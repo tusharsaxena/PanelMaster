@@ -25,16 +25,16 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 |---|---|---|
 | `core/Compat.lua` | `NS.Compat` | The only caller of deprecated / varying APIs. Addon metadata, screen size, UI scale, LibSharedMedia registration and lookup, class colour, cursor test, backdrop-mixin presence. |
 | `core/LSMPatch.lua` | — | Upstream fixup for the vendored `LSM30_Border` widget's misaligned preview tile. Lives in `core/`, not `libs/`, so a lib refresh cannot blow it away. |
-| `core/Constants.lua` | `NS.Constants` | Strata and anchor-point enums, geometry bounds, the panel record template, the field type/order maps, preview specs, media paths. |
+| `core/Constants.lua` | `NS.Constants` | Strata, anchor-point and edge enums, geometry bounds, the panel record template, the field type/order/media/colour maps, preview specs, media paths. |
 | `core/Namespace.lua` | `NS.name/version/PREFIX/SCHEMA_VERSION` | Metadata bootstrap. The cyan `[PM]` chat tag lives here. |
 | `core/State.lua` | `NS.State` | Session-only runtime state: `debug`, `unlocked`, `unlockedPanels`, `preview`, `previewIDs`. Never persisted. |
 | `core/Util.lua` | `NS.Util`, `NS.Print` | Path splitting, clamping, rounding, snapping, colour parse/format, name cleaning, deep copy, and the secret-safe shared chat printer. |
 | `core/PanelMaster.lua` | `NS.addon`, `NS.bus` | AceAddon registration, the printer reclaim, the bus-target factory, `OnInitialize` / `OnEnable`. |
-| `core/Database.lua` | `NS:InitDB`, `NS:RunMigrations` | AceDB open, the migration seam, the `[Init]` summary. |
+| `core/Database.lua` | `NS:InitDB`, `NS:RunMigrations` | AceDB open on the shared "Default" profile, the migration seam, the profile-change callbacks, the `[Init]` summary. |
 | `defaults/Profile.lua` | `NS.defaults.profile` | Per-character defaults: the (empty) panel registry, `nextID`, and the settings block. |
 | `defaults/Global.lua` | `NS.defaults.global` | The `schemaVersion` stamp — the one account-wide value. |
-| `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, field edits, sanitizing, slug-uniqueness, off-screen recovery. Sole sender of both panel messages. |
-| `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the offset border child frame, the four accent-bar textures, the shared mouseover ticker, targeted and full repaints. |
+| `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, copy-from, field edits, sanitizing, slug-uniqueness, off-screen recovery, profile reload. Sole sender of both panel messages. |
+| `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the offset border child frame, the four accent-bar frames and their lazy borders, the shared mouseover ticker, targeted and full repaints. |
 | `modules/Unlock.lua` | `NS.Unlock` | Unlock mode (outline, label, drag, snap), global and per-panel, and preview mode. |
 | `modules/DebugLog.lua` | `NS.DebugLog`, `NS.Debug` | The on-screen debug console and the gated logging sink. |
 | `settings/Schema.lua` | `NS.Schema`, `NS.COMMANDS` | The settings schema (one row per setting) and the command table. Sole sender of `SettingsChanged`. |
@@ -285,7 +285,8 @@ is asserted in tests without capturing chat.
 
 ## Options UI
 
-Blizzard `Settings.RegisterCanvasLayoutCategory` + raw AceGUI (`options-ui`). Three pages:
+Blizzard `Settings.RegisterCanvasLayoutCategory` + raw AceGUI (`options-ui`). A parent category and
+three subcategories:
 
 - **Ka0s Panel Master** (parent) — logo, tagline, the generated slash-command list.
 - **General** — the schema rows, in a two-column grid.
@@ -426,6 +427,26 @@ There is none to speak of, and that is a design property rather than luck: the a
 non-secure frames of its own, never touches a Blizzard frame, never reparents anything, and never
 calls a protected API. The single protected call anywhere near it is `Settings.OpenToCategory`, which
 is refused under lockdown.
+
+## Shipped media
+
+Four logo assets, one of which the game can actually load:
+
+| File | Size | Ships to players | Purpose |
+|---|---|---|---|
+| `panelmaster.logo.tga` | 512×512, 24-bit RLE | **yes** | The runtime asset — `C.LOGO_PATH`, drawn on the settings landing page |
+| `panelmaster.logo.png` | 1254×1254 | no | Master art; the source the others are rendered from |
+| `panelmaster.logo.jpg` | 1024×1024 | no | Project page / CDN |
+| `panelmaster.logo.256.jpg` | 256×256 | no | README, thumbnails |
+
+WoW cannot load `.png` or `.jpg` at runtime **at all**, and rescales any texture that is not a power
+of two — hence a 512 TGA rather than the 1254 master. `.pkgmeta` excludes the three non-runtime
+renders, so a player's download does not carry megabytes of files their client physically cannot use.
+
+The failure mode here is silent: a missing or wrongly-named texture renders **nothing** and raises
+**no error**, so it surfaces as a blank settings page that reads like a layout bug. A test therefore
+asserts that the file `C.LOGO_PATH` names exists on disk, and the same for the debug console's
+vendored font.
 
 ## Known limitations
 

@@ -3,10 +3,12 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW%20Addon%20Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-412%2F412_passing-green)
+![Tests](https://img.shields.io/badge/Tests-415%2F415_passing-green)
 
-<!-- Logo: media/logos/panelmaster.logo.tga ships with the addon for the settings page. The README
-     image below is added once the art is uploaded to the CurseForge CDN at first release. -->
+<!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
+     CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
+     addon actually loads in-game — WoW cannot read .png or .jpg at runtime. -->
+![Logo](media/logos/panelmaster.logo.256.jpg)
 
 Ka0s Panel Master draws plain coloured panels behind your interface, so a screen full of separate
 frames starts to read as a few deliberate groups.
@@ -27,7 +29,7 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - Create as many backdrop panels as you like, each with its own size, position, textures, colours,
   border and frame strata.
 - Pick any background and border texture you have installed — anything that uses LibSharedMedia
-  (ElvUI, WeakAuras, Details and most others) shares its textures with Panel Master.
+  shares its textures with Panel Master.
 - Class-colour a panel's background or border with one tick, and it follows whoever you log in as.
 - Show a panel only when your cursor is over it, faded to whatever opacity you like the rest of the
   time — without it ever swallowing a click.
@@ -36,8 +38,8 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
   out of the box, class-coloured, with any status-bar texture you have installed.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
-- Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons and
-  WeakAuras can anchor to it.
+- Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
+  to it.
 - Test mode drops three sample panels on screen, so you can see what a panel looks like before
   making one of your own.
 - Full command-line control: create, rename, delete and edit any field of any panel from `/pm`.
@@ -108,7 +110,7 @@ Every panel has a fixed frame name built from its own name: `PanelMaster_Panel_`
 panel name with anything that is not a letter or number turned into an underscore. A panel called
 **Chat BG** is `PanelMaster_Panel_Chat_BG`. The settings page shows you the exact name.
 
-Other addons, and WeakAuras, can anchor to that name:
+Other addons can anchor to that name:
 
 ```lua
 myFrame:SetPoint("TOPLEFT", "PanelMaster_Panel_Chat_BG", "TOPLEFT", 4, -4)
@@ -196,29 +198,13 @@ above will cover normal UI, which is occasionally what you want and usually not.
 A panel never takes your mouse, whatever layer it is in. That stays true even with **Show on
 mouseover only** turned on — the panel watches where your cursor is without claiming the click.
 
-### Accent bars
-
-An accent bar is a thin coloured strip running the full length of one of a panel's edges, usually
-sitting just off it. If you have seen BenikUI's panels, it is that look.
-
-It is **on out of the box**: a new panel arrives as a dark block with a class-coloured strip along
-its top, 5px thick and flush against the edge, outlined by a 1px black hairline. The panel's own
-border starts off, so one thing defines the edge rather than two.
-
-Tick whichever edges you want — any combination, or all four for a full outline — and pick a
-thickness and an offset. Push the offset positive and the bar detaches into a separate floating
-stripe instead.
-
-The bar always draws **above** the panel's border, so the two can be used together without the
-border cutting across it. The bar can carry a border of its own as well — off by default, with the
-same texture, size, offset and colour controls the panel's border has.
-
-The bar is class-coloured out of the box, so it matches whoever you are playing without any setup.
-Untick **Class colour** to pick your own. Textures come from your LibSharedMedia status-bar
-collection — the same list your unit frames and cast bars use.
-
-They fade with the panel, sit on the same layer as it, and like everything else here they never take
-a click. Untick **Enable accent bar** if you would rather have a plain block.
+Most of a panel's look is the **accent bar** — a thin coloured strip running the full length of an
+edge, the look BenikUI's panels are known for. It is on out of the box, so a new panel arrives as a
+dark block with a class-coloured strip along its top, and the panel's own border starts off so one
+thing defines the edge rather than two. Tick whichever edges you want, pick a thickness, and push the
+offset positive if you would rather it detached into a separate floating stripe. It draws above the
+panel's border, can carry a thin border of its own, and takes any status-bar texture you have
+installed. Untick **Enable accent bar** for a plain block.
 
 Out of the box every character shares one set of panels, because most people run one UI. If you want
 a character to differ, make it a profile of its own on the **Profiles** page — you can copy your

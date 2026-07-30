@@ -10,9 +10,9 @@ nothing below is hidden.
 |---|---|---|---|---|
 | D-001 | `toc-file-§1` | No `## X-Curse-Project-ID:` line. | **None yet** | The field is a MUST *once published on CurseForge*. There is no project yet, so a line would be a placeholder. Add it with the id at first publish. |
 | D-002 | `documentation-§1` | The README badge row has **four** badges, not five: the published-version badge (`curseforge/v/<id>`) is absent. | **None yet** | Same cause as D-001 — the badge template needs a project id. A badge pointing at a non-existent project renders as an error. Added alongside D-001. |
-| D-003 | `options-ui-§6` / `layout-§3` | `media/logos/panelmaster.logo.tga` does not exist. `C.LOGO_PATH` points at it and the settings landing page requests it. | **Low** | A missing texture renders nothing and raises no error, so the landing page is simply logo-less today. Art is an authoring task, not a code one. |
+| D-003 | `options-ui-§6` / `layout-§3` | ~~`media/logos/panelmaster.logo.tga` does not exist.~~ | **RESOLVED** | Closed later the same day. The master art was supplied and rendered to the collection's four-asset set — `.png` (1254 master), `.jpg` (1024), `.256.jpg`, and the runtime `.tga` (512×512 24-bit RLE). A test now asserts the file `C.LOGO_PATH` names actually exists, since a missing texture renders nothing and raises no error. |
 | D-004 | `documentation-§1` | The README's `## Screenshots` section carries a placeholder note rather than images. | **Low** | Screenshots require a live client with panels placed. Captured at first release; `.pkgmeta` already excludes `media/screenshots` from the player payload. |
-| D-005 | `documentation-§1` | The README has no logo image under the title. | **Low** | Depends on D-003 and on the CurseForge CDN URL, which does not exist until first publish. |
+| D-005 | `documentation-§1` | ~~The README has no logo image under the title.~~ | **RESOLVED** | Closed with D-003, using the repo-relative `.256.jpg`, which renders on GitHub today. Swap for the CDN URL at first publish if preferred. |
 
 ## Accepted, documented decisions
 

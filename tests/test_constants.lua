@@ -79,3 +79,33 @@ test("Constants: the mono font and logo point at this addon's folder", function(
   assertTrue(C.FONT_MONO:find("PanelMaster", 1, true) ~= nil)
   assertTrue(C.LOGO_PATH:find("PanelMaster", 1, true) ~= nil)
 end)
+
+-- The shipped media paths actually resolve to files on disk.
+--
+-- This is the one class of asset bug the client gives you nothing for: a missing texture renders
+-- NOTHING and raises NO error, so a wrong path or a file that never got committed shows up as a
+-- blank settings page that looks like a layout problem. A sibling addon shipped exactly that for a
+-- while. Cheap to check here, since the in-game path maps directly onto the repo path.
+local function repoPathFor(interfacePath)
+  -- "Interface\AddOns\PanelMaster\media\..." → "media/..."
+  return (interfacePath:gsub("\\", "/"):gsub("^Interface/AddOns/PanelMaster/", ""))
+end
+
+test("Constants: the logo file named by LOGO_PATH exists", function()
+  local path = repoPathFor(C.LOGO_PATH)
+  local f = io.open(path, "rb")
+  assertTrue(f ~= nil, "missing shipped asset: " .. path)
+  if f then f:close() end
+end)
+
+test("Constants: the logo is a Targa, which is the only format WoW loads at runtime", function()
+  -- .png and .jpg cannot be loaded by the client at all, so a path pointing at one is a blank page.
+  assertTrue(C.LOGO_PATH:lower():find("%.tga$") ~= nil)
+end)
+
+test("Constants: the debug console's mono font exists", function()
+  local path = repoPathFor(C.FONT_MONO)
+  local f = io.open(path, "rb")
+  assertTrue(f ~= nil, "missing shipped asset: " .. path)
+  if f then f:close() end
+end)

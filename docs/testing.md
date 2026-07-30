@@ -77,6 +77,15 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
 - **`Settings.RegisterCanvasLayout(Sub)category` keeps each frame it is handed** in
   `mocks.__settingsPanels`, so `test_panel.lua` can assert the `OnCommit` / `OnDefault` / `OnRefresh`
   contract on what the framework actually received (`options-ui-§1`).
+- **AceDB's CALLBACK surface is modelled, not stubbed.** Switching profiles swaps `db.profile`
+  wholesale, so `mocks.__switchProfile(name)` replaces the table and then fires `OnProfileChanged`
+  exactly as AceDB does. Without that, "the previous profile's panels stayed on screen" — the actual
+  failure mode — would be untestable. The mock also reproduces AceDB's own `defaultProfile` rule
+  (`true` → the shared `"Default"`) and records what the addon asked for, since which profile every
+  character lands on is a product decision a fixed-name stub would hide.
+- **AceConfig / AceDBOptions / AceConfigDialog are present**, with `mocks.__profileOptions` recording
+  what was registered. "We handed AceDB's own options table to the Profiles page" is that page's
+  entire contract, and there is nothing else to assert about it headlessly.
 - **LibSharedMedia is deliberately absent** from the mock library table. It is an `OptionalDep`, so
   the default headless environment is the one without it — which makes the soft-fallback path the
   tested path (`library-stack-§6`).

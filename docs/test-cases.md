@@ -51,7 +51,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Compat.HasBackdrop: true when the mixin is present
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
-### test_constants.lua (11)
+### test_constants.lua (14)
 
 - Constants: the strata list runs lowest to highest and starts at BACKGROUND
 - Constants: new panels default to LOW
@@ -64,6 +64,9 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Constants: the template's own values are valid by its own rules
 - Constants: preview panels are valid panel overrides
 - Constants: the mono font and logo point at this addon's folder
+- Constants: the logo file named by LOGO_PATH exists
+- Constants: the logo is a Targa, which is the only format WoW loads at runtime
+- Constants: the debug console's mono font exists
 
 ### test_registry.lua (33)
 
@@ -466,7 +469,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 |-------|------:|
 | test_util.lua | 24 |
 | test_compat.lua | 15 |
-| test_constants.lua | 11 |
+| test_constants.lua | 14 |
 | test_registry.lua | 33 |
 | test_canvas.lua | 24 |
 | test_unlock.lua | 22 |
@@ -478,4 +481,4 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_slash.lua | 47 |
 | test_panel.lua | 20 |
 | test_profiles.lua | 21 |
-| **Total** | **412** |
+| **Total** | **415** |
