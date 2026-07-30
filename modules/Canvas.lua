@@ -1,0 +1,350 @@
+local addonName, NS = ...   -- luacheck: ignore addonName
+NS.Canvas = NS.Canvas or {}
+local Canvas = NS.Canvas
+local C = NS.Constants
+local Util = NS.Util
+
+-- The renderer: turns panel records into on-screen frames and keeps them in step with the registry.
+--
+-- Panels are NON-SECURE frames (standalone-windows), so none of this is combat-gated — creating,
+-- moving, recolouring and hiding a plain backdrop frame is all legal in combat, and gating it would
+-- mean a panel that visibly failed to follow a settings change mid-pull. Unlock mode is the one part
+-- that IS gated, and for a UX reason rather than a taint one (modules/Unlock.lua).
+
+-- Frame pool (hard rule #14: ≥10 dynamic frames use a pool). A user with thirty panels who toggles
+-- the master switch twice would otherwise leak sixty frames — WoW frames are never garbage
+-- collected, so "create one per record on every rebuild" is a permanent leak, not a slow one.
+--
+-- The pool is keyed by GLOBAL FRAME NAME rather than being a flat stack, because every panel frame
+-- carries a deterministic name (`PanelMaster_Panel_<slug>`) that other addons anchor to — and a
+-- frame's name is fixed at CreateFrame time and can never be changed afterwards. So a released
+-- frame can only be reused by a panel that wants the same name, which in practice means: delete a
+-- panel and re-create it with the same name and you get the same frame back.
+--
+-- The bound on frames is therefore "one per distinct panel name used this session", not "one per
+-- create". Renaming a panel ten times does leave ten frames behind — hidden, unparented and inert —
+-- which is the price of the deterministic-name contract and is bounded by how often a human renames
+-- things. The alternative (anonymous pooled frames plus `_G` aliases) keeps a flat pool but hands
+-- out frames whose `GetName()` is nil, which breaks every consumer that expects a real named frame.
+local pool = {}      -- globalName → a released frame, ready to be reused under that same name
+local active = {}    -- panel id → the frame currently on screen for it
+Canvas.__pool, Canvas.__active = pool, active
+
+-- Panels currently running the mouseover fade, so one shared ticker drives all of them.
+local mouseoverPanels = {}
+local mouseoverDriver
+
+-- ── The render spec ─────────────────────────────────────────────────────────────
+-- PURE: record + settings → exactly what the frame should look like. No frames touched, so the whole
+-- of "what does this panel render as" is unit-testable headlessly, and the frame code below becomes
+-- a thin, uninteresting application of the result.
+--
+-- `shown` folds the two independent switches — the addon-wide master and the panel's own — into one
+-- answer, so no call site has to remember both.
+function Canvas.BuildSpec(rec, settings)
+  if type(rec) ~= "table" then return nil end
+  settings = settings or {}
+  local alpha = Util.Clamp(rec.alpha, 0, 1, 1)
+  local mouseover = rec.mouseover and true or false
+  return {
+    id        = rec.id,
+    name      = rec.name,
+    frameName = Util.FrameName(rec.name),
+    shown     = (settings.enabled ~= false) and (rec.enabled ~= false),
+    width     = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.width),
+    height    = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.height),
+    point     = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point,
+    relPoint  = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint,
+    x         = tonumber(rec.x) or 0,
+    y         = tonumber(rec.y) or 0,
+    strata    = Util.IsStrata(rec.strata) and rec.strata or C.PANEL_TEMPLATE.strata,
+    level     = Util.Clamp(rec.level, 0, 100, 0),
+    alpha     = alpha,
+    -- Colours come from the shared resolver, so the class-colour override is applied in exactly one
+    -- place for every colour the addon will ever have (C.COLOR_FIELDS).
+    bg        = Util.ResolveColor(rec, "bgColor"),
+    border    = Util.ResolveColor(rec, "borderColor"),
+    bgTexture     = rec.bgTexture or C.PANEL_TEMPLATE.bgTexture,
+    borderTexture = rec.borderTexture or C.PANEL_TEMPLATE.borderTexture,
+    -- A zero border is a real choice (a plain block with no outline), so it is honoured rather than
+    -- floored to 1 — it means no backdrop is applied at all rather than one drawn at zero size.
+    borderSize = Util.Clamp(rec.borderSize, C.MIN_BORDER, C.MAX_BORDER, 1),
+    borderOffset =
+      Util.Clamp(rec.borderOffset, C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 0),
+    mouseover  = mouseover,
+    -- The alpha the panel rests at when the cursor is elsewhere. Clamped to at most `alpha`: a
+    -- resting alpha above the hover alpha would make the panel FADE when you moused over it, which
+    -- is not what the setting says it does.
+    mouseoverAlpha = mouseover and math.min(Util.Clamp(rec.mouseoverAlpha, 0, 1, 0), alpha) or alpha,
+  }
+end
+
+local function currentSettings()
+  local p = NS.db and NS.db.profile
+  return (p and p.settings) or {}
+end
+
+-- ── Frame construction ──────────────────────────────────────────────────────────
+
+-- Build a bare panel frame under its deterministic global name.
+--
+-- The name is passed to CreateFrame rather than assigned afterwards because a frame's name is
+-- immutable — this is the only moment it can be set, and it is what makes
+-- `PanelMaster_Panel_<slug>` a real, anchorable frame rather than a table in `_G`.
+--
+-- `BackdropTemplate` is required: the border is drawn as a backdrop `edgeFile` so it can use any
+-- LibSharedMedia border texture. (The first version used four flat textures, which cannot render an
+-- edge file's corners at all.) The BACKGROUND fill stays a plain texture, because a backdrop's
+-- `bgFile` insets under the edge and a panel wants its fill to run to the frame's actual bounds.
+local function newFrame(globalName)
+  local f = CreateFrame("Frame", globalName, UIParent)
+  f:SetClampedToScreen(false)   -- a panel may legitimately hang off the screen edge
+  f:EnableMouse(false)          -- locked panels are mouse-transparent; Unlock flips this
+
+  f.bg = f:CreateTexture(nil, "BACKGROUND")
+  f.bg:SetAllPoints(f)
+
+  -- The border lives on its own child frame rather than on the panel itself, so it can be OFFSET
+  -- from the panel's edge (borderOffset). A backdrop is always drawn at its own frame's bounds, so
+  -- the only way to move the border in or out is to move the frame carrying it.
+  --
+  -- It is a child, so it inherits the panel's strata, level and alpha automatically — the border can
+  -- never end up on a different layer from the panel it belongs to.
+  f.borderFrame = CreateFrame("Frame", nil, f, "BackdropTemplate")
+  f.borderFrame:EnableMouse(false)
+  return f
+end
+
+-- Paint the background fill. An LSM background name resolves to a texture path that is tinted with
+-- the panel's colour via SetVertexColor; the "None" entry means draw no fill at all.
+local function applyBackground(f, spec)
+  local path = NS.Compat.FetchMedia("background", spec.bgTexture)
+  if not path then
+    f.bg:SetTexture(nil)
+    f.bg:Hide()
+    return
+  end
+  f.bg:Show()
+  f.bg:SetTexture(path, "REPEAT", "REPEAT")
+  f.bg:SetVertexColor(spec.bg[1], spec.bg[2], spec.bg[3], spec.bg[4])
+end
+
+-- Paint the border as a backdrop edge. `edgeSize` is the border thickness the user set, which for
+-- the flat "Solid" texture is a literal pixel width and for a decorative edge file is the size its
+-- slices are drawn at — the same knob either way, which is why it stays one setting.
+--
+-- Guarded on the METHOD being present, rather than on a build check: it is the frame in hand that
+-- has to answer, and a headless stub has no real SetBackdrop either. Both cases degrade to a plain
+-- borderless panel instead of erroring.
+local function applyBorder(f, spec)
+  local b = f.borderFrame
+  if not b or type(b.SetBackdrop) ~= "function" then return end
+
+  -- Offset the border frame from the panel's edge. Positive pushes it outward (a halo), negative
+  -- pulls it inward (an inset frame); 0 sits exactly on the edge.
+  b:ClearAllPoints()
+  b:SetPoint("TOPLEFT", f, "TOPLEFT", -spec.borderOffset, spec.borderOffset)
+  b:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", spec.borderOffset, -spec.borderOffset)
+
+  local path = spec.borderSize > 0 and NS.Compat.FetchMedia("border", spec.borderTexture) or nil
+  if not path then
+    -- No border at all: a zero thickness, or the "None" texture. Clearing the backdrop is what
+    -- removes it — a backdrop drawn at zero size still costs a draw call and can leave artefacts.
+    b:SetBackdrop(nil)
+    b:Hide()
+    return
+  end
+  b:Show()
+  -- BackdropTemplate wants the table verbatim on every call; it is not merged with the previous one.
+  b:SetBackdrop({ edgeFile = path, edgeSize = spec.borderSize })
+  -- MUST follow SetBackdrop: applying a backdrop resets its border colour to white, so colouring
+  -- first would be silently undone.
+  b:SetBackdropBorderColor(spec.border[1], spec.border[2], spec.border[3], spec.border[4])
+end
+
+-- Apply a spec to a frame. Idempotent — running it twice with the same spec is a no-op — so the
+-- repaint path never has to track what changed.
+local function applySpec(f, spec)
+  f:SetSize(spec.width, spec.height)
+  f:ClearAllPoints()
+  f:SetPoint(spec.point, UIParent, spec.relPoint, spec.x, spec.y)
+  f:SetFrameStrata(spec.strata)
+  f:SetFrameLevel(spec.level)
+
+  applyBackground(f, spec)
+  applyBorder(f, spec)
+
+  -- The resting alpha. While unlocked this is overridden to full opacity by Unlock:Decorate — you
+  -- cannot place a panel you cannot see — so the mouseover fade is an editing-mode-off behaviour.
+  f.__spec = spec
+  f:SetAlpha(spec.mouseover and spec.mouseoverAlpha or spec.alpha)
+  Canvas.SetMouseoverTracked(spec.id, f, spec.mouseover)
+
+  f:SetShown(spec.shown)
+end
+
+-- ── Mouseover fade ──────────────────────────────────────────────────────────────
+-- One shared OnUpdate drives every mouseover panel, rather than one script per panel: the work is a
+-- MouseIsOver call per tracked panel and a shared ticker keeps that a single scheduled callback no
+-- matter how many panels the user has.
+--
+-- Deliberately polled rather than driven by OnEnter/OnLeave, because those require the frame to take
+-- mouse input — and a panel that takes the mouse stops being click-through, which is the one
+-- guarantee a backdrop must never break. Polling reads the cursor without claiming it.
+local MOUSEOVER_INTERVAL = 0.1   -- 10Hz; well under a frame budget and imperceptible as a delay
+
+local function updateMouseover()
+  local unlocked = NS.State.unlocked
+  for id, f in pairs(mouseoverPanels) do
+    local spec = f.__spec
+    if not spec then
+      mouseoverPanels[id] = nil
+    elseif unlocked or NS.Unlock:IsPanelUnlocked(id) then
+      -- Editing this panel: hold it fully visible so it can be found and dragged.
+      f:SetAlpha(spec.alpha)
+    else
+      f:SetAlpha(NS.Compat.MouseIsOver(f) and spec.alpha or spec.mouseoverAlpha)
+    end
+  end
+end
+Canvas.__updateMouseover = updateMouseover   -- test seam: the headless build has no OnUpdate
+
+local function ensureMouseoverDriver()
+  if mouseoverDriver then return mouseoverDriver end
+  mouseoverDriver = CreateFrame("Frame")
+  local elapsed = 0
+  mouseoverDriver:SetScript("OnUpdate", function(_, delta)
+    elapsed = elapsed + (delta or 0)
+    if elapsed < MOUSEOVER_INTERVAL then return end
+    elapsed = 0
+    updateMouseover()
+  end)
+  return mouseoverDriver
+end
+
+-- Add or drop a panel from the mouseover ticker, and start the ticker on first use. The driver is
+-- never destroyed once created — it is one frame, and it stops doing any work the moment the tracked
+-- set is empty.
+function Canvas.SetMouseoverTracked(id, frame, tracked)
+  if tracked then
+    mouseoverPanels[id] = frame
+    ensureMouseoverDriver()
+  else
+    mouseoverPanels[id] = nil
+  end
+end
+
+Canvas.__mouseoverPanels = mouseoverPanels   -- test seam
+
+-- ── Pool ────────────────────────────────────────────────────────────────────────
+
+-- Get the frame that carries `globalName`, reusing a released one if that exact name has been seen
+-- before. A frame can only ever answer to the name it was created with, so the pool is a lookup, not
+-- a stack.
+local function acquire(globalName)
+  local f = pool[globalName]
+  if f then
+    pool[globalName] = nil
+    return f
+  end
+  return newFrame(globalName)
+end
+
+local function release(f)
+  if not f then return end
+  f:Hide()
+  f:ClearAllPoints()
+  f:EnableMouse(false)
+  f.__spec = nil
+  if f.panelID then Canvas.SetMouseoverTracked(f.panelID, nil, false) end
+  if f.borderFrame and type(f.borderFrame.SetBackdrop) == "function" then
+    f.borderFrame:SetBackdrop(nil)
+    f.borderFrame:Hide()
+  end
+  if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
+  -- `__frameName` is the authority, not `GetName()`: the headless stub frame answers every
+  -- PascalCase call with itself, so GetName() there returns a table and would key the pool on a
+  -- frame object.
+  local name = f.__frameName or (f.GetName and f:GetName())
+  if type(name) == "string" then pool[name] = f end
+end
+
+-- How many frames are parked in the pool. A helper rather than `#pool` because the pool is keyed by
+-- frame name, so it has no array part to take a length of.
+function Canvas.PooledCount()
+  local n = 0
+  for _ in pairs(pool) do n = n + 1 end
+  return n
+end
+
+-- ── Render ──────────────────────────────────────────────────────────────────────
+
+-- Repaint one panel by id. Cheap and targeted: the drag path and every single-field edit come
+-- through here, so moving a panel does not touch the other twenty-nine.
+function Canvas:Render(id)
+  local rec = NS.Registry:Get(id)
+  if not rec then
+    -- The record is gone: retire its frame rather than leaving it on screen. This is what makes a
+    -- delete visible without a full rebuild.
+    if active[id] then release(active[id]); active[id] = nil end
+    return nil
+  end
+  local spec = Canvas.BuildSpec(rec, currentSettings())
+  local f = active[id]
+  -- A rename changes the panel's frame NAME, and a frame's name cannot change — so the old frame is
+  -- retired and the one belonging to the new name is brought in. Anything anchored to the old global
+  -- name is now anchored to a hidden frame, which is the documented consequence of renaming a panel.
+  if f and f.__frameName ~= spec.frameName then
+    release(f)
+    active[id] = nil
+    f = nil
+  end
+  if not f then
+    f = acquire(spec.frameName)
+    f.__frameName = spec.frameName
+    active[id] = f
+  end
+  f.panelID = rec.id
+  applySpec(f, spec)
+  if NS.Unlock and NS.Unlock.Decorate then NS.Unlock:Decorate(f, rec) end
+  return f
+end
+
+-- Rebuild the whole set: render every record, and retire any frame whose record no longer exists.
+-- The structural path — a create, a delete, a rename or a master-switch flip.
+function Canvas:RenderAll()
+  local seen = {}
+  for _, rec in ipairs(NS.Registry:All()) do
+    seen[rec.id] = true
+    Canvas:Render(rec.id)
+  end
+  for id, f in pairs(active) do
+    if not seen[id] then
+      release(f)
+      active[id] = nil
+    end
+  end
+  if NS.State.debug and NS.Debug then
+    NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
+  end
+end
+
+-- The frame currently showing a given panel, or nil. Unlock mode needs it to attach drag handles;
+-- the tests use it to assert that a record really produced a frame.
+function Canvas:FrameFor(id)
+  return active[id]
+end
+
+-- ── Bus wiring ──────────────────────────────────────────────────────────────────
+-- Registered on this module's OWN AceEvent target, never on the shared bus-as-self: CallbackHandler
+-- keys callbacks by (message, target), so two consumers sharing a target silently clobber each other
+-- (architecture-§4).
+function Canvas:Enable()
+  if Canvas.__ev then return end
+  local ev = NS.NewBusTarget()
+  if not ev then return end
+  Canvas.__ev = ev
+  ev:RegisterMessage(NS.Registry.MSG_PANELS, function() Canvas:RenderAll() end)
+  ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id) Canvas:Render(id) end)
+  ev:RegisterMessage("Ka0s_PanelMaster_SettingsChanged", function() Canvas:RenderAll() end)
+end

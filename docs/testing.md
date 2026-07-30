@@ -1,0 +1,129 @@
+# Testing — Ka0s Panel Master
+
+How to verify the addon. This is the contributor-facing page; the player-facing `README.md`
+deliberately carries none of it, only the `[tests]` badge.
+
+## The green gate
+
+Both of these must pass **before every commit**. A commit with red tests or lint errors is
+forbidden, and a logic change without a covering test is not done.
+
+```sh
+lua tests/run.lua     # all suites green; exits non-zero on any failure
+luacheck .            # 0 errors, 0 warnings
+```
+
+## Local toolchain
+
+WoW runs Lua 5.1, so the harness targets 5.1.
+
+```sh
+sudo apt-get update && sudo apt-get install -y lua5.1 luarocks
+sudo luarocks install luacheck
+```
+
+Syntax-check a single file with `luac -p path/to/file.lua`.
+
+## How the harness works
+
+```
+tests/
+  run.lua            -- the runner + micro-framework; also the --list inventory mode
+  loader.lua         -- loads each source with loadfile + setfenv over the mock env
+  wow_mock.lua       -- the WoW API mock builder (a fresh env per run)
+  test_<module>.lua  -- one suite per module
+```
+
+- `run.lua` builds the addon environment once by loading every source **in TOC order**, then calls
+  `NS.addon:OnInitialize()` and `NS.addon:OnEnable()` — the addon's **real** lifecycle entry points.
+  It exposes `NS`, the mocks and the assertion helpers to the suites through `_G.PM_TEST`, runs each
+  case under `pcall`, and exits non-zero on any failure.
+
+  **Never reproduce the lifecycle by hand here.** An earlier version of this harness listed the setup
+  steps itself (`InitDB`, `Schema:Register`, `Slash:Register`, `Panel:Register`, `Canvas:Enable`),
+  and because it called `Canvas:Enable()` directly, every bus test passed against wiring `OnEnable`
+  did not actually do. In-game the result was that nothing was live: no settings change or panel edit
+  reached the renderer, and only the two paths calling `Canvas:RenderAll()` directly (lock/unlock and
+  test mode) repainted anything. Calling the real functions means a step dropped from either entry
+  point fails the suite instead of hiding in it.
+- `loader.lua` reproduces the `local addonName, NS = ...` header by calling each chunk as
+  `chunk("PanelMaster", NS)` under an environment where WoW globals resolve to the mock table first
+  and fall back to real `_G`.
+- `wow_mock.lua` stubs time, combat, metadata and UI APIs plus a universal frame.
+
+### Mock fidelity that is load-bearing
+
+Do not "simplify" any of these — each exists because a lazier stub hides a whole bug class:
+
+- **The frame stub models visibility, geometry, colour and scripts.** A blanket self-returning no-op
+  would make `IsShown()` permanently truthy and `GetPoint()` hand back the frame, so "we applied the
+  stored position" and "we applied garbage" would look identical. Position and size *are* the product
+  here, so they have to be real state. Scripts are recorded rather than dropped so the drag handler
+  can actually be fired.
+- **It also records the frame NAME, the backdrop and the applied textures/colours.** The name is this
+  addon's public anchor contract (`PanelMaster_Panel_<slug>`), and a stub that dropped `CreateFrame`'s
+  name argument would make it untestable. `SetBackdrop` / `SetBackdropBorderColor` /
+  `SetColorTexture` / `SetVertexColor` are kept because "which edge texture, at what thickness, in
+  what colour" is exactly what the border and class-colour suites assert on — and because the border
+  colour is only correct if it is applied *after* the backdrop, which is unprovable against a no-op.
+- **Child regions are fresh stubs, not the parent.** A texture that *was* the frame would make all
+  four border edges share one colour slot.
+- **`UIParent` carries a real 1920×1080 size.** A 0×0 screen makes `Compat.GetScreenSize` return nil
+  and silently skips every off-screen-recovery test.
+- **The AceAddon mock stamps AceConsole's colliding `:Print` mixin**, so the tests exercise the real
+  printer-reclaim path (`architecture-§2`, anti-pattern #36).
+- **The message bus keys callbacks by `(message, target)`** and fans `SendMessage` out to every
+  target, so a test can catch two receivers clobbering each other on a shared target.
+- **`Settings.RegisterCanvasLayout(Sub)category` keeps each frame it is handed** in
+  `mocks.__settingsPanels`, so `test_panel.lua` can assert the `OnCommit` / `OnDefault` / `OnRefresh`
+  contract on what the framework actually received (`options-ui-§1`).
+- **LibSharedMedia is deliberately absent** from the mock library table. It is an `OptionalDep`, so
+  the default headless environment is the one without it — which makes the soft-fallback path the
+  tested path (`library-stack-§6`).
+
+A suite reads:
+
+```lua
+local T = _G.PM_TEST
+local NS = T.NS
+local test, assertEqual = T.test, T.assertEqual
+
+test("Registry.New: creates a panel with the template's shape", function()
+  assertEqual(NS.Registry:New("Chat BG").width, NS.Constants.PANEL_TEMPLATE.width)
+end)
+```
+
+`assertNear` is available for the geometry and colour maths, where an exact `==` would be a false
+failure.
+
+### Shared state
+
+The suites share one addon environment, so any case that touches the registry starts by emptying it
+(`R:DeleteAll()`, and `Canvas:RenderAll()` where frames matter). A case that inherits the previous
+one's panels passes or fails depending on the order it ran in, which is the worst kind of flake.
+
+## Writing tests
+
+Test-first: write or extend a **failing** test that pins the intended behaviour, then implement until
+it passes. Pure, testable logic — the registry's CRUD and sanitizing, `Canvas.BuildSpec`, the snap
+maths, off-screen recovery, schema read/write, the debug formatters and every slash output shape — is
+exercised headlessly. Genuinely in-client behaviour (how a panel actually looks, dragging with a real
+mouse, strata against other addons' frames) belongs in [`smoke-tests.md`](smoke-tests.md), which
+complements rather than replaces the unit suites.
+
+A few suites assert against the **source files** rather than behaviour — one sender per bus message,
+no `WOW_PROJECT_ID` branching. Those rules only break when someone adds a line years later, which is
+exactly when nobody is looking.
+
+## The case inventory
+
+[`test-cases.md`](test-cases.md) is the **generated**, authoritative enumeration of every case and
+the addon's authoritative pass count. Never hand-edit it. Whenever a case is added, removed or
+renamed — or the count moves — regenerate it and update the README's `[tests]` badge **in the same
+change**:
+
+```sh
+lua tests/run.lua --list > docs/test-cases.md
+```
+
+There is no CI. This is deliberately local and hand-run.

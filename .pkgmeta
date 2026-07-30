@@ -1,0 +1,12 @@
+package-as: PanelMaster
+
+# Libraries are vendored in libs/ and committed to git — NOT fetched as externals.
+
+ignore:
+  - .luacheckrc
+  - .gitignore
+  - docs        # holds docs/audits/ and docs/reviews/ too — all dev-only
+  - tests
+  - _dev
+  - "*.bak"
+  - media/screenshots   # project-page art, served from the CurseForge CDN — never downloaded by a player
