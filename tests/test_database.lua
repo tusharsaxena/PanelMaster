@@ -16,10 +16,19 @@ test("Database: a fresh install ships the current schema version", function()
 end)
 
 test("Database: the panel registry is per-profile, not global", function()
-  -- A panel layout belongs to the character running that UI. Storing it globally would silently
-  -- share one layout across every alt.
+  -- Per PROFILE, so the Profiles page can give a character its own layout. Storing it in `global`
+  -- would put it outside the profile system entirely and make that impossible.
   assertTrue(NS.db.profile.panels ~= nil)
   assertEqual(NS.db.global.panels, nil)
+end)
+
+test("Database: every character starts on the shared 'Default' profile", function()
+  -- The `true` third argument to AceDB:New, which AceDB maps to the profile named "Default".
+  -- Without it each character would be handed a private profile keyed on its own name, and anyone
+  -- running one UI across their alts would have to rebuild or copy it on every single one.
+  assertEqual(T.mocks.__dbDefaultProfile, true,
+    "AceDB was not asked for the shared Default profile")
+  assertEqual(NS.db:GetCurrentProfile(), "Default")
 end)
 
 test("Database: a fresh profile ships no panels", function()
@@ -81,7 +90,7 @@ test("Database.InitSummary: names the addon, version, schema, profile and count"
   assertTrue(s:find("PanelMaster", 1, true) ~= nil)
   assertTrue(s:find("v" .. NS.version, 1, true) ~= nil)
   assertTrue(s:find("schema v" .. NS.SCHEMA_VERSION, 1, true) ~= nil)
-  assertTrue(s:find("Mock - Realm", 1, true) ~= nil)
+  assertTrue(s:find("Default", 1, true) ~= nil)
   assertTrue(s:find("1 panels", 1, true) ~= nil)
   NS.Registry:DeleteAll()
 end)

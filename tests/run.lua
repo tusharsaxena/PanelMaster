@@ -79,7 +79,7 @@ local SUITE_FILES = {
   "test_registry.lua", "test_canvas.lua", "test_unlock.lua", "test_media.lua",
   "test_accent.lua",
   "test_database.lua", "test_debuglog.lua",
-  "test_schema.lua", "test_slash.lua", "test_panel.lua",
+  "test_schema.lua", "test_slash.lua", "test_panel.lua", "test_profiles.lua",
 }
 for _, s in ipairs(SUITE_FILES) do
   currentSuite = s

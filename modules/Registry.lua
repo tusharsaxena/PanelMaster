@@ -277,6 +277,61 @@ function R:Reset(key)
   return true, rec.name
 end
 
+-- Fields a copy never carries across, because they are what make a panel *that* panel rather than
+-- a description of how it looks.
+--
+-- `id` and `name` are identity: copying them would either clash or rename. The four geometry fields
+-- are position — the whole reason to copy settings from another panel is to make this one MATCH it
+-- while staying where it is; a copy that also moved it would land the two exactly on top of each
+-- other, which is never what was wanted. Size IS copied: two panels of matching appearance usually
+-- want matching dimensions, and unlike position that does not make one of them disappear.
+local COPY_EXCLUDED = {
+  id = true, name = true,
+  point = true, relPoint = true, x = true, y = true,
+}
+
+-- Copy every appearance setting from one panel onto another.
+--
+-- Returns (true, sourceName) or (false, reason). Deep-copies each value, so the two panels do not
+-- end up sharing a colour array — an in-place edit of one would otherwise silently change the other.
+function R:CopyFrom(targetKey, sourceKey)
+  local target = R:Resolve(targetKey)
+  if not target then return false, ("no panel called '%s'"):format(tostring(targetKey)) end
+  local source = R:Resolve(sourceKey)
+  if not source then return false, ("no panel called '%s'"):format(tostring(sourceKey)) end
+  if source.id == target.id then return false, "a panel cannot copy from itself" end
+
+  for field, value in pairs(source) do
+    if not COPY_EXCLUDED[field] then
+      target[field] = Util.DeepCopy(value)
+    end
+  end
+  R.Sanitize(target)
+
+  if NS.State.debug and NS.Debug then
+    NS.Debug("Panel", "'%s' copied settings from '%s'", target.name, source.name)
+  end
+  fire(MSG_PANEL, target.id)
+  return true, source.name
+end
+
+-- Re-read the registry after the active AceDB profile changed underneath it.
+--
+-- Lives here, rather than in core/Database.lua where the profile callbacks are registered, so that
+-- `Ka0s_PanelMaster_PanelsChanged` keeps exactly ONE sender (architecture-§4). A profile switch IS a
+-- wholesale change to the set of panels, so that message is precisely the right one.
+--
+-- Every record is re-sanitized on the way in: a profile created by an older build, or copied from
+-- one, can be missing fields this build expects, and this is the first moment it is looked at.
+function R:ReloadProfile()
+  for _, rec in ipairs(R:All()) do R.Sanitize(rec) end
+  if NS.State.debug and NS.Debug then
+    NS.Debug("Profile", "switched to '%s', %s panels",
+      (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?", R:Count())
+  end
+  fire(MSG_PANELS)
+end
+
 -- Remove every panel. Returns how many went, so the caller can report it.
 function R:DeleteAll()
   local p = NS.db and NS.db.profile

@@ -43,9 +43,16 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 
 ## Data model
 
-Saved to `PanelMasterDB`. **Per-character**, deliberately: a panel layout belongs to the UI a given
-character runs, and AceDB's profile machinery is what lets a user copy one to an alt when they do
-want it shared. A forced account-wide profile would take that choice away.
+Saved to `PanelMasterDB`, in AceDB profiles, with every character starting on the **shared
+"Default" profile** (`AceDB:New(..., true)`).
+
+Shared rather than character-keyed because a panel layout is a description of a UI and most people
+run one UI: under a per-character default, anyone wanting a common layout has to rebuild or copy it
+on every alt, whereas under this one anyone wanting a private layout makes one on the Profiles page
+in two clicks. The asymmetry favours the shared default.
+
+Note AceDB's precedence — `sv.profileKeys[charKey] or defaultProfile or charKey` — so a character
+that has already been assigned a profile keeps it. This governs where *new* characters land.
 
 ```
 PanelMasterDB
@@ -191,7 +198,12 @@ alpha: a panel resting at 0 alpha would be impossible to find and drag.
 
 ### Accent bars
 
-A thin strip along one or more of a panel's edges, in the style of BenikUI's panels. Four textures
+A thin strip along one or more of a panel's edges, in the style of BenikUI's panels. **On by
+default**, with the panel's own border off to match: the shipped look leans on the bar for
+definition, and a panel wearing both an outline and a bar reads as busy rather than framed. The bar
+ships with a 1px **black** hairline of its own — black rather than the panel border's grey because
+its job is to separate the bar from what is behind it, and against a bright background a bare class
+colour bleeds into the scenery. Four textures
 are created up front on the panel frame — one per edge — and shown or hidden per render; four
 textures is cheaper than creating and destroying them as the edge set changes, and it keeps the
 render path allocation-free.
@@ -278,6 +290,22 @@ Blizzard `Settings.RegisterCanvasLayoutCategory` + raw AceGUI (`options-ui`). Th
 - **Ka0s Panel Master** (parent) — logo, tagline, the generated slash-command list.
 - **General** — the schema rows, in a two-column grid.
 - **Panels** — create, edit and delete the panels themselves.
+- **Profiles** — AceDBOptions' own options table, rendered by AceConfigDialog into a container
+  parented to our canvas.
+
+Profiles is the **one** place `AceConfigDialog` is used. `anti-patterns` forbids it for content and
+carves out Profiles explicitly, and the carve-out earns itself: AceDBOptions returns a complete,
+correct table for create / switch / copy / reset / delete plus the per-character, class, realm and
+faction scopes, and a hand-rolled AceGUI equivalent would be a large pile of code whose only
+distinguishing feature would be its own bugs. It has no Defaults button — the page already carries
+its own destructive controls, and a second "reset" meaning something else would be a trap. Both libs
+are `OptionalDeps`, so their absence means no Profiles page rather than a broken one.
+
+Switching profile swaps `db.profile` wholesale, so `core/Database.lua` registers AceDB's
+`OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks and delegates to
+`Registry:ReloadProfile` — in the registry rather than the database so `PanelsChanged` keeps exactly
+one sender. The reload re-runs migrations and re-sanitizes every record, since an incoming profile
+may predate the current build. Without it the previous profile's panels would simply stay on screen.
 
 The Panels page shows **one** panel's editor at a time, chosen from a dropdown. Stacking every
 panel's editor grew past a screen at three panels and past a scrollbar's usefulness at ten, and
@@ -295,6 +323,17 @@ the dropdown already shows which panel is selected, so a heading repeating it wa
 chrome between choosing a panel and editing it. The panel selector carries no label either, which
 makes it 14px shorter than a labelled control — so a compensating spacer (`LABEL_ROW_H`) sits above
 it, or the `Edit` heading would look tighter than every other heading on the page.
+
+The editor opens with a **General** section in decision order — which panel is this (name, and the
+option to copy another's look), is it on (Enabled / Unlock), am I done with it (Reset / Delete). The
+frame name lives in the name box's **tooltip** rather than as a permanent second label: it is
+reference information you need once, when wiring something else up to this panel.
+
+`Registry:CopyFrom` copies every field except `id`, `name` and the four geometry fields. Position is
+excluded because the point of copying is to make a panel *match* another while staying where it is —
+copying position too would land the two exactly on top of each other. Size **is** copied: matching
+dimensions is usually what was wanted, and unlike position it cannot make a panel disappear. Values
+are deep-copied, or the two panels would share a colour array and editing one would change the other.
 
 `Reset` and `Delete` sit at the **top** of the editor beside `Enabled` and `Unlock`, because that is
 where you look once you have decided you are done with a panel. A Delete parked at the foot of a long

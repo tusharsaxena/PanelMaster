@@ -104,7 +104,10 @@ C.PANEL_TEMPLATE = {
   level       = 0,
   bgColor      = { 0.05, 0.05, 0.07, 0.85 },
   borderColor  = { 0.35, 0.35, 0.40, 1.00 },
-  borderSize   = 1,
+  -- No panel border out of the box. The shipped look leans on the accent bar for definition
+  -- instead, and a panel wearing both an outline and a bar reads as busy rather than framed. The
+  -- colour above is kept so raising the size gives something sensible immediately.
+  borderSize   = 0,
   borderOffset = 0,
   alpha        = 1.0,
 
@@ -130,9 +133,11 @@ C.PANEL_TEMPLATE = {
   -- Purely decorative: it is drawn as textures on the panel's own frame, so it inherits the panel's
   -- strata, level and alpha, and it is as click-through as everything else here.
   --
-  -- OFF by default. It is a strong visual statement and an addon that put a coloured stripe on every
-  -- panel unasked would be making that choice for the user.
-  accentEnabled   = false,
+  -- ON by default: the accent bar IS the shipped look. A new panel arrives as a dark block with a
+  -- class-coloured strip along its top rather than a plain rectangle, so the addon shows what it is
+  -- for without the user having to go and find the switch. The panel's own border is off to
+  -- compensate (see borderSize above) — one piece of definition, not two.
+  accentEnabled   = true,
   -- A SET, not a single edge — any combination is legal. Top alone is the BenikUI look and the
   -- default. An empty set is valid and draws nothing, so unticking every edge does not silently
   -- re-tick one.
@@ -158,9 +163,12 @@ C.PANEL_TEMPLATE = {
   -- decoration, and outlining it unasked would change the look of every accent bar the moment the
   -- feature shipped. Shares the panel border's bounds, so the two sliders read alike.
   accentBorderTexture   = "Solid",
-  accentBorderSize      = 0,
+  -- A 1px black outline around the bar. Black rather than the panel border's grey because its job is
+  -- to SEPARATE the bar from whatever is behind it — against a bright background a bare class colour
+  -- bleeds into the scenery, and a dark hairline restores the edge whatever the class colour is.
+  accentBorderSize      = 1,
   accentBorderOffset    = 0,
-  accentBorderColor     = { 0.35, 0.35, 0.40, 1.00 },
+  accentBorderColor     = { 0.00, 0.00, 0.00, 1.00 },
   accentBorderClassColor = false,
 }
 

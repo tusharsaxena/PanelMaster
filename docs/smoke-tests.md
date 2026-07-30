@@ -56,7 +56,7 @@ Start each run from a clean state: `/reload`, then `/pm resetall` and `/pm panel
 With a panel created and locked:
 
 1. `/pm panel <name> bgColor 1,0,0,0.5` → **Expect:** it turns translucent red immediately.
-2. `/pm panel <name> borderSize 6` and `/pm panel <name> borderColor 0,1,0,1` → **Expect:** a thick
+2. `/pm panel <name> borderSize 6` (it starts at 0) and `/pm panel <name> borderColor 0,1,0,1` → **Expect:** a thick
    green border, with the four edges **meeting cleanly at the corners** — no darker overlap squares,
    which is what a translucent border would reveal.
 3. `/pm panel <name> borderSize 0` → **Expect:** the border disappears entirely, leaving a plain fill.
@@ -83,19 +83,8 @@ With a panel created and locked:
 7. Set **Border texture** to `None`. **Expect:** the border disappears entirely while **Border size**
    stays where it was. Set it back and the border returns.
 8. Set **Background texture** to `None`. **Expect:** the fill disappears, the border stays.
-
-## 5b-3. Border offset
-
-1. With a visible border of 2–4px, drag **Border offset** positive. **Expect:** the border moves
-   *outward*, away from the panel's fill, leaving a gap between the two — a halo.
-2. Drag it negative. **Expect:** the border moves *inward*, overlapping the fill — an inset frame.
-3. Return it to 0. **Expect:** the border sits exactly on the panel's edge.
-4. With a non-zero offset, drag the panel. **Expect:** the border moves with it, keeping its offset.
-5. With a non-zero offset, change the **Frame strata**. **Expect:** the border stays with the panel —
-   it is a child frame, so it cannot end up on a different layer.
-6. `/reload`. **Expect:** the offset persisted.
-8. Reload. **Expect:** both texture choices survived.
-9. **The uninstall case:** pick a texture supplied by another addon, disable that addon, `/reload`.
+9. Reload. **Expect:** both texture choices survived.
+10. **The uninstall case:** pick a texture supplied by another addon, disable that addon, `/reload`.
    **Expect:** the panel renders **plain** — not invisible, not an error — and re-enabling the addon
    brings the texture straight back. The choice was never overwritten.
 
@@ -120,35 +109,29 @@ stubs AceGUI out entirely, so **nothing below is covered by a unit test.**
 7. Now change a colour **and** drag the opacity slider. **Expect:** both apply, and the panel's
    opacity is the picker's alpha multiplied by the **Panel opacity** slider (under Visibility).
 
-## 5c. Class colour
+## 5b-3. Border offset
 
-1. Tick **Class colour** next to **Background colour**. **Expect:** the panel takes your class
-   colour, and the colour swatch beside it greys out.
-2. Check the panel's **opacity is unchanged** — class colour replaces the hue, not the alpha. Drag
-   **Opacity** and confirm it still works.
-3. Tick **Class colour** next to **Border colour** too, and confirm the two are independent: untick
-   the background one and the border stays class-coloured.
-4. Untick both. **Expect:** the original colours come back exactly — they were never overwritten.
-4b. **The picker stays usable under class colour.** With **Class colour** ticked, the picker's label
-   reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
-   **Expect:** the class-coloured border/fill gets more or less solid. This is the only control that
-   sets opacity, so it must not be greyed out.
-4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
-   colour mode produced it. Compare a picked bright colour against your class colour at the **same
-   opacity and size** — a darker class colour will legitimately look softer. If they differ at
-   matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any colour
-   crisp regardless of UI scale.
-5. Log in on a character of a **different class**. **Expect:** that character's panels (if
-   class-coloured) show the new class colour.
+1. With a visible border of 2–4px, drag **Border offset** positive. **Expect:** the border moves
+   *outward*, away from the panel's fill, leaving a gap between the two — a halo.
+2. Drag it negative. **Expect:** the border moves *inward*, overlapping the fill — an inset frame.
+3. Return it to 0. **Expect:** the border sits exactly on the panel's edge.
+4. With a non-zero offset, drag the panel. **Expect:** the border moves with it, keeping its offset.
+5. With a non-zero offset, change the **Frame strata**. **Expect:** the border stays with the panel —
+   it is a child frame, so it cannot end up on a different layer.
+6. `/reload`. **Expect:** the offset persisted.
 
 ## 5b-4. Accent bar
 
 The BenikUI-style strip. Everything below is per panel, under **Accent bar** in the editor.
 
-1. On a fresh panel, confirm **Enable accent bar** is **unticked** and no strip is drawn.
-2. Tick it. **Expect:** a bar appears along the **top** edge only, running the panel's full width,
-   **5px thick, flush against the panel**, in the **Blizzard** status-bar texture and **your class
-   colour** — with no other configuration.
+1. On a fresh panel, confirm **Enable accent bar** is **ticked** and a bar is already drawn along the
+   **top** edge only — running the panel's full width, **5px thick, flush against the panel**, in
+   the **Blizzard** status-bar texture, in **your class colour**, outlined by a **1px black**
+   hairline. That is the shipped look, with no configuration at all.
+1b. Confirm the panel's **own** border starts at size **0** — the accent bar defines the edge, and
+   both at once reads as busy.
+2. Untick **Enable accent bar**. **Expect:** the strip vanishes, leaving a plain block. Tick it
+   again and it returns exactly as before.
 2b. **Z-order.** Give the panel a border of 4 or more in a contrasting colour. **Expect:** the accent
    bar draws **over** the border where they meet, not under it. Change **Frame strata** and confirm
    the stacking holds.
@@ -184,6 +167,27 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 16. From the command line: `/pm panel <name> accentEdges top,left`, then
     `/pm panel <name> accentEdges none`, then a deliberate typo like `accentEdges middle`.
     **Expect:** the first two apply, the third is refused with the valid list.
+
+## 5c. Class colour
+
+1. Tick **Class colour** next to **Background colour**. **Expect:** the panel takes your class
+   colour. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix.
+2. Check the panel's **opacity is unchanged** — class colour replaces the hue, not the alpha. Drag
+   **Panel opacity** and confirm it still works.
+3. Tick **Class colour** next to **Border colour** too, and confirm the two are independent: untick
+   the background one and the border stays class-coloured.
+4. Untick both. **Expect:** the original colours come back exactly — they were never overwritten.
+4b. **The picker stays usable under class colour.** With **Class colour** ticked, the picker's label
+   reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
+   **Expect:** the class-coloured border/fill gets more or less solid. This is the only control that
+   sets opacity, so it must not be greyed out.
+4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
+   colour mode produced it. Compare a picked bright colour against your class colour at the **same
+   opacity and size** — a darker class colour will legitimately look softer. If they differ at
+   matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any colour
+   crisp regardless of UI scale.
+5. Log in on a character of a **different class**. **Expect:** that character's panels (if
+   class-coloured) show the new class colour.
 
 ## 5d. Mouseover fade
 
@@ -344,8 +348,42 @@ The addon's public contract, and the one thing no unit test can prove works in a
 ## 12. Profiles
 
 1. Create a couple of panels on one character.
-2. Log in on an alt → **Expect:** no panels; the layout is per-character.
+2. Log in on an alt → **Expect:** the SAME panels — every character starts on the shared "Default"
+   profile. This is the check for the `true` third argument to `AceDB:New`.
 3. Back on the first character → **Expect:** the panels are exactly as you left them.
+
+### 12b. The Profiles page
+
+1. `/pm config` → **Profiles**. **Expect:** Ace's standard profile UI — Reset Profile, current
+   profile name, New / Existing Profiles, Copy From, Delete a Profile. No **Defaults** button in the
+   header (profile management has its own destructive controls).
+2. Type a new profile name and press Enter. **Expect:** the profile is created and switched to, and
+   **the screen clears of panels immediately** — you are now on an empty profile. This is the check
+   that matters: without the profile callbacks the old panels would just stay there.
+3. Create a panel on the new profile, then switch back via **Existing Profiles**. **Expect:** the
+   original character's panels return and the new profile's panel disappears, at once.
+4. Use **Copy From** to pull the other profile's panels in. **Expect:** they appear immediately.
+5. Press **Reset Profile**. **Expect:** every panel on this profile goes.
+6. Switch to a profile, `/reload`, and confirm you are still on it with the right panels.
+7. Open the **Panels** page, then switch profile from the Profiles page and come back. **Expect:**
+   the panel dropdown lists the new profile's panels, not the old ones.
+
+## 12c. Copy settings from another panel
+
+1. Make two panels. Style the first heavily — size, textures, both colours, border, accent bar.
+   Move the second somewhere clearly different.
+2. On the **second** panel, pick the first from **Copy settings from panel**.
+3. **Expect:** the second takes on the first's entire appearance **and size**, and a cyan-tagged
+   confirmation names the source.
+4. **Expect: it does not move.** Position is deliberately not copied — otherwise the two would land
+   exactly on top of each other. Its name and **frame name** are unchanged too, so anything anchored
+   to it is still anchored.
+5. **Expect:** the dropdown snaps back to empty. It is an action, not a stored setting — a lingering
+   selection would imply an ongoing link between the two panels.
+6. Now change a colour on the **first** panel. **Expect:** the second does not change — the copy was
+   a snapshot, not a link.
+7. On a lone panel (delete all others), **Expect:** the dropdown is disabled with a tooltip saying to
+   make another panel first.
 
 ## 13. Standalone
 

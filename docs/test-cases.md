@@ -235,9 +235,10 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Registry.Delete: drops the panel's session unlock state
 - Database: per-panel unlock state is NOT persisted
 
-### test_accent.lua (59)
+### test_accent.lua (60)
 
-- Accent: off by default
+- Accent: ON by default — the accent bar is the shipped look
+- Accent: the panel's OWN border is off, so only one thing defines the edge
 - Accent: defaults to the top edge only
 - Accent: defaults to 5px thick, flush against the panel
 - Accent: the default bar texture is one LibSharedMedia always ships
@@ -261,7 +262,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Registry.Sanitize: clamps thickness and offset
 - Registry.Sanitize: thickness has a floor of 1, not 0
 - Registry.FormatField: renders an edge set readably
-- Registry.Reset: clears the accent bar back to off
+- Registry.Reset: puts the accent bar back to the shipped defaults
 - Canvas.BuildSpec: carries the accent settings
 - Canvas.BuildSpec: clamps accent thickness and offset
 - Canvas.BuildSpec: the accent colour goes through the shared resolver
@@ -282,7 +283,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Canvas: the accent bar draws ABOVE the border
 - Canvas: the accent/border stacking survives a frame-level change
 - Canvas: the accent bars live on their own child frame
-- Accent border: off by default
+- Accent border: a 1px BLACK hairline by default
 - Accent border: its class-colour flag is wired into the generic colour map
 - Accent border: selects from the BORDER media pool, not statusbar
 - Canvas.BuildSpec: carries the accent border settings
@@ -294,14 +295,15 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Canvas: the bar border is offset from the bar
 - Canvas: dropping the bar border to zero clears it
 - Canvas: a 'None' bar border texture removes it
-- Registry.Reset: clears the bar border too
+- Registry.Reset: puts the bar border back to the shipped hairline
 - Canvas: a released frame hides its accent bars
 
-### test_database.lua (13)
+### test_database.lua (14)
 
 - Database: InitDB opened both scopes
 - Database: a fresh install ships the current schema version
 - Database: the panel registry is per-profile, not global
+- Database: every character starts on the shared 'Default' profile
 - Database: a fresh profile ships no panels
 - Database: the debug flag is NOT persisted (debug-logging-§5)
 - Database: unlock state is NOT persisted
@@ -434,6 +436,30 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Panel: the tracking registry is emptied between rebuilds
 - Panel: the Panels page's Defaults action is confirm-gated
 
+### test_profiles.lua (21)
+
+- Registry.CopyFrom: copies appearance across
+- Registry.CopyFrom: does NOT copy position
+- Registry.CopyFrom: does NOT copy identity
+- Registry.CopyFrom: DOES copy size
+- Registry.CopyFrom: colours are deep-copied, not shared
+- Registry.CopyFrom: edge sets are deep-copied too
+- Registry.CopyFrom: refuses to copy from itself
+- Registry.CopyFrom: an unknown panel on either side is an error
+- Registry.CopyFrom: reports the source's name on success
+- Registry.CopyFrom: repaints the target
+- Registry.CopyFrom: the copy is sanitized
+- Database: profile callbacks are registered
+- Database: switching profile re-renders the panels
+- Database: switching profile re-runs migrations on the incoming profile
+- Database: switching profile sanitizes the incoming records
+- Database: the profile reload goes through Registry, keeping one sender
+- Panel: the Profiles subcategory is registered
+- Panel: Profiles registers AceDB's own options table
+- Panel: the Profiles page carries the framework contract like every other
+- Panel: the Profiles page has NO Defaults button
+- Panel: the Profiles page builds lazily on OnShow
+
 ## Totals
 
 | Suite | Cases |
@@ -445,10 +471,11 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_canvas.lua | 24 |
 | test_unlock.lua | 22 |
 | test_media.lua | 79 |
-| test_accent.lua | 59 |
-| test_database.lua | 13 |
+| test_accent.lua | 60 |
+| test_database.lua | 14 |
 | test_debuglog.lua | 19 |
 | test_schema.lua | 23 |
 | test_slash.lua | 47 |
 | test_panel.lua | 20 |
-| **Total** | **389** |
+| test_profiles.lua | 21 |
+| **Total** | **412** |

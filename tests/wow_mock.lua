@@ -205,15 +205,44 @@ return function()
 
   -- LibStub + Ace library mocks
   local libs = {}
+  -- AceDB, including its CALLBACK surface. The callbacks are modelled rather than stubbed because
+  -- switching profiles swaps `db.profile` wholesale — if the addon does not react, the previous
+  -- profile's panels stay on screen. `__switchProfile` reproduces exactly that: replace the table,
+  -- then fire, which is what AceDB does.
+  M.__profileName = nil
+  M.__dbDefaultProfile = nil
   libs["AceDB-3.0"] = {
-    New = function(_, _name, defaults)
-      return {
+    New = function(_, _name, defaults, defaultProfile)
+      local db
+      local callbacks = {}
+      -- AceDB's own rule, reproduced: `true` maps to the shared "Default" profile, a string is used
+      -- verbatim, and nothing at all falls back to the character key. Recorded so a test can assert
+      -- which of those the addon actually asked for — "every character starts on Default" is a
+      -- product decision a stub returning a fixed name would quietly hide.
+      M.__dbDefaultProfile = defaultProfile
+      M.__profileName = (defaultProfile == true and "Default")
+        or (type(defaultProfile) == "string" and defaultProfile)
+        or "Mock - Realm"
+      db = {
         global  = deepcopy(defaults and defaults.global or {}),
         profile = deepcopy(defaults and defaults.profile or {}),
-        -- Created in-game with no defaultProfile argument, so the profile is per-character. Mirror
-        -- that here so the [Init] summary renders a character-shaped profile name.
-        GetCurrentProfile = function() return "Mock - Realm" end,
+        GetCurrentProfile = function() return M.__profileName end,
+        RegisterCallback = function(target, event, fn)
+          callbacks[event] = callbacks[event] or {}
+          callbacks[event][target] = fn
+        end,
+        __fire = function(event, ...)
+          for target, fn in pairs(callbacks[event] or {}) do fn(target, ...) end
+        end,
       }
+      -- Swap to a named profile the way AceDB does: a fresh defaults-shaped table, then the event.
+      M.__switchProfile = function(name)
+        M.__profileName = name
+        db.profile = deepcopy(defaults and defaults.profile or {})
+        db.__fire("OnProfileChanged", db, name)
+      end
+      M.__db = db
+      return db
     end,
   }
 
@@ -222,6 +251,21 @@ return function()
   -- already guards on the create returning a usable widget. That is enough to exercise registration
   -- and the framework callback contract without modelling AceGUI's whole widget tree.
   libs["AceGUI-3.0"] = { Create = function() return nil end }
+
+  -- AceConfig / AceDBOptions back the Profiles page. Present so P:Register exercises the real
+  -- registration path; `__profileOptions` records what was handed over, since "we registered AceDB's
+  -- own options table" is the entire contract of that page.
+  M.__profileOptions = nil
+  libs["AceDBOptions-3.0"] = {
+    GetOptionsTable = function(_, db) return { type = "group", args = {}, __db = db } end,
+  }
+  libs["AceConfig-3.0"] = {
+    RegisterOptionsTable = function(_, name, opts) M.__profileOptions = { name = name, opts = opts } end,
+  }
+  M.__profileDialogOpens = 0
+  libs["AceConfigDialog-3.0"] = {
+    Open = function() M.__profileDialogOpens = M.__profileDialogOpens + 1 end,
+  }
 
   -- LibSharedMedia is deliberately ABSENT from this table. It is an OptionalDep, and the addon must
   -- run without it (library-stack-§6) — so the default headless environment is the one where it is

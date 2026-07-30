@@ -463,10 +463,6 @@ local selectedID
 local EDITOR_SELECT_GAP  = 20   -- panel dropdown → the editor box
 local EDITOR_SECTION_GAP = 14   -- between subsections inside the editor
 local EDITOR_ROW_GAP     = 6    -- between rows within one subsection
--- A left-hand field paired with a right-hand annotation, plus the gutter between them. Flow packs
--- children flush, so the gutter is a real (empty) widget rather than padding on either side.
-local EDITOR_FIELD_REL   = 0.44
-local EDITOR_GUTTER_REL  = 0.04
 -- The height an AceGUI control's label row occupies (a labelled Dropdown is 40 tall, an unlabelled
 -- one 26). A section heading is followed by a fixed gap, so a control with NO label starts 14px
 -- higher than a labelled one and the heading above it looks tighter than every other heading on the
@@ -668,7 +664,77 @@ local function buildPanelEditor(ctx, parent, rec)
     return dd
   end
 
-  -- ── Switches ──
+  -- ── General ──
+  -- Identity first, then the switches, then the two whole-panel actions. Reading order matches
+  -- decision order: which panel is this, is it on, and am I done with it.
+  editorHeading(group, "General")
+
+  local nameRow = editorRow(group)
+
+  local nameBox = AceGUI:Create("EditBox")
+  nameBox:SetLabel("Panel name")
+  nameBox:SetRelativeWidth(0.5)
+  nameBox:SetText(rec.name)
+  nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
+    local ok, err = NS.Registry:Rename(rec.id, text)
+    if not ok then
+      print("error: " .. tostring(err))
+      widget:SetText(rec.name)   -- put the rejected edit back rather than leaving a lie on screen
+      return
+    end
+    -- Renaming changes the frame name and the selector entry, so the page is rebuilt rather than
+    -- patched in two places.
+    ctx.dirty = true
+    if ctx.panel:IsShown() then runRebuilders(ctx) end
+  end)
+  -- The frame name lives in the TOOLTIP rather than as a second label beside the box. It is
+  -- reference information you need once, when wiring something else up to this panel — not
+  -- something worth a permanent line of chrome in the editor.
+  attachTooltip(nameBox, "Panel name",
+    ("Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor to this frame by name. "
+     .. "Renaming the panel changes it, so anything anchored to the old name will need updating.")
+      :format(NS.Registry.FrameName(rec)))
+  nameRow:AddChild(nameBox)
+
+  -- Copy every appearance setting from another panel. Position is deliberately not copied — see
+  -- Registry.CopyFrom — so the panel takes on the other's look without moving on top of it.
+  local others, order = {}, {}
+  for _, other in ipairs(NS.Registry:All()) do
+    if other.id ~= rec.id then
+      others[other.id] = other.name
+      order[#order + 1] = other.id
+    end
+  end
+
+  local copyFrom = AceGUI:Create("Dropdown")
+  trackDropdown(copyFrom)
+  copyFrom:SetLabel("Copy settings from panel")
+  copyFrom:SetRelativeWidth(0.5)
+  copyFrom:SetList(others, order)
+  -- Deliberately valueless: this is an ACTION, not a stored setting. Showing a "current" entry would
+  -- imply an ongoing link between the two panels, when the copy is a one-off.
+  copyFrom:SetValue(nil)
+  if #order == 0 then
+    copyFrom:SetDisabled(true)
+  end
+  copyFrom:SetCallback("OnValueChanged", function(widget, _, sourceID)
+    -- On success the second return is the SOURCE's name, not an error.
+    local ok, result = NS.Registry:CopyFrom(rec.id, sourceID)
+    widget:SetValue(nil)   -- snap back: nothing is selected, something was done
+    if not ok then print("error: " .. tostring(result)); return end
+    print(("copied settings from '%s'"):format(tostring(result)))
+    -- Every control in this editor now holds a stale value.
+    ctx.dirty = true
+    if ctx.panel:IsShown() then runRebuilders(ctx) end
+  end)
+  attachTooltip(copyFrom, "Copy settings from panel",
+    #order == 0
+      and "Make another panel first, then you can copy its settings onto this one."
+      or ("Take on another panel's appearance \226\128\148 size, textures, colours, border and "
+          .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
+  nameRow:AddChild(copyFrom)
+
+  editorSpacer(group, EDITOR_ROW_GAP)
   local switches = editorRow(group)
 
   local enabled = AceGUI:Create("CheckBox")
@@ -698,10 +764,6 @@ local function buildPanelEditor(ctx, parent, rec)
     .. "Session-only \226\128\148 always locked again after a reload.")
   switches:AddChild(unlocked)
 
-  -- The two whole-panel actions, paired under the two whole-panel switches. Up here rather than at
-  -- the foot of the editor because that is where you look when you have decided you are done with a
-  -- panel — and a Delete button parked at the bottom of a long scrolling form is one the user only
-  -- meets after scrolling past everything they might instead have wanted to change.
   editorSpacer(group, EDITOR_ROW_GAP)
   local actions = editorRow(group)
 
@@ -726,51 +788,6 @@ local function buildPanelEditor(ctx, parent, rec)
   end)
   attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
   actions:AddChild(deleteBtn)
-
-  -- ── Identity ──
-  editorHeading(group, "Name")
-
-  local nameRow = editorRow(group)
-
-  local nameBox = AceGUI:Create("EditBox")
-  nameBox:SetLabel("Panel name")
-  nameBox:SetRelativeWidth(EDITOR_FIELD_REL)
-  nameBox:SetText(rec.name)
-  nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
-    local ok, err = NS.Registry:Rename(rec.id, text)
-    if not ok then
-      print("error: " .. tostring(err))
-      widget:SetText(rec.name)   -- put the rejected edit back rather than leaving a lie on screen
-      return
-    end
-    -- Renaming changes the group title, the frame name and the selector entry, so the page is
-    -- rebuilt rather than patched in three places.
-    ctx.dirty = true
-    if ctx.panel:IsShown() then runRebuilders(ctx) end
-  end)
-  attachTooltip(nameBox, "Panel name",
-    "Renaming a panel also changes its frame name, so anything anchored to the old name "
-    .. "will need updating.")
-  nameRow:AddChild(nameBox)
-
-  -- A gutter between the name box and the frame-name text. Flow packs children flush against each
-  -- other, so the only way to separate two controls on one row is to put something between them —
-  -- and without it the frame name butts straight up against the EditBox's "Okay" button.
-  local nameGutter = AceGUI:Create("SimpleGroup")
-  nameGutter:SetLayout(nil)
-  nameGutter:SetRelativeWidth(EDITOR_GUTTER_REL)
-  nameGutter:SetHeight(1)
-  nameRow:AddChild(nameGutter)
-
-  -- The frame name is the addon's public anchor contract, so it is shown rather than left to be
-  -- worked out — and it visibly changes when the panel is renamed, which is the warning that
-  -- anything anchored to the old one will need updating.
-  local frameName = AceGUI:Create("Label")
-  frameName:SetRelativeWidth(0.5)
-  frameName:SetText(("\n|cff808080Frame name|r\n|cffffff00%s|r"):format(NS.Registry.FrameName(rec)))
-  attachTooltip(frameName, "Frame name",
-    "Other addons and WeakAuras can anchor to this frame by name.")
-  nameRow:AddChild(frameName)
 
   -- ── Position and size ──
   editorHeading(group, "Position and size")
@@ -841,7 +858,7 @@ local function buildPanelEditor(ctx, parent, rec)
     .. "Off by default.")
   accentRow:AddChild(accentOn)
 
-  makeMediaDropdown(accentRow, rec, "accentTexture", "Bar texture",
+  makeMediaDropdown(accentRow, rec, "accentTexture", "Accent bar texture",
     "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
     .. "'Solid' is a flat colour.")
 
@@ -855,37 +872,37 @@ local function buildPanelEditor(ctx, parent, rec)
 
   editorSpacer(group, EDITOR_ROW_GAP)
   local accentSizeRow = editorRow(group)
-  numberField(accentSizeRow, "Bar thickness", "accentThickness",
+  numberField(accentSizeRow, "Accent bar thickness", "accentThickness",
     C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
     "How thick the accent bar is, in screen units.")
-  numberField(accentSizeRow, "Bar offset", "accentOffset",
+  numberField(accentSizeRow, "Accent bar offset", "accentOffset",
     C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
     "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
     .. "which is the look this is modelled on; 0 sits flush; negative overlaps the panel.")
 
   editorSpacer(group, EDITOR_ROW_GAP)
   local accentColorRow = editorRow(group)
-  makeColorPair(accentColorRow, rec, "accentColor", "Bar colour")
+  makeColorPair(accentColorRow, rec, "accentColor", "Accent bar colour")
 
   -- The bar's own border. Same four controls as the panel's, in the same order, so the two read
   -- alike — the only difference is what they outline.
   editorSpacer(group, EDITOR_ROW_GAP)
   local accentBorderRow = editorRow(group)
-  makeMediaDropdown(accentBorderRow, rec, "accentBorderTexture", "Bar border texture",
+  makeMediaDropdown(accentBorderRow, rec, "accentBorderTexture", "Accent bar border texture",
     "The edge style drawn around the accent bar. 'None' removes it, as does a size of 0.")
-  numberField(accentBorderRow, "Bar border size", "accentBorderSize",
+  numberField(accentBorderRow, "Accent bar border size", "accentBorderSize",
     C.MIN_BORDER, C.MAX_BORDER, 1,
     "Thickness of the accent bar's own border. 0 removes it entirely, which is the default.")
 
   editorSpacer(group, EDITOR_ROW_GAP)
   local accentBorderOffsetRow = editorRow(group)
-  numberField(accentBorderOffsetRow, "Bar border offset", "accentBorderOffset",
+  numberField(accentBorderOffsetRow, "Accent bar border offset", "accentBorderOffset",
     C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
     "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
 
   editorSpacer(group, EDITOR_ROW_GAP)
   local accentBorderColorRow = editorRow(group)
-  makeColorPair(accentBorderColorRow, rec, "accentBorderColor", "Bar border colour")
+  makeColorPair(accentBorderColorRow, rec, "accentBorderColor", "Accent bar border colour")
 
   -- ── Visibility ──
   editorHeading(group, "Visibility")
@@ -1173,6 +1190,51 @@ function P:Register()
     end
   end)
   Settings.RegisterCanvasLayoutSubcategory(mainCategory, pctx.panel, "Panels")
+
+  -- Profiles subcategory = AceDB's own profile management, rendered into our canvas.
+  --
+  -- This is the ONE place AceConfigDialog is permitted (anti-patterns forbids it for content, and
+  -- explicitly carves out Profiles). AceDBOptions hands back a complete, correct options table for
+  -- create / switch / copy / reset / delete plus the per-character/class/realm/faction scopes —
+  -- reimplementing that by hand in AceGUI would be a large pile of code whose only distinction would
+  -- be its own bugs.
+  --
+  -- Guarded rather than assumed: both libs are OptionalDeps, and their absence means no Profiles
+  -- page rather than a broken one (library-stack-§6).
+  local AceDBOptions    = LibStub and LibStub("AceDBOptions-3.0", true)
+  local AceConfig       = LibStub and LibStub("AceConfig-3.0", true)
+  local AceConfigDialog = LibStub and LibStub("AceConfigDialog-3.0", true)
+  if AceDBOptions and AceConfig and AceConfigDialog and NS.db then
+    AceConfig:RegisterOptionsTable("PanelMaster-Profiles", AceDBOptions:GetOptionsTable(NS.db))
+
+    -- No Defaults button: profile management carries its own destructive controls, and a second
+    -- "reset" meaning something different from the page's own Reset Profile would be a trap.
+    local prctx = createPanel("Profiles", {})
+
+    -- AceConfigDialog renders into any AceGUI container, so it is pointed at a group parented to
+    -- our body — the widgets land inside the canvas rather than opening their own window.
+    -- Guarded like every other AceGUI create on this page: a container that failed to build must
+    -- leave the page inert, not raise during OnInitialize and take the whole addon's load with it.
+    local container = AceGUI:Create("SimpleGroup")
+    if container and container.frame then
+      container:SetLayout("Fill")
+      container.frame:SetParent(prctx.body)
+      container.frame:ClearAllPoints()
+      container.frame:SetPoint("TOPLEFT",     prctx.body, "TOPLEFT",      PADDING_X, -8)
+      container.frame:SetPoint("BOTTOMRIGHT", prctx.body, "BOTTOMRIGHT", -PADDING_X, 8)
+    end
+
+    -- The OnShow is installed unconditionally, so this page keeps the same lazy-build contract as
+    -- every other one (options-ui-§1) even if the container failed to build. Re-opened on every
+    -- show, not just the first: after a profile switch the whole options tree is stale, and
+    -- AceConfigDialog reuses its existing widget tree, so this is cheap.
+    prctx.panel:SetScript("OnShow", function()
+      if not (container and container.frame) then return end
+      AceConfigDialog:Open("PanelMaster-Profiles", container)
+    end)
+    Settings.RegisterCanvasLayoutSubcategory(mainCategory, prctx.panel, "Profiles")
+    P.profiles = prctx
+  end
 end
 
 function P:Open()

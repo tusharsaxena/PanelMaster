@@ -13,12 +13,18 @@ end
 
 -- ── Defaults ────────────────────────────────────────────────────────────────────
 
-test("Accent: off by default", function()
-  -- A coloured stripe on every panel is a strong visual statement; an addon must not make it for
-  -- the user unasked.
-  assertFalse(C.PANEL_TEMPLATE.accentEnabled)
+test("Accent: ON by default \226\128\148 the accent bar is the shipped look", function()
+  -- A new panel arrives as a dark block with a class-coloured strip along its top, so the addon
+  -- shows what it is for without the user having to go and find the switch.
+  assertTrue(C.PANEL_TEMPLATE.accentEnabled)
   fresh()
-  assertFalse(R:New("Fresh").accentEnabled)
+  assertTrue(R:New("Fresh").accentEnabled)
+end)
+
+test("Accent: the panel's OWN border is off, so only one thing defines the edge", function()
+  -- The shipped look leans on the accent bar. A panel wearing both an outline and a bar reads as
+  -- busy rather than framed.
+  assertEqual(C.PANEL_TEMPLATE.borderSize, 0)
 end)
 
 test("Accent: defaults to the top edge only", function()
@@ -187,15 +193,15 @@ test("Registry.FormatField: renders an edge set readably", function()
   assertEqual(R.FormatField(R:Get(rec.id), "accentEdges"), "(none)")
 end)
 
-test("Registry.Reset: clears the accent bar back to off", function()
+test("Registry.Reset: puts the accent bar back to the shipped defaults", function()
   fresh()
   local rec = R:New("Accented")
-  R:Set(rec.id, "accentEnabled", true)
+  R:Set(rec.id, "accentEnabled", false)
   R:Set(rec.id, "accentEdges", "bottom")
   R:Set(rec.id, "accentThickness", 12)
   R:Reset(rec.id)
   local after = R:Get(rec.id)
-  assertFalse(after.accentEnabled)
+  assertTrue(after.accentEnabled)
   assertTrue(after.accentEdges.TOP)
   assertEqual(after.accentThickness, C.PANEL_TEMPLATE.accentThickness)
 end)
@@ -242,6 +248,7 @@ end)
 test("Canvas: no accent bar is shown when the feature is off", function()
   fresh()
   local rec = R:New("Plain")
+  R:Set(rec.id, "accentEnabled", false)
   local f = Canvas:FrameFor(rec.id)
   for _, edge in ipairs(C.EDGES) do
     assertFalse(f.accents[edge]:IsShown(), edge .. " bar shown on a panel with accents off")
@@ -411,11 +418,17 @@ end)
 
 -- ── The accent bar's own border ─────────────────────────────────────────────────
 
-test("Accent border: off by default", function()
-  -- The bar is already a decoration; outlining it unasked would change the look of every accent bar
-  -- the moment the feature shipped.
-  assertEqual(C.PANEL_TEMPLATE.accentBorderSize, 0)
+test("Accent border: a 1px BLACK hairline by default", function()
+  -- Black rather than the panel border's grey because its job is to separate the bar from whatever
+  -- is behind it: against a bright background a bare class colour bleeds into the scenery, and a
+  -- dark hairline restores the edge whatever the class colour happens to be.
+  assertEqual(C.PANEL_TEMPLATE.accentBorderSize, 1)
   assertFalse(C.PANEL_TEMPLATE.accentBorderClassColor)
+  local c = C.PANEL_TEMPLATE.accentBorderColor
+  assertEqual(c[1], 0)
+  assertEqual(c[2], 0)
+  assertEqual(c[3], 0)
+  assertEqual(c[4], 1)
 end)
 
 test("Accent border: its class-colour flag is wired into the generic colour map", function()
@@ -443,9 +456,12 @@ end)
 
 test("Canvas: no border frame is built when the bar has no border", function()
   fresh()
-  local rec = R:New("Plain", { accentEnabled = true })
-  -- Lazy: most panels never give their bars a border, and eagerly building four more frames per
-  -- panel would be four frames created for nothing.
+  -- A name no other case uses, deliberately: the frame pool is keyed by frame NAME, so reusing a
+  -- name whose frame once had a bar border would hand back that frame with its (hidden, cleared)
+  -- border frame still attached — and the laziness this asserts would look broken when it is not.
+  local rec = R:New("NeverOutlined", { accentEnabled = true, accentBorderSize = 0 })
+  -- Still lazy, even though the shipped default now asks for one: a user who turns the bar border
+  -- off must not be charged four frames for it.
   assertEqual(Canvas:FrameFor(rec.id).accents.TOP.borderFrame, nil)
 end)
 
@@ -506,12 +522,12 @@ test("Canvas: a 'None' bar border texture removes it", function()
   assertEqual(Canvas:FrameFor(rec.id).accents.TOP.borderFrame, nil)
 end)
 
-test("Registry.Reset: clears the bar border too", function()
+test("Registry.Reset: puts the bar border back to the shipped hairline", function()
   fresh()
   local rec = R:New("Outlined", { accentEnabled = true })
   R:Set(rec.id, "accentBorderSize", 8)
   R:Reset(rec.id)
-  assertEqual(R:Get(rec.id).accentBorderSize, 0)
+  assertEqual(R:Get(rec.id).accentBorderSize, 1)
 end)
 
 test("Canvas: a released frame hides its accent bars", function()

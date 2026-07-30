@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW%20Addon%20Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-389%2F389_passing-green)
+![Tests](https://img.shields.io/badge/Tests-412%2F412_passing-green)
 
 <!-- Logo: media/logos/panelmaster.logo.tga ships with the addon for the settings page. The README
      image below is added once the art is uploaded to the CurseForge CDN at first release. -->
@@ -32,8 +32,8 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - Show a panel only when your cursor is over it, faded to whatever opacity you like the rest of the
   time — without it ever swallowing a click.
 - Offset the border away from the panel's edge for a halo, or inward for an inset frame.
-- **Accent bars** — a thin detached strip along any edge of a panel, in the style of BenikUI's
-  panels. Class-coloured by default, with any status-bar texture you have installed.
+- **Accent bars** — a thin strip along any edge of a panel, in the style of BenikUI's panels. On
+  out of the box, class-coloured, with any status-bar texture you have installed.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons and
@@ -41,7 +41,9 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - Test mode drops three sample panels on screen, so you can see what a panel looks like before
   making one of your own.
 - Full command-line control: create, rename, delete and edit any field of any panel from `/pm`.
-- Panels are saved per character, so a healer's layout and a tank alt's can differ.
+- Copy one panel's whole look onto another in a single click — everything except where it sits.
+- Every character shares one layout out of the box, with a **Profiles** page for giving a character
+  its own — create, switch, copy and reset profiles.
 
 ## Screenshots
 
@@ -128,6 +130,10 @@ Renaming a panel changes its frame name, so anything anchored to the old one sto
 | Default frame strata | The layer new panels start in. |
 | Default opacity | How see-through new panels start out. |
 
+The **Profiles** page is Ace's standard profile management: create, switch between, copy and reset
+profiles, or bind one per character, class, realm or faction. Everyone starts on the shared
+**Default** profile. Switching profiles redraws your panels immediately.
+
 The **Panels** page is where the panels themselves live. Type a name at the top and press Enter (or
 click **Okay**), then pick any panel from the dropdown to edit it. One panel is shown at a time, so
 the page stays the same size whether you have two panels or twenty.
@@ -140,27 +146,27 @@ Each panel's editor has:
 | Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
 | Reset | Put the panel back to how a new one starts. Its name is kept, so anything anchored to it stays anchored. |
 | Delete | Remove the panel. |
-| Panel name | Rename the panel. Press Enter, or click Okay. |
-| Frame name | The name other addons can anchor to. Changes when you rename. |
+| Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to. |
+| Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
 | Width, Height, X offset, Y offset | Size and position. |
 | Anchor | Which corner or edge of the screen the offsets are measured from. |
 | Frame strata | Which layer the panel sits in. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
 | Background colour / Class colour | The fill colour, or your class colour. Its opacity controls the fill alone. |
 | Border texture | Any border style LibSharedMedia knows about, or **None** for no border. |
-| Border size | Thickness. 0 also removes the border. |
+| Border size | Thickness. Starts at 0 — the accent bar defines the edge instead. |
 | Border offset | How far the border sits from the panel's edge. Positive pushes it out, negative pulls it in. |
 | Border colour / Class colour | The border colour, or your class colour. The opacity you set applies either way. |
-| Enable accent bar | Draw a thin strip along the panel's edges. Off until you turn it on. |
-| Bar texture | Any status-bar texture LibSharedMedia knows about. |
+| Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. |
+| Accent bar texture | Any status-bar texture LibSharedMedia knows about. |
 | Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. |
-| Bar thickness | How thick the bar is. |
-| Bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
-| Bar colour / Class colour | The bar colour. Class colour is **on** by default. |
-| Bar border texture | An edge style for the bar itself, or **None**. |
-| Bar border size | Thickness of the bar's own border. 0 (the default) removes it. |
-| Bar border offset | How far that border sits from the bar. |
-| Bar border colour / Class colour | The bar border's colour, or your class colour. |
+| Accent bar thickness | How thick the bar is. |
+| Accent bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
+| Accent bar colour / Class colour | The bar colour. Class colour is **on** by default. |
+| Accent bar border texture | An edge style for the bar itself, or **None**. |
+| Accent bar border size | Thickness of the bar's own border. Defaults to a 1px black hairline. |
+| Accent bar border offset | How far that border sits from the bar. |
+| Accent bar border colour / Class colour | The bar border's colour, or your class colour. |
 | Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each colour. |
 | Show on mouseover only | Keep the panel faded until your cursor is over it. |
 | Faded opacity | How visible it is the rest of the time. 0 hides it completely. |
@@ -195,10 +201,13 @@ mouseover only** turned on — the panel watches where your cursor is without cl
 An accent bar is a thin coloured strip running the full length of one of a panel's edges, usually
 sitting just off it. If you have seen BenikUI's panels, it is that look.
 
-Turn it on per panel under **Accent bar**, tick whichever edges you want — any combination, or all
-four for a full outline — and pick a thickness and an offset. Out of the box the bar sits flush
-against the panel's top edge, 5px thick; push the offset positive and it detaches into a separate
-floating stripe instead.
+It is **on out of the box**: a new panel arrives as a dark block with a class-coloured strip along
+its top, 5px thick and flush against the edge, outlined by a 1px black hairline. The panel's own
+border starts off, so one thing defines the edge rather than two.
+
+Tick whichever edges you want — any combination, or all four for a full outline — and pick a
+thickness and an offset. Push the offset positive and the bar detaches into a separate floating
+stripe instead.
 
 The bar always draws **above** the panel's border, so the two can be used together without the
 border cutting across it. The bar can carry a border of its own as well — off by default, with the
@@ -208,11 +217,12 @@ The bar is class-coloured out of the box, so it matches whoever you are playing 
 Untick **Class colour** to pick your own. Textures come from your LibSharedMedia status-bar
 collection — the same list your unit frames and cast bars use.
 
-Accent bars are off until you turn them on. They fade with the panel, sit on the same layer as it,
-and like everything else here they never take a click.
+They fade with the panel, sit on the same layer as it, and like everything else here they never take
+a click. Untick **Enable accent bar** if you would rather have a plain block.
 
-Everything is saved per character. Two characters can have completely different layouts, and copying
-one to the other is done through the usual profile controls.
+Out of the box every character shares one set of panels, because most people run one UI. If you want
+a character to differ, make it a profile of its own on the **Profiles** page — you can copy your
+existing layout into it as a starting point, so nothing has to be rebuilt.
 
 ## FAQ
 
@@ -230,8 +240,9 @@ pass straight through to whatever is on top of it. It only takes the mouse while
 unlocked, which is the whole point of unlocking.
 
 **Do my panels follow me to my alts?**
-No — each character has its own set. That is usually what you want, since alts often run different
-layouts. Use the profile controls if you would rather share one.
+Yes, by default — every character starts on the same shared profile, so a layout you build once
+shows up everywhere. If you want one character to differ, give it its own profile on the **Profiles**
+page.
 
 **How many panels can I have?**
 As many as you like. They are cheap: a panel is a handful of flat textures and it costs nothing while
@@ -296,4 +307,4 @@ debug log (see above) helps a great deal for anything that looks like a bug.
 
 | Version | Notes |
 |---|---|
-| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-colour option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; test mode; full command-line control; per-character layouts. |
+| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-colour option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |

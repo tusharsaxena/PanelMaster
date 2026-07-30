@@ -1,14 +1,43 @@
 local addonName, NS = ...
 
--- AceDB init. Deliberately PER-CHARACTER (no defaultProfile argument): a panel layout is tied to the
--- UI a given character runs, and a healer's frame arrangement is rarely the tank alt's. AceDB's
--- profile machinery is what lets a user copy one character's layout to another when they do want it
--- shared, which a single forced account-wide profile would take away.
+-- AceDB init, using the SHARED "Default" profile (the `true` third argument, which AceDB maps to the
+-- profile named "Default").
+--
+-- Every character therefore starts on one common layout rather than each getting a private
+-- character-keyed profile. That is the right default for this addon: a panel layout is a description
+-- of a UI, and most people run one UI. Someone who genuinely wants a per-character layout makes one
+-- on the Profiles page in two clicks; under the opposite default, someone who wants a shared layout
+-- has to rebuild or copy it on every alt.
+--
+-- Note AceDB's precedence — `sv.profileKeys[charKey] or defaultProfile or charKey` — so a character
+-- that has ALREADY been assigned a profile keeps it. This changes where new characters land, not
+-- where existing ones already are.
 --
 -- `global` holds only the schema stamp; everything the user configures lives in `profile`.
 function NS:InitDB()
-  NS.db = LibStub("AceDB-3.0"):New(addonName .. "DB", NS.defaults)
+  NS.db = LibStub("AceDB-3.0"):New(addonName .. "DB", NS.defaults, true)
   NS:RunMigrations()   -- normalize the persisted schema before any panel is read
+  NS:RegisterProfileCallbacks()
+end
+
+-- React to the Profiles page switching, copying into, or resetting the active profile.
+--
+-- Without this, switching profiles leaves the previous profile's panels on screen: `NS.db.profile`
+-- is swapped wholesale by AceDB, and nothing else would ever look at it again. All three events mean
+-- the same thing to this addon — "the panel set you were showing is no longer the panel set that is
+-- stored" — so all three take the same path.
+--
+-- The reload is delegated to NS.Registry so that the panels message keeps a single sender
+-- (architecture-§4).
+function NS:RegisterProfileCallbacks()
+  if not (NS.db and NS.db.RegisterCallback) then return end
+  local function reload()
+    NS:RunMigrations()   -- the incoming profile may predate the current schema
+    if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
+  end
+  NS.db.RegisterCallback(NS, "OnProfileChanged", reload)
+  NS.db.RegisterCallback(NS, "OnProfileCopied", reload)
+  NS.db.RegisterCallback(NS, "OnProfileReset", reload)
 end
 
 -- Schema-migration runner (savedvariables-§1). Reads/writes db.global.schemaVersion and ships even
