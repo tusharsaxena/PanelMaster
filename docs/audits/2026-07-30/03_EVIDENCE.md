@@ -99,7 +99,9 @@ case that fails if it regresses:
 
 ## Not verified here
 
-- **In-client behaviour.** Nothing in this bundle has been run in WoW. Rendering, dragging, layering
-  against other addons, the console's scrollbar and the Defaults button's skinning are covered by
-  [`docs/smoke-tests.md`](../../smoke-tests.md), which has **not** yet been executed.
+- **In-client behaviour.** Nothing in *this bundle* was run in WoW at the time it was written.
+  Rendering, dragging, layering against other addons, the console's scrollbar and the Defaults
+  button's skinning are covered by [`docs/smoke-tests.md`](../../smoke-tests.md) — since executed and
+  passed (see [05_EXECUTION_PLAN.md](05_EXECUTION_PLAN.md) step 1), though the page has grown
+  considerably since.
 - **The vendored libraries' contents** were copied wholesale from `BankLedger` and not re-read.

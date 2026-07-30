@@ -21,8 +21,13 @@ Match the column shape of the existing rows in that file, which may have moved s
 
 ## Step 1 — Run the smoke tests
 
-[`docs/smoke-tests.md`](../../smoke-tests.md) has **never been executed** — nothing in this addon has
-been run in a live client. Thirteen sections, roughly twenty minutes.
+> **✅ Done.** The smoke tests were run in a live client and passed. Note the page has grown a great
+> deal since this plan was written — it now also covers LibSharedMedia textures, the colour pickers,
+> border offset, the accent bar and its border, frame-name anchoring, profiles and copy-settings —
+> so re-run it after any further change to the render path or the settings page.
+
+[`docs/smoke-tests.md`](../../smoke-tests.md) had **never been executed** at the time this plan was
+written — nothing in the addon had been run in a live client. Thirteen sections, roughly twenty minutes.
 
 Pay particular attention to, because they are the parts the headless harness genuinely cannot reach:
 
