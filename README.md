@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW%20Addon%20Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-322%2F322_passing-green)
+![Tests](https://img.shields.io/badge/Tests-389%2F389_passing-green)
 
 <!-- Logo: media/logos/panelmaster.logo.tga ships with the addon for the settings page. The README
      image below is added once the art is uploaded to the CurseForge CDN at first release. -->
@@ -32,6 +32,8 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - Show a panel only when your cursor is over it, faded to whatever opacity you like the rest of the
   time — without it ever swallowing a click.
 - Offset the border away from the panel's edge for a halo, or inward for an inset frame.
+- **Accent bars** — a thin detached strip along any edge of a panel, in the style of BenikUI's
+  panels. Class-coloured by default, with any status-bar texture you have installed.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons and
@@ -78,8 +80,10 @@ below.
 
 The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `point`, `relPoint`,
 `x`, `y`, `strata`, `level`, `alpha`, `bgTexture`, `bgColor`, `bgClassColor`, `borderTexture`,
-`borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover` and `mouseoverAlpha`.
-So:
+`borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover`, `mouseoverAlpha`,
+`accentEnabled`, `accentEdges`, `accentTexture`, `accentThickness`, `accentOffset`, `accentColor`,
+`accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
+`accentBorderColor` and `accentBorderClassColor`. So:
 
 ```
 /pm panel ChatBG width 420
@@ -87,11 +91,14 @@ So:
 /pm panel ChatBG bgTexture blizzard marble
 /pm panel ChatBG borderClassColor on
 /pm panel ChatBG strata LOW
+/pm panel ChatBG accentEnabled on
+/pm panel ChatBG accentEdges top,left
 ```
 
 Colours take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
 half-transparent red. Texture names are whatever LibSharedMedia has, and are matched however you
-type the capitals.
+type the capitals. `accentEdges` takes a comma list of `top`, `bottom`, `left`, `right` — or `none`
+for no bars at all.
 
 ### Anchoring other things to a panel
 
@@ -143,8 +150,18 @@ Each panel's editor has:
 | Border texture | Any border style LibSharedMedia knows about, or **None** for no border. |
 | Border size | Thickness. 0 also removes the border. |
 | Border offset | How far the border sits from the panel's edge. Positive pushes it out, negative pulls it in. |
-| Border colour / Class colour | The border colour, or your class colour. |
-| Panel opacity | How visible the whole panel is — background and border together. Multiplies with the opacity in each colour. |
+| Border colour / Class colour | The border colour, or your class colour. The opacity you set applies either way. |
+| Enable accent bar | Draw a thin strip along the panel's edges. Off until you turn it on. |
+| Bar texture | Any status-bar texture LibSharedMedia knows about. |
+| Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. |
+| Bar thickness | How thick the bar is. |
+| Bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
+| Bar colour / Class colour | The bar colour. Class colour is **on** by default. |
+| Bar border texture | An edge style for the bar itself, or **None**. |
+| Bar border size | Thickness of the bar's own border. 0 (the default) removes it. |
+| Bar border offset | How far that border sits from the bar. |
+| Bar border colour / Class colour | The bar border's colour, or your class colour. |
+| Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each colour. |
 | Show on mouseover only | Keep the panel faded until your cursor is over it. |
 | Faded opacity | How visible it is the rest of the time. 0 hides it completely. |
 
@@ -172,6 +189,27 @@ above will cover normal UI, which is occasionally what you want and usually not.
 
 A panel never takes your mouse, whatever layer it is in. That stays true even with **Show on
 mouseover only** turned on — the panel watches where your cursor is without claiming the click.
+
+### Accent bars
+
+An accent bar is a thin coloured strip running the full length of one of a panel's edges, usually
+sitting just off it. If you have seen BenikUI's panels, it is that look.
+
+Turn it on per panel under **Accent bar**, tick whichever edges you want — any combination, or all
+four for a full outline — and pick a thickness and an offset. Out of the box the bar sits flush
+against the panel's top edge, 5px thick; push the offset positive and it detaches into a separate
+floating stripe instead.
+
+The bar always draws **above** the panel's border, so the two can be used together without the
+border cutting across it. The bar can carry a border of its own as well — off by default, with the
+same texture, size, offset and colour controls the panel's border has.
+
+The bar is class-coloured out of the box, so it matches whoever you are playing without any setup.
+Untick **Class colour** to pick your own. Textures come from your LibSharedMedia status-bar
+collection — the same list your unit frames and cast bars use.
+
+Accent bars are off until you turn them on. They fade with the panel, sit on the same layer as it,
+and like everything else here they never take a click.
 
 Everything is saved per character. Two characters can have completely different layouts, and copying
 one to the other is done through the usual profile controls.

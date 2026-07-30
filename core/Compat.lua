@@ -80,6 +80,9 @@ function Compat.RegisterMedia()
   local C = NS.Constants
   LSM:Register("border", C.SOLID_MEDIA_NAME, C.SOLID_TEXTURE)
   LSM:Register("background", C.SOLID_MEDIA_NAME, C.SOLID_TEXTURE)
+  -- LSM ships a "Solid" statusbar, but registering is a no-op when the name is taken and this way
+  -- the accent bar's default resolves even against a build that drops it.
+  LSM:Register("statusbar", C.SOLID_MEDIA_NAME, C.SOLID_TEXTURE)
   return true
 end
 

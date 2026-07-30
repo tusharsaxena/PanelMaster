@@ -90,6 +90,30 @@ function R.Sanitize(rec)
   rec.mouseover      = rec.mouseover and true or false
   rec.mouseoverAlpha = Util.Clamp(rec.mouseoverAlpha, 0, 1, t.mouseoverAlpha)
 
+  -- Accent bar. The edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
+  -- (the user unticked every edge) and must not be quietly repopulated with TOP, so only a
+  -- non-table falls back to the template's.
+  rec.accentEnabled = rec.accentEnabled and true or false
+  rec.accentEdges = Util.EdgeSet(
+    type(rec.accentEdges) == "table" and rec.accentEdges or t.accentEdges)
+  if type(rec.accentTexture) ~= "string" or rec.accentTexture == "" then
+    rec.accentTexture = t.accentTexture
+  end
+  rec.accentThickness = Util.Clamp(rec.accentThickness,
+    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, t.accentThickness)
+  rec.accentOffset = Util.Clamp(rec.accentOffset,
+    C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, t.accentOffset)
+
+  -- The accent bar's own border. Shares the panel border's bounds, so a value legal on one is legal
+  -- on the other.
+  if type(rec.accentBorderTexture) ~= "string" or rec.accentBorderTexture == "" then
+    rec.accentBorderTexture = t.accentBorderTexture
+  end
+  rec.accentBorderSize = Util.Clamp(rec.accentBorderSize,
+    C.MIN_BORDER, C.MAX_BORDER, t.accentBorderSize)
+  rec.accentBorderOffset = Util.Clamp(rec.accentBorderOffset,
+    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, t.accentBorderOffset)
+
   return rec
 end
 
@@ -332,6 +356,18 @@ function R:Set(key, field, value)
       if not parsed then return false, "expected r,g,b[,a] (0-1 or 0-255)" end
       value = parsed
     end
+  elseif kind == "edges" then
+    if type(value) ~= "table" then
+      local parsed = Util.ParseEdges(value)
+      if not parsed then
+        return false, ("expected any of: %s (or 'none')")
+          :format(table.concat(C.EDGES, ", "):lower())
+      end
+      value = parsed
+    end
+    -- Copied, not aliased: a caller that keeps its table would otherwise be able to mutate the
+    -- stored set behind the registry's back, skipping the write seam entirely.
+    value = Util.EdgeSet(value)
   elseif kind == "media" then
     -- Matched case-insensitively against the LIVE LibSharedMedia list so the CLI accepts
     -- `/pm panel X bgTexture blizzard marble` for "Blizzard Marble", and so a typo is refused with
@@ -382,7 +418,9 @@ end
 function R.FormatField(rec, field)
   local v = rec and rec[field]
   if v == nil then return "nil" end
-  if C.PANEL_FIELD_TYPE[field] == "color" then return Util.FormatColor(v) end
+  local kind = C.PANEL_FIELD_TYPE[field]
+  if kind == "color" then return Util.FormatColor(v) end
+  if kind == "edges" then return Util.FormatEdges(v) end
   if type(v) == "boolean" then return v and "true" or "false" end
   if type(v) == "number" then
     -- Alpha is fractional; everything else is a whole UI unit and reads better without ".00".

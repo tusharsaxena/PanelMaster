@@ -364,6 +364,60 @@ test("Registry.Reset: leaves other panels alone", function()
   assertEqual(R:Get(two.id).width, 900)
 end)
 
+-- ── Class colour vs a picked colour: identical apart from RGB ───────────────────
+-- Raised as "the border looks less well defined in class-colour mode". It is not: both paths go
+-- through Util.ResolveColor and produce the same backdrop, the same edge size, the same alpha and
+-- the same anchoring. These pin that, so a future change cannot quietly introduce the asymmetry
+-- that was suspected.
+
+test("Border: class colour and a picked colour produce the same backdrop", function()
+  fresh()
+  local picked = R:New("Picked", { borderSize = 1, borderColor = { 0, 1, 0, 1 },
+                                   borderClassColor = false })
+  local classy = R:New("Classy", { borderSize = 1, borderColor = { 0, 1, 0, 1 },
+                                   borderClassColor = true })
+  local a = Canvas:FrameFor(picked.id).borderFrame
+  local b = Canvas:FrameFor(classy.id).borderFrame
+
+  assertEqual(a:GetBackdrop().edgeFile, b:GetBackdrop().edgeFile, "different edge texture")
+  assertEqual(a:GetBackdrop().edgeSize, b:GetBackdrop().edgeSize, "different edge size")
+  assertEqual(a:GetNumPoints(), b:GetNumPoints(), "different anchoring")
+end)
+
+test("Border: class colour preserves the picked colour's ALPHA exactly", function()
+  fresh()
+  -- The half of the colour a class colour does NOT override. If this drifted, a class-coloured
+  -- border really would render fainter than a picked one — which is the defect that was suspected.
+  local picked = R:New("Picked", { borderSize = 1, borderColor = { 0, 1, 0, 0.6 },
+                                   borderClassColor = false })
+  local classy = R:New("Classy", { borderSize = 1, borderColor = { 0, 1, 0, 0.6 },
+                                   borderClassColor = true })
+  local a = Canvas:FrameFor(picked.id).borderFrame.__backdropBorderColor
+  local b = Canvas:FrameFor(classy.id).borderFrame.__backdropBorderColor
+  assertNear(a[4], 0.6)
+  assertNear(b[4], 0.6, 1e-6, "the class-coloured border lost the stored alpha")
+end)
+
+test("Border: only the RGB differs between the two modes", function()
+  fresh()
+  local rec = R:New("Toggling", { borderSize = 1, borderColor = { 0, 1, 0, 1 } })
+  local before = Canvas:FrameFor(rec.id).borderFrame.__backdropBorderColor
+  local pickedAlpha = before[4]
+  R:Set(rec.id, "borderClassColor", true)
+  local after = Canvas:FrameFor(rec.id).borderFrame.__backdropBorderColor
+  assertNear(after[4], pickedAlpha, 1e-6, "toggling class colour changed the alpha")
+  -- The mock player is a Priest (1,1,1), so the RGB does change — that is the whole point.
+  assertNear(after[1], 1)
+end)
+
+test("Accent bar: class colour likewise preserves alpha", function()
+  fresh()
+  local rec = R:New("Accented", { accentEnabled = true,
+                                  accentColor = { 0, 1, 0, 0.4 }, accentClassColor = true })
+  local c = Canvas:FrameFor(rec.id).accents.TOP.fill.__color
+  assertNear(c[4], 0.4)
+end)
+
 -- ── Background colour actually reaches the frame ────────────────────────────────
 
 test("Canvas: the background colour is applied to the fill texture", function()

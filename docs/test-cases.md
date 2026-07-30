@@ -153,7 +153,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Unlock.SetPreview: turning it on twice is a no-op
 - Unlock.TogglePreview: alternates
 
-### test_media.lua (75)
+### test_media.lua (79)
 
 - Util.Slugify: keeps alphanumerics and collapses everything else
 - Util.Slugify: trims leading and trailing separators
@@ -195,6 +195,10 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Registry.Reset: repaints the panel
 - Registry.Reset: an unknown panel is an error, not a silent no-op
 - Registry.Reset: leaves other panels alone
+- Border: class colour and a picked colour produce the same backdrop
+- Border: class colour preserves the picked colour's ALPHA exactly
+- Border: only the RGB differs between the two modes
+- Accent bar: class colour likewise preserves alpha
 - Canvas: the background colour is applied to the fill texture
 - Canvas: the background picks up a colour change
 - Registry.Set: a media name is matched case-insensitively against the live list
@@ -230,6 +234,68 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Unlock: a panel deleted mid-combat is not resurrected on replay
 - Registry.Delete: drops the panel's session unlock state
 - Database: per-panel unlock state is NOT persisted
+
+### test_accent.lua (59)
+
+- Accent: off by default
+- Accent: defaults to the top edge only
+- Accent: defaults to 5px thick, flush against the panel
+- Accent: the default bar texture is one LibSharedMedia always ships
+- Accent: defaults to CLASS colour
+- Accent: the class-colour flag is wired into the generic colour map
+- Accent: the bar texture selects from the statusbar pool
+- Accent: every accent field is typed and in the dump order
+- Util.EdgeSet: keeps only real edges, normalized to true
+- Util.EdgeSet: a non-table is the empty set, not an error
+- Util.ParseEdges: reads a comma list, any casing
+- Util.ParseEdges: 'none' is the empty set
+- Util.ParseEdges: rejects an unknown edge rather than dropping it
+- Util.FormatEdges: always renders in the declared order
+- Util.FormatEdges: the empty set prints (none)
+- Util.FormatEdges: round-trips through ParseEdges
+- Registry.Set: parses an edge list from the CLI
+- Registry.Set: an unknown edge is refused with the valid list
+- Registry.Set: an edge set is copied, not aliased
+- Registry.Sanitize: an EMPTY edge set is preserved, not repopulated
+- Registry.Sanitize: a non-table edge set falls back to the template's
+- Registry.Sanitize: clamps thickness and offset
+- Registry.Sanitize: thickness has a floor of 1, not 0
+- Registry.FormatField: renders an edge set readably
+- Registry.Reset: clears the accent bar back to off
+- Canvas.BuildSpec: carries the accent settings
+- Canvas.BuildSpec: clamps accent thickness and offset
+- Canvas.BuildSpec: the accent colour goes through the shared resolver
+- Canvas.BuildSpec: accent class colour is independent of the others
+- Canvas: no accent bar is shown when the feature is off
+- Canvas: enabling shows only the chosen edges
+- Canvas: all four edges at once is legal
+- Canvas: an empty edge set draws nothing even when enabled
+- Canvas: the top bar spans the full edge and is offset outward
+- Canvas: the bottom bar is offset downward
+- Canvas: the left bar is vertical and offset leftward
+- Canvas: the right bar is offset rightward
+- Canvas: a negative offset pulls the bar over the panel
+- Canvas: the bar is painted with the resolved colour
+- Canvas: the bar takes the class colour by default
+- Canvas: the bar is re-anchored, not accumulated, on repaint
+- Canvas: toggling accents off hides the bars again
+- Canvas: the accent bar draws ABOVE the border
+- Canvas: the accent/border stacking survives a frame-level change
+- Canvas: the accent bars live on their own child frame
+- Accent border: off by default
+- Accent border: its class-colour flag is wired into the generic colour map
+- Accent border: selects from the BORDER media pool, not statusbar
+- Canvas.BuildSpec: carries the accent border settings
+- Canvas.BuildSpec: clamps the accent border to the panel border's bounds
+- Canvas: no border frame is built when the bar has no border
+- Canvas: the bar border is a backdrop edge at the set thickness
+- Canvas: the bar border colour is applied AFTER the backdrop
+- Canvas: the bar border takes the class colour
+- Canvas: the bar border is offset from the bar
+- Canvas: dropping the bar border to zero clears it
+- Canvas: a 'None' bar border texture removes it
+- Registry.Reset: clears the bar border too
+- Canvas: a released frame hides its accent bars
 
 ### test_database.lua (13)
 
@@ -345,7 +411,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Slash.CliRecover: reports how many it moved
 - Slash: every printed line carries the shared cyan tag
 
-### test_panel.lua (16)
+### test_panel.lua (20)
 
 - Panel.Register: the category is registered EAGERLY at load (options-ui-§1)
 - Panel.Register: both subcategories are registered
@@ -362,6 +428,10 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Panel.Open: opens out of combat
 - Panel.Refresh: a hidden page is not refreshed
 - Panel.RestoreDefaults: resets settings and leaves panels alone
+- Panel: closing dropdowns dispatches on widget TYPE, not on field presence
+- Panel: closing an unopened dropdown is a no-op, not an error
+- Panel: an unknown widget type is skipped rather than guessed at
+- Panel: the tracking registry is emptied between rebuilds
 - Panel: the Panels page's Defaults action is confirm-gated
 
 ## Totals
@@ -374,10 +444,11 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_registry.lua | 33 |
 | test_canvas.lua | 24 |
 | test_unlock.lua | 22 |
-| test_media.lua | 75 |
+| test_media.lua | 79 |
+| test_accent.lua | 59 |
 | test_database.lua | 13 |
 | test_debuglog.lua | 19 |
 | test_schema.lua | 23 |
 | test_slash.lua | 47 |
-| test_panel.lua | 16 |
-| **Total** | **322** |
+| test_panel.lua | 20 |
+| **Total** | **389** |

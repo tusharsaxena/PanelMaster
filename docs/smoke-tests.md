@@ -129,8 +129,61 @@ stubs AceGUI out entirely, so **nothing below is covered by a unit test.**
 3. Tick **Class colour** next to **Border colour** too, and confirm the two are independent: untick
    the background one and the border stays class-coloured.
 4. Untick both. **Expect:** the original colours come back exactly — they were never overwritten.
+4b. **The picker stays usable under class colour.** With **Class colour** ticked, the picker's label
+   reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
+   **Expect:** the class-coloured border/fill gets more or less solid. This is the only control that
+   sets opacity, so it must not be greyed out.
+4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
+   colour mode produced it. Compare a picked bright colour against your class colour at the **same
+   opacity and size** — a darker class colour will legitimately look softer. If they differ at
+   matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any colour
+   crisp regardless of UI scale.
 5. Log in on a character of a **different class**. **Expect:** that character's panels (if
    class-coloured) show the new class colour.
+
+## 5b-4. Accent bar
+
+The BenikUI-style strip. Everything below is per panel, under **Accent bar** in the editor.
+
+1. On a fresh panel, confirm **Enable accent bar** is **unticked** and no strip is drawn.
+2. Tick it. **Expect:** a bar appears along the **top** edge only, running the panel's full width,
+   **5px thick, flush against the panel**, in the **Blizzard** status-bar texture and **your class
+   colour** — with no other configuration.
+2b. **Z-order.** Give the panel a border of 4 or more in a contrasting colour. **Expect:** the accent
+   bar draws **over** the border where they meet, not under it. Change **Frame strata** and confirm
+   the stacking holds.
+3. Tick **Bottom**, **Left** and **Right** in turn. **Expect:** each edge gains a bar spanning that
+   edge in full. With all four on it reads as a detached outline.
+4. Untick every edge. **Expect:** no bars, and the enable switch stays **on** — unticking edges must
+   not silently re-tick Top.
+5. Resize the panel (drag the Width and Height sliders). **Expect:** every bar tracks the new size
+   and still spans its whole edge, with no gap at either end.
+6. Raise **Bar thickness**. **Expect:** top/bottom bars get taller, left/right bars get wider.
+7. Drag **Bar offset** positive. **Expect:** the bars move *away* from the panel on all sides at
+   once. Set it to 0 — they sit flush, and start to look like a thick border. Negative — they
+   overlap the panel.
+8. Untick **Class colour** next to **Bar colour**. **Expect:** the bar turns the stored green. Pick
+   your own colour and confirm it applies (see §5b-2 — same picker, same fix).
+9. Change **Bar texture** to a gradient status-bar texture. **Expect:** the bar renders with it,
+   tinted by the bar colour. The list should be your **status-bar** textures, not backgrounds.
+9b. **The bar's own border.** Raise **Bar border size** to 3. **Expect:** an outline appears around
+    each bar. Change **Bar border texture**, **Bar border colour** and its **Class colour** — all
+    behave like the panel's border. Push **Bar border offset** positive and negative. Drop the size
+    back to 0 and confirm the outline goes completely.
+10. Set **Panel opacity** to 0.3. **Expect:** the bars fade *with* the panel — they are part of it,
+    not separate.
+11. Change **Frame strata**. **Expect:** the bars move with the panel; they can never be on a
+    different layer.
+12. With bars on, **click through** where a bar is drawn. **Expect:** the click lands on whatever is
+    behind. Accent bars must not take the mouse either.
+13. Turn on **Show on mouseover only** with a faded opacity of 0. **Expect:** the bars vanish and
+    reappear with the panel.
+14. Delete a panel that had bars. **Expect:** no coloured strips left floating where it was — they
+    are anchored *outside* the panel's bounds, so this is a real failure mode.
+15. `/reload`. **Expect:** every accent setting persisted.
+16. From the command line: `/pm panel <name> accentEdges top,left`, then
+    `/pm panel <name> accentEdges none`, then a deliberate typo like `accentEdges middle`.
+    **Expect:** the first two apply, the third is refused with the valid list.
 
 ## 5d. Mouseover fade
 

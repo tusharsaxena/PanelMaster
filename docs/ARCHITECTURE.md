@@ -34,7 +34,7 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `defaults/Profile.lua` | `NS.defaults.profile` | Per-character defaults: the (empty) panel registry, `nextID`, and the settings block. |
 | `defaults/Global.lua` | `NS.defaults.global` | The `schemaVersion` stamp — the one account-wide value. |
 | `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, field edits, sanitizing, slug-uniqueness, off-screen recovery. Sole sender of both panel messages. |
-| `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the offset border child frame, the shared mouseover ticker, targeted and full repaints. |
+| `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the offset border child frame, the four accent-bar textures, the shared mouseover ticker, targeted and full repaints. |
 | `modules/Unlock.lua` | `NS.Unlock` | Unlock mode (outline, label, drag, snap), global and per-panel, and preview mode. |
 | `modules/DebugLog.lua` | `NS.DebugLog`, `NS.Debug` | The on-screen debug console and the gated logging sink. |
 | `settings/Schema.lua` | `NS.Schema`, `NS.COMMANDS` | The settings schema (one row per setting) and the command table. Sole sender of `SettingsChanged`. |
@@ -61,7 +61,11 @@ PanelMasterDB
 { id, name, enabled, width, height, point, relPoint, x, y, strata, level, alpha,
   bgTexture,     bgColor,    bgClassColor,
   borderTexture, borderSize, borderOffset, borderColor, borderClassColor,
-  mouseover, mouseoverAlpha }
+  mouseover, mouseoverAlpha,
+  accentEnabled, accentEdges, accentTexture, accentThickness, accentOffset,
+                 accentColor, accentClassColor,
+  accentBorderTexture, accentBorderSize, accentBorderOffset,
+                       accentBorderColor, accentBorderClassColor }
 ```
 
 `core/Constants.lua`'s `PANEL_TEMPLATE` is the single definition of that shape — the shipped default
@@ -76,9 +80,18 @@ it, so adding a field is one template entry plus one row in whichever of these a
 | `COLOR_FIELDS` | which boolean class-colours which colour |
 
 `COLOR_FIELDS` is the generic seam the class-colour feature is built on: every colour read goes
-through `Util.ResolveColor`, which consults it. A colour added later gets class-colour support in
+through `Util.ResolveColor`, which consults it. A class colour replaces only the **RGB**; the stored
+**alpha** is kept, because "class coloured" is a statement about hue, not about how solid the result
+is. Tests pin that a picked colour and a class colour produce an otherwise identical backdrop — same
+edge texture, same edge size, same alpha, same anchoring — since a drift there would make a
+class-coloured border genuinely render fainter than a picked one.
+
+Because the alpha is still the user's, the colour picker stays **enabled** while class colour is on:
+it is the only control that sets opacity, so greying it out contradicted its own tooltip and left a
+washed-out class colour unfixable. Its label gains an `(opacity)` suffix to say which half is live. A colour added later gets class-colour support in
 the renderer, the CLI and the settings page from that one row — nothing re-decides "does this colour
-support class colour?" at a call site.
+support class colour?" at a call site. The accent bar proved this out: adding a third class-colourable
+colour was one `COLOR_FIELDS` row and no new class-colour logic anywhere.
 
 **Panel records are an `architecture-§5` storage carve-out.** They are not Schema rows: a schema row
 is a fixed setting with one widget, and a panel is a variable-length user-created object. They are
@@ -175,6 +188,45 @@ guarantee a backdrop must never break. Polling reads the cursor without claiming
 
 While a panel is unlocked (globally or on its own) the fade is suspended and it is held at full
 alpha: a panel resting at 0 alpha would be impossible to find and drag.
+
+### Accent bars
+
+A thin strip along one or more of a panel's edges, in the style of BenikUI's panels. Four textures
+are created up front on the panel frame — one per edge — and shown or hidden per render; four
+textures is cheaper than creating and destroying them as the edge set changes, and it keeps the
+render path allocation-free.
+
+They live on their **own child frame** (`accentFrame`), separate from the border's. That is purely
+z-order: a child frame always draws above its parent's textures whatever draw layer those use, so
+with the border on a child frame and the bars directly on the panel, the border covered the bars
+regardless. `applySpec` therefore assigns explicit levels bottom-up — panel fill, then
+`borderFrame` at `+1`, then `accentFrame` at `+2` — because left alone both children would default
+to `parent + 1` and their order would come down to creation sequence. The base is read back with
+`GetFrameLevel()` rather than reusing `spec.level`, since the client clamps a frame's level and the
+value that landed may not be the one asked for.
+
+Being a child of the panel is still what makes the bars inherit its strata and alpha: an accent bar
+cannot end up on a different layer from the panel it accents, and it fades with the mouseover fade
+with no extra bookkeeping.
+
+Each bar is pinned to **both corners** of its edge, which makes "covers the entirety of that edge"
+true by construction — the bar tracks the panel's size with no recalculation. `accentOffset` pushes
+it outward (the detached look) or, when negative, over the panel's own area.
+
+`accentEdges` is a **set**, not a single value, because any combination is legal. Two consequences:
+`Util.EdgeSet` normalizes it on the way in so a hand-edited SavedVariables file cannot smuggle a
+fifth "edge" into the render loop; and an **empty** set is preserved rather than defaulted back to
+`TOP`, since unticking every edge is a legitimate state that must not be silently undone.
+
+Bar textures come from LibSharedMedia's **statusbar** pool rather than `background` — statusbar
+textures are authored to read as thin strips, and it is the pool a user has already curated for their
+bars.
+
+Each bar is a **frame**, not a bare texture, because it can carry a border of its own: a backdrop
+needs a frame to live on. The fill is a texture filling that frame, and the bar's border gets a
+further child frame so it can be offset — the same shape as the panel's border, built **lazily**
+since it ships at size 0 and most panels never use it. Without that laziness every panel would carry
+four more frames created for nothing.
 
 ## Combat
 
@@ -283,7 +335,16 @@ closed dropdown.
 open list to `UIParent` so it can overflow the panel, which means scrolling slides the control away
 while its list stays floating where it was — frequently outside the settings window entirely. Nothing
 in AceGUI closes it, so the page tracks every dropdown it builds (`trackDropdown`) and closes the
-open one on any **user-driven** scroll: the `MoveScroll` override (the wheel path) and the
+open one on any **user-driven** scroll.
+
+Closing dispatches on the widget's **`type`**, never on which fields it happens to carry. A stock
+AceGUI `Dropdown` also has a `.dropdown` field — its Blizzard `UIDropDownMenuTemplate` frame — so an
+earlier field-presence check handed that frame to the SharedMedia library's pool-return, which
+iterates a `contentRepo` a Blizzard frame does not have. The error propagated out of `MoveScroll` and
+killed mouse-wheel scrolling on the whole page. A unit test pins the dispatch against hand-built
+widget stand-ins, since the headless harness builds no real widgets.
+
+The two scroll hooks: the `MoveScroll` override (the wheel path) and the
 scrollbar's `OnMouseDown` (the drag path). `OnMouseDown` rather than the slider's `OnValueChanged`,
 because that also fires from `FixScroll`'s own `SetValue` during layout — and opening a dropdown
 triggers a relayout, so closing there would shut it the instant it opened. The registry is emptied at

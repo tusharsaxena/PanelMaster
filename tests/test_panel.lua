@@ -123,6 +123,67 @@ test("Panel.RestoreDefaults: resets settings and leaves panels alone", function(
   NS.Registry:DeleteAll()
 end)
 
+-- ── Closing an open dropdown on scroll ──────────────────────────────────────────
+-- An open dropdown's list is parented to UIParent, so scrolling would otherwise leave it floating
+-- detached over (or outside) the settings window. The page closes it on any user-driven scroll.
+--
+-- These drive P.__closeOpenDropdowns against hand-built widget stand-ins, because the headless
+-- harness stubs AceGUI out entirely and no real widget is ever constructed.
+
+test("Panel: closing dropdowns dispatches on widget TYPE, not on field presence", function()
+  -- The regression pin. A stock AceGUI Dropdown ALSO has a `.dropdown` field (its Blizzard
+  -- UIDropDownMenuTemplate frame), so a field-presence check handed that frame to the SharedMedia
+  -- library's pool-return, which iterates a `contentRepo` the Blizzard frame does not have. The
+  -- error propagated out of MoveScroll and killed mouse-wheel scrolling on the entire page.
+  local closed, returned = false, false
+  local stock = {
+    type = "Dropdown",
+    dropdown = { itIsABlizzardFrame = true },   -- present, and MUST NOT be touched
+    pullout = { Close = function() closed = true end },
+  }
+  local lsm = {
+    type = "LSM30_Border",
+    dropdown = { contentRepo = {}, __returned = function() returned = true end },
+  }
+  P.__registerDropdownForTest(stock)
+  P.__registerDropdownForTest(lsm)
+
+  P.__closeOpenDropdowns()
+
+  assertTrue(closed, "the stock dropdown's pullout was not closed")
+  assertFalse(returned, "the stock dropdown was routed down the SharedMedia path")
+  P.__forgetDropdownsForTest()
+end)
+
+test("Panel: closing an unopened dropdown is a no-op, not an error", function()
+  -- Every tracked dropdown is visited on every scroll, and almost all of them are shut.
+  P.__registerDropdownForTest({ type = "Dropdown" })
+  P.__registerDropdownForTest({ type = "LSM30_Statusbar" })
+  P.__closeOpenDropdowns()
+  P.__forgetDropdownsForTest()
+end)
+
+test("Panel: an unknown widget type is skipped rather than guessed at", function()
+  -- A future widget family must not be pushed down whichever branch happens to match its fields.
+  local touched = false
+  P.__registerDropdownForTest({
+    type = "SomeFutureWidget",
+    dropdown = { contentRepo = {} },
+    setDropdown = function() touched = true end,
+  })
+  P.__closeOpenDropdowns()
+  assertFalse(touched)
+  P.__forgetDropdownsForTest()
+end)
+
+test("Panel: the tracking registry is emptied between rebuilds", function()
+  P.__registerDropdownForTest({ type = "Dropdown" })
+  P.__forgetDropdownsForTest()
+  -- A stale entry would point at a released widget, which AceGUI has already recycled into
+  -- something else by the time the next scroll fires.
+  assertEqual(P.__openDropdownCount(), 0)
+end)
+
 test("Panel: the Panels page's Defaults action is confirm-gated", function()
   NS.Registry:DeleteAll()
   NS.Registry:New("A")

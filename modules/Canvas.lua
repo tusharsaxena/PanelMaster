@@ -76,6 +76,28 @@ function Canvas.BuildSpec(rec, settings)
     -- resting alpha above the hover alpha would make the panel FADE when you moused over it, which
     -- is not what the setting says it does.
     mouseoverAlpha = mouseover and math.min(Util.Clamp(rec.mouseoverAlpha, 0, 1, 0), alpha) or alpha,
+
+    -- The accent bar, resolved into one sub-table so the renderer takes a single decision per edge
+    -- rather than re-reading and re-validating the record four times.
+    accent = {
+      enabled   = rec.accentEnabled and true or false,
+      edges     = Util.EdgeSet(rec.accentEdges),
+      texture   = rec.accentTexture or C.PANEL_TEMPLATE.accentTexture,
+      thickness = Util.Clamp(rec.accentThickness,
+        C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, C.PANEL_TEMPLATE.accentThickness),
+      offset    = Util.Clamp(rec.accentOffset,
+        C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, C.PANEL_TEMPLATE.accentOffset),
+      -- Through the same shared resolver as every other colour, so the class-colour override needed
+      -- no new code here at all — just the C.COLOR_FIELDS row.
+      color     = Util.ResolveColor(rec, "accentColor"),
+      -- The bar's own border, sharing the panel border's bounds so the two sliders read alike.
+      borderTexture = rec.accentBorderTexture or C.PANEL_TEMPLATE.accentBorderTexture,
+      borderSize    = Util.Clamp(rec.accentBorderSize,
+        C.MIN_BORDER, C.MAX_BORDER, C.PANEL_TEMPLATE.accentBorderSize),
+      borderOffset  = Util.Clamp(rec.accentBorderOffset,
+        C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, C.PANEL_TEMPLATE.accentBorderOffset),
+      borderColor   = Util.ResolveColor(rec, "accentBorderColor"),
+    },
   }
 end
 
@@ -112,7 +134,121 @@ local function newFrame(globalName)
   -- never end up on a different layer from the panel it belongs to.
   f.borderFrame = CreateFrame("Frame", nil, f, "BackdropTemplate")
   f.borderFrame:EnableMouse(false)
+
+  -- Accent bars, one texture per edge, created up front and shown/hidden per render. Four textures
+  -- is cheaper than creating and destroying them as the edge set changes, and it keeps the render
+  -- path allocation-free.
+  --
+  -- They live on their OWN child frame rather than directly on the panel, purely for z-order: a
+  -- child frame always draws above its parent's textures whatever draw layer those use, so with the
+  -- border on one child frame and the bars on the panel itself, the border covered the bars no
+  -- matter what. Two child frames with explicit levels (see applySpec) put the accent above the
+  -- border, which is the way round it has to be — the bar is the top decoration.
+  --
+  -- Still a child of the panel, so it inherits strata and alpha: an accent bar can never end up on a
+  -- different layer from the panel it accents, and it fades with the mouseover fade for free.
+  f.accentFrame = CreateFrame("Frame", nil, f)
+  f.accentFrame:EnableMouse(false)
+  f.accentFrame:SetAllPoints(f)
+
+  -- One FRAME per edge rather than a bare texture, because a bar can carry its own border and a
+  -- backdrop needs a frame to live on. The fill is a texture filling that frame.
+  f.accents = {}
+  for _, edge in ipairs(C.EDGES) do
+    local bar = CreateFrame("Frame", nil, f.accentFrame)
+    bar:EnableMouse(false)
+    bar.fill = bar:CreateTexture(nil, "ARTWORK")
+    bar.fill:SetAllPoints(bar)
+    f.accents[edge] = bar
+  end
   return f
+end
+
+-- The accent bar's own border frame, built on first use.
+--
+-- Lazy because most panels never give their bars a border (it ships at size 0), and this would
+-- otherwise be four more frames per panel created for nothing. Same shape as the panel's border: a
+-- separate frame, so the border can be OFFSET from the bar it outlines.
+local function ensureAccentBorder(bar)
+  if bar.borderFrame then return bar.borderFrame end
+  bar.borderFrame = CreateFrame("Frame", nil, bar, "BackdropTemplate")
+  bar.borderFrame:EnableMouse(false)
+  return bar.borderFrame
+end
+
+-- Paint one accent bar's border. Mirrors applyBorder exactly — including that
+-- SetBackdropBorderColor MUST follow SetBackdrop, which resets it to white.
+local function applyAccentBorder(bar, spec)
+  local a = spec.accent
+  local wanted = a.borderSize > 0 and NS.Compat.FetchMedia("border", a.borderTexture) or nil
+  if not wanted then
+    -- Never built one, and none wanted: nothing to do. This is the common case and is why the
+    -- border frame is lazy.
+    if not bar.borderFrame then return end
+    bar.borderFrame:SetBackdrop(nil)
+    bar.borderFrame:Hide()
+    return
+  end
+
+  local b = ensureAccentBorder(bar)
+  if type(b.SetBackdrop) ~= "function" then return end
+  b:ClearAllPoints()
+  b:SetPoint("TOPLEFT", bar, "TOPLEFT", -a.borderOffset, a.borderOffset)
+  b:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", a.borderOffset, -a.borderOffset)
+  b:Show()
+  b:SetBackdrop({ edgeFile = wanted, edgeSize = a.borderSize })
+  b:SetBackdropBorderColor(
+    a.borderColor[1], a.borderColor[2], a.borderColor[3], a.borderColor[4])
+end
+
+-- Lay out and paint the accent bars.
+--
+-- Each bar spans its edge in full and is offset OUTWARD from the panel: positive pushes it away
+-- (the detached BenikUI look), negative pulls it over the panel's own area. The anchor pair per edge
+-- is what makes "covers the entirety of that edge" true by construction — the bar is pinned to both
+-- corners of that side, so it tracks the panel's size with no recalculation.
+local function applyAccents(f, spec)
+  local accents = f.accents
+  if not accents then return end
+
+  local a = spec.accent
+  local thickness, offset = a.thickness, a.offset
+
+  for _, edge in ipairs(C.EDGES) do
+    local bar = accents[edge]
+    if not a.enabled or not a.edges[edge] then
+      bar:Hide()
+    else
+      bar:ClearAllPoints()
+      if edge == "TOP" then
+        bar:SetPoint("BOTTOMLEFT",  f, "TOPLEFT",     0, offset)
+        bar:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT",    0, offset)
+        bar:SetHeight(thickness)
+      elseif edge == "BOTTOM" then
+        bar:SetPoint("TOPLEFT",     f, "BOTTOMLEFT",  0, -offset)
+        bar:SetPoint("TOPRIGHT",    f, "BOTTOMRIGHT", 0, -offset)
+        bar:SetHeight(thickness)
+      elseif edge == "LEFT" then
+        bar:SetPoint("TOPRIGHT",    f, "TOPLEFT",     -offset, 0)
+        bar:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT",  -offset, 0)
+        bar:SetWidth(thickness)
+      else -- RIGHT
+        bar:SetPoint("TOPLEFT",     f, "TOPRIGHT",    offset, 0)
+        bar:SetPoint("BOTTOMLEFT",  f, "BOTTOMRIGHT", offset, 0)
+        bar:SetWidth(thickness)
+      end
+
+      local path = NS.Compat.FetchMedia("statusbar", a.texture)
+      if path then
+        bar.fill:SetTexture(path)
+        bar.fill:SetVertexColor(a.color[1], a.color[2], a.color[3], a.color[4])
+      else
+        bar.fill:SetColorTexture(a.color[1], a.color[2], a.color[3], a.color[4])
+      end
+      applyAccentBorder(bar, spec)
+      bar:Show()
+    end
+  end
 end
 
 -- Paint the background fill. An LSM background name resolves to a texture path that is tinted with
@@ -171,8 +307,20 @@ local function applySpec(f, spec)
   f:SetFrameStrata(spec.strata)
   f:SetFrameLevel(spec.level)
 
+  -- Explicit child levels, stacked bottom-up: panel fill → border → accent bar. Left to itself a
+  -- child frame merely defaults to parent + 1, which would put the border and the accent on the SAME
+  -- level and leave their order to creation sequence. The accent bar is the top decoration and must
+  -- draw over the border.
+  --
+  -- Read back with GetFrameLevel rather than reusing spec.level, because the client clamps a frame's
+  -- level to a minimum and the value that landed may not be the value asked for.
+  local base = f:GetFrameLevel() or 0
+  if f.borderFrame then f.borderFrame:SetFrameLevel(base + 1) end
+  if f.accentFrame then f.accentFrame:SetFrameLevel(base + 2) end
+
   applyBackground(f, spec)
   applyBorder(f, spec)
+  applyAccents(f, spec)
 
   -- The resting alpha. While unlocked this is overridden to full opacity by Unlock:Decorate — you
   -- cannot place a panel you cannot see — so the mouseover fade is an editing-mode-off behaviour.
@@ -260,6 +408,15 @@ local function release(f)
   if f.borderFrame and type(f.borderFrame.SetBackdrop) == "function" then
     f.borderFrame:SetBackdrop(nil)
     f.borderFrame:Hide()
+  end
+  -- Accent bars are anchored OUTSIDE the panel's bounds, so a pooled frame that kept them would
+  -- leave four coloured strips floating where the panel used to be.
+  for _, bar in pairs(f.accents or {}) do
+    bar:Hide()
+    if bar.borderFrame and type(bar.borderFrame.SetBackdrop) == "function" then
+      bar.borderFrame:SetBackdrop(nil)
+      bar.borderFrame:Hide()
+    end
   end
   if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
   -- `__frameName` is the authority, not `GetName()`: the headless stub frame answers every

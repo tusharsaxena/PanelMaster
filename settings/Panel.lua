@@ -51,26 +51,59 @@ local function trackDropdown(widget)
   openDropdowns[#openDropdowns + 1] = widget
 end
 
+-- Test seams. The headless harness stubs AceGUI out, so no real widget is ever built — these let the
+-- close routine be exercised against hand-built stand-ins, which is how the type-dispatch bug below
+-- is pinned.
+P.__registerDropdownForTest = trackDropdown
+function P.__openDropdownCount() return #openDropdowns end
+
 -- Forget widgets released by a rebuild. Called at the top of every rebuild rather than on release,
 -- because AceGUI has no per-widget "you were released" callback we can hook from here.
 local function forgetDropdowns()
   for i = #openDropdowns, 1, -1 do openDropdowns[i] = nil end
 end
+P.__forgetDropdownsForTest = forgetDropdowns
 
-local function closeOpenDropdowns()
-  local AGSMW = LibStub and LibStub("AceGUISharedMediaWidgets-1.0", true)
+-- The LSM media type → the AceGUI widget registered by libs/AceGUI-3.0-SharedMediaWidgets. Those
+-- widgets render a preview swatch of each texture in the dropdown, which for a texture picker is the
+-- entire point — a list of names tells you nothing about what they look like.
+local LSM_WIDGET = {
+  background = "LSM30_Background",
+  border     = "LSM30_Border",
+  statusbar  = "LSM30_Statusbar",
+}
+
+-- The same names as a set, for telling the two families of dropdown apart when closing them.
+local IS_LSM_WIDGET = {}
+for _, widgetType in pairs(LSM_WIDGET) do IS_LSM_WIDGET[widgetType] = true end
+
+-- Close whichever tracked dropdown is open.
+--
+-- Dispatch is on the widget's `type`, NOT on which fields it happens to have. That distinction is
+-- the whole bug this function once had: a stock AceGUI Dropdown ALSO carries a `.dropdown` field —
+-- its Blizzard `UIDropDownMenuTemplate` frame — so a field-presence check handed that frame to
+-- AGSMW's pool-return, which expects one of its own frames and iterates a `contentRepo` the Blizzard
+-- frame does not have. The resulting error propagated out of `MoveScroll` and killed mouse-wheel
+-- scrolling on the whole page.
+function P.__closeOpenDropdowns()
+  local AGSMW
   for _, widget in ipairs(openDropdowns) do
-    -- Stock AceGUI Dropdown: an AceGUI "Dropdown-Pullout" widget it owns.
-    if widget.pullout and widget.pullout.Close then
+    if IS_LSM_WIDGET[widget.type] then
+      -- AceGUI-3.0-SharedMediaWidgets: a plain frame from its own pool, RETURNED rather than hidden,
+      -- so the widget's next click opens it instead of toggling it shut.
+      if widget.dropdown then
+        AGSMW = AGSMW or (LibStub and LibStub("AceGUISharedMediaWidgets-1.0", true))
+        if AGSMW and AGSMW.ReturnDropDownFrame then
+          widget.dropdown = AGSMW:ReturnDropDownFrame(widget.dropdown)
+        end
+      end
+    elseif widget.pullout and widget.pullout.Close then
+      -- Stock AceGUI Dropdown: an AceGUI "Dropdown-Pullout" widget it owns.
       widget.pullout:Close()
-    end
-    -- AceGUI-3.0-SharedMediaWidgets: a plain frame from its own pool, returned rather than hidden so
-    -- the widget's next click opens instead of toggling shut.
-    if widget.dropdown and AGSMW and AGSMW.ReturnDropDownFrame then
-      widget.dropdown = AGSMW:ReturnDropDownFrame(widget.dropdown)
     end
   end
 end
+local closeOpenDropdowns = P.__closeOpenDropdowns
 
 -- ── Tooltip helper (an AceGUI widget via SetCallback, a plain frame via HookScript) ──
 local function attachTooltip(widget, label, tooltip)
@@ -440,14 +473,6 @@ local EDITOR_GUTTER_REL  = 0.04
 -- page. Adding this back before an unlabelled control makes the gaps read as equal.
 local LABEL_ROW_H        = 14
 
--- The LSM media type → the AceGUI widget registered by libs/AceGUI-3.0-SharedMediaWidgets. Those
--- widgets render a preview swatch of each texture in the dropdown, which for a texture picker is the
--- entire point — a list of names tells you nothing about what they look like.
-local LSM_WIDGET = {
-  background = "LSM30_Background",
-  border     = "LSM30_Border",
-}
-
 -- ── Editor building blocks ──────────────────────────────────────────────────────
 -- The editor emits into a List-layout container as a sequence of full-width ROWS, rather than
 -- pouring every widget into one Flow group. A single Flow reflows controls of differing heights into
@@ -517,14 +542,26 @@ end
 -- A colour control plus its "use class colour" companion.
 --
 -- Driven off C.COLOR_FIELDS rather than written out per colour, so a colour added to the panel
--- record later gets its class-colour checkbox for free. The picker is disabled while the class
--- colour is on — its RGB is being overridden, and a live control that visibly does nothing is worse
--- than one that is greyed out — but its ALPHA still applies, which the tooltip says.
+-- record later gets its class-colour checkbox for free.
+--
+-- The picker stays ENABLED while the class colour is on, and this is a deliberate reversal. It used
+-- to be greyed out on the reasoning that its RGB was being overridden — but a colour's ALPHA is not
+-- overridden, it still decides how solid the result is, and the picker is the only control that sets
+-- it. Disabling it therefore contradicted its own tooltip ("the opacity you picked still applies")
+-- and left the user unable to fix a washed-out class-coloured border at all. The label says which
+-- half is live instead.
 local function makeColorPair(row, rec, field, label)
   local flag = C.COLOR_FIELDS[field]
+  local usingClass = flag and rec[flag] and true or false
+
+  -- What the control actually governs right now: everything, or only the opacity.
+  local function labelFor(classOn)
+    if classOn then return label .. " |cff808080(opacity)|r" end
+    return label
+  end
 
   local picker = AceGUI:Create("ColorPicker")
-  picker:SetLabel(label)
+  picker:SetLabel(labelFor(usingClass))
   picker:SetRelativeWidth(0.5)
   picker:SetHasAlpha(true)
   local col = NS.Util.Color(rec[field])
@@ -548,6 +585,9 @@ local function makeColorPair(row, rec, field, label)
   -- user drags — which is what a colour picker should do anyway.
   picker:SetCallback("OnValueChanged", store)
   picker:SetCallback("OnValueConfirmed", store)
+  attachTooltip(picker, label,
+    "Sets the colour and its opacity. With Class colour ticked the colour part is overridden, "
+    .. "but the opacity you set here still decides how solid the result is.")
   row:AddChild(picker)
 
   if not flag then return end
@@ -555,16 +595,38 @@ local function makeColorPair(row, rec, field, label)
   local cb = AceGUI:Create("CheckBox")
   cb:SetLabel("Class colour")
   cb:SetRelativeWidth(0.5)
-  cb:SetValue(rec[flag] and true or false)
+  cb:SetValue(usingClass)
   cb:SetCallback("OnValueChanged", function(_, _, v)
     NS.Registry:Set(rec.id, flag, v and true or false)
-    if picker.SetDisabled then picker:SetDisabled(v and true or false) end
+    picker:SetLabel(labelFor(v and true or false))
   end)
   attachTooltip(cb, "Class colour",
-    "Use your class colour for " .. label:lower() .. ". The opacity you picked still applies.")
+    "Use your class colour for " .. label:lower() .. ". The opacity from the colour picker still "
+    .. "applies \226\128\148 a class colour at low opacity looks just as washed out as any other.")
   row:AddChild(cb)
+end
 
-  if picker.SetDisabled then picker:SetDisabled(rec[flag] and true or false) end
+-- The four edge checkboxes for the accent bar, as one quarter-width row.
+--
+-- A set of independent booleans rather than a dropdown, because the edges are not exclusive — "top
+-- and left" is an ordinary choice, and a dropdown would have to enumerate all fifteen combinations
+-- to offer it. Each tick writes the WHOLE set through Registry:Set, so the single write seam still
+-- sees one complete value rather than four partial ones.
+local function makeEdgeChecks(row, rec)
+  for _, edge in ipairs(C.EDGES) do
+    local cb = AceGUI:Create("CheckBox")
+    cb:SetLabel(C.EDGE_LABEL[edge])
+    cb:SetRelativeWidth(0.25)
+    cb:SetValue(NS.Util.EdgeSet(rec.accentEdges)[edge] and true or false)
+    cb:SetCallback("OnValueChanged", function(_, _, v)
+      local edges = NS.Util.EdgeSet(rec.accentEdges)
+      edges[edge] = v and true or nil
+      NS.Registry:Set(rec.id, "accentEdges", edges)
+    end)
+    attachTooltip(cb, C.EDGE_LABEL[edge],
+      ("Draw an accent bar along the %s edge."):format(C.EDGE_LABEL[edge]:lower()))
+    row:AddChild(cb)
+  end
 end
 
 -- One panel's editor. Every control writes through NS.Registry:Set, which is the same seam the CLI
@@ -762,6 +824,68 @@ local function buildPanelEditor(ctx, parent, rec)
   editorSpacer(group, EDITOR_ROW_GAP)
   local borderColorRow = editorRow(group)
   makeColorPair(borderColorRow, rec, "borderColor", "Border colour")
+
+  -- ── Accent bar ──
+  editorHeading(group, "Accent bar")
+
+  local accentRow = editorRow(group)
+  local accentOn = AceGUI:Create("CheckBox")
+  accentOn:SetLabel("Enable accent bar")
+  accentOn:SetRelativeWidth(0.5)
+  accentOn:SetValue(rec.accentEnabled and true or false)
+  accentOn:SetCallback("OnValueChanged", function(_, _, v)
+    NS.Registry:Set(rec.id, "accentEnabled", v and true or false)
+  end)
+  attachTooltip(accentOn, "Enable accent bar",
+    "Draw a thin coloured strip along the panel's edges, in the style of BenikUI's panels. "
+    .. "Off by default.")
+  accentRow:AddChild(accentOn)
+
+  makeMediaDropdown(accentRow, rec, "accentTexture", "Bar texture",
+    "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
+    .. "'Solid' is a flat colour.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local edgeLabel = AceGUI:Create("Label")
+  edgeLabel:SetFullWidth(true)
+  edgeLabel:SetText("|cffffd100Edges|r")
+  group:AddChild(edgeLabel)
+  local edgeRow = editorRow(group)
+  makeEdgeChecks(edgeRow, rec)
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local accentSizeRow = editorRow(group)
+  numberField(accentSizeRow, "Bar thickness", "accentThickness",
+    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
+    "How thick the accent bar is, in screen units.")
+  numberField(accentSizeRow, "Bar offset", "accentOffset",
+    C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
+    "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
+    .. "which is the look this is modelled on; 0 sits flush; negative overlaps the panel.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local accentColorRow = editorRow(group)
+  makeColorPair(accentColorRow, rec, "accentColor", "Bar colour")
+
+  -- The bar's own border. Same four controls as the panel's, in the same order, so the two read
+  -- alike — the only difference is what they outline.
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local accentBorderRow = editorRow(group)
+  makeMediaDropdown(accentBorderRow, rec, "accentBorderTexture", "Bar border texture",
+    "The edge style drawn around the accent bar. 'None' removes it, as does a size of 0.")
+  numberField(accentBorderRow, "Bar border size", "accentBorderSize",
+    C.MIN_BORDER, C.MAX_BORDER, 1,
+    "Thickness of the accent bar's own border. 0 removes it entirely, which is the default.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local accentBorderOffsetRow = editorRow(group)
+  numberField(accentBorderOffsetRow, "Bar border offset", "accentBorderOffset",
+    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
+    "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local accentBorderColorRow = editorRow(group)
+  makeColorPair(accentBorderColorRow, rec, "accentBorderColor", "Bar border colour")
 
   -- ── Visibility ──
   editorHeading(group, "Visibility")

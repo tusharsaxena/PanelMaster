@@ -77,6 +77,7 @@ _G.PM_TEST = {
 local SUITE_FILES = {
   "test_util.lua", "test_compat.lua", "test_constants.lua",
   "test_registry.lua", "test_canvas.lua", "test_unlock.lua", "test_media.lua",
+  "test_accent.lua",
   "test_database.lua", "test_debuglog.lua",
   "test_schema.lua", "test_slash.lua", "test_panel.lua",
 }

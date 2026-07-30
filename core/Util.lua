@@ -89,6 +89,51 @@ function Util.FormatColor(c)
   return ("%.2f,%.2f,%.2f,%.2f"):format(c[1], c[2], c[3], c[4])
 end
 
+-- ── Edge sets ───────────────────────────────────────────────────────────────────
+
+-- A normalized edge set from an arbitrary stored value: only the four real edge keys survive, and
+-- every value becomes a plain `true`. A hand-edited SavedVariables file cannot smuggle a fifth
+-- "edge" into the renderer's loop this way.
+function Util.EdgeSet(v)
+  local out = {}
+  if type(v) ~= "table" then return out end
+  for edge, on in pairs(v) do
+    if on and C.EDGE_SET[edge] then out[edge] = true end
+  end
+  return out
+end
+
+-- "top,left" → { TOP = true, LEFT = true }, for `/pm panel X accentEdges top,left`.
+-- "none" (or an empty list) → the empty set, which is how the CLI says "no bars".
+-- Returns nil for anything containing a name that is not an edge, so a typo is reported with the
+-- valid list rather than silently dropping that edge.
+function Util.ParseEdges(s)
+  if type(s) ~= "string" then return nil end
+  if s:lower():match("^%s*none%s*$") then return {} end
+  local out, any = {}, false
+  for part in s:gmatch("[^,%s]+") do
+    local edge = part:upper()
+    if not C.EDGE_SET[edge] then return nil end
+    out[edge] = true
+    any = true
+  end
+  if not any then return nil end
+  return out
+end
+
+-- An edge set → the "TOP, LEFT" form ParseEdges accepts, always in C.EDGES order so the same set
+-- never renders two different ways. The empty set prints "(none)", matching how the CLI reports
+-- every other empty collection.
+function Util.FormatEdges(v)
+  local set = Util.EdgeSet(v)
+  local parts = {}
+  for _, edge in ipairs(C.EDGES) do
+    if set[edge] then parts[#parts + 1] = edge end
+  end
+  if #parts == 0 then return "(none)" end
+  return table.concat(parts, ", ")
+end
+
 -- ── Names ───────────────────────────────────────────────────────────────────────
 
 -- Trim and collapse whitespace in a user-supplied panel name. Returns nil for an empty result, so

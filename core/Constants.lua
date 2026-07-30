@@ -39,6 +39,20 @@ C.POINTS = {
 C.POINT_SET = {}
 for _, p in ipairs(C.POINTS) do C.POINT_SET[p] = true end
 
+-- ── Panel edges ─────────────────────────────────────────────────────────────────
+-- The four edges an accent bar can be drawn on. Stored as the keys of a SET
+-- (`accentEdges = { TOP = true }`) rather than a single value, because any combination is legal —
+-- a bar on the top and the left at once is a perfectly ordinary look.
+--
+-- The array is the display/serialization order, so `/pm panel X accentEdges` always prints its
+-- edges in the same order regardless of how the set was built.
+C.EDGES = { "TOP", "BOTTOM", "LEFT", "RIGHT" }
+
+C.EDGE_SET = {}
+for _, e in ipairs(C.EDGES) do C.EDGE_SET[e] = true end
+
+C.EDGE_LABEL = { TOP = "Top", BOTTOM = "Bottom", LEFT = "Left", RIGHT = "Right" }
+
 -- ── Geometry bounds ─────────────────────────────────────────────────────────────
 -- Clamps applied by the registry on every write (Registry.Sanitize), so neither the settings UI, the
 -- CLI, nor a hand-edited SavedVariables file can produce a panel that cannot be seen or grabbed.
@@ -54,6 +68,12 @@ C.MAX_BORDER = 32
 -- happen, not a feature.
 C.MIN_BORDER_OFFSET = -32
 C.MAX_BORDER_OFFSET = 32
+-- Accent-bar bounds. Thickness has a floor of 1 rather than 0 — "no bar" is what the enable switch
+-- and the edge set are for, and a 0px bar would be an invisible third way of saying it.
+C.MIN_ACCENT_THICKNESS = 1
+C.MAX_ACCENT_THICKNESS = 32
+C.MIN_ACCENT_OFFSET = -32
+C.MAX_ACCENT_OFFSET = 32
 C.MIN_GRID = 1
 C.MAX_GRID = 128
 
@@ -104,6 +124,44 @@ C.PANEL_TEMPLATE = {
   -- choice, not something to surprise a new user with.
   mouseover      = false,
   mouseoverAlpha = 0.0,
+
+  -- ── Accent bar ──
+  -- A thin detached strip along one or more of the panel's edges, in the style of BenikUI's panels.
+  -- Purely decorative: it is drawn as textures on the panel's own frame, so it inherits the panel's
+  -- strata, level and alpha, and it is as click-through as everything else here.
+  --
+  -- OFF by default. It is a strong visual statement and an addon that put a coloured stripe on every
+  -- panel unasked would be making that choice for the user.
+  accentEnabled   = false,
+  -- A SET, not a single edge — any combination is legal. Top alone is the BenikUI look and the
+  -- default. An empty set is valid and draws nothing, so unticking every edge does not silently
+  -- re-tick one.
+  accentEdges     = { TOP = true },
+  -- Drawn from LibSharedMedia's STATUSBAR pool rather than `background`: statusbar textures are
+  -- authored to be read as thin horizontal strips, which is exactly what this is, and it is the pool
+  -- a user has already curated for their bars.
+  --
+  -- "Blizzard" is LibSharedMedia's OWN default statusbar, so it resolves on any install and gives
+  -- the bar a slight sheen rather than the flat block "Solid" produces.
+  accentTexture   = "Blizzard",
+  accentThickness = 5,
+  -- Flush against the panel by default. The bar reads as part of the panel's frame rather than as a
+  -- separate floating strip; push the offset positive for the detached look instead.
+  accentOffset    = 0,
+  -- Class colour is ON by default, so the bar picks up the wearer's colour with no configuration.
+  -- The stored colour underneath is the green the BenikUI look is known for, which is what shows the
+  -- moment class colour is switched off.
+  accentColor      = { 0.15, 0.85, 0.40, 1.00 },
+  accentClassColor = true,
+
+  -- The accent bar's OWN border, mirroring the panel's. Size 0 by default: the bar is already a
+  -- decoration, and outlining it unasked would change the look of every accent bar the moment the
+  -- feature shipped. Shares the panel border's bounds, so the two sliders read alike.
+  accentBorderTexture   = "Solid",
+  accentBorderSize      = 0,
+  accentBorderOffset    = 0,
+  accentBorderColor     = { 0.35, 0.35, 0.40, 1.00 },
+  accentBorderClassColor = false,
 }
 
 -- Colour field → the boolean field that class-colours it.
@@ -115,6 +173,8 @@ C.PANEL_TEMPLATE = {
 C.COLOR_FIELDS = {
   bgColor     = "bgClassColor",
   borderColor = "borderClassColor",
+  accentColor = "accentClassColor",
+  accentBorderColor = "accentBorderClassColor",
 }
 
 -- Field → type, for the CLI's `/pm panel set <name> <field> <value>` coercion and for validation.
@@ -130,6 +190,12 @@ C.PANEL_FIELD_TYPE = {
   bgTexture = "media", borderTexture = "media",
   bgClassColor = "boolean", borderClassColor = "boolean",
   mouseover = "boolean", mouseoverAlpha = "number",
+  accentEnabled = "boolean", accentEdges = "edges", accentTexture = "media",
+  accentThickness = "number", accentOffset = "number",
+  accentColor = "color", accentClassColor = "boolean",
+  accentBorderTexture = "media", accentBorderSize = "number",
+  accentBorderOffset = "number",
+  accentBorderColor = "color", accentBorderClassColor = "boolean",
 }
 
 -- Media field → the LibSharedMedia media type it selects from. Drives both the CLI's validation and
@@ -137,6 +203,8 @@ C.PANEL_FIELD_TYPE = {
 C.PANEL_FIELD_MEDIA = {
   bgTexture     = "background",
   borderTexture = "border",
+  accentTexture = "statusbar",
+  accentBorderTexture = "border",
 }
 
 -- Ordered field list for `/pm panel <name>`, so the dump reads in a stable, sensible order rather
@@ -147,6 +215,10 @@ C.PANEL_FIELD_ORDER = {
   "bgTexture", "bgColor", "bgClassColor",
   "borderTexture", "borderSize", "borderOffset", "borderColor", "borderClassColor",
   "mouseover", "mouseoverAlpha",
+  "accentEnabled", "accentEdges", "accentTexture", "accentThickness", "accentOffset",
+  "accentColor", "accentClassColor",
+  "accentBorderTexture", "accentBorderSize", "accentBorderOffset",
+  "accentBorderColor", "accentBorderClassColor",
 }
 
 -- ── Shared media ────────────────────────────────────────────────────────────────
@@ -166,6 +238,7 @@ C.NONE_MEDIA_NAME = "None"
 C.MEDIA_FALLBACK = {
   background = C.SOLID_MEDIA_NAME,
   border     = C.SOLID_MEDIA_NAME,
+  statusbar  = C.SOLID_MEDIA_NAME,
 }
 
 -- ── Preview mode ────────────────────────────────────────────────────────────────
