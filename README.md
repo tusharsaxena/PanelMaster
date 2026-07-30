@@ -64,20 +64,20 @@ below.
 | Command | What it does |
 |---|---|
 | `/pm config` | Open the settings panel |
-| `/pm new <name>` | Create a panel |
-| `/pm delete <name>` | Delete a panel |
-| `/pm rename <old> <new>` | Rename a panel |
+| `/pm new name` | Create a panel |
+| `/pm delete name` | Delete a panel |
+| `/pm rename old new` | Rename a panel |
 | `/pm panels` | List your panels |
-| `/pm panel <name> [field] [value]` | Look at, or change, one panel |
+| `/pm panel name [field] [value]` | Look at, or change, one panel |
 | `/pm unlock` | Show every panel with a drag handle |
 | `/pm lock` | Put them back to normal |
 | `/pm preview` | Toggle three sample panels |
 | `/pm recover` | Bring off-screen panels back into view |
 | `/pm version` | Print the version you are running |
-| `/pm get <setting>` | Read a setting |
-| `/pm set <setting> <value>` | Change a setting |
+| `/pm get setting` | Read a setting |
+| `/pm set setting value` | Change a setting |
 | `/pm list` | List every setting |
-| `/pm reset <setting>` | Put one setting back to normal |
+| `/pm reset setting` | Put one setting back to normal |
 | `/pm resetall` | Put every setting back to normal (your panels are kept) |
 | `/pm debug` | Show the debug window |
 | `/pm help` | Show this list |
