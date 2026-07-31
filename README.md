@@ -314,23 +314,13 @@ The full asset specification — the hard requirements table, the two authoring 
 generating a motif and the PNG-to-TGA conversion snippets — is
 [`docs/artwork-spec.md`](docs/artwork-spec.md). Read it before authoring anything.
 
-### The artwork generator
+### The artwork importer
 
-`tools/artwork/generate.py` draws the bundled art in code with [Pillow](https://python-pillow.org/)
-and writes it straight to `media/artwork/` as the TGA the game loads:
-
-```
-python3 tools/artwork/generate.py                  # every bundled asset
-python3 tools/artwork/generate.py runic-sigil-bw   # just one
-```
-
-It exists so the shipped art is reproducible from the repository, reviewable as a diff rather than
-as an opaque binary, and license-clean by construction — it is original work under this addon's own
-MIT release.
-
-Art authored **outside** the repo goes through `tools/artwork/import.py`, which converts a plate to
-the 32-bit power-of-two TGA the client loads, erases a generator watermark if there is one, and
-warns when the motif has too little transparent margin for the **Fill (crop)** and **Tile** modes:
+Art is authored outside the repo and brought in through `tools/artwork/import.py`, which uses
+[Pillow](https://python-pillow.org/) to convert a plate to the 32-bit power-of-two TGA the client
+loads. It letterboxes a non-square plate onto the square canvas rather than distorting it, erases a
+generator watermark if there is one, and warns when the motif has too little transparent margin for
+the **Fill (crop)** and **Tile** modes:
 
 ```
 python3 tools/artwork/import.py IN.png alliance-crest-bw            # white-on-black -> tintable
@@ -345,8 +335,8 @@ be re-derived later without going back to whoever made it. It is committed but n
 **This is an accepted, documented deviation from the [Ka0s WoW Addon
 Standard](https://github.com/tusharsaxena/WowAddonStandards).** The standard defines no location for
 build tooling, and this is the first non-Lua source in the tree. Accepted on 2026-07-31 for the
-reason above: keeping the art reproducible and license-clean from the repo itself is worth the extra
-folder. `luacheck` is unaffected — it only walks Lua.
+reason above: keeping the conversion in the repo, next to the raw plates it consumes, is what makes
+an asset re-derivable and its licensing auditable. `luacheck` is unaffected — it only walks Lua.
 
 ## FAQ
 

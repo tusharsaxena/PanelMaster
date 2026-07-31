@@ -239,6 +239,10 @@ validates and refuses bad values with the real option list.
 
 ### Artwork generation — `tools/artwork/generate.py`
 
+> **Superseded 2026-07-31.** `generate.py` was removed; artwork is now authored by hand outside the
+> repo and brought in through `tools/artwork/import.py`. The section below is left as written, as
+> the record of what was designed and shipped on this branch. Do not run it as instructions.
+
 A committed Python + Pillow script that draws the motif in code and writes a 512×512 32-bit
 uncompressed TGA to `media/artwork/`. Reproducible, reviewable as a diff, license-clean by
 construction (original work, MIT), and re-runnable for the later batch.

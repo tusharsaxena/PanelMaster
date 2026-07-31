@@ -731,11 +731,9 @@ vendored font.
 Bundled artwork lives under `media/artwork/`, one 512×512 32-bit TGA per catalog row, addressed at
 runtime through `C.ARTWORK_PATH_PREFIX` plus the row's `file` stem. The same silent failure mode
 applies, which is why a row's path is worth asserting against the filesystem the way the logo's is.
-Two tools produce those files. `tools/artwork/generate.py` draws art procedurally with Pillow, so
-the pieces it makes are reproducible from the repo, reviewable as a diff and license-clean by
-construction. `tools/artwork/import.py` converts art authored *outside* the repo — luminance-to-alpha
-for a white-on-black plate, or a magenta chroma key for full-color art, which is the only one of the
-two that can separate dark art from a dark background. It also erases a generator's watermark,
+`tools/artwork/import.py` is what produces those files. It converts art authored *outside* the repo
+with Pillow — luminance-to-alpha for a white-on-black plate, or a magenta chroma key for full-color
+art, which is the only one of the two that can separate dark art from a dark background. It also erases a generator's watermark,
 letterboxes a non-square plate rather than distorting it, and normalizes the RGB of fully
 transparent pixels, which is invisible under normal blending but is read by other blend modes and
 was otherwise left to whichever code path a plate happened to take.

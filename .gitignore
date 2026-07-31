@@ -1,4 +1,4 @@
-# Python bytecode from tools/artwork/. The tools themselves are committed (they are how the
-# bundled art is produced and how contributed art is converted); their compiled cache is not.
+# Python bytecode from tools/artwork/. The importer itself is committed (it is how authored and
+# contributed art is converted to the TGA the client loads); its compiled cache is not.
 __pycache__/
 *.pyc
