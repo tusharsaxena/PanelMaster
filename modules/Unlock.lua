@@ -46,12 +46,27 @@ end
 local function ensureOverlay(f)
   if f.overlay then return f.overlay end
   local o = { edges = {} }
+
+  -- The furniture lives on its OWN child frame, not on the panel frame itself.
+  --
+  -- It used to sit directly on `f`, relying on the OVERLAY draw layer to keep it above the panel's
+  -- own art. That worked only while every one of those pieces was also a region of `f`. It is not
+  -- any more: the fill, border, accent bar and artwork are all child FRAMES now, and WoW orders
+  -- regions by strata, then FRAME LEVEL, then draw layer — frame level dominates, so a BACKGROUND
+  -- texture on a child at base+2 draws straight over an OVERLAY texture on the parent at base.
+  --
+  -- Left alone, the gold outline and the panel name would be buried under the panel's own 85%-opaque
+  -- fill on every unlock and every preview, which is precisely the one thing the overlay exists to
+  -- prevent: you cannot drag a panel you cannot find.
+  o.frame = CreateFrame("Frame", nil, f)
+  o.frame:EnableMouse(false)   -- the PANEL takes the drag, not this; see U:ArmDrag
+  o.frame:SetAllPoints(f)
+
   for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
-    -- OVERLAY, above the panel's own BORDER-layer edges, so the unlock outline is visible even on a
-    -- panel whose own border is the same color.
-    o.edges[side] = f:CreateTexture(nil, "OVERLAY")
+    -- OVERLAY within that frame, so the outline still beats the label if they ever intersect.
+    o.edges[side] = o.frame:CreateTexture(nil, "OVERLAY")
   end
-  o.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  o.label = o.frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   o.label:SetPoint("CENTER")
   f.overlay = o
   return o
@@ -118,6 +133,11 @@ function U:Decorate(f, rec)
     return
   end
   local o = ensureOverlay(f)
+  -- Re-asserted on every decorate rather than once at creation: the panel's own frame level is a
+  -- user setting, so `base` moves whenever they change it, and a level set at creation time would
+  -- silently stop being above the ladder the moment it did.
+  o.frame:SetFrameLevel((f:GetFrameLevel() or 0) + C.UNLOCK_FRAME_LEVEL)
+
   local rgba = C.UNLOCK_OUTLINE_RGB
   layoutOutline(f, o, C.UNLOCK_OUTLINE_PX)
   for _, tex in pairs(o.edges) do
@@ -250,8 +270,15 @@ function U:ResumePending()
   return resumed
 end
 
--- Exposed so a test can assert the deferral without reaching into a file-local.
-function U:HasPending(id)
+-- Test seam. `pendingUnlock` and `pendingPanels` are file-locals with no other way in, and the
+-- combat-deferral rules are worth asserting, so the state is readable rather than guessed at from
+-- its side effects.
+--
+-- Named with the `__` prefix every other seam in the addon uses (Canvas.__pool,
+-- Canvas.__updateMouseover, Panel.__openDropdownCount) precisely BECAUSE it has no production
+-- caller: without the prefix it reads as public API that nothing uses, and the next person to sweep
+-- for dead exports deletes it along with the eight assertions it holds up.
+function U.__hasPending(id)
   if id ~= nil then return pendingPanels[id] == true end
   return pendingUnlock
 end

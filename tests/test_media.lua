@@ -668,7 +668,7 @@ test("Unlock: a per-panel unlock during combat is deferred", function()
   T.mocks.__inCombat = true
   assertEqual(NS.Unlock:SetPanelUnlocked(rec.id, true), nil)
   assertFalse(NS.Unlock:IsPanelUnlocked(rec.id))
-  assertTrue(NS.Unlock:HasPending(rec.id))
+  assertTrue(NS.Unlock.__hasPending(rec.id))
   T.mocks.__inCombat = false
 end)
 
@@ -680,7 +680,7 @@ test("Unlock: a deferred per-panel unlock is replayed when combat ends", functio
   T.mocks.__inCombat = false
   assertTrue(NS.Unlock:ResumePending())
   assertTrue(NS.Unlock:IsPanelUnlocked(rec.id))
-  assertFalse(NS.Unlock:HasPending(rec.id))
+  assertFalse(NS.Unlock.__hasPending(rec.id))
   NS.Unlock:SetPanelUnlocked(rec.id, false)
 end)
 

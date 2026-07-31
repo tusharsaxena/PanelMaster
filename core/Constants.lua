@@ -99,6 +99,128 @@ C.MAX_GRID = 128
 -- the slider can reach, and it is named here so the panel cannot invent its own number.
 C.EDITOR_OFFSET_RANGE = 2000
 
+-- ── Artwork ─────────────────────────────────────────────────────────────────────
+-- The bundled-art catalog's fixed category list. Stored inside catalog rows (never inside a
+-- panel record), so this is a source-level contract rather than a saved-variables one — but it is
+-- also the ORDER the artwork dropdown groups by, which is why it is an array and not a set.
+C.ARTWORK_CATEGORIES = { "General", "Races", "Classes", "Expansions", "Factions" }
+
+C.ARTWORK_CATEGORY_SET = {}
+for _, c in ipairs(C.ARTWORK_CATEGORIES) do C.ARTWORK_CATEGORY_SET[c] = true end
+
+-- Where bundled artwork lives. A catalog row carries a bare file STEM and the full path is
+-- rebuilt here at render time, so moving the art (or renaming the folder) is a one-line change
+-- rather than an edit to every row.
+C.ARTWORK_PATH_PREFIX = "Interface\\AddOns\\PanelMaster\\media\\artwork\\"
+
+-- The two reserved artTexture values that are not catalog ids. They are stored strings like any
+-- other id, so they are named here rather than spelled inline at the half-dozen places that have to
+-- ask "is any artwork selected?" and "is this the user's own file?".
+C.ARTWORK_NONE   = "None"
+C.ARTWORK_CUSTOM = "Custom"
+
+-- How the art is sized inside the panel. STATIC draws it at its authored pixel size, STRETCH
+-- distorts it to the panel exactly, FILL covers the panel and crops the overflow, FIT contains the
+-- whole image inside the panel, TILE repeats it. Stored tokens — never rename one.
+--
+-- STRETCH deliberately ignores artScale: stretching IS "match the panel exactly", so a scaled
+-- stretch is really FILL or STATIC depending on which the user meant.
+C.ART_FILL = { "STATIC", "STRETCH", "FILL", "FIT", "TILE" }
+
+-- Quarter turns only, and NUMBERS rather than strings, because the value is arithmetic (the spec
+-- applies the transpose `artRotation / 90` times) and a numeric field also survives a hand-typed
+-- `/pm panel set ... artRotation 180` without a string/number mismatch.
+--
+-- Only quarter turns are offered. An eight-argument SetTexCoord can express an exact axis transpose
+-- with no resampling; an arbitrary angle applied to a CROPPED quad samples outside 0..1 and smears
+-- the edge pixels across the corners under CLAMP.
+C.ART_ROTATION = { 0, 90, 180, 270 }
+
+-- Where the art sits in the panel's frame ladder. Three choices rather than two because artwork is
+-- used both as a watermark under everything and as a logo over everything, and which one a given
+-- piece wants is not something the addon can guess.
+C.ART_LAYER = { "BELOW_BG", "ABOVE_BG", "ABOVE_ALL" }
+
+-- The one blend mode artwork is ever drawn with. NOT a setting, and deliberately so.
+--
+-- All five WoW modes were offered at first and two of them cannot be right for this feature. DISABLE
+-- means "ignore the alpha channel", so art defined ENTIRELY by its alpha can only ever come out as a
+-- solid rectangle. MOD multiplies, which needs a transparent region to be WHITE to be a no-op, while
+-- ADD needs it BLACK — one texture cannot satisfy both, so whichever is chosen makes the other mode
+-- wrong. That left a five-item dropdown in which two entries could only ever produce a bug report,
+-- so the setting was removed rather than documented around.
+C.ART_BLEND_MODE = "BLEND"
+
+-- All four artwork enums need the same three shapes: the ordered array (dropdown order and the
+-- "expected one of: ..." error text), a membership set for validation, and a {value=, label=}
+-- option list for the settings widgets. Building them by hand four times over would be four chances
+-- to let the three drift apart, so they are derived from one array plus one parallel label list.
+local function enumTables(values, labels)
+  local set, options = {}, {}
+  for i = 1, #values do
+    set[values[i]] = true
+    options[i] = { value = values[i], label = labels[i] }
+  end
+  return set, options
+end
+
+C.ART_FILL_SET, C.ART_FILL_OPTIONS = enumTables(C.ART_FILL, {
+  "Native size", "Stretch", "Fill (crop)", "Fit (contain)", "Tile",
+})
+
+-- The degree sign is written as its decimal escape: this file is read by tooling that does not
+-- promise a UTF-8 locale, and a mangled label would ship silently.
+C.ART_ROTATION_SET, C.ART_ROTATION_OPTIONS = enumTables(C.ART_ROTATION, {
+  "0\194\176", "90\194\176", "180\194\176", "270\194\176",
+})
+
+C.ART_LAYER_SET, C.ART_LAYER_OPTIONS = enumTables(C.ART_LAYER, {
+  "Behind background", "Above background", "Above border and accent",
+})
+
+-- Artwork scale bounds. The floor is not 0: a zero-scale image is invisible, which is what
+-- artTexture = "None" already says, and an invisible-but-selected artwork reads as a bug. The
+-- ceiling is generous because FILL and STATIC legitimately zoom well past the panel.
+C.MIN_ART_SCALE = 0.1
+C.MAX_ART_SCALE = 4.0
+
+-- The panel's frame ladder, as offsets from the panel frame's OWN GetFrameLevel(). The three
+-- artwork levels are spread apart rather than consecutive because artwork has to INTERLEAVE with
+-- the background, the border and the accent bars — each of the six things below needs a level of
+-- its own, in this exact order, or "behind the background" and "above the accent" cannot both be
+-- expressible at once. There is still only one art frame; its level is reassigned per render.
+--
+-- BELOW_BG is why the background fill lives on its own child frame rather than on the panel: a
+-- child frame always draws above its parent's own textures whatever draw layer they use, so with
+-- the fill on the panel itself there is no level a child could take to get underneath it.
+C.ART_FRAME_LEVEL = { BELOW_BG = 1, ABOVE_BG = 3, ABOVE_ALL = 6 }
+C.BG_FRAME_LEVEL     = 2
+C.BORDER_FRAME_LEVEL = 4
+C.ACCENT_FRAME_LEVEL = 5
+
+-- The unlock overlay, above EVERY rung above — including ABOVE_ALL artwork. It has to be the top of
+-- the stack by definition: its whole job is to be findable on a panel you would otherwise not be
+-- able to see, so anything that could cover it defeats it. This is also the ceiling of a panel's
+-- frame-level footprint, and C.PANEL_LEVEL_STRIDE is derived from it.
+C.UNLOCK_FRAME_LEVEL = 7
+
+-- How far apart two panels' frame levels are placed, so one panel's whole stack clears the next
+-- one's. A panel occupies base .. base + C.UNLOCK_FRAME_LEVEL, so the stride is that plus one.
+--
+-- Without it the user's `level` is used as a raw frame level and the stacks INTERLEAVE: a panel at
+-- level 0 puts its accent bar at base+5 while a panel at level 3 puts its background fill at the
+-- same 5, and which one wins falls back to frame creation order — which, because Canvas pools
+-- frames by name, is not even panel order. The level setting says "higher draws in front"; without
+-- a stride that is only true when the numbers happen to differ by more than the footprint.
+--
+-- This was always partly broken (the old three-rung footprint made levels 1 and 2 apart collide
+-- too) and artwork widened the footprint enough to matter. Multiplying is the fix for both: every
+-- DISTINCT level now separates cleanly, which is what the setting has always claimed.
+--
+-- Bounded safely: a panel's level is clamped to 100 (Registry.Sanitize, Canvas.BuildSpec), so the
+-- highest frame level this can produce is 800 — far under the client's per-strata ceiling.
+C.PANEL_LEVEL_STRIDE = C.UNLOCK_FRAME_LEVEL + 1
+
 -- ── Panel record template ───────────────────────────────────────────────────────
 -- The shipped shape of a new panel, and the source every field default is read from when an older
 -- (or hand-edited) record is missing one. Registry.New copies this; Registry.Sanitize fills gaps
@@ -192,6 +314,48 @@ C.PANEL_TEMPLATE = {
   accentBorderOffset    = 0,
   accentBorderColor     = { 0.00, 0.00, 0.00, 1.00 },
   accentBorderClassColor = false,
+
+  -- ── Artwork ──
+  -- A texture layer drawn within the panel's bounds: a bundled catalog piece, or the user's own
+  -- file. Everything about it is per-panel, because artwork is the one part of a panel that is
+  -- purely taste — the same layout wants a faction crest on one panel and nothing on the next.
+  --
+  -- Stored as a catalog ID, never as a path. A stored path is only true until the addon that
+  -- supplied the file is uninstalled or its folder is renamed, and then the record points at
+  -- nothing with no way back; an ID that no longer resolves degrades to "no artwork" and can be
+  -- re-picked from the list. This is the same reasoning that makes bgTexture store a
+  -- LibSharedMedia NAME rather than the path that name currently resolves to.
+  --
+  -- "None" by default, and that default is load-bearing: every panel that predates this feature —
+  -- and every profile, and every copied record — gains these fields on the next Sanitize, and must
+  -- look exactly as it did before. Any other default would silently restyle the user's whole UI on
+  -- upgrade.
+  artTexture     = "None",
+  -- Only consulted when artTexture == "Custom". Kept as its own field rather than overloading
+  -- artTexture so that switching to a catalog piece and back does not lose what the user typed.
+  artCustomPath  = "",
+  -- White, i.e. "show the art as authored". Catalog pieces authored grayscale-on-transparent use
+  -- this tint to take their color; pieces that declare tintable = false ignore it entirely.
+  artColor       = { 1, 1, 1, 1 },
+  artClassColor  = false,
+  -- Art opacity, multiplied on top of the panel's own alpha rather than replacing it, so fading the
+  -- panel fades its artwork with it.
+  artAlpha       = 1.0,
+  -- FIT, not STRETCH: fitting shows the whole image undistorted at any panel size, which is the
+  -- only fill type that cannot make a bundled piece look broken on a panel it was not authored for.
+  artFill        = "FIT",
+  -- Anchor of the art within the panel. Honoured only by the fill types that leave room to move
+  -- (STATIC and FIT) — STRETCH, FILL and TILE cover the panel by definition.
+  artPoint       = "CENTER",
+  artX           = 0,
+  artY           = 0,
+  artScale       = 1.0,
+  artRotation    = 0,
+  artFlipH       = false,
+  artFlipV       = false,
+  -- Above the background but under the border and the accent bar: the panel's own framing stays
+  -- legible and the artwork reads as part of the fill rather than as something laid on top of it.
+  artLayer       = "ABOVE_BG",
 }
 
 -- Color field → the boolean field that class-colors it.
@@ -205,6 +369,10 @@ C.COLOR_FIELDS = {
   borderColor = "borderClassColor",
   accentColor = "accentClassColor",
   accentBorderColor = "accentBorderClassColor",
+  -- Artwork inherits class color for the price of this one row: the tint already resolves through
+  -- Util.ResolveColor, so the renderer, the CLI, the settings page and the field dump all pick it
+  -- up without a line of new code anywhere.
+  artColor    = "artClassColor",
 }
 
 -- Field → type, for the CLI's `/pm panel set <name> <field> <value>` coercion and for validation.
@@ -226,6 +394,25 @@ C.PANEL_FIELD_TYPE = {
   accentBorderTexture = "media", accentBorderSize = "number",
   accentBorderOffset = "number",
   accentBorderColor = "color", accentBorderClassColor = "boolean",
+  -- "artwork" is its own kind, validated against the LIVE catalog the same way "media" is
+  -- validated against the live LibSharedMedia list — a typo is refused with the real list rather
+  -- than stored and silently rendered as nothing. "enum" is the generic closed-list kind; which
+  -- list a field belongs to is C.PANEL_FIELD_ENUM below.
+  artTexture = "artwork", artCustomPath = "string",
+  artColor = "color", artClassColor = "boolean", artAlpha = "number",
+  artFill = "enum", artPoint = "point", artX = "number", artY = "number",
+  artScale = "number", artRotation = "enum",
+  artFlipH = "boolean", artFlipV = "boolean",
+  artLayer = "enum",
+}
+
+-- Enum field → its ordered list of legal values. One generic "enum" kind driven by this table,
+-- rather than five near-identical branches in Registry:Set, so the next closed-list field costs a
+-- row here and nothing else. The array order is also the order the rejection message lists.
+C.PANEL_FIELD_ENUM = {
+  artFill     = C.ART_FILL,
+  artRotation = C.ART_ROTATION,
+  artLayer    = C.ART_LAYER,
 }
 
 -- Media field → the LibSharedMedia media type it selects from. Drives both the CLI's validation and
@@ -249,6 +436,9 @@ C.PANEL_FIELD_ORDER = {
   "accentColor", "accentClassColor",
   "accentBorderTexture", "accentBorderSize", "accentBorderOffset",
   "accentBorderColor", "accentBorderClassColor",
+  "artTexture", "artCustomPath", "artColor", "artClassColor", "artAlpha",
+  "artFill", "artPoint", "artX", "artY", "artScale",
+  "artRotation", "artFlipH", "artFlipV", "artLayer",
 }
 
 -- ── Shared media ────────────────────────────────────────────────────────────────

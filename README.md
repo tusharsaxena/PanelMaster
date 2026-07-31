@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-477%2F477_passing-green)
+![Tests](https://img.shields.io/badge/Tests-564%2F564_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
@@ -36,6 +36,10 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - Offset the border away from the panel's edge for a halo, or inward for an inset frame.
 - **Accent bars** — a thin strip along any edge of a panel, in the style of BenikUI's panels. On
   out of the box, class-colored, with any status-bar texture you have installed.
+- **Panel artwork** — a picture drawn inside a panel's bounds, either one of the pieces bundled with
+  the addon or a texture file of your own, with its own color, opacity, fill mode, position, scale,
+  quarter-turn rotation, flip and draw layer. Nothing is drawn until you pick something,
+  so panels you already have are unchanged.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
@@ -87,7 +91,9 @@ The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `
 `borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover`, `mouseoverAlpha`,
 `accentEnabled`, `accentEdges`, `accentTexture`, `accentThickness`, `accentOffset`, `accentColor`,
 `accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
-`accentBorderColor` and `accentBorderClassColor`. So:
+`accentBorderColor`, `accentBorderClassColor`, `artTexture`, `artCustomPath`, `artColor`,
+`artClassColor`, `artAlpha`, `artFill`, `artPoint`, `artX`, `artY`, `artScale`, `artRotation`,
+`artFlipH`, `artFlipV` and `artLayer`. So:
 
 ```
 /pm panel ChatBG width 420
@@ -97,12 +103,16 @@ The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `
 /pm panel ChatBG strata LOW
 /pm panel ChatBG accentEnabled on
 /pm panel ChatBG accentEdges top,left
+/pm panel ChatBG artTexture runic-sigil
+/pm panel ChatBG artFill FILL
 ```
 
 Colors take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
 half-transparent red. Texture names are whatever LibSharedMedia has, and are matched however you
 type the capitals. `accentEdges` takes a comma list of `top`, `bottom`, `left`, `right` — or `none`
-for no bars at all.
+for no bars at all. `artTexture` takes the id of a bundled artwork (matched however you type the
+capitals), `None`, or `Custom`; the five `art*` dropdown fields refuse anything that is not one of
+their values and print the real list back at you.
 
 ### Anchoring other things to a panel
 
@@ -211,6 +221,133 @@ Out of the box every character shares one set of panels, because most people run
 a character to differ, make it a profile of its own on the **Profiles** page — you can copy your
 existing layout into it as a starting point, so nothing has to be rebuilt.
 
+## Panel artwork
+
+A panel can carry a picture as well as a color. Pick one of the pieces bundled with the addon, or
+point it at a texture file of your own, and it is drawn inside the panel's bounds — clipped there,
+so art that is offset or scaled up cannot spill out over the rest of your UI.
+
+Every panel starts with no artwork at all (`artTexture` is `None`), so nothing you already have
+changes until you choose something.
+
+What you can set per panel:
+
+| Setting | What it does |
+|---|---|
+| Artwork | Which piece. **None**, one of the bundled pieces, or **Custom path…** for your own file. |
+| Custom path | The texture to draw when **Custom** is picked. Only read in that case, so switching to a bundled piece and back does not lose what you typed. |
+| Color / Class color | Tints the art. The bundled pieces are drawn in white so the tint is what gives them their color, and class color works on them like it does on everything else. Art that ships in full color is left alone by the tint. |
+| Opacity | How solid the art is, on top of the panel's own opacity. |
+| Fill | **Native size** draws it at its authored pixel size; **Stretch** fills the panel exactly and ignores scale; **Fill (crop)** covers the panel and crops the overflow; **Fit (contain)** — the default — fits the whole image inside the panel; **Tile** repeats it across the panel. |
+| Position, X, Y | Where the art sits in the panel. Only **Native size** and **Fit** honor it — the other three cover the panel exactly, so there is nothing to move. |
+| Scale | 0.1 to 4. On **Fill (crop)** it zooms the crop; **Stretch** ignores it. |
+| Rotation, Flip | Quarter turns — 0°, 90°, 180°, 270° — and a horizontal and vertical mirror. Flips apply first, then the rotation. |
+| Layer | Behind the background, above the background (the default), or above the border and accent bar. |
+
+Your own file has to be something WoW can load at runtime — a `.tga` or `.blp` inside an addon
+folder, written the way the game addresses it, e.g.
+`Interface\AddOns\MyStuff\art\crest.tga`. The game cannot read `.png` or `.jpg` at all, and a
+texture path it cannot resolve draws nothing and raises no error.
+
+### Contributing artwork
+
+Bundled art lives in `media/artwork/`, one file per piece, and is registered as a single row in the
+catalog at the top of `modules/Artwork.lua`. Adding a piece is that file plus that row — there is
+no other code to touch.
+
+**Format.** 32-bit TGA with an alpha channel, uncompressed, power-of-two on both axes. 512×512 is
+the recommended size and what the bundled art uses. WoW cannot load `.png` or `.jpg` at runtime, and
+rescales anything that is not a power of two.
+
+**Authoring.** The background must be genuinely transparent — alpha 0, not white and not black —
+because the panel's own fill, texture and opacity show through it. Leave a couple of pixels of
+transparent margin at the edges so the **Fill (crop)** and **Tile** modes do not shave the outermost
+pixels off the motif.
+
+Prefer **white-on-transparent**: every visible pixel is pure white and the whole shape is carried by
+the alpha channel, so a pixel that should read at half strength is white at alpha 128, never gray at
+full alpha. Gray multiplied by a tint comes out muddy. Art authored that way declares
+`tintable = true` and picks up the per-panel color and class color for free. Only art that genuinely
+depends on several hues — a crest with heraldic colors, say — should ship in full color with
+`tintable = false`, which hides the color control and forces the tint to white so it cannot be
+spoiled.
+
+**Naming.** Lowercase kebab-case, no spaces, the file stem matching the catalog `id`, and always
+a `-bw` or `-color` suffix saying which of the two authoring modes it is:
+
+```
+media/artwork/alliance-crest-bw.tga        tintable = true  — takes the panel's tint
+media/artwork/alliance-crest-color.tga     tintable = false — ignores it
+media/artwork/raw/alliance-crest-bw.png    the source plate; committed, never shipped
+```
+
+The suffix is required even when only one half of a pair exists, because the two behave
+differently enough that a bare name leaves you guessing which you are looking at. Each half is
+its own catalog row rather than a variant of one entry — they are different files with different
+`tintable` answers.
+
+**The catalog row**, in `modules/Artwork.lua`:
+
+```lua
+{ id       = "alliance-crest-bw",  -- stored value; never rename it once shipped
+  category = "Factions",           -- General | Races | Classes | Expansions | Factions
+  label    = "Alliance Crest (B&W)",
+  file     = "alliance-crest-bw",  -- stem under media/artwork/
+  w        = 512, h = 512,         -- authored pixel size, declared not measured
+  tintable = true,
+  credit   = "Your Name (CC0)" },  -- required
+```
+
+The `id` is what gets written into a player's saved variables. **Renaming a shipped id silently
+breaks every panel using it** — those panels fall back to drawing no artwork on the next load, with
+no error and no warning. Ids are added, never renamed. `w` and `h` are declared rather than measured
+because a texture reports a size of 0 until the file has actually loaded, and three of the five fill
+modes need the native size to compute anything.
+
+**Licensing.** Submitted art has to be redistributable under a license compatible with this addon's
+MIT release — CC0, MIT and public domain are all fine. **Ripped or traced Blizzard art cannot ship**,
+and neither can anything under a non-commercial or no-derivatives license. Every catalog row
+carries a `credit` string naming the author and the license; that field is the attribution record,
+and a submission without one cannot be accepted.
+
+The full asset specification — the hard requirements table, the two authoring modes, prompts for
+generating a motif and the PNG-to-TGA conversion snippets — is
+[`docs/artwork-spec.md`](docs/artwork-spec.md). Read it before authoring anything.
+
+### The artwork generator
+
+`tools/artwork/generate.py` draws the bundled art in code with [Pillow](https://python-pillow.org/)
+and writes it straight to `media/artwork/` as the TGA the game loads:
+
+```
+python3 tools/artwork/generate.py                  # every bundled asset
+python3 tools/artwork/generate.py runic-sigil-bw   # just one
+```
+
+It exists so the shipped art is reproducible from the repository, reviewable as a diff rather than
+as an opaque binary, and license-clean by construction — it is original work under this addon's own
+MIT release.
+
+Art authored **outside** the repo goes through `tools/artwork/import.py`, which converts a plate to
+the 32-bit power-of-two TGA the client loads, erases a generator watermark if there is one, and
+warns when the motif has too little transparent margin for the **Fill (crop)** and **Tile** modes:
+
+```
+python3 tools/artwork/import.py IN.png alliance-crest-bw            # white-on-black -> tintable
+python3 tools/artwork/import.py IN.png alliance-crest-color --chroma  # magenta-keyed full color
+```
+
+The source plate is kept under `media/artwork/raw/`, named for the id it produces, so an asset can
+be re-derived later without going back to whoever made it. It is committed but never shipped — see
+`.pkgmeta`. Full asset rules, and the prompts for both modes, are in
+[docs/artwork-spec.md](docs/artwork-spec.md).
+
+**This is an accepted, documented deviation from the [Ka0s WoW Addon
+Standard](https://github.com/tusharsaxena/WowAddonStandards).** The standard defines no location for
+build tooling, and this is the first non-Lua source in the tree. Accepted on 2026-07-31 for the
+reason above: keeping the art reproducible and license-clean from the repo itself is worth the extra
+folder. `luacheck` is unaffected — it only walks Lua.
+
 ## FAQ
 
 **Does this move my frames around?**
@@ -264,6 +401,14 @@ That texture came from another addon which is no longer loaded. Panel Master kee
 falls back to a flat fill until the addon is back, so nothing is lost — pick another texture if you
 would rather not wait.
 
+**I picked artwork and nothing appeared.**
+If it was your own file, the path is the likely cause: WoW can only load a `.tga` or `.blp` from
+inside an addon folder, addressed the way the game addresses it, and a path it cannot resolve draws
+nothing and raises no error — so a typo looks exactly like having picked **None**. Check the file is
+a power of two on both sides too; a texture that is not may fail to load outright. If the artwork is
+one of the bundled pieces and *still* nothing shows, check the **Draw layer**: **Behind background**
+puts it under the panel's own fill, which hides it completely unless that fill is transparent.
+
 **The addon will not let me use a name.**
 Two panels cannot share a frame name, and the frame name ignores punctuation and spacing — so "Chat
 BG" and "Chat-BG" are the same name as far as anchoring is concerned. Pick something that differs by
@@ -294,4 +439,4 @@ debug log (see above) helps a great deal for anything that looks like a bug.
 
 | Version | Notes |
 |---|---|
-| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-color option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |
+| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-color option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; per-panel artwork from a bundled catalog or your own texture, with tint, fill, position, scale, rotation, flip and draw layer; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |

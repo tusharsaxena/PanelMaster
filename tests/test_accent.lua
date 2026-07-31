@@ -388,9 +388,14 @@ test("Canvas: the accent bar draws ABOVE the border", function()
   -- Bottom-up: panel fill, then border, then accent. Left to itself a child frame merely defaults to
   -- parent + 1, which would put the border and the accent on the SAME level and leave their order to
   -- creation sequence.
+  --
+  -- The two offsets are read from Constants rather than written as literals: artwork interleaves
+  -- with these (C.ART_FRAME_LEVEL), so the ladder is spread over six slots and the numbers move
+  -- whenever a new layer is slotted in. Naming the constants means such a change fails in the ONE
+  -- place that defines the ladder instead of here.
   local base = f:GetFrameLevel()
-  assertEqual(f.borderFrame:GetFrameLevel(), base + 1)
-  assertEqual(f.accentFrame:GetFrameLevel(), base + 2)
+  assertEqual(f.borderFrame:GetFrameLevel(), base + C.BORDER_FRAME_LEVEL)
+  assertEqual(f.accentFrame:GetFrameLevel(), base + C.ACCENT_FRAME_LEVEL)
   assertTrue(f.accentFrame:GetFrameLevel() > f.borderFrame:GetFrameLevel(),
     "the border would cover the accent bar")
 end)
@@ -399,10 +404,10 @@ test("Canvas: the accent/border stacking survives a frame-level change", functio
   fresh()
   local rec = R:New("Levelled", { accentEnabled = true, borderSize = 4, level = 5 })
   local f = Canvas:FrameFor(rec.id)
-  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + 2)
+  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.ACCENT_FRAME_LEVEL)
   R:Set(rec.id, "level", 20)
   -- Re-derived from the panel's own level on every repaint, not set once at creation.
-  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + 2)
+  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.ACCENT_FRAME_LEVEL)
   assertTrue(f.accentFrame:GetFrameLevel() > f.borderFrame:GetFrameLevel())
 end)
 

@@ -3,8 +3,8 @@
 In-client checks for the things the headless harness genuinely cannot reach: how a panel actually
 looks, dragging with a real mouse, layering against other addons' frames, and the debug console's
 rendering. Run these before tagging a release, after any change to `modules/Canvas.lua`,
-`modules/Unlock.lua`, `settings/Panel.lua` or `settings/PanelEditor.lua`, and whenever the
-`## Interface:` is bumped.
+`modules/Artwork.lua`, `modules/Unlock.lua`, `settings/Panel.lua` or `settings/PanelEditor.lua`,
+and whenever the `## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 
@@ -207,6 +207,89 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
    the cursor, so it can be found and dragged. Untick and the fade resumes.
 8. Create half a dozen mouseover panels and watch your frame rate. **Expect:** no measurable change —
    one shared 10Hz ticker drives all of them.
+
+## 5e. Artwork — does it load at all
+
+**Run this first.** A malformed `.tga` renders as *nothing* with no Lua error, which is
+indistinguishable from having picked **None** — so every check below it is meaningless until this
+one passes.
+
+1. Create a panel, size it around 300x300, and open its **Artwork** section.
+2. Set **Artwork** to `General: Runic Sigil (B&W)`. **Expect:** the sigil appears inside the panel.
+3. Step through every other catalog entry. **Expect:** each one draws. If any renders blank, that
+   file is bad — the headless suite only proves the file *exists*, never that the client can decode
+   it.
+4. Set **Artwork** back to **None**. **Expect:** the panel returns to a plain block.
+
+## 5e-2. Artwork — fill types under resize
+
+The one behavior the whole feature turns on, and the reason to resize rather than eyeball a static
+panel: three of the five fills only differ once the panel stops matching the art's aspect.
+
+1. With artwork on, drag the panel's **Width** slider from minimum to maximum at each fill:
+   - **Fit (contain)** → the whole emblem stays visible, never cropped, aspect never distorted.
+   - **Fill (crop)** → the art always covers the panel edge to edge, aspect never distorted, and the
+     overflow is cropped evenly on both sides.
+   - **Stretch** → the art distorts to match the panel. This one is *supposed* to look wrong.
+   - **Native size** → the emblem's size never changes as the panel resizes.
+   - **Tile** → more copies appear as the panel grows, and each copy stays the same size.
+2. Now do the same with **Height**.
+3. **The one that shipped broken:** set **Rotation** to `90` and repeat step 1 at **Fit**, **Fill**,
+   **Native size** and **Tile**. **Expect:** the art is turned a quarter-turn and its proportions are
+   otherwise unchanged. A squashed or stretched emblem here means the axis transpose regressed.
+
+## 5e-3. Artwork — layers and clipping
+
+1. Give the panel a solid opaque background and a thick border.
+2. **Draw layer → Behind background.** **Expect:** the artwork is hidden behind the fill. Drop the
+   background's alpha and it shows through.
+3. **→ Above background.** **Expect:** the art sits on the fill but *under* the border and the
+   accent bar.
+4. **→ Above border and accent.** **Expect:** the art now covers both.
+5. **Clipping:** set **Fill type** to `Native size`, **Scale** to `4`, and drag **X** and **Y**
+   around. **Expect:** the art is cut off exactly at the panel's edges and never spills outside them.
+   Confirm the **accent bar still hangs outside** the panel — it is deliberately unclipped, and
+   clipping it would be a regression.
+6. **Expect:** there is no blend-mode control. Artwork always draws with normal transparency —
+   two of WoW's five modes cannot be correct for art defined by its alpha channel, so the setting
+   was removed rather than shipped with two traps in it.
+
+## 5e-4. Artwork — color and the tintable split
+
+1. On a **(B&W)** piece: change **Color**. **Expect:** the art takes the color. Tick **Class color**
+   → it takes your class color. Drop **Opacity** → it fades independently of the panel's own
+   background alpha.
+2. On the **(Color)** piece: **Expect:** the Color and Class color controls are **hidden** — it is
+   finished art, and tinting could only muddy it. Its **Opacity** still works.
+
+## 5e-5. Artwork — the two z-order regressions
+
+Both of these broke panels that have **no artwork at all**, so run them on a plain panel.
+
+1. On a panel with the default opaque-ish background and **Artwork = None**, `/pm unlock`.
+   **Expect:** the gold outline and the panel's name are clearly visible **on top of** the
+   background fill. If they are dim or invisible, the unlock overlay has fallen behind the fill
+   again.
+2. `/pm preview` → **Expect:** all three sample panels show their gold outline and name legibly.
+3. Create two overlapping panels, same strata. Set one to **Level** `0` and the other to `1`.
+   **Expect:** the level-1 panel draws entirely in front — its background covers the other panel's
+   accent bar and border, not just part of them. Repeat with levels `0` and `3`; the result must be
+   the same. Interleaved layers here mean the level stride regressed.
+
+## 5e-6. Artwork — custom paths and persistence
+
+1. Set **Artwork** to `Custom path…` and enter `Interface\Icons\INV_Misc_QuestionMark`.
+   **Expect:** the question-mark icon renders under the current fill.
+2. Enter deliberate nonsense. **Expect:** nothing draws, and **no Lua error**.
+3. Clear the box. **Expect:** nothing draws.
+4. Set up a panel with artwork, a tint, a rotation, a flip and an offset. `/reload`.
+   **Expect:** every one of those survives exactly.
+5. **Copy settings from another panel** onto a second panel. **Expect:** all the artwork settings
+   travel with it.
+6. Switch profiles and back. **Expect:** the artwork settings are intact.
+7. `/pm panel <name>` → **Expect:** the `art*` fields print. Try
+   `/pm panel set <name> artFill SQUISH` → **Expect:** a refusal listing the five legal values, not
+   a silent store.
 
 ## 6. Layering (the actual point of the addon)
 

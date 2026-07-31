@@ -61,7 +61,7 @@ test("Unlock: unlocking during combat is deferred, not applied", function()
   T.mocks.__inCombat = true
   assertEqual(U:SetUnlocked(true), nil, "unlock should report deferral, not a state")
   assertFalse(NS.State.unlocked, "panels unlocked during combat")
-  assertTrue(U:HasPending())
+  assertTrue(U.__hasPending())
   T.mocks.__inCombat = false
 end)
 
@@ -72,7 +72,7 @@ test("Unlock: the deferred unlock is replayed when combat ends", function()
   T.mocks.__inCombat = false
   assertTrue(U:ResumePending())
   assertTrue(NS.State.unlocked)
-  assertFalse(U:HasPending(), "the pending flag was not cleared")
+  assertFalse(U.__hasPending(), "the pending flag was not cleared")
 end)
 
 test("Unlock: ResumePending is a no-op with nothing queued", function()
@@ -98,7 +98,7 @@ test("Unlock: locking clears a queued unlock", function()
   U:SetUnlocked(false)         -- explicit lock while still in combat
   T.mocks.__inCombat = false
   -- Otherwise the queued unlock would fire on leaving combat and undo the user's explicit lock.
-  assertFalse(U:HasPending())
+  assertFalse(U.__hasPending())
 end)
 
 test("Unlock: an unlocked panel takes the mouse; a locked one does not", function()
@@ -250,7 +250,7 @@ test("Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked"
   U:SetPreview(false)
   assertFalse(NS.State.unlocked)
   assertEqual(next(NS.State.unlockedPanels), nil, "a per-panel unlock survived the preview")
-  assertFalse(U:HasPending(rec.id), "a queued per-panel unlock survived the preview")
+  assertFalse(U.__hasPending(rec.id), "a queued per-panel unlock survived the preview")
 end)
 
 test("Unlock.SetPreview: preview during combat applies whole, it is never queued (F-014)", function()
@@ -264,14 +264,14 @@ test("Unlock.SetPreview: preview during combat applies whole, it is never queued
   U:SetPreview(true)
   assertTrue(NS.State.preview, "preview did not turn on during combat")
   assertTrue(NS.State.unlocked, "preview during combat left its own placeholders locked")
-  assertFalse(U:HasPending(), "preview queued its implied unlock instead of applying it")
+  assertFalse(U.__hasPending(), "preview queued its implied unlock instead of applying it")
 
   -- And leaving again is symmetrical: the lock lands now, not on the next PLAYER_REGEN_ENABLED,
   -- and it does not leave a stray "panels unlocked" queued behind it.
   U:SetPreview(false)
   assertFalse(NS.State.preview)
   assertFalse(NS.State.unlocked, "leaving preview during combat left the screen unlocked")
-  assertFalse(U:HasPending(), "leaving preview during combat queued an unlock")
+  assertFalse(U.__hasPending(), "leaving preview during combat queued an unlock")
   T.mocks.__inCombat = false
 end)
 
@@ -284,7 +284,7 @@ test("Unlock.SetPreview: previewing while already unlocked in combat queues noth
   -- The user was unlocked before preview, so they are unlocked after it — and no phantom unlock is
   -- sitting in the queue to print "panels unlocked" at them when the fight ends.
   assertTrue(NS.State.unlocked, "preview took away an unlock the user already had")
-  assertFalse(U:HasPending(), "a preview round-trip queued a redundant unlock")
+  assertFalse(U.__hasPending(), "a preview round-trip queued a redundant unlock")
   T.mocks.__inCombat = false
 end)
 
@@ -294,7 +294,7 @@ test("Unlock: the global combat gate still defers a plain unlock (F-014)", funct
   T.mocks.__inCombat = true
   assertEqual(U:SetUnlocked(true), nil, "the combat gate stopped deferring a plain unlock")
   assertFalse(NS.State.unlocked)
-  assertTrue(U:HasPending())
+  assertTrue(U.__hasPending())
   T.mocks.__inCombat = false
   U:SetUnlocked(false)
 end)
@@ -304,4 +304,51 @@ test("Unlock.TogglePreview: alternates", function()
   assertEqual(U:TogglePreview(), true)
   assertEqual(U:TogglePreview(), false)
   assertEqual(R:Count(), 0)
+end)
+
+test("Unlock: the overlay outranks every rung of the panel's own ladder", function()
+  -- The outline and the name label used to live on the panel frame itself, above its art by DRAW
+  -- LAYER alone. That stopped being enough the moment the fill, border, accent and artwork became
+  -- child FRAMES: WoW orders by strata, then frame level, then draw layer, so a BACKGROUND texture
+  -- on a child at base+2 buries an OVERLAY texture on the parent at base.
+  --
+  -- The symptom was a gold outline and a panel name rendered underneath the panel's own 85%-opaque
+  -- fill on every unlock and every preview — i.e. exactly the panels a user is trying to find.
+  fresh()
+  local C = NS.Constants
+  R:New("ZOrder")
+  local rec = R:FindByName("ZOrder")
+  U:SetUnlocked(true)
+  local f = Canvas:FrameFor(rec.id)
+  local o = f.overlay
+  assertTrue(o ~= nil, "unlocking built no overlay")
+  assertTrue(o.frame ~= nil, "the overlay has no frame of its own")
+
+  local base = f:GetFrameLevel()
+  local overlay = o.frame:GetFrameLevel()
+  for name, lvl in pairs({
+    bg     = C.BG_FRAME_LEVEL,
+    border = C.BORDER_FRAME_LEVEL,
+    accent = C.ACCENT_FRAME_LEVEL,
+    art    = C.ART_FRAME_LEVEL.ABOVE_ALL,
+  }) do
+    assertTrue(overlay > base + lvl,
+      ("the unlock overlay (%d) is not above %s (%d)"):format(overlay, name, base + lvl))
+  end
+  U:SetUnlocked(false)
+end)
+
+test("Unlock: the overlay follows the panel's level when the panel's level changes", function()
+  -- Set once at creation, the overlay's level would silently stop clearing the ladder the moment
+  -- the user raised the panel's own level — the bug would come back only for panels above level 0.
+  fresh()
+  R:New("ZFollow")
+  local rec = R:FindByName("ZFollow")
+  U:SetUnlocked(true)
+  local f = Canvas:FrameFor(rec.id)
+  R:Set(rec.id, "level", 7)
+  f = Canvas:FrameFor(rec.id)
+  assertEqual(f.overlay.frame:GetFrameLevel(),
+    f:GetFrameLevel() + NS.Constants.UNLOCK_FRAME_LEVEL)
+  U:SetUnlocked(false)
 end)

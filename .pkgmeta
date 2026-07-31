@@ -7,6 +7,7 @@ ignore:
   - .gitignore
   - docs        # holds docs/audits/ and docs/reviews/ too — all dev-only
   - tests
+  - tools       # the artwork generator/importer — build-time only, and not even Lua
   - _dev
   - "*.bak"
   - media/screenshots   # project-page art, served from the CurseForge CDN — never downloaded by a player
@@ -15,3 +16,11 @@ ignore:
   # them would add megabytes to every download for files the client physically cannot use.
   - media/logos/*.png
   - media/logos/*.jpg
+  # The source plate every bundled artwork was converted FROM, kept in git so an asset can be
+  # re-derived (a different size, a fixed margin, a corrected watermark erase) without going back
+  # to whoever generated it. Same reasoning as the logo above: WoW cannot load a .png, so shipping
+  # these would add megabytes per download for files the client physically cannot use.
+  #
+  # Each raw file is named for the catalog id it produces, so media/artwork/raw/alliance-crest.png
+  # is unambiguously the source of media/artwork/alliance-crest.tga.
+  - media/artwork/raw

@@ -45,6 +45,8 @@ defaults\Global.lua
 
 # Modules (Registry before Canvas — the renderer reads the registry)
 modules\Registry.lua
+# Artwork before Canvas — the renderer reads its art list and geometry math
+modules\Artwork.lua
 modules\Canvas.lua
 modules\Unlock.lua
 modules\DebugLog.lua

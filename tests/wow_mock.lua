@@ -113,8 +113,26 @@ local function stubFrame()
     if k == "SetBackdropBorderColor" then
       return function(_, r, g, b, a) f.__backdropBorderColor = { r, g, b, a }; return f end
     end
-    if k == "SetTexture" then return function(_, path) f.__texture = path; return f end end
+    -- The WRAP arguments are kept alongside the path, not dropped. Tiled artwork is the one thing
+    -- whose correctness lives entirely in them: a spec that computes coordinates past 1 but forgets
+    -- REPEAT clamps to the edge pixel and draws one smeared copy, and a path-only capture cannot
+    -- tell that apart from a correct tile.
+    if k == "SetTexture" then
+      return function(_, path, wrapH, wrapV)
+        f.__texture, f.__wrapH, f.__wrapV = path, wrapH, wrapV
+        return f
+      end
+    end
     if k == "GetTexture" then return function() return f.__texture end end
+    -- The blend mode is part of "what does this look like" in the same way color is — ADD over a
+    -- dark panel is a glow and BLEND is not — so it is recorded rather than swallowed.
+    if k == "SetBlendMode" then return function(_, mode) f.__blend = mode; return f end end
+    -- Recorded because "artwork renders inside the panel's bounds" is asserted by asking whether the
+    -- art frame was ever told to clip. A stub cannot really clip anything, so the CALL is the only
+    -- evidence there is, and a blanket no-op would make a renderer that never asked look identical.
+    if k == "SetClipsChildren" then
+      return function(_, v) f.__clipsChildren = v and true or false; return f end
+    end
     -- Texture ORIENTATION, recorded for the same reason as color: which way a texture was rotated is
     -- part of "what does this look like", and an accent bar on a vertical edge is drawn with the
     -- 8-argument form. Stored as the flat 8-number list the caller passed, in SetTexCoord's own

@@ -1,0 +1,4 @@
+# Python bytecode from tools/artwork/. The tools themselves are committed (they are how the
+# bundled art is produced and how contributed art is converted); their compiled cache is not.
+__pycache__/
+*.pyc

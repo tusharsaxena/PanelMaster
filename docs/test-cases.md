@@ -116,7 +116,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Registry.Recover: pulls an off-screen panel back into view
 - Registry: the panel messages have exactly one sender
 
-### test_canvas.lua (27)
+### test_canvas.lua (29)
 
 - Canvas.BuildSpec: carries the record's geometry through
 - Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
@@ -145,8 +145,10 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Canvas: showLabels still repaints — the unlock overlay reads it (F-012)
 - Canvas: OnEnable subscribes the renderer to the bus
 - Canvas: consumers register on their own bus target (architecture-§4)
+- Canvas: each panel level gets a frame-level band of its own
+- Canvas: one level apart is enough to separate two panels completely
 
-### test_unlock.lua (28)
+### test_unlock.lua (30)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
@@ -176,6 +178,8 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Unlock.SetPreview: previewing while already unlocked in combat queues nothing (F-014)
 - Unlock: the global combat gate still defers a plain unlock (F-014)
 - Unlock.TogglePreview: alternates
+- Unlock: the overlay outranks every rung of the panel's own ladder
+- Unlock: the overlay follows the panel's level when the panel's level changes
 
 ### test_media.lua (79)
 
@@ -324,6 +328,92 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Canvas: a vertical bar rotates its texture 90 degrees
 - Canvas: a horizontal bar draws its texture as authored
 - Canvas: the orientation is re-applied on every repaint, not just the first
+
+### test_artwork.lua (83)
+
+- Artwork: every catalog id is unique
+- Artwork: no catalog row claims one of the two reserved ids
+- Artwork: every catalog row sits in a declared category
+- Artwork: every catalog row declares the fields the fill math needs
+- Artwork: every catalog row's derived path points at a file that exists
+- Artwork: the shipped seed row is the runic sigil, tintable and square
+- Artwork.Entry: finds a row by id and forgives its case
+- Artwork.List: brackets the catalog with None first and Custom last
+- Artwork.List: a catalog label carries its category as a prefix
+- Artwork.List: orders the catalog by category, then by label
+- Artwork FIT: the whole image lands inside the panel at every aspect pairing
+- Artwork FIT: never crops — the texture coordinates stay the full image
+- Artwork FIT: scale multiplies the fitted size and nothing else
+- Artwork FIT: scale is clamped to the artwork bounds, not applied raw
+- Artwork FILL: covers the panel exactly, at every panel and art aspect
+- Artwork FILL: the crop preserves the art's aspect
+- Artwork FILL: crops the binding axis not at all, and centers what it does crop
+- Artwork FILL: a wide panel crops vertically and a tall panel crops horizontally
+- Artwork FILL: scale tightens both surviving ranges, so a bigger scale zooms in
+- Artwork STATIC: draws at the authored pixel size and ignores the panel entirely
+- Artwork STATIC: scale multiplies the authored size
+- Artwork STRETCH: matches the panel exactly, at every panel and art aspect
+- Artwork STRETCH: deliberately ignores scale
+- Artwork TILE: the uv range is how many copies fit across the panel
+- Artwork TILE: the copy count scales linearly with the panel
+- Artwork TILE: scale sizes the tile, so a bigger scale means fewer copies
+- Artwork: only TILE asks the renderer to wrap
+- Artwork: all five fills behave as the panel is resized
+- Artwork: position is honoured by STATIC and FIT, which leave room to move
+- Artwork: STRETCH, FILL and TILE force center, since they already cover the panel
+- Artwork: a nonsense art anchor falls back to the template's own
+- Artwork: an unturned, unflipped quad is the identity texture coordinate
+- Artwork: one quarter turn reproduces C.ACCENT_TEXCOORD_ROT90 exactly
+- Artwork: half a turn is the identity quad reversed
+- Artwork: three quarter turns are the quarter turn applied three times
+- Artwork: a horizontal flip swaps the left and right columns
+- Artwork: a vertical flip swaps the top and bottom rows
+- Artwork: flipping both ways is the same as turning it half way round
+- Artwork: flips are applied BEFORE the turn, and the order is part of the contract
+- Artwork: a quarter turn transposes a FILL crop rather than discarding it
+- Artwork FILL: every quarter turn preserves the art's aspect
+- Artwork FIT: every quarter turn preserves the art's aspect
+- Artwork STATIC: every quarter turn preserves the art's aspect
+- Artwork TILE: every quarter turn preserves the art's aspect
+- Artwork: a rotation that is not a quarter turn falls back to the template's
+- Artwork: the tint carries the stored color through
+- Artwork: artAlpha multiplies the tint's own alpha rather than replacing it
+- Artwork: artClassColor overrides the RGB and keeps the computed alpha
+- Artwork: the class-color row is wired up in C.COLOR_FIELDS
+- Artwork: full-color art is forced white, and keeps the computed alpha
+- Artwork: full-color art ignores class color too
+- Artwork: a custom path counts as tintable
+- Artwork.BuildArtSpec: no artwork selected is nil, the cheapest possible answer
+- Artwork.BuildArtSpec: an id that no longer exists draws nothing, not an error
+- Artwork.BuildArtSpec: Custom with nothing typed yet draws nothing
+- Artwork.BuildArtSpec: a zero-sized panel is nil rather than a division by zero
+- Artwork.BuildArtSpec: a catalog row with a broken native size draws nothing
+- Artwork.BuildArtSpec: a catalog row with NO declared size falls back to the nominal one
+- Artwork.BuildArtSpec: a non-table record is nil, not a crash
+- Artwork.BuildArtSpec: an unknown fill or layer falls back to the template
+- Artwork.BuildArtSpec: the layer resolves to the frame level the renderer must use
+- Artwork: a panel straight from the template renders no artwork at all
+- Artwork: a record that predates the feature entirely renders no artwork
+- Artwork: Canvas.BuildSpec fits the art to the CLAMPED panel size
+- Artwork: Sanitize leaves a fully-specified artwork record alone
+- Artwork: every art field is in the template, the type map and the dump order
+- Artwork: Registry.CopyFrom carries every art field across
+- Artwork: a copy deep-copies the art color rather than sharing it
+- Artwork: a profile round-trip keeps every art field intact
+- Artwork: R:Set stores an art field through the normal write seam
+- Canvas: a panel with artwork shows its art frame and applies the resolved path
+- Canvas: the art frame takes the level its layer names, for all three layers
+- Canvas: there is ONE art frame, whose level is reassigned per render
+- Canvas: the artwork ladder interleaves with the fill, the border and the accent
+- Canvas: the fill lives on its own child frame, so BELOW_BG is reachable
+- Canvas: the art frame clips its children, so offset art stays inside the panel
+- Canvas: the art texture takes the spec's size, anchor and texture coordinates
+- Canvas: tiled artwork asks SetTexture to wrap; nothing else does
+- Canvas: the artwork tint reaches the texture, and the blend mode is always Normal
+- Canvas: turning artwork off clears the texture as well as hiding the frame
+- Canvas: a released frame keeps no artwork for the next panel to inherit
+- Canvas: a reused frame draws the new panel's artwork, not the old panel's
+- Canvas: a panel with no artwork never shows its art frame
 
 ### test_database.lua (18)
 
@@ -536,10 +626,11 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_compat.lua | 14 |
 | test_constants.lua | 16 |
 | test_registry.lua | 41 |
-| test_canvas.lua | 27 |
-| test_unlock.lua | 28 |
+| test_canvas.lua | 29 |
+| test_unlock.lua | 30 |
 | test_media.lua | 79 |
 | test_accent.lua | 63 |
+| test_artwork.lua | 83 |
 | test_database.lua | 18 |
 | test_debuglog.lua | 25 |
 | test_schema.lua | 21 |
@@ -547,4 +638,4 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
 | test_spelling.lua | 2 |
-| **Total** | **477** |
+| **Total** | **564** |

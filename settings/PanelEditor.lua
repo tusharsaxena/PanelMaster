@@ -316,6 +316,61 @@ local function makeColorPair(ctx, row, rec, field, label)
   row:AddChild(cb)
 end
 
+-- Whether the tint controls mean anything for the artwork a record currently has selected.
+--
+-- A catalog row that declares `tintable = false` is finished full-color art, and BuildArtSpec
+-- forces its RGB to white regardless of what artColor holds. Offering a color picker for it would
+-- therefore be a control that lies, which is worse than no control at all.
+--
+-- The two reserved ids have no catalog row and count as tintable: "None" draws nothing so the
+-- question is moot, and tinting your own file white is a no-op — the permissive answer costs
+-- nothing either way, and it keeps the picker's state from flickering as you page through the list.
+local function artTintable(rec)
+  local row = NS.Artwork.Entry(rec.artTexture)
+  return not (row and row.tintable == false)
+end
+
+-- The artwork color pair, in a row that adds and removes it as the selected artwork changes.
+--
+-- This is the one control in the editor whose EXISTENCE is a function of another field, and AceGUI
+-- gives no way to express that: both the Flow and the List layout call frame:Show() on every child
+-- on every pass, so a widget hidden by hand reappears at the next DoLayout. The row therefore holds
+-- the pair or holds nothing, and switching between the two is a release-and-rebuild of that row
+-- alone.
+--
+-- Releasing widgets from inside a refresher is safe here only because of what is NOT in this row:
+-- the artwork dropdown that triggers the change lives one row up, so nothing on the callback stack
+-- is released (the F-002 hazard). Rebuilding the whole editor instead would release that dropdown
+-- while its own click handler was still running.
+--
+-- The pair is given its OWN refresher list rather than ctx's. ctx.refreshers is cleared only by a
+-- full rebuild, so a pair released here would otherwise leave a closure behind holding a widget
+-- AceGUI has already recycled into something else — the exact failure the refresher list's own
+-- header warns about, just reached from the other direction.
+local function makeArtColorRow(ctx, group, rec)
+  local row = editorRow(group)
+  local sub = { refreshers = {} }
+  local shown   -- nil, not false: the first pass must build, whatever the answer turns out to be
+
+  local function reconcile(live)
+    local want = artTintable(live)
+    if want == shown then return end
+    for i = #sub.refreshers, 1, -1 do sub.refreshers[i] = nil end
+    row:ReleaseChildren()
+    if want then makeColorPair(sub, row, rec, "artColor", "Artwork color") end
+    shown = want
+    -- The row just changed height, and every row below it has to move. The scroll frame owns that
+    -- arithmetic; nothing else on this path re-runs it.
+    if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
+  end
+
+  reconcile(rec)
+  addRefresher(ctx, rec, function(live)
+    reconcile(live)
+    for _, fn in ipairs(sub.refreshers) do fn() end
+  end)
+end
+
 -- The four edge checkboxes for the accent bar, as one quarter-width row.
 --
 -- A set of independent booleans rather than a dropdown, because the edges are not exclusive — "top
@@ -383,6 +438,30 @@ local function buildPanelEditor(ctx, parent, rec)
     dd:SetRelativeWidth(0.5)
     local list, order = {}, {}
     for i, token in ipairs(tokens) do list[token] = token; order[i] = token end
+    dd:SetList(list, order)
+    dd:SetValue(rec[field])
+    dd:SetCallback("OnValueChanged", function(_, _, key) NS.Registry:Set(rec.id, field, key) end)
+    if tooltip then attachTooltip(dd, label, tooltip) end
+    row:AddChild(dd)
+    addRefresher(ctx, rec, function(live) dd:SetValue(live[field]) end)
+    return dd
+  end
+
+  -- A dropdown over a {value=, label=} option list — the shape C.STRATA_OPTIONS and the four
+  -- C.ART_*_OPTIONS already come in.
+  --
+  -- Kept separate from tokenDropdown rather than folded into it, because the two answer different
+  -- questions. A token dropdown SHOWS the stored token, which is right for anchor points and strata:
+  -- those tokens are also what you type at the CLI, so displaying them teaches the CLI. An artwork
+  -- enum stores "FIT" and has to read "Fit (contain)" — nobody should have to know the token to pick
+  -- a fill mode.
+  local function optionDropdown(row, label, field, options, tooltip)
+    local dd = AceGUI:Create("Dropdown")
+    trackDropdown(ctx, dd)
+    dd:SetLabel(label)
+    dd:SetRelativeWidth(0.5)
+    local list, order = {}, {}
+    for i, opt in ipairs(options) do list[opt.value] = opt.label; order[i] = opt.value end
     dd:SetList(list, order)
     dd:SetValue(rec[field])
     dd:SetCallback("OnValueChanged", function(_, _, key) NS.Registry:Set(rec.id, field, key) end)
@@ -625,6 +704,133 @@ local function buildPanelEditor(ctx, parent, rec)
   editorSpacer(group, EDITOR_ROW_GAP)
   local accentBorderColorRow = editorRow(group)
   makeColorPair(ctx, accentBorderColorRow, rec, "accentBorderColor", "Accent bar border color")
+
+  -- ── Artwork ──
+  -- Last of the appearance sections, and deliberately so: artwork is drawn INTO the panel the three
+  -- sections above describe, so it reads as a decision you make once the panel itself looks right.
+  --
+  -- The dropdowns are all label-carrying option lists rather than raw tokens — see optionDropdown.
+  editorHeading(group, "Artwork")
+
+  local artRow = editorRow(group)
+
+  -- Built from Artwork.List() rather than from the catalog, because that function already places
+  -- the two reserved entries where they were agreed to go ("None" first, "Custom path" last) and
+  -- prefixes each catalog row with its category. Rebuilt per editor build for the same reason the
+  -- media lists are: an art pack appending to the catalog may well have loaded after this addon.
+  local artOptions = {}
+  for i, entry in ipairs(NS.Artwork.List()) do
+    artOptions[i] = { value = entry.id, label = entry.label }
+  end
+  optionDropdown(artRow, "Artwork", "artTexture", artOptions,
+    "The image drawn inside this panel. 'None' draws nothing at all, which is what every panel "
+    .. "starts as. 'Custom path\226\128\166' uses the file you name beside this instead of a "
+    .. "bundled piece.")
+
+  -- The custom path box. Enabled only for "Custom", because a path is meaningless for every other
+  -- selection — but the text is KEPT either way (it is its own record field), so switching to a
+  -- bundled piece to compare and back again does not cost you what you typed.
+  local pathBox = AceGUI:Create("EditBox")
+  pathBox:SetLabel("Custom texture path")
+  pathBox:SetRelativeWidth(0.5)
+  local function applyArtPath(live)
+    -- The disabled state is pushed unconditionally: it tracks artTexture, and a stale one would let
+    -- you type into a box whose contents nothing reads.
+    pathBox:SetDisabled(live.artTexture ~= C.ARTWORK_CUSTOM)
+    -- The TEXT is not, while the box has focus. This is the one control in the editor holding a
+    -- half-typed value, and a MSG_PANEL from somewhere else entirely — a drag, a `/pm panel set`,
+    -- another field in this very editor — would otherwise wipe the path mid-keystroke. The rename
+    -- box solves the same problem by having no refresher at all; this one cannot, because it has a
+    -- disabled state to keep honest.
+    local eb = pathBox.editbox
+    if eb and eb.HasFocus and eb:HasFocus() then return end
+    pathBox:SetText(live.artCustomPath or "")
+  end
+  applyArtPath(rec)
+  pathBox:SetCallback("OnEnterPressed", function(_, _, text)
+    NS.Registry:Set(rec.id, "artCustomPath", text)
+  end)
+  attachTooltip(pathBox, "Custom texture path",
+    "A texture file of your own, given as a full path \226\128\148 for example "
+    .. "|cffffff00Interface\\AddOns\\MyAddon\\art\\logo.tga|r. Only used while Artwork is set to "
+    .. "'Custom path\226\128\166'.\n\nWoW loads TGA and BLP files whose width and height are both "
+    .. "powers of two. Anything else draws as a green square or as nothing, with no error.")
+  artRow:AddChild(pathBox)
+  addRefresher(ctx, rec, applyArtPath)
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  -- Present only while the selected artwork is actually tintable. See makeArtColorRow.
+  makeArtColorRow(ctx, group, rec)
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artFillRow = editorRow(group)
+  numberField(artFillRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
+    "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
+    .. "panel's own opacity, so a faded panel fades its art with it.")
+  optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
+    "How the image is sized inside the panel.\n\n"
+    .. "|cffffff00Native size|r draws it at its authored pixel size, aspect intact.\n"
+    .. "|cffffff00Stretch|r matches the panel exactly and distorts the aspect to do it.\n"
+    .. "|cffffff00Fill (crop)|r covers the panel with the aspect intact, cropping whatever "
+    .. "overflows.\n"
+    .. "|cffffff00Fit (contain)|r shows the whole image with the aspect intact, leaving space on "
+    .. "two sides.\n"
+    .. "|cffffff00Tile|r repeats it at native size across the panel.\n\n"
+    .. "Stretch ignores Scale \226\128\148 a scaled stretch is really Fill or Native size.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  -- Position sits alone on its row rather than sharing with the X slider below it, so that X and Y
+  -- stay side by side. Splitting a pair of offsets across two rows is the one arrangement that
+  -- genuinely reads wrong.
+  local artPointRow = editorRow(group)
+  tokenDropdown(artPointRow, "Artwork position", "artPoint", C.POINTS,
+    "Which part of the panel the artwork is anchored to, and what the offsets below are measured "
+    .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
+    .. "is nowhere for the art to move to.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artOffsetRow = editorRow(group)
+  -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
+  -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
+  numberField(artOffsetRow, "Artwork X offset", "artX",
+    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+    "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
+    .. "have no room to move in.")
+  numberField(artOffsetRow, "Artwork Y offset", "artY",
+    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+    "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
+    .. "have no room to move in.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artScaleRow = editorRow(group)
+  numberField(artScaleRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
+    "Size multiplier for the artwork.\n\nIgnored entirely by Stretch, which always matches the "
+    .. "panel exactly. Under Fill and Tile the art still covers the panel, so this changes what you "
+    .. "SEE rather than how big the art is drawn: above 1 Fill crops tighter (it zooms in) and Tile "
+    .. "lays down fewer, larger copies.")
+  optionDropdown(artScaleRow, "Rotation", "artRotation", C.ART_ROTATION_OPTIONS,
+    "Turn the artwork. Quarter turns only: those are an exact swap of the texture's corners, with "
+    .. "no blurring and no smeared edges. An arbitrary angle cannot be drawn that cleanly on a "
+    .. "cropped image, so it is not offered.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artFlipRow = editorRow(group)
+  boolField(artFlipRow, "Flip horizontal", "artFlipH",
+    "Mirror the artwork left to right. Applied BEFORE the rotation, so flipping and then turning "
+    .. "is not the same result as turning and then flipping.")
+  boolField(artFlipRow, "Flip vertical", "artFlipV",
+    "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artLayerRow = editorRow(group)
+  optionDropdown(artLayerRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
+    "Where the artwork sits in the panel's stack.\n\n"
+    .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
+    .. "background that is transparent or partly so \226\128\148 with a solid background it is "
+    .. "invisible.\n"
+    .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
+    .. "bar.\n"
+    .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
 
   -- ── Visibility ──
   editorHeading(group, "Visibility")

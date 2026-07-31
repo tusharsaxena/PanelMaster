@@ -281,3 +281,35 @@ test("Canvas: consumers register on their own bus target (architecture-§4)", fu
   assertTrue(Canvas.__ev ~= nil and targets[Canvas.__ev] ~= nil,
     "Canvas is not registered on its own target")
 end)
+
+test("Canvas: each panel level gets a frame-level band of its own", function()
+  -- The level setting means "higher draws in front". Used as a RAW frame level that was only true
+  -- while a panel occupied one rung — and a panel occupies eight. Two panels three levels apart put
+  -- one's accent bar and the other's background fill on the same number, leaving the winner to
+  -- frame creation order, which the name-keyed pool does not even keep in panel order.
+  fresh()
+  R:New("Low"); R:New("High")
+  local lo = R:FindByName("Low")
+  local hi = R:FindByName("High")
+  R:Set(lo.id, "level", 0)
+  R:Set(hi.id, "level", 3)
+
+  local lf, hf = Canvas:FrameFor(lo.id), Canvas:FrameFor(hi.id)
+  local loTop = lf:GetFrameLevel() + C.UNLOCK_FRAME_LEVEL
+  local hiBottom = hf:GetFrameLevel()
+  assertTrue(hiBottom > loTop,
+    ("the higher panel's stack starts at %d, inside the lower panel's %d..%d")
+      :format(hiBottom, lf:GetFrameLevel(), loTop))
+end)
+
+test("Canvas: one level apart is enough to separate two panels completely", function()
+  -- The tightest case, and the one a user would actually hit: adjacent levels must not interleave.
+  fresh()
+  R:New("A"); R:New("B")
+  local a, b = R:FindByName("A"), R:FindByName("B")
+  R:Set(a.id, "level", 4)
+  R:Set(b.id, "level", 5)
+  local af, bf = Canvas:FrameFor(a.id), Canvas:FrameFor(b.id)
+  assertTrue(bf:GetFrameLevel() > af:GetFrameLevel() + C.UNLOCK_FRAME_LEVEL,
+    "adjacent panel levels still interleave")
+end)

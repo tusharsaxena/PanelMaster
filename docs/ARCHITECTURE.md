@@ -25,7 +25,7 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 |---|---|---|
 | `core/Compat.lua` | `NS.Compat` | The only caller of deprecated / varying APIs. Addon metadata, screen size, UI scale, LibSharedMedia registration and lookup, class color, cursor test. |
 | `core/LSMPatch.lua` | — | Upstream fixup for the vendored `LSM30_Border` widget's misaligned preview tile. Lives in `core/`, not `libs/`, so a lib refresh cannot blow it away. |
-| `core/Constants.lua` | `NS.Constants` | Strata, anchor-point and edge enums, geometry bounds, the panel record template, the field type/order/media/color maps, preview specs, media paths. |
+| `core/Constants.lua` | `NS.Constants` | Strata, anchor-point, edge and artwork enums (with their derived membership sets and option lists), geometry and scale bounds, the frame ladder, the panel record template, the field type/order/media/enum/color maps, preview specs, media paths. |
 | `core/Namespace.lua` | `NS.name/version/PREFIX/SCHEMA_VERSION` | Metadata bootstrap. The cyan `[PM]` chat tag lives here. |
 | `core/State.lua` | `NS.State` | Session-only runtime state: `debug`, `unlocked`, `unlockedPanels`, `preview`, `previewIDs`. Never persisted. |
 | `core/Util.lua` | `NS.Util`, `NS.Print` | Path splitting, clamping, rounding, snapping, boolean and color parse/format, name cleaning, deep copy, and the secret-safe shared chat printer. |
@@ -36,7 +36,8 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `locales/enUS.lua` | `NS.L` | The canonical locale table and its key-is-the-string fallback. Carries no keys in 0.1.0 — see **Localization**. |
 | `locales/PostLoad.lua` | — | Derived-key aliases, loaded after every locale file so it reads whatever the active locale resolved. Empty in 0.1.0. |
 | `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, copy-from, field edits, sanitizing, slug-uniqueness, off-screen recovery, profile reload. Sole sender of both panel messages. |
-| `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the offset border child frame, the four accent-bar frames and their lazy borders, the shared mouseover ticker, targeted and full repaints. |
+| `modules/Artwork.lua` | `NS.Artwork` | The bundled-art catalog and the pure `BuildArtSpec` geometry — fill math, UV crop/flip/rotation composition, tint resolution. Touches no frames and calls no WoW API. Loads **before** `Canvas`, which reads it. |
+| `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the background, border, accent and artwork child frames (the last clipping and re-leveled per render), the four accent bars and their lazy borders, the shared mouseover ticker, targeted and full repaints. |
 | `modules/Unlock.lua` | `NS.Unlock` | Unlock mode (outline, label, drag, snap), global and per-panel, and preview mode. |
 | `modules/DebugLog.lua` | `NS.DebugLog`, `NS.Debug`, `NS.DebugBuild` | The on-screen debug console and the gated logging sink. `NS.Debug` carries the addon's **only** debug gate (`debug-logging-§4`); `NS.DebugBuild` is the same sink for a site whose arguments cost something to produce, deferring that work past the same gate rather than growing a second one. Its builder must be a plain function reference with its arguments passed unbound — a closure would be allocated at the call site, before the gate, which is the cost being avoided. |
 | `settings/Schema.lua` | `NS.Schema` | The settings schema (one row per setting). Sole sender of `SettingsChanged`. |
@@ -75,7 +76,10 @@ PanelMasterDB
   accentEnabled, accentEdges, accentTexture, accentThickness, accentOffset,
                  accentColor, accentClassColor,
   accentBorderTexture, accentBorderSize, accentBorderOffset,
-                       accentBorderColor, accentBorderClassColor }
+                       accentBorderColor, accentBorderClassColor,
+  artTexture, artCustomPath, artColor, artClassColor, artAlpha,
+  artFill, artPoint, artX, artY, artScale,
+  artRotation, artFlipH, artFlipV, artLayer }
 ```
 
 `core/Constants.lua`'s `PANEL_TEMPLATE` is the single definition of that shape — the shipped default
@@ -87,6 +91,7 @@ it, so adding a field is one template entry plus one row in whichever of these a
 | `PANEL_FIELD_TYPE` | CLI coercion and validation |
 | `PANEL_FIELD_ORDER` | the `/pm panel <name>` dump order |
 | `PANEL_FIELD_MEDIA` | which LibSharedMedia type a media field selects from |
+| `PANEL_FIELD_ENUM` | which closed value list an `enum` field is validated against |
 | `COLOR_FIELDS` | which boolean class-colors which color |
 
 `COLOR_FIELDS` is the generic seam the class-color feature is built on: every color read goes
@@ -106,6 +111,57 @@ color was one `COLOR_FIELDS` row and no new class-color logic anywhere.
 **Panel records are an `architecture-§5` storage carve-out.** They are not Schema rows: a schema row
 is a fixed setting with one widget, and a panel is a variable-length user-created object. They are
 mutated only through `NS.Registry`, which is the equivalent single write seam.
+
+### The artwork fields
+
+Fifteen `art*` fields carry the per-panel art layer, prefixed to match the existing `accent*`
+convention and added to the template, `PANEL_FIELD_TYPE` and `PANEL_FIELD_ORDER` like any other
+field — which is precisely why `Registry.Sanitize`, `R:Reset`, `R:CopyFrom`, profile switching and
+the whole `/pm panel` surface pick them up with no per-field work.
+
+| Field | Default | Kind | Meaning |
+|---|---|---|---|
+| `artTexture` | `"None"` | `artwork` | Catalog id, or the two reserved values `None` / `Custom` |
+| `artCustomPath` | `""` | `string` | Texture path, read only when `artTexture == "Custom"` |
+| `artColor` | `{1,1,1,1}` | `color` | Tint |
+| `artClassColor` | `false` | `boolean` | Class-color override for `artColor` |
+| `artAlpha` | `1.0` | `number` | Art opacity, multiplied onto the resolved tint's alpha |
+| `artFill` | `"FIT"` | `enum` | `STATIC` / `STRETCH` / `FILL` / `FIT` / `TILE` |
+| `artPoint` | `"CENTER"` | `point` | Anchor within the art frame |
+| `artX` / `artY` | `0` | `number` | Offset from that anchor |
+| `artScale` | `1.0` | `number` | Size multiplier, clamped to `C.MIN_ART_SCALE`…`C.MAX_ART_SCALE` (0.1–4) |
+| `artRotation` | `0` | `enum` | `0` / `90` / `180` / `270`, stored as **numbers** |
+| `artFlipH` / `artFlipV` | `false` | `boolean` | Mirror horizontally / vertically |
+| `artLayer` | `"ABOVE_BG"` | `enum` | `BELOW_BG` / `ABOVE_BG` / `ABOVE_ALL` |
+
+`artColor` is one more `COLOR_FIELDS` row (`artColor → artClassColor`) and no new class-color code
+anywhere — the third time that seam has paid for itself.
+
+`artTexture` defaults to `"None"`, so a record that predates this change renders exactly as before —
+`BuildArtSpec` returns `nil` for it before touching anything else.
+
+The five closed lists are **not** five branches in `Registry:Set`. One generic `"enum"` kind reads
+`C.PANEL_FIELD_ENUM`, so a sixth enum field later costs one row and no code; `artTexture` has its own
+`"artwork"` kind validated case-insensitively against `Artwork.List()`, mirroring how `"media"`
+already validates against the live LibSharedMedia list and refuses a typo with the real list.
+
+Two deliberate asymmetries in `Sanitize`:
+
+- **`artTexture` is not validated against the catalog on write**, exactly as the LSM media names
+  are not. An id that resolves to nothing now can be valid a moment later (an art pack appending to
+  `Artwork.Catalog` loads after this addon), and `BuildArtSpec` already degrades an unresolvable
+  id to "draw nothing". Rewriting it to `"None"` on first touch would destroy the user's choice
+  permanently to fix a problem that fixes itself. `R:Set` still refuses a typo up front, which is
+  when there is somebody to tell.
+- **`artX` / `artY` are unbounded**, like the panel's own offsets: the offset is measured against a
+  panel size `Sanitize` does not know, so an invented bound would clamp a good placement on a large
+  panel the first time the record was touched.
+
+An **empty** `artCustomPath` is a legitimate state — Custom is picked and the path is not typed yet
+— so only a non-string falls back to the template, the same distinction the accent edge set makes.
+The four enum values do snap back to their template default when what is stored is not a member,
+because an unknown `artFill` would otherwise produce a nil size that lands in `SetSize` and aborts
+the rest of that panel's paint.
 
 ### Sanitizing
 
@@ -201,6 +257,12 @@ color) plus a `BackdropTemplate` **edge** (an LSM `border` name at the user's th
 backdrop's `bgFile` is deliberately unused — it insets under the edge, and a panel wants its fill to
 run to the frame's actual bounds.
 
+That fill texture lives on its **own child frame** (`f.bgFrame`, `SetAllPoints`), not on the panel
+frame itself. The reason is artwork: a child frame always draws above its parent's textures whatever
+draw layer those use, so with the fill on the panel there is **no** frame level a child could take
+to get underneath it, and `artLayer = "BELOW_BG"` would be unreachable. The texture keeps the field
+name `f.bg`, so every call site and test that paints it is unchanged; only what it hangs off moved.
+
 The border lives on its **own child frame** (`f.borderFrame`), not on the panel frame itself. A
 backdrop is always drawn at its own frame's bounds, so moving the border in or out relative to the
 panel — `borderOffset` — is only possible by moving the frame that carries it. Being a child, it
@@ -209,6 +271,53 @@ different layer from the panel it belongs to.
 
 `SetBackdropBorderColor` **must** follow `SetBackdrop`: applying a backdrop resets its border color
 to white, so coloring first is silently undone. A test asserts the recorded color survives.
+
+### The frame ladder
+
+Everything a panel draws sits on a child frame with an explicitly assigned level, seven slots deep,
+stated once in `core/Constants.lua` (`C.ART_FRAME_LEVEL`, `C.BG_FRAME_LEVEL`,
+`C.BORDER_FRAME_LEVEL`, `C.ACCENT_FRAME_LEVEL`, `C.UNLOCK_FRAME_LEVEL`) and applied in `applySpec`
+— except the last, which `modules/Unlock.lua` builds lazily and sets itself:
+
+```
+f                       base          the panel frame
+  f.artFrame  BELOW_BG  base + 1
+  f.bgFrame             base + 2      background fill
+  f.artFrame  ABOVE_BG  base + 3      ← artLayer default
+  f.borderFrame         base + 4
+  f.accentFrame         base + 5
+  f.artFrame  ABOVE_ALL base + 6
+  f.overlay.frame       base + 7      unlock outline and name label
+```
+
+The unlock overlay is on the ladder at all because of this change. It used to be textures on the
+panel frame itself, kept above the panel's art by *draw layer*; that works only while the art is
+also a region of `f`. Once the fill became a child frame, frame level took precedence over draw
+layer and the fill drew straight over the outline — so on every unlock and every preview, the gold
+outline and the panel name vanished under the panel's own 85%-opaque background. It now has its own
+frame above every other rung, which is what its job requires: nothing may cover the thing that makes
+an invisible panel findable.
+
+### Panel levels are strided
+
+A panel's own frame level is `level × C.PANEL_LEVEL_STRIDE`, not `level`. A panel occupies eight
+rungs, so consecutive raw levels would *interleave* — one panel's accent bar landing on the same
+frame level as the next panel's background fill, with the winner decided by frame creation order,
+which the name-keyed pool does not keep in panel order. The `level` setting means "higher draws in
+front"; the stride is what makes that true for every distinct value rather than only for values far
+enough apart to clear the footprint.
+
+The levels are **spread out** rather than consecutive because the artwork has to *interleave* with
+the other three: three of the six slots are the same single `f.artFrame`, whose level is reassigned
+per render from `C.ART_FRAME_LEVEL[art.layer]`. Frame levels are mutable at any time, so one frame
+covers all three choices — three art frames per panel would be two created to sit hidden forever.
+This is also the only arrangement in which "behind the background" and "above the accent bar" are
+both expressible.
+
+Left alone, every child frame merely defaults to `parent + 1`, which would pile the fill, the border
+and the accent onto one level and leave their order to creation sequence. `base` is read back with
+`GetFrameLevel()` rather than reusing `spec.level`, since the client clamps a frame's level and the
+value that landed may not be the one asked for.
 
 ### Frame names and the pool
 
@@ -261,11 +370,8 @@ render path allocation-free.
 They live on their **own child frame** (`accentFrame`), separate from the border's. That is purely
 z-order: a child frame always draws above its parent's textures whatever draw layer those use, so
 with the border on a child frame and the bars directly on the panel, the border covered the bars
-regardless. `applySpec` therefore assigns explicit levels bottom-up — panel fill, then
-`borderFrame` at `+1`, then `accentFrame` at `+2` — because left alone both children would default
-to `parent + 1` and their order would come down to creation sequence. The base is read back with
-`GetFrameLevel()` rather than reusing `spec.level`, since the client clamps a frame's level and the
-value that landed may not be the one asked for.
+regardless. Their explicit levels — `borderFrame` at `+4`, `accentFrame` at `+5` — come from the
+ladder above, which is where the reasoning for the whole stack lives.
 
 Being a child of the panel is still what makes the bars inherit its strata and alpha: an accent bar
 cannot end up on a different layer from the panel it accents, and it fades with the mouseover fade
@@ -300,6 +406,68 @@ needs a frame to live on. The fill is a texture filling that frame, and the bar'
 further child frame so it can be offset — the same shape as the panel's border, built **lazily**
 since it ships at size 0 and most panels never use it. Without that laziness every panel would carry
 four more frames created for nothing.
+
+### Artwork
+
+`modules/Artwork.lua` owns two things and touches no frames: `Artwork.Catalog`, the list of
+bundled art, and `Artwork.BuildArtSpec(rec, panelW, panelH)`, the record-to-geometry math.
+`Canvas.BuildSpec` calls it with the panel's **clamped** render size and hangs the result on
+`spec.art`, `nil` meaning "this panel draws no artwork" — the default, and the cheapest answer.
+`applyArtwork` then applies that spec and decides nothing.
+
+The math lives outside the renderer for the same reason `BuildSpec` is pure. Fill math is the part
+of artwork most likely to be wrong and hardest to eyeball in-game — a `FILL` crop off by half a
+pixel of texture space looks fine until the panel is resized — so all five fill types can be checked
+against resize in the headless harness instead of by launching the client and squinting.
+
+A catalog row is `{ id, category, label, file, w, h, tintable, credit }`:
+
+- `id` is the **stored** value and part of the saved-variables contract. It is never renamed —
+  renaming one degrades every panel using it to "no artwork" on the next load, silently.
+- `file` is a bare stem; the path is rebuilt from `C.ARTWORK_PATH_PREFIX` at render time, so the art
+  survives the addon folder being moved or renamed. Same reasoning as storing LSM *names*, not paths.
+- `w` / `h` are the **authored** pixel size, declared rather than measured: `Texture:GetWidth()`
+  returns 0 until the file has loaded, which is not guaranteed on the first render pass, and
+  `STATIC`, `FIT` and `TILE` cannot compute anything without a native size. Declaring it is also
+  what keeps this module frame-free.
+- `tintable = false` marks finished full-color art; `BuildArtSpec` forces its RGB to white (keeping
+  the computed alpha), because tinting finished art can only darken it toward the tint.
+- `credit` is the attribution record redistribution requires.
+
+Two reserved ids sit outside the catalog: `"None"` (the default, draws nothing) and `"Custom"`
+(draw `artCustomPath`). Custom counts as tintable — tinting your own art white is a no-op — and
+assumes a nominal `Artwork.CUSTOM_NATIVE_SIZE` of 256, since learning a user file's real pixel size
+would need a frame and a load round-trip. `Artwork.Entry` is a linear scan rather than a prebuilt
+index precisely so a runtime append to `Artwork.Catalog` works; `Artwork.List` is the ordered
+dropdown source (`None` first, catalog sorted by category order then label, `Custom` last, with
+`"Category: Label"` prefixes because the widget is a flat list).
+
+Every division in the fill math is guarded — a nil, zero or negative `W`, `H`, `w` or `h` returns
+`nil` rather than reaching a division, because WoW accepts inf/nan texture coordinates silently and
+renders them as a garbage smear. `STRETCH` deliberately ignores `artScale`: stretching *is* "match
+the panel exactly". Position is honoured for `STATIC` and `FIT` only; the other three cover the
+panel exactly, so the spec forces `CENTER, 0, 0` rather than letting an offset shove panel-filling
+art out through the clip.
+
+Crop, flip and rotation compose on the same four UV corners in that fixed order — flip then rotate
+is not the same transform as rotate then flip, and stating the order is what makes the two
+checkboxes and the dropdown mean something stable together — and are emitted as the eight-argument
+`SetTexCoord` list in its own `UL, LL, UR, LR` order. Quarter turns only: an exact axis transpose
+needs no resampling and never samples outside the crop, whereas rotating a *cropped* quad by an
+arbitrary angle samples beyond it and, under CLAMP, drags the edge pixels across the corners.
+Applying the transpose once to the identity quad reproduces `C.ACCENT_TEXCOORD_ROT90` exactly — the
+accent bars' rotation and the artwork's are one rotation. `Texture:SetRotation` was rejected: it is
+implemented in terms of texture coordinates internally and therefore fights `SetTexCoord`, which
+every fill type but `STRETCH` needs.
+
+`f.artFrame` gets `SetClipsChildren(true)`, guarded on the method existing the way `SetBackdrop`
+already is so the headless harness degrades rather than errors. That clip is what makes "artwork
+renders inside the panel's bounds" true for offset and scaled art. It is on the **art** frame
+specifically, never on the panel, because the accent bars deliberately hang outside the panel's
+bounds and a clip one level up would eat them.
+
+`release()` clears the art texture and hides the art frame, so a pooled frame reused by another
+panel cannot inherit the previous panel's artwork.
 
 ## Combat
 
@@ -560,6 +728,27 @@ The failure mode here is silent: a missing or wrongly-named texture renders **no
 asserts that the file `C.LOGO_PATH` names exists on disk, and the same for the debug console's
 vendored font.
 
+Bundled artwork lives under `media/artwork/`, one 512×512 32-bit TGA per catalog row, addressed at
+runtime through `C.ARTWORK_PATH_PREFIX` plus the row's `file` stem. The same silent failure mode
+applies, which is why a row's path is worth asserting against the filesystem the way the logo's is.
+Two tools produce those files. `tools/artwork/generate.py` draws art procedurally with Pillow, so
+the pieces it makes are reproducible from the repo, reviewable as a diff and license-clean by
+construction. `tools/artwork/import.py` converts art authored *outside* the repo — luminance-to-alpha
+for a white-on-black plate, or a magenta chroma key for full-color art, which is the only one of the
+two that can separate dark art from a dark background. It also erases a generator's watermark,
+letterboxes a non-square plate rather than distorting it, and normalizes the RGB of fully
+transparent pixels, which is invisible under normal blending but is read by other blend modes and
+was otherwise left to whichever code path a plate happened to take.
+
+The source plate each asset was converted from is kept under `media/artwork/raw/`, named for the
+catalog id it produces, so a piece can be re-derived at a different size or with a corrected margin
+without going back to whoever made it. It is committed to git but excluded from the package by
+`.pkgmeta` — the same reasoning as the logo's master renders, since the client cannot load a `.png`
+at all. Both the asset requirements and the contribution rules are in
+[artwork-spec.md](artwork-spec.md) and the README; `tools/` is an **accepted, documented deviation**
+from the Ka0s WoW Addon Standard (approved 2026-07-31 — the standard defines no build-tooling
+location, and this is the first non-Lua source in the tree).
+
 ## Known limitations
 
 - **Panel names with spaces are awkward at the CLI.** `/pm rename` and `/pm panel` take the name as
@@ -573,8 +762,9 @@ vendored font.
 - **Renames accumulate frames.** One per distinct panel name used in a session, never freed (see
   *Frame names and the pool*). Bounded by human behavior rather than by code.
 - **No per-panel strata *level* UI.** `level` is in the record and settable from the CLI, but the
-  settings page exposes only the strata dropdown; two panels in the same strata are ordered by
-  creation.
+  settings page exposes only the strata dropdown. Two panels sharing a strata *and* a level are
+  ordered by frame creation, which the name-keyed pool does not keep in panel order; distinct
+  levels order cleanly (see *Panel levels are strided*).
 - **The mouseover fade is a hard cut, not a smooth fade.** Alpha snaps between the two values at the
   10Hz poll. An animated transition is a natural refinement.
 - **Class color is the player's own class only.** There is no "color by target's class" or

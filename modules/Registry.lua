@@ -31,6 +31,36 @@ local function describeWrite(rec, field)
   return rec.name, field, R.FormatField(rec, field)
 end
 
+-- Match a value against the closed list a field belongs to (C.PANEL_FIELD_ENUM), returning the
+-- CANONICAL member and the list itself: the member to store, the list for the rejection message.
+--
+-- One generic enum seam rather than a branch per field: artFill, artRotation and artLayer
+-- are all closed sets that differ only in their contents, so four near-identical `elseif` arms in
+-- R:Set would be four places to keep the coercion, the membership test and the error text agreeing.
+-- Driven off the table instead, a fifth enum field later costs one C.PANEL_FIELD_ENUM row and
+-- nothing else — the CLI, the validation and the sanitizer all pick it up untouched.
+--
+-- The coercion is chosen from the list's OWN element type rather than declared per field, because
+-- the two cases already in play need different ones: artRotation stores numbers (`90`, so that
+-- `artRotation / 90` is arithmetic rather than a parse) and the rest store upper-case tokens. A CLI
+-- argument is always a string, so without this a typed `90` could never equal the stored 90.
+local function enumMatch(field, value)
+  local list = C.PANEL_FIELD_ENUM[field]
+  if not list then return nil, nil end
+
+  local wanted
+  if type(list[1]) == "number" then
+    wanted = tonumber(value)
+  else
+    wanted = tostring(value):upper()
+  end
+
+  for _, candidate in ipairs(list) do
+    if candidate == wanted then return candidate, list end
+  end
+  return nil, list
+end
+
 -- The live registry array. Returns an empty table (not nil) before the DB exists, so every caller
 -- can iterate unconditionally.
 function R:All()
@@ -120,6 +150,46 @@ function R.Sanitize(rec)
     C.MIN_BORDER, C.MAX_BORDER, t.accentBorderSize)
   rec.accentBorderOffset = Util.Clamp(rec.accentBorderOffset,
     C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, t.accentBorderOffset)
+
+  -- ── Artwork ──
+  -- artTexture is NOT validated against the live catalog here, for the same reason the media names
+  -- above are left as free strings: an id that resolves to nothing right now can be perfectly valid
+  -- a moment later (an art pack appending to the artwork catalog loads after this addon), and
+  -- BuildArtSpec already degrades an unresolvable id to "draw nothing" at render time. Rewriting it
+  -- to "None" on the first touch would destroy the user's choice permanently to fix a problem that
+  -- fixes itself. R:Set still refuses a typo up front, which is when there is somebody to tell.
+  if type(rec.artTexture) ~= "string" or rec.artTexture == "" then rec.artTexture = t.artTexture end
+  -- An EMPTY custom path is a legitimate state — the user has picked Custom and has not typed the
+  -- path yet — so only a non-string falls back, the same distinction the accent edge set makes.
+  if type(rec.artCustomPath) ~= "string" then rec.artCustomPath = t.artCustomPath end
+
+  rec.artColor = Util.Color(rec.artColor, t.artColor)
+  rec.artAlpha = Util.Clamp(rec.artAlpha, 0, 1, t.artAlpha)
+  rec.artScale = Util.Clamp(rec.artScale, C.MIN_ART_SCALE, C.MAX_ART_SCALE, t.artScale)
+
+  -- Deliberately unbounded, exactly as the panel's own x/y are above: the art offset is measured
+  -- against a panel whose size is not known here, and a bound invented at this point would clamp a
+  -- perfectly good placement on a large panel the first time the record was touched.
+  rec.artX = tonumber(rec.artX) or t.artX
+  rec.artY = tonumber(rec.artY) or t.artY
+  if not Util.IsPoint(rec.artPoint) then rec.artPoint = t.artPoint end
+
+  rec.artFlipH = rec.artFlipH and true or false
+  rec.artFlipV = rec.artFlipV and true or false
+
+  -- The four closed lists snap back to their template default when what is stored is not a member.
+  -- A hand-edited SavedVariables file carrying artFill = "COVER" must not reach the renderer: every
+  -- fill branch computes a different rectangle and a different set of texture coordinates, so an
+  -- unknown token would either fall through to whichever branch happens to be last or produce a nil
+  -- size that lands in SetSize — a Lua error inside a paint, which aborts the rest of that panel's
+  -- render and leaves it half-drawn. Snapping to the default here means the worst outcome of a
+  -- corrupt file is artwork that looks wrong, which the user can see and re-pick.
+  --
+  -- enumMatch also normalizes case, so a lower-case token typed straight into the file is repaired
+  -- rather than discarded.
+  rec.artFill     = enumMatch("artFill",     rec.artFill)     or t.artFill
+  rec.artRotation = enumMatch("artRotation", rec.artRotation) or t.artRotation
+  rec.artLayer    = enumMatch("artLayer",    rec.artLayer)    or t.artLayer
 
   return rec
 end
@@ -490,6 +560,37 @@ function R:Set(key, field, value)
     end
     if not matched then
       return false, ("unknown %s texture. Available: %s"):format(mediaType, table.concat(names, ", "))
+    end
+    value = matched
+  elseif kind == "enum" then
+    -- One branch for every closed-list field. See enumMatch above for why the four artwork enums
+    -- share a kind instead of getting a branch each: they differ only in their contents, so the
+    -- next one is a C.PANEL_FIELD_ENUM row rather than another copy of this code.
+    local matched, list = enumMatch(field, value)
+    -- A field typed "enum" with no list is a Constants bug, not user error, so say so rather than
+    -- crashing table.concat on a nil.
+    if not list then return false, ("'%s' has no value list"):format(tostring(field)) end
+    if not matched then
+      return false, "expected one of: " .. table.concat(list, ", ")
+    end
+    value = matched
+  elseif kind == "artwork" then
+    -- Matched case-insensitively against the LIVE catalog, mirroring the media branch above and
+    -- for the same reason: a typo must come back with the real list of ids rather than being stored
+    -- and then silently resolving to nothing at render time, which reads as "artwork is broken"
+    -- instead of "that is not one of the names".
+    --
+    -- Artwork.List() is the source rather than the raw catalog because it already carries the two
+    -- reserved ids in their agreed places — "None" first, "Custom" last — so accepting them costs
+    -- nothing here and the offered order matches what the dropdown shows.
+    value = tostring(value)
+    local wanted, matched, ids = value:lower(), nil, {}
+    for _, entry in ipairs(NS.Artwork.List()) do
+      ids[#ids + 1] = entry.id
+      if tostring(entry.id):lower() == wanted then matched = entry.id end
+    end
+    if not matched then
+      return false, ("unknown artwork. Available: %s"):format(table.concat(ids, ", "))
     end
     value = matched
   end

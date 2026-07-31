@@ -52,9 +52,15 @@ local function authoredFiles()
   end
   -- .luacheckrc is authored English too. It is neither a .lua nor a .md file, which is exactly how
   -- a "Class colour" comment sat in it through the sweep that was meant to remove it.
+  --
+  -- docs/artwork-spec.md is here for the same reason as the rest: it is handed to CONTRIBUTORS as
+  -- the definition of an acceptable asset, and a doc that tells someone to author a "grayscale"
+  -- plate while the code calls the field something else is exactly the drift this scan exists to
+  -- stop. Frozen bundles under docs/audits/ and docs/reviews/ are deliberately absent — they are
+  -- dated records of what was true on a past day, not living text to respell.
   for _, doc in ipairs({ "README.md", "CLAUDE.md", "docs/ARCHITECTURE.md", "docs/agent-context.md",
                          "docs/smoke-tests.md", "docs/test-cases.md", "docs/testing.md",
-                         ".luacheckrc" }) do
+                         "docs/artwork-spec.md", ".luacheckrc" }) do
     paths[#paths + 1] = doc
   end
   return paths

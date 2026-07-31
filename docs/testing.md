@@ -68,6 +68,13 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
   color is only correct if it is applied *after* the backdrop, which is unprovable against a no-op.
 - **Child regions are fresh stubs, not the parent.** A texture that *was* the frame would make all
   four border edges share one color slot.
+- **`SetTexCoord` keeps the eight-argument form verbatim, and the artwork extras are recorded too** —
+  the blend mode, `SetTexture`'s wrap arguments and `SetClipsChildren`. The coordinate list is the
+  whole output of the artwork crop/flip/rotation math, so a stub that collapsed it to four numbers
+  would make every fill type unprovable. The wrap arguments are the one part of a tiled spec the
+  renderer cannot infer from the numbers, and the blend mode is asserted precisely *because* it is
+  no longer a setting: the artwork texture is pooled, so a mode set on one panel would otherwise
+  leak into the next panel that reuses the frame.
 - **`UIParent` carries a real 1920×1080 size.** A 0×0 screen makes `Compat.GetScreenSize` return nil
   and silently skips every off-screen-recovery test.
 - **The AceAddon mock stamps AceConsole's colliding `:Print` mixin**, so the tests exercise the real

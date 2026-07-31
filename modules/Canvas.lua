@@ -46,13 +46,18 @@ function Canvas.BuildSpec(rec, settings)
   settings = settings or {}
   local alpha = Util.Clamp(rec.alpha, 0, 1, 1)
   local mouseover = rec.mouseover and true or false
+  -- Hoisted out of the table below because the artwork geometry needs the CLAMPED size, not the raw
+  -- record fields: art fitted to a width the panel will never actually be drawn at is art that lands
+  -- in the wrong place the moment the clamp bites.
+  local width  = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.width)
+  local height = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.height)
   return {
     id        = rec.id,
     name      = rec.name,
     frameName = Util.FrameName(rec.name),
     shown     = (settings.enabled ~= false) and (rec.enabled ~= false),
-    width     = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.width),
-    height    = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.height),
+    width     = width,
+    height    = height,
     point     = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point,
     relPoint  = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint,
     x         = tonumber(rec.x) or 0,
@@ -98,6 +103,14 @@ function Canvas.BuildSpec(rec, settings)
         C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, C.PANEL_TEMPLATE.accentBorderOffset),
       borderColor   = Util.ResolveColor(rec, "accentBorderColor"),
     },
+
+    -- The artwork layer, resolved entirely by modules/Artwork.lua — every fill, crop, flip and
+    -- quarter-turn is arithmetic on the record, and none of it belongs in a renderer. nil means
+    -- "this panel draws no artwork", which is the default and stays the cheapest answer.
+    --
+    -- Guarded on the module existing so a partial load (or a test harness that skips it) yields a
+    -- panel with no art rather than an error out of the spec builder, which every render path calls.
+    art = NS.Artwork and NS.Artwork.BuildArtSpec(rec, width, height) or nil,
   }
 end
 
@@ -123,8 +136,17 @@ local function newFrame(globalName)
   f:SetClampedToScreen(false)   -- a panel may legitimately hang off the screen edge
   f:EnableMouse(false)          -- locked panels are mouse-transparent; Unlock flips this
 
-  f.bg = f:CreateTexture(nil, "BACKGROUND")
-  f.bg:SetAllPoints(f)
+  -- The fill lives on its OWN child frame rather than on the panel, for one reason: a child frame
+  -- always draws above its parent's textures whatever draw layer those use, so with the fill on the
+  -- panel itself there is NO level a child frame could take to get underneath it — and "artwork
+  -- behind the background" would be unreachable. The texture keeps the field name `f.bg` so every
+  -- call site and test that paints it is unchanged; only what it hangs off moved.
+  f.bgFrame = CreateFrame("Frame", nil, f)
+  f.bgFrame:EnableMouse(false)
+  f.bgFrame:SetAllPoints(f)
+
+  f.bg = f.bgFrame:CreateTexture(nil, "BACKGROUND")
+  f.bg:SetAllPoints(f.bgFrame)
 
   -- The border lives on its own child frame rather than on the panel itself, so it can be OFFSET
   -- from the panel's edge (borderOffset). A backdrop is always drawn at its own frame's bounds, so
@@ -161,6 +183,26 @@ local function newFrame(globalName)
     bar.fill:SetAllPoints(bar)
     f.accents[edge] = bar
   end
+
+  -- ONE artwork frame, not three. The layer choice (behind the background, above it, above
+  -- everything) is expressed by reassigning this frame's level per render — frame levels are mutable
+  -- at any time — so three frames for three choices would be two frames created to sit hidden
+  -- forever on every panel the user owns.
+  f.artFrame = CreateFrame("Frame", nil, f)
+  f.artFrame:EnableMouse(false)
+  f.artFrame:SetAllPoints(f)
+  -- This is what makes "artwork renders inside the panel's bounds" true for offset and scaled art:
+  -- without it, STATIC art anchored near an edge simply hangs off the panel. Guarded on the METHOD
+  -- being present rather than a build check, exactly as SetBackdrop is — a headless stub frame has
+  -- no real clipping either, and both cases must degrade to unclipped art instead of erroring.
+  --
+  -- Clipping is on the ART frame specifically, never on the panel: the accent bars deliberately hang
+  -- OUTSIDE the panel's bounds, and a clip one level up would eat them.
+  if type(f.artFrame.SetClipsChildren) == "function" then
+    f.artFrame:SetClipsChildren(true)
+  end
+  f.art = f.artFrame:CreateTexture(nil, "ARTWORK")
+
   return f
 end
 
@@ -306,6 +348,53 @@ local function applyBorder(f, spec)
   b:SetBackdropBorderColor(spec.border[1], spec.border[2], spec.border[3], spec.border[4])
 end
 
+-- Paint the artwork layer. Every decision worth making was already made in Artwork.BuildArtSpec —
+-- this is the dumb applier, which is the point: the fill math is arithmetic on a record and is
+-- verified headlessly, so nothing here needs a judgement call.
+local function applyArtwork(f, spec)
+  local frame, tex = f.artFrame, f.art
+  if not frame or not tex then return end
+
+  local art = spec.art
+  if not art then
+    -- Cleared as well as hidden. A hidden frame still holds its texture's file reference, and this
+    -- same frame is about to be handed to whatever panel the pool gives it to next.
+    tex:SetTexture(nil)
+    frame:Hide()
+    return
+  end
+  frame:Show()
+
+  -- The one place the ladder is not a fixed offset: which of the three artwork levels this panel
+  -- wants is a per-record choice, resolved into a number by the spec.
+  local base = f:GetFrameLevel() or 0
+  frame:SetFrameLevel(base + art.level)
+
+  -- REPEAT wrapping is the only thing that makes TILE's out-of-range coords mean anything; passing
+  -- it unconditionally would let a FILL crop's rounding sample the opposite edge instead of clamping
+  -- to the border pixel, so the wrap arguments are omitted entirely when the art does not tile.
+  if art.tile then
+    tex:SetTexture(art.path, "REPEAT", "REPEAT")
+  else
+    tex:SetTexture(art.path)
+  end
+
+  tex:SetSize(art.width, art.height)
+  tex:ClearAllPoints()
+  tex:SetPoint(art.point, frame, art.point, art.x, art.y)
+
+  -- MUST follow SetTexture, which resets a texture's coords — the same rule the accent bars already
+  -- document, and the reason the crop/flip/rotation is reapplied on every repaint rather than once.
+  local uv = art.uv
+  tex:SetTexCoord(uv[1], uv[2], uv[3], uv[4], uv[5], uv[6], uv[7], uv[8])
+  tex:SetVertexColor(art.color[1], art.color[2], art.color[3], art.color[4])
+  -- Set explicitly rather than left to the texture's default, because this texture is POOLED: it
+  -- is the same object a previous panel drew with, and anything that ever changed the mode would
+  -- otherwise leak into the next panel. C.ART_BLEND_MODE is a constant, not a setting — see there
+  -- for why the other four modes are not offered.
+  tex:SetBlendMode(C.ART_BLEND_MODE)
+end
+
 -- Apply a spec to a frame. Idempotent — running it twice with the same spec is a no-op — so the
 -- repaint path never has to track what changed.
 local function applySpec(f, spec)
@@ -313,22 +402,41 @@ local function applySpec(f, spec)
   f:ClearAllPoints()
   f:SetPoint(spec.point, UIParent, spec.relPoint, spec.x, spec.y)
   f:SetFrameStrata(spec.strata)
-  f:SetFrameLevel(spec.level)
+  -- Multiplied by the stride, so each panel's whole stack gets a band of its own rather than
+  -- interleaving with the next panel's. The user's `level` is a relative ordering ("higher draws in
+  -- front"), not a raw frame level — and used raw it stopped meaning that as soon as a panel
+  -- occupied more than one rung. See C.PANEL_LEVEL_STRIDE.
+  f:SetFrameLevel(spec.level * C.PANEL_LEVEL_STRIDE)
 
-  -- Explicit child levels, stacked bottom-up: panel fill → border → accent bar. Left to itself a
-  -- child frame merely defaults to parent + 1, which would put the border and the accent on the SAME
-  -- level and leave their order to creation sequence. The accent bar is the top decoration and must
-  -- draw over the border.
+  -- Explicit child levels, stacked bottom-up over seven slots:
+  --
+  --   +1  artwork, BELOW_BG          +4  border          +7  unlock overlay (modules/Unlock.lua)
+  --   +2  background fill            +5  accent bars
+  --   +3  artwork, ABOVE_BG          +6  artwork, ABOVE_ALL
+  --
+  -- The unlock overlay is not set here — Unlock owns it and builds it lazily — but it is part of
+  -- this ladder and is why the stride is 8 rather than 7.
+  --
+  -- Left to itself every child frame merely defaults to parent + 1, which would pile the fill, the
+  -- border and the accent onto one level and leave their order to creation sequence. The six numbers
+  -- are spread out — rather than the artwork taking one slot next to the others — because the art
+  -- has to INTERLEAVE with the rest: three of the six slots are the same single art frame, whose
+  -- level is reassigned per render from C.ART_FRAME_LEVEL. That is the only way "behind the
+  -- background" and "above the accent bar" can both be reachable without three art frames per panel.
+  -- The numbers live in Constants so this ladder is stated once; do not renumber without updating
+  -- both.
   --
   -- Read back with GetFrameLevel rather than reusing spec.level, because the client clamps a frame's
   -- level to a minimum and the value that landed may not be the value asked for.
   local base = f:GetFrameLevel() or 0
-  if f.borderFrame then f.borderFrame:SetFrameLevel(base + 1) end
-  if f.accentFrame then f.accentFrame:SetFrameLevel(base + 2) end
+  if f.bgFrame then f.bgFrame:SetFrameLevel(base + C.BG_FRAME_LEVEL) end
+  if f.borderFrame then f.borderFrame:SetFrameLevel(base + C.BORDER_FRAME_LEVEL) end
+  if f.accentFrame then f.accentFrame:SetFrameLevel(base + C.ACCENT_FRAME_LEVEL) end
 
   applyBackground(f, spec)
   applyBorder(f, spec)
   applyAccents(f, spec)
+  applyArtwork(f, spec)
 
   -- The resting alpha. While unlocked this is overridden to full opacity by Unlock:Decorate — you
   -- cannot place a panel you cannot see — so the mouseover fade is an editing-mode-off behavior.
@@ -430,6 +538,13 @@ local function release(f)
       bar.borderFrame:Hide()
     end
   end
+  -- Same reasoning as the bars: a released frame must be inert, not merely hidden. It sits in the
+  -- pool until some other panel claims its name, and anything that shows it before applySpec runs
+  -- again — Unlock's overlay, a debug dump, a stray Show() — would put the PREVIOUS panel's artwork
+  -- on screen for the new one. Clearing the texture as well as hiding the frame also drops the file
+  -- reference for a panel that may never come back.
+  if f.artFrame then f.artFrame:Hide() end
+  if f.art then f.art:SetTexture(nil) end
   if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
   -- `__frameName` is the authority, not `GetName()`: the headless stub frame answers every
   -- PascalCase call with itself, so GetName() there returns a table and would key the pool on a
