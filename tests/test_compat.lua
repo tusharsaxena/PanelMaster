@@ -80,7 +80,7 @@ test("Compat.GetClassColor: an unknown class is nil, not white", function()
   T.mocks.UnitClass = function() return "Tinker", "TINKER", 99 end
   local r = NS.Compat.GetClassColor()
   T.mocks.UnitClass = saved
-  -- nil lets the caller keep the user's stored colour; white would silently repaint their panel.
+  -- nil lets the caller keep the user's stored color; white would silently repaint their panel.
   assertEqual(r, nil)
 end)
 
@@ -93,10 +93,6 @@ test("Compat.MouseIsOver: answers without the frame taking mouse input", functio
   -- The panel is never EnableMouse'd for this — that would break click-through, which is the one
   -- guarantee a backdrop cannot break.
   assertFalse(frame:IsMouseEnabled())
-end)
-
-test("Compat.HasBackdrop: true when the mixin is present", function()
-  assertTrue(NS.Compat.HasBackdrop())
 end)
 
 test("Compat owns the deprecated-API surface: no flavor branching in the addon", function()

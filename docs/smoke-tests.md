@@ -3,7 +3,8 @@
 In-client checks for the things the headless harness genuinely cannot reach: how a panel actually
 looks, dragging with a real mouse, layering against other addons' frames, and the debug console's
 rendering. Run these before tagging a release, after any change to `modules/Canvas.lua`,
-`modules/Unlock.lua` or `settings/Panel.lua`, and whenever the `## Interface:` is bumped.
+`modules/Unlock.lua`, `settings/Panel.lua` or `settings/PanelEditor.lua`, and whenever the
+`## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 
@@ -21,9 +22,9 @@ Start each run from a clean state: `/reload`, then `/pm resetall` and `/pm panel
 
 ## 2. Preview mode
 
-1. `/pm preview` → **Expect:** three sample panels appear (bottom-left, bottom-centre, top-right),
+1. `/pm preview` → **Expect:** three sample panels appear (bottom-left, bottom-center, top-right),
    each outlined in gold with its name across the middle, and panels are now unlocked.
-2. Confirm each is a **different colour and size** — that is what proves colour, size and position
+2. Confirm each is a **different color and size** — that is what proves color, size and position
    are all really being applied rather than one default being drawn three times.
 3. `/pm preview` again → **Expect:** all three vanish, the registry is empty (`/pm panels`), and
    panels are **locked** again — test mode undoes the unlock it turned on.
@@ -71,7 +72,7 @@ With a panel created and locked:
    swatch per entry, `Solid` among them, plus anything other addons have registered (ElvUI,
    WeakAuras, Details all contribute).
 2. Pick a decorative one — `Blizzard Parchment`, say. **Expect:** the panel fills with it
-   immediately, tinted by its background colour.
+   immediately, tinted by its background color.
 3. Reopen the dropdown. **Expect:** it still reads the texture you picked. (If it has reverted to the
    old name while the panel visibly changed, the LSM widget's value push has regressed — see
    `ARCHITECTURE.md` ▸ Options UI.)
@@ -88,25 +89,25 @@ With a panel created and locked:
    **Expect:** the panel renders **plain** — not invisible, not an error — and re-enabling the addon
    brings the texture straight back. The choice was never overwritten.
 
-## 5b-2. Colour pickers (regression: they used to do nothing)
+## 5b-2. Color pickers (regression: they used to do nothing)
 
 AceGUI's ColorPicker only fires `OnValueConfirmed` when the **opacity slider** is touched, so binding
-that alone meant an ordinary colour change never reached the addon — the swatch updated and the panel
+that alone meant an ordinary color change never reached the addon — the swatch updated and the panel
 did not. Both pickers now bind `OnValueChanged` too. This is live-client-only: the headless suite
 stubs AceGUI out entirely, so **nothing below is covered by a unit test.**
 
-1. Click the **Background colour** swatch. Pick a strong colour (bright green). **Do not touch the
+1. Click the **Background color** swatch. Pick a strong color (bright green). **Do not touch the
    opacity slider.** Click **OK**.
 2. **Expect:** the panel is green. Both the swatch *and* the panel must change — a green swatch over
    an unchanged panel is exactly the old bug.
-3. Watch the panel while dragging inside the colour wheel, before clicking OK. **Expect:** it
+3. Watch the panel while dragging inside the color wheel, before clicking OK. **Expect:** it
    updates live.
-4. Repeat both steps for **Border colour** with a border thickness of 4 or more. **Expect:** the
-   border takes the colour.
-5. Open a picker, change the colour, and press **Cancel**. **Expect:** the panel returns to its
-   previous colour.
-6. Change a colour, `/reload`. **Expect:** the colour persisted.
-7. Now change a colour **and** drag the opacity slider. **Expect:** both apply, and the panel's
+4. Repeat both steps for **Border color** with a border thickness of 4 or more. **Expect:** the
+   border takes the color.
+5. Open a picker, change the color, and press **Cancel**. **Expect:** the panel returns to its
+   previous color.
+6. Change a color, `/reload`. **Expect:** the color persisted.
+7. Now change a color **and** drag the opacity slider. **Expect:** both apply, and the panel's
    opacity is the picker's alpha multiplied by the **Panel opacity** slider (under Visibility).
 
 ## 5b-3. Border offset
@@ -126,13 +127,13 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 
 1. On a fresh panel, confirm **Enable accent bar** is **ticked** and a bar is already drawn along the
    **top** edge only — running the panel's full width, **5px thick, flush against the panel**, in
-   the **Blizzard** status-bar texture, in **your class colour**, outlined by a **1px black**
+   the **Blizzard** status-bar texture, in **your class color**, outlined by a **1px black**
    hairline. That is the shipped look, with no configuration at all.
 1b. Confirm the panel's **own** border starts at size **0** — the accent bar defines the edge, and
    both at once reads as busy.
 2. Untick **Enable accent bar**. **Expect:** the strip vanishes, leaving a plain block. Tick it
    again and it returns exactly as before.
-2b. **Z-order.** Give the panel a border of 4 or more in a contrasting colour. **Expect:** the accent
+2b. **Z-order.** Give the panel a border of 4 or more in a contrasting color. **Expect:** the accent
    bar draws **over** the border where they meet, not under it. Change **Frame strata** and confirm
    the stacking holds.
 3. Tick **Bottom**, **Left** and **Right** in turn. **Expect:** each edge gains a bar spanning that
@@ -145,12 +146,12 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 7. Drag **Bar offset** positive. **Expect:** the bars move *away* from the panel on all sides at
    once. Set it to 0 — they sit flush, and start to look like a thick border. Negative — they
    overlap the panel.
-8. Untick **Class colour** next to **Bar colour**. **Expect:** the bar turns the stored green. Pick
-   your own colour and confirm it applies (see §5b-2 — same picker, same fix).
+8. Untick **Class color** next to **Bar color**. **Expect:** the bar turns the stored green. Pick
+   your own color and confirm it applies (see §5b-2 — same picker, same fix).
 9. Change **Bar texture** to a gradient status-bar texture. **Expect:** the bar renders with it,
-   tinted by the bar colour. The list should be your **status-bar** textures, not backgrounds.
+   tinted by the bar color. The list should be your **status-bar** textures, not backgrounds.
 9b. **The bar's own border.** Raise **Bar border size** to 3. **Expect:** an outline appears around
-    each bar. Change **Bar border texture**, **Bar border colour** and its **Class colour** — all
+    each bar. Change **Bar border texture**, **Bar border color** and its **Class color** — all
     behave like the panel's border. Push **Bar border offset** positive and negative. Drop the size
     back to 0 and confirm the outline goes completely.
 10. Set **Panel opacity** to 0.3. **Expect:** the bars fade *with* the panel — they are part of it,
@@ -161,33 +162,33 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
     behind. Accent bars must not take the mouse either.
 13. Turn on **Show on mouseover only** with a faded opacity of 0. **Expect:** the bars vanish and
     reappear with the panel.
-14. Delete a panel that had bars. **Expect:** no coloured strips left floating where it was — they
+14. Delete a panel that had bars. **Expect:** no colored strips left floating where it was — they
     are anchored *outside* the panel's bounds, so this is a real failure mode.
 15. `/reload`. **Expect:** every accent setting persisted.
 16. From the command line: `/pm panel <name> accentEdges top,left`, then
     `/pm panel <name> accentEdges none`, then a deliberate typo like `accentEdges middle`.
     **Expect:** the first two apply, the third is refused with the valid list.
 
-## 5c. Class colour
+## 5c. Class color
 
-1. Tick **Class colour** next to **Background colour**. **Expect:** the panel takes your class
-   colour. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix.
-2. Check the panel's **opacity is unchanged** — class colour replaces the hue, not the alpha. Drag
+1. Tick **Class color** next to **Background color**. **Expect:** the panel takes your class
+   color. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix.
+2. Check the panel's **opacity is unchanged** — class color replaces the hue, not the alpha. Drag
    **Panel opacity** and confirm it still works.
-3. Tick **Class colour** next to **Border colour** too, and confirm the two are independent: untick
-   the background one and the border stays class-coloured.
-4. Untick both. **Expect:** the original colours come back exactly — they were never overwritten.
-4b. **The picker stays usable under class colour.** With **Class colour** ticked, the picker's label
+3. Tick **Class color** next to **Border color** too, and confirm the two are independent: untick
+   the background one and the border stays class-colored.
+4. Untick both. **Expect:** the original colors come back exactly — they were never overwritten.
+4b. **The picker stays usable under class color.** With **Class color** ticked, the picker's label
    reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
-   **Expect:** the class-coloured border/fill gets more or less solid. This is the only control that
-   sets opacity, so it must not be greyed out.
+   **Expect:** the class-colored border/fill gets more or less solid. This is the only control that
+   sets opacity, so it must not be grayed out.
 4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
-   colour mode produced it. Compare a picked bright colour against your class colour at the **same
-   opacity and size** — a darker class colour will legitimately look softer. If they differ at
-   matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any colour
+   color mode produced it. Compare a picked bright color against your class color at the **same
+   opacity and size** — a darker class color will legitimately look softer. If they differ at
+   matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any color
    crisp regardless of UI scale.
 5. Log in on a character of a **different class**. **Expect:** that character's panels (if
-   class-coloured) show the new class colour.
+   class-colored) show the new class color.
 
 ## 5d. Mouseover fade
 
@@ -226,14 +227,14 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 ## 8. Combat gating
 
 1. Pull a training dummy.
-2. `/pm unlock` **in combat** → **Expect:** a grey "unlock queued" notice; panels stay locked.
+2. `/pm unlock` **in combat** → **Expect:** a gray "unlock queued" notice; panels stay locked.
 3. Leave combat → **Expect:** panels unlock by themselves and print "panels unlocked".
 4. Pull again, `/pm unlock`, then `/pm lock` while still in combat, then leave combat.
    **Expect:** panels stay **locked** — the explicit lock cleared the queue.
-4b. Pull again and tick a panel's **Unlock** box in the settings editor. **Expect:** the same grey
+4b. Pull again and tick a panel's **Unlock** box in the settings editor. **Expect:** the same gray
    notice, and the checkbox **unticks itself** rather than claiming a state the panel is not in.
    Leave combat → that one panel unlocks.
-5. `/pm config` **in combat** → **Expect:** a grey "cannot open settings during combat" notice and
+5. `/pm config` **in combat** → **Expect:** a gray "cannot open settings during combat" notice and
    **no** panel opens.
 6. Leave combat → **Expect:** the options panel does **not** pop open by itself. Run `/pm config`
    yourself and it opens.
@@ -245,7 +246,7 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 2. Click **General** → **Expect:** a two-column grid of settings, section headings, a **Defaults**
    button top-right in the standard dark/gold style — **not** Blizzard's red stone button. (A red
    button means it was created too early; see `options-ui-§5`.)
-3. Confirm the scrollbar is **present but greyed out** on a page that fits, and that the body does not
+3. Confirm the scrollbar is **present but grayed out** on a page that fits, and that the body does not
    jump width when you tab between pages.
 4. Toggle **Unlock panels** and **Test mode** → **Expect:** they do exactly what the slash
    commands do.
@@ -271,9 +272,9 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry and the
    **Frame name** line both update. Try renaming to an existing panel's name →
    **Expect:** a cyan-tagged error and the box reverts to the old name rather than showing a lie.
-5e. **Reset.** Configure a panel heavily — resize it, move it, change both textures and both colours,
+5e. **Reset.** Configure a panel heavily — resize it, move it, change both textures and both colors,
    turn on mouseover — then press **Reset**. **Expect:** it returns to a brand-new panel's
-   appearance *and position* (centre of the screen), every control in the editor re-reads the new
+   appearance *and position* (center of the screen), every control in the editor re-reads the new
    values, and the **name and Frame name are unchanged**. Confirm anything anchored to it is still
    anchored. Other panels must be untouched.
 6. Type a name, then click **away** from the box without pressing Enter. **Expect:** *nothing is
@@ -286,7 +287,7 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 8. Create two more, then use the **Panel** dropdown to switch between them. **Expect:** exactly one
    editor is shown at a time, and the page does not grow as panels are added.
 9. Disable a panel and reopen the dropdown. **Expect:** it is listed as `<name> (disabled)`.
-10. Change a panel's width slider and colour picker → **Expect:** the panel updates as you release.
+10. Change a panel's width slider and color picker → **Expect:** the panel updates as you release.
 11. Tick **Unlock** on the selected panel → **Expect:** *only that panel* grows an outline and a
     drag handle; the others stay inert. Drag it, then untick.
 12. Check the **Frame name** line in the editor reads `PanelMaster_Panel_<slug>` for that panel.
@@ -313,12 +314,12 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 2. `/pm debug on` → **Expect:** a cyan-tagged chat ack with **ON in green**; the console shows
    `[Debug] logging enabled` followed by an `[Init]` line naming the addon, version, schema and
    profile.
-3. Create, drag and recolour a panel → **Expect:** one `[Panel]` line per action, and the line counter
+3. Create, drag and recolor a panel → **Expect:** one `[Panel]` line per action, and the line counter
    climbing.
 4. Change a setting → **Expect:** exactly **one** `[Set]` line (not one per reactor).
 5. **Drag the scrollbar** → **Expect:** the log scrolls. **Wheel-scroll the log** → **Expect:** the
    thumb follows. No Lua error either way.
-6. Click **Copy** → **Expect:** a selectable window with the same lines, no colour codes. Ctrl+C, Esc.
+6. Click **Copy** → **Expect:** a selectable window with the same lines, no color codes. Ctrl+C, Esc.
 7. Click **Clear** → **Expect:** an empty log and `0 / 500 lines`.
 8. Click the `Debug: ON` toggle → **Expect:** it flips to red `OFF` and prints the matching chat ack.
 9. `/pm debug dump` → **Expect:** a `[Dump]` block listing each panel with `frame=yes`, and
@@ -370,7 +371,7 @@ The addon's public contract, and the one thing no unit test can prove works in a
 
 ## 12c. Copy settings from another panel
 
-1. Make two panels. Style the first heavily — size, textures, both colours, border, accent bar.
+1. Make two panels. Style the first heavily — size, textures, both colors, border, accent bar.
    Move the second somewhere clearly different.
 2. On the **second** panel, pick the first from **Copy settings from panel**.
 3. **Expect:** the second takes on the first's entire appearance **and size**, and a cyan-tagged
@@ -380,7 +381,7 @@ The addon's public contract, and the one thing no unit test can prove works in a
    to it is still anchored.
 5. **Expect:** the dropdown snaps back to empty. It is an action, not a stored setting — a lingering
    selection would imply an ongoing link between the two panels.
-6. Now change a colour on the **first** panel. **Expect:** the second does not change — the copy was
+6. Now change a color on the **first** panel. **Expect:** the second does not change — the copy was
    a snapshot, not a link.
 7. On a lone panel (delete all others), **Expect:** the dropdown is disabled with a tooltip saying to
    make another panel first.

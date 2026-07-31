@@ -55,19 +55,19 @@ tests/
 
 Do not "simplify" any of these — each exists because a lazier stub hides a whole bug class:
 
-- **The frame stub models visibility, geometry, colour and scripts.** A blanket self-returning no-op
+- **The frame stub models visibility, geometry, color and scripts.** A blanket self-returning no-op
   would make `IsShown()` permanently truthy and `GetPoint()` hand back the frame, so "we applied the
   stored position" and "we applied garbage" would look identical. Position and size *are* the product
   here, so they have to be real state. Scripts are recorded rather than dropped so the drag handler
   can actually be fired.
-- **It also records the frame NAME, the backdrop and the applied textures/colours.** The name is this
+- **It also records the frame NAME, the backdrop and the applied textures/colors.** The name is this
   addon's public anchor contract (`PanelMaster_Panel_<slug>`), and a stub that dropped `CreateFrame`'s
   name argument would make it untestable. `SetBackdrop` / `SetBackdropBorderColor` /
   `SetColorTexture` / `SetVertexColor` are kept because "which edge texture, at what thickness, in
-  what colour" is exactly what the border and class-colour suites assert on — and because the border
-  colour is only correct if it is applied *after* the backdrop, which is unprovable against a no-op.
+  what color" is exactly what the border and class-color suites assert on — and because the border
+  color is only correct if it is applied *after* the backdrop, which is unprovable against a no-op.
 - **Child regions are fresh stubs, not the parent.** A texture that *was* the frame would make all
-  four border edges share one colour slot.
+  four border edges share one color slot.
 - **`UIParent` carries a real 1920×1080 size.** A 0×0 screen makes `Compat.GetScreenSize` return nil
   and silently skips every off-screen-recovery test.
 - **The AceAddon mock stamps AceConsole's colliding `:Print` mixin**, so the tests exercise the real
@@ -77,7 +77,7 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
 - **`Settings.RegisterCanvasLayout(Sub)category` keeps each frame it is handed** in
   `mocks.__settingsPanels`, so `test_panel.lua` can assert the `OnCommit` / `OnDefault` / `OnRefresh`
   contract on what the framework actually received (`options-ui-§1`).
-- **AceDB's CALLBACK surface is modelled, not stubbed.** Switching profiles swaps `db.profile`
+- **AceDB's CALLBACK surface is modeled, not stubbed.** Switching profiles swaps `db.profile`
   wholesale, so `mocks.__switchProfile(name)` replaces the table and then fires `OnProfileChanged`
   exactly as AceDB does. Without that, "the previous profile's panels stayed on screen" — the actual
   failure mode — would be untestable. The mock also reproduces AceDB's own `defaultProfile` rule
@@ -102,7 +102,7 @@ test("Registry.New: creates a panel with the template's shape", function()
 end)
 ```
 
-`assertNear` is available for the geometry and colour maths, where an exact `==` would be a false
+`assertNear` is available for the geometry and color maths, where an exact `==` would be a false
 failure.
 
 ### Shared state
@@ -113,14 +113,14 @@ one's panels passes or fails depending on the order it ran in, which is the wors
 
 ## Writing tests
 
-Test-first: write or extend a **failing** test that pins the intended behaviour, then implement until
+Test-first: write or extend a **failing** test that pins the intended behavior, then implement until
 it passes. Pure, testable logic — the registry's CRUD and sanitizing, `Canvas.BuildSpec`, the snap
 maths, off-screen recovery, schema read/write, the debug formatters and every slash output shape — is
-exercised headlessly. Genuinely in-client behaviour (how a panel actually looks, dragging with a real
+exercised headlessly. Genuinely in-client behavior (how a panel actually looks, dragging with a real
 mouse, strata against other addons' frames) belongs in [`smoke-tests.md`](smoke-tests.md), which
 complements rather than replaces the unit suites.
 
-A few suites assert against the **source files** rather than behaviour — one sender per bus message,
+A few suites assert against the **source files** rather than behavior — one sender per bus message,
 no `WOW_PROJECT_ID` branching. Those rules only break when someone adds a line years later, which is
 exactly when nobody is looking.
 

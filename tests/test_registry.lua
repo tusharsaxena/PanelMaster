@@ -70,8 +70,8 @@ test("Registry.New: does not alias the shared template", function()
   local a = R:New("A")
   a.bgColor[1] = 0.99
   local b = R:New("B")
-  -- If New handed out a reference to C.PANEL_TEMPLATE, editing A's colour would have poisoned the
-  -- template and B would come out with A's colour.
+  -- If New handed out a reference to C.PANEL_TEMPLATE, editing A's color would have poisoned the
+  -- template and B would come out with A's color.
   assertNear(b.bgColor[1], C.PANEL_TEMPLATE.bgColor[1])
 end)
 
@@ -96,6 +96,21 @@ test("Registry.DeleteAll: empties the registry and reports the count", function(
   R:New("A"); R:New("B"); R:New("C")
   assertEqual(R:DeleteAll(), 3)
   assertEqual(R:Count(), 0)
+end)
+
+test("Registry.DeleteAll: drops the session state keyed on the panels it removed (F-020)", function()
+  fresh()
+  local a, b = R:New("A"), R:New("B")
+  NS.State.unlockedPanels[a.id] = true
+  NS.State.unlockedPanels[b.id] = true
+  NS.State.previewIDs = { a.id, b.id }
+  R:DeleteAll()
+  -- Ids are never reused, so a stale entry is never read again — but it accumulates for the session
+  -- and shows up in a debug dump as an unlocked panel that does not exist. R:Delete already sweeps;
+  -- DeleteAll must too, and for the same reason.
+  assertEqual(NS.State.unlockedPanels[a.id], nil, "a deleted panel is still marked unlocked")
+  assertEqual(NS.State.unlockedPanels[b.id], nil, "a deleted panel is still marked unlocked")
+  assertEqual(#NS.State.previewIDs, 0, "preview still claims ids that no longer exist")
 end)
 
 test("Registry.Resolve: finds by name and by id", function()
@@ -191,9 +206,20 @@ test("Registry.Set: coerces a CLI string to the field's type", function()
   assertFalse(R:Get(rec.id).enabled)
 end)
 
-test("Registry.Set: parses a colour string", function()
+test("Registry.Set: an unreadable boolean is refused, not stored as false (F-023)", function()
   fresh()
-  local rec = R:New("Coloured")
+  local rec = R:New("Typoed")
+  local ok, err = R:Set(rec.id, "enabled", "ture")
+  assertFalse(ok, "'ture' was accepted")
+  assertTrue(err:find("expected true/false", 1, true) ~= nil, "the error does not list the tokens")
+  -- The regression that matters: the old coercion turned every unrecognized word into `false`, so a
+  -- typo switched the panel OFF and echoed that as though it had been asked for.
+  assertTrue(R:Get(rec.id).enabled, "a typo turned the panel off")
+end)
+
+test("Registry.Set: parses a color string", function()
+  fresh()
+  local rec = R:New("Colored")
   assertTrue(R:Set(rec.id, "bgColor", "1,0,0,0.5"))
   local c = R:Get(rec.id).bgColor
   assertNear(c[1], 1)
@@ -254,6 +280,74 @@ test("Registry.FormatField: renders each field type readably", function()
   assertEqual(R.FormatField(rec, "width"), tostring(C.PANEL_TEMPLATE.width))
   assertEqual(R.FormatField(rec, "alpha"), "1.00")
   assertTrue(R.FormatField(rec, "bgColor"):find(",", 1, true) ~= nil)
+end)
+
+test("Registry.CopyFrom: never spreads the preview marker onto a real panel", function()
+  fresh()
+  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
+  local mine  = R:New("Mine")
+  assertTrue(R:CopyFrom(mine.id, ghost.id))
+  -- Copying appearance from a placeholder must not make the target disappear on the next sweep.
+  assertEqual(R:Get(mine.id)[C.PREVIEW_FIELD], nil, "the preview marker was copied across")
+end)
+
+test("Registry.NewBatch: creates every spec and broadcasts once", function()
+  fresh()
+  local target, count = {}, 0
+  NS.bus.RegisterMessage(target, R.MSG_PANELS, function() count = count + 1 end)
+
+  local recs = R:NewBatch({ { name = "Batch One" }, { name = "Batch Two" } })
+  assertEqual(#recs, 2)
+  assertEqual(R:Count(), 2)
+  assertEqual(count, 1, "a batch create broadcast once per record")
+
+  NS.bus.UnregisterMessage(target, R.MSG_PANELS)
+end)
+
+test("Registry.NewBatch: skips a spec whose name is taken, keeping the rest", function()
+  fresh()
+  R:New("Batch One")
+  local recs = R:NewBatch({ { name = "Batch One" }, { name = "Batch Two" } })
+  -- A name collision is the user's, not ours: skip that one rather than refuse the whole batch.
+  assertEqual(#recs, 1)
+  assertEqual(recs[1].name, "Batch Two")
+end)
+
+test("Registry.Recover: leaves an on-screen TOPLEFT panel alone", function()
+  fresh()
+  -- The bug this guards: a CENTER-shaped bound (±w/2) called this panel lost and dragged it to 960.
+  R:New("Corner", { point = "TOPLEFT", relPoint = "TOPLEFT", x = 1000, y = -300 })
+  assertEqual(R:Recover(), 0, "a fully on-screen TOPLEFT panel was moved")
+end)
+
+test("Registry.Recover: still rescues a genuinely off-screen TOPLEFT panel", function()
+  fresh()
+  local rec = R:New("Gone", { point = "TOPLEFT", relPoint = "TOPLEFT", x = 9000, y = 9000 })
+  assertEqual(R:Recover(), 1)
+  local moved = R:Get(rec.id)
+  assertEqual(moved.x, 1920)   -- the mock's full screen width: a LEFT anchor runs 0..w
+  assertEqual(moved.y, 0)      -- and a TOP anchor runs -h..0
+end)
+
+test("Registry.Recover: survives a record whose anchor is missing or junk (F-006)", function()
+  fresh()
+  -- Nothing sanitizes records at login — Sanitize runs per write and on a profile switch — so a
+  -- hand-edited or pre-anchor SavedVariables file can hand the sweep a nil (or non-string)
+  -- relPoint. Indexing it would abort the loop half-written: the panels already visited would have
+  -- had x/y rewritten in the DB with no broadcast and no repaint, and the rest never looked at.
+  local broken = R:New("No anchor", { x = 9000, y = 9000 })
+  broken.relPoint = nil
+  local junk = R:New("Junk anchor", { x = 9000, y = 9000 })
+  junk.relPoint = 5
+  local ok = R:New("Also lost", { x = 9000, y = 9000 })
+
+  assertEqual(R:Recover(), 3, "the sweep gave up before it reached every panel")
+  -- All three fall back to the template's CENTER anchor, like Canvas.BuildSpec already does.
+  for _, rec in ipairs({ broken, junk, ok }) do
+    local moved = R:Get(rec.id)
+    assertEqual(moved.x, 960, rec.name .. " was not bounded as a CENTER anchor")
+    assertEqual(moved.y, 540, rec.name .. " was not bounded as a CENTER anchor")
+  end
 end)
 
 test("Registry.Recover: leaves on-screen panels alone", function()

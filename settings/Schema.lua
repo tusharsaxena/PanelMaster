@@ -65,18 +65,20 @@ S.Schema = {
     tooltip = "Print each panel's name across the middle of it while panels are unlocked.",
     onChange = function() announce("showLabels") end },
 
+  -- No onChange on either grid row: neither can change how a panel LOOKS. U.SnapPosition reads
+  -- db.profile.settings live at drag-stop, so a new grid applies to the very next drag on its own —
+  -- announcing would repaint every panel per mouse-up on the slider for nothing. `showLabels` above
+  -- keeps its announce because U:Decorate reads it, and Decorate only ever runs from a render.
   { path = "settings.snapToGrid", default = true, type = "boolean", widget = "CheckBox",
     group = "Editing", label = "Snap to grid",
-    tooltip = "Round a dragged panel's position to the grid size below.",
-    onChange = function() announce("snapToGrid") end },
+    tooltip = "Round a dragged panel's position to the grid size below." },
 
   { path = "settings.gridSize", default = 4, type = "number",
     min = C.MIN_GRID, max = 64, step = 1, widget = "Slider",
     fmt = "%d px",   -- grid → "4 px" in the slash list/get output (slash-commands-§5)
     group = "Editing", label = "Grid size",
     tooltip = "The grid a dragged panel snaps to, in UI units. Ignored when snapping is off.",
-    validate = function(v) return type(v) == "number" and v >= C.MIN_GRID and v <= C.MAX_GRID end,
-    onChange = function() announce("gridSize") end },
+    validate = function(v) return type(v) == "number" and v >= C.MIN_GRID and v <= C.MAX_GRID end },
 
   -- ── New Panel Defaults ──
   -- Applied to panels created AFTER a change here; existing panels are never retroactively altered,
@@ -139,9 +141,7 @@ function S:Set(path, value)
   end
   -- Every settings mutation is logged ONCE, here at the write seam (debug-logging-§10). Downstream
   -- reactors must not re-echo the same value.
-  if NS.State and NS.State.debug and NS.Debug then
-    NS.Debug("Set", "%s = %s", tostring(path), tostring(value))
-  end
+  NS.Debug("Set", "%s = %s", tostring(path), tostring(value))
   if row.onChange then row.onChange(value) end
   return true
 end
@@ -173,56 +173,3 @@ function S:Register()
   end
   return unresolved
 end
-
--- Slash command table. Dispatch lives in Slash.lua and the help index is generated from this, so
--- `/pm help`, the README's command table and the settings landing page can never drift
--- (slash-commands-§3).
-NS.COMMANDS = {
-  { name = "config",   desc = "Open settings", fn = function()
-      if NS.Panel then NS.Panel:Open() end
-    end },
-  { name = "new",      desc = "Create a panel: /pm new <name>",
-    fn = function(a) NS.Slash:CliNew(a) end },
-  { name = "delete",   desc = "Delete a panel: /pm delete <name>",
-    fn = function(a) NS.Slash:CliDelete(a) end },
-  { name = "rename",   desc = "Rename a panel: /pm rename <old> <new>",
-    fn = function(a) NS.Slash:CliRename(a) end },
-  { name = "panels",   desc = "List your panels", fn = function() NS.Slash:CliPanels() end },
-  { name = "panel",    desc = "Inspect or edit one: /pm panel <name> [field] [value]",
-    fn = function(a) NS.Slash:CliPanel(a) end },
-  { name = "unlock",   desc = "Unlock panels for dragging", fn = function()
-      if NS.Unlock then NS.Unlock:SetUnlocked(true) end
-    end },
-  { name = "lock",     desc = "Lock panels again", fn = function()
-      if NS.Unlock and NS.Unlock:SetUnlocked(false) ~= nil then NS.Print("panels locked") end
-    end },
-  { name = "preview",  desc = "Toggle sample panels", fn = function()
-      if not NS.Unlock then return end
-      local on = NS.Unlock:TogglePreview()
-      NS.Print("preview " .. (on and "on" or "off"))
-    end },
-  { name = "recover",  desc = "Bring off-screen panels back into view",
-    fn = function() NS.Slash:CliRecover() end },
-  { name = "version",  desc = "Print addon version", fn = function() NS.Slash:CliVersion() end },
-  { name = "get",      desc = "Get a setting value", fn = function(a) NS.Slash:CliGet(a) end },
-  { name = "set",      desc = "Set a setting value", fn = function(a) NS.Slash:CliSet(a) end },
-  { name = "list",     desc = "List all settings", fn = function() NS.Slash:CliList() end },
-  { name = "reset",    desc = "Reset one setting", fn = function(a) NS.Slash:CliReset(a) end },
-  { name = "resetall", desc = "Reset all settings", fn = function() NS.Slash:CliResetAll() end },
-  { name = "debug",    desc = "Toggle the console; 'on'/'off' set logging", fn = function(rest)
-      -- `/pm debug` toggles the WINDOW only (the logging flag is untouched); `/pm debug on|off` sets
-      -- the session-only logging flag through the DebugLog seam. Logging runs even with the console
-      -- closed, so a bug can be reproduced first and the log read afterwards.
-      local arg = rest and tostring(rest):lower():match("^%s*(%S*)") or ""
-      if not NS.DebugLog then return end
-      if arg == "on" then NS.DebugLog:SetEnabled(true)
-      elseif arg == "off" then NS.DebugLog:SetEnabled(false)
-      elseif arg == "dump" then
-        -- Structured dump verb (debug-logging-§4): the registry's and the renderer's views of the
-        -- world, side by side. Uses the RAW append, so it works whether or not logging is enabled.
-        NS.DebugLog:Show()
-        for _, line in ipairs(NS.DebugLog:Diagnose()) do NS.DebugLog:Add("Dump", line) end
-      else NS.DebugLog:Toggle() end
-    end },
-  { name = "help",     desc = "Show this help", fn = function() NS.Slash:PrintHelp() end },
-}

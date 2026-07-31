@@ -1,6 +1,6 @@
 ## Interface: 120007
 ## Title: Ka0s Panel Master
-## Notes: Draws backdrop panels behind your UI, so separate frames read as deliberate groups.
+## Notes: Draws plain backdrop panels behind your UI, so separate frames read as deliberate groups.
 ## Author: add1kted2ka0s
 ## Version: 0.1.0
 ## IconTexture: Interface\Icons\inv_misc_food_legion_gooseraw
@@ -52,4 +52,5 @@ modules\DebugLog.lua
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
 settings\Slash.lua
+settings\PanelEditor.lua
 settings\Panel.lua

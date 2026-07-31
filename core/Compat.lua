@@ -46,16 +46,16 @@ function Compat.GetUIScale()
   return 1
 end
 
--- ── Class colour ────────────────────────────────────────────────────────────────
+-- ── Class color ────────────────────────────────────────────────────────────────
 
--- The player's class colour as r, g, b (0-1), or nil when it cannot be determined.
+-- The player's class color as r, g, b (0-1), or nil when it cannot be determined.
 --
 -- `RAID_CLASS_COLORS` is read rather than `C_ClassColor.GetClassColor` because the former is the one
--- every UI addon already agrees on and is what a user comparing PanelMaster's "class colour" against
+-- every UI addon already agrees on and is what a user comparing PanelMaster's "class color" against
 -- their unit frames will be looking at. Keyed on the **classFile** token ("PRIEST"), never on the
 -- localized class name (localization-§4).
 --
--- Returns nil rather than white on failure, so the caller can fall back to the stored colour instead
+-- Returns nil rather than white on failure, so the caller can fall back to the stored color instead
 -- of silently painting a panel white.
 function Compat.GetClassColor()
   if type(UnitClass) ~= "function" then return nil end
@@ -141,10 +141,7 @@ function Compat.MouseIsOver(frame)
   return ok and result and true or false
 end
 
--- ── Backdrop support ────────────────────────────────────────────────────────────
-
--- Does this build still carry the BackdropTemplate mixin? Retail has kept it since 9.0, but the
--- panels degrade to plain textures without it rather than erroring, so the check is explicit.
-function Compat.HasBackdrop()
-  return type(BackdropTemplateMixin) == "table"
-end
+-- NOTE: there is deliberately no backdrop-support shim here. Asking whether BackdropTemplateMixin
+-- exists says nothing about the frame in hand; modules/Canvas.lua guards on the frame instance's own
+-- SetBackdrop method instead, which is the stronger check and the only one it can act on
+-- (anti-patterns #10 — no deprecated API is being wrapped, so nothing belongs in Compat).

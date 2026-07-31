@@ -38,10 +38,35 @@ function Util.Snap(n, grid)
   return Util.Round((tonumber(n) or 0) / grid) * grid
 end
 
--- ── Colours ─────────────────────────────────────────────────────────────────────
+-- ── Booleans ────────────────────────────────────────────────────────────────────
+
+-- The accepted spellings of yes and no, shared so the CLI and the registry can never disagree about
+-- what "on" means. The error text below lists exactly these, so the two stay in step.
+local BOOL_TOKENS = {
+  ["true"] = true, ["on"] = true,  ["yes"] = true, ["1"] = true,
+  ["false"] = false, ["off"] = false, ["no"] = false, ["0"] = false,
+}
+
+-- The message every caller prints when ParseBool comes back nil. One string, so `/pm set` and
+-- `/pm panel` refuse a typo in the same words (slash-commands-§5).
+Util.BOOL_USAGE = "expected true/false (or on/off, yes/no, 1/0)"
+
+-- A user-typed boolean → true, false, or nil for "I could not read that".
+--
+-- The nil is the whole point. Both call sites used to coerce with `s == "true" or s == "1" or …`,
+-- which reads every typo as false — so `/pm set settings.enabled ture` turned panels OFF and echoed
+-- `= false` as though that had been asked for. Every other type in both dispatchers reports a parse
+-- failure; booleans do too now, which is a deliberate user-visible change.
+function Util.ParseBool(s)
+  if type(s) == "boolean" then return s end
+  if type(s) ~= "string" and type(s) ~= "number" then return nil end
+  return BOOL_TOKENS[tostring(s):lower()]
+end
+
+-- ── Colors ─────────────────────────────────────────────────────────────────────
 
 -- A normalized {r, g, b, a} array from an arbitrary stored value. Every component is clamped to
--- 0..1 and alpha defaults to 1, so a partial or malformed colour still renders something visible
+-- 0..1 and alpha defaults to 1, so a partial or malformed color still renders something visible
 -- instead of erroring inside SetColorTexture.
 function Util.Color(v, fallback)
   local src = (type(v) == "table") and v or fallback or { 1, 1, 1, 1 }
@@ -53,10 +78,10 @@ function Util.Color(v, fallback)
   }
 end
 
--- "r,g,b,a" → a colour array, for `/pm panel set <name> bgColor 0.1,0.1,0.1,0.8`. Accepts 3 or 4
+-- "r,g,b,a" → a color array, for `/pm panel set <name> bgColor 0.1,0.1,0.1,0.8`. Accepts 3 or 4
 -- components (alpha defaults to 1) and 0-255 byte input as well as 0-1.
 --
--- The byte-vs-fraction decision reads only R, G and B, and then applies to all four: a hex colour
+-- The byte-vs-fraction decision reads only R, G and B, and then applies to all four: a hex color
 -- pasted as bytes carries its alpha as a byte too, and alpha alone is not a reliable signal (a
 -- fully-opaque byte alpha is 255, but a fully-opaque fractional one is 1, and "1" is a legal value
 -- in both readings). Deciding on the three unambiguous components and following through is the only
@@ -82,8 +107,8 @@ function Util.ParseColor(s)
   }
 end
 
--- A colour array → the "r,g,b,a" form ParseColor accepts, for the CLI echo and `/pm panel show`.
--- Round-trips: FormatColor(ParseColor(s)) parses back to the same colour.
+-- A color array → the "r,g,b,a" form ParseColor accepts, for the CLI echo and `/pm panel show`.
+-- Round-trips: FormatColor(ParseColor(s)) parses back to the same color.
 function Util.FormatColor(c)
   c = Util.Color(c)
   return ("%.2f,%.2f,%.2f,%.2f"):format(c[1], c[2], c[3], c[4])
@@ -170,12 +195,12 @@ function Util.FrameName(name)
   return C.FRAME_NAME_PREFIX .. Util.Slugify(name)
 end
 
--- Resolve a panel's colour field to the {r, g, b, a} that is actually drawn.
+-- Resolve a panel's color field to the {r, g, b, a} that is actually drawn.
 --
--- This is the single seam every colour read goes through. If the field has a class-colour companion
+-- This is the single seam every color read goes through. If the field has a class-color companion
 -- in C.COLOR_FIELDS and that flag is set, the player's class RGB replaces the stored RGB — but the
--- stored ALPHA is kept, because "class coloured" is a statement about hue, not about how
--- see-through the user wanted their panel. Falls back to the stored colour whenever the class colour
+-- stored ALPHA is kept, because "class colored" is a statement about hue, not about how
+-- see-through the user wanted their panel. Falls back to the stored color whenever the class color
 -- cannot be determined, so a headless or early-login read is never a white panel.
 function Util.ResolveColor(rec, field)
   local stored = Util.Color(rec and rec[field], C.PANEL_TEMPLATE[field])

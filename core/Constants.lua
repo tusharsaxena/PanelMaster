@@ -76,14 +76,18 @@ C.MIN_ACCENT_OFFSET = -32
 C.MAX_ACCENT_OFFSET = 32
 C.MIN_GRID = 1
 C.MAX_GRID = 128
+-- The range the editor's X/Y sliders span. NOT a clamp: Registry.Sanitize deliberately does not
+-- bound offsets (a multi-monitor layout legitimately carries large ones), so this is only how far
+-- the slider can reach, and it is named here so the panel cannot invent its own number.
+C.EDITOR_OFFSET_RANGE = 2000
 
 -- ── Panel record template ───────────────────────────────────────────────────────
 -- The shipped shape of a new panel, and the source every field default is read from when an older
 -- (or hand-edited) record is missing one. Registry.New copies this; Registry.Sanitize fills gaps
 -- from it. There is no second list of "what a panel has" anywhere in the addon.
 --
--- Colours are {r, g, b, a} arrays rather than {r=,g=,b=,a=} maps because that is the order every
--- WoW colour setter takes them in, so the record unpacks straight into SetColorTexture.
+-- Colors are {r, g, b, a} arrays rather than {r=,g=,b=,a=} maps because that is the order every
+-- WoW color setter takes them in, so the record unpacks straight into SetColorTexture.
 C.PANEL_TEMPLATE = {
   name        = "Panel",
   enabled     = true,
@@ -106,7 +110,7 @@ C.PANEL_TEMPLATE = {
   borderColor  = { 0.35, 0.35, 0.40, 1.00 },
   -- No panel border out of the box. The shipped look leans on the accent bar for definition
   -- instead, and a panel wearing both an outline and a bar reads as busy rather than framed. The
-  -- colour above is kept so raising the size gives something sensible immediately.
+  -- color above is kept so raising the size gives something sensible immediately.
   borderSize   = 0,
   borderOffset = 0,
   alpha        = 1.0,
@@ -117,7 +121,7 @@ C.PANEL_TEMPLATE = {
   bgTexture     = "Solid",
   borderTexture = "Solid",
 
-  -- Class-colour flags. Each one overrides the RGB of its paired colour field while leaving that
+  -- Class-color flags. Each one overrides the RGB of its paired color field while leaving that
   -- field's ALPHA in force — see C.COLOR_FIELDS.
   bgClassColor     = false,
   borderClassColor = false,
@@ -134,7 +138,7 @@ C.PANEL_TEMPLATE = {
   -- strata, level and alpha, and it is as click-through as everything else here.
   --
   -- ON by default: the accent bar IS the shipped look. A new panel arrives as a dark block with a
-  -- class-coloured strip along its top rather than a plain rectangle, so the addon shows what it is
+  -- class-colored strip along its top rather than a plain rectangle, so the addon shows what it is
   -- for without the user having to go and find the switch. The panel's own border is off to
   -- compensate (see borderSize above) — one piece of definition, not two.
   accentEnabled   = true,
@@ -153,9 +157,9 @@ C.PANEL_TEMPLATE = {
   -- Flush against the panel by default. The bar reads as part of the panel's frame rather than as a
   -- separate floating strip; push the offset positive for the detached look instead.
   accentOffset    = 0,
-  -- Class colour is ON by default, so the bar picks up the wearer's colour with no configuration.
-  -- The stored colour underneath is the green the BenikUI look is known for, which is what shows the
-  -- moment class colour is switched off.
+  -- Class color is ON by default, so the bar picks up the wearer's color with no configuration.
+  -- The stored color underneath is the green the BenikUI look is known for, which is what shows the
+  -- moment class color is switched off.
   accentColor      = { 0.15, 0.85, 0.40, 1.00 },
   accentClassColor = true,
 
@@ -163,21 +167,21 @@ C.PANEL_TEMPLATE = {
   -- decoration, and outlining it unasked would change the look of every accent bar the moment the
   -- feature shipped. Shares the panel border's bounds, so the two sliders read alike.
   accentBorderTexture   = "Solid",
-  -- A 1px black outline around the bar. Black rather than the panel border's grey because its job is
-  -- to SEPARATE the bar from whatever is behind it — against a bright background a bare class colour
-  -- bleeds into the scenery, and a dark hairline restores the edge whatever the class colour is.
+  -- A 1px black outline around the bar. Black rather than the panel border's gray because its job is
+  -- to SEPARATE the bar from whatever is behind it — against a bright background a bare class color
+  -- bleeds into the scenery, and a dark hairline restores the edge whatever the class color is.
   accentBorderSize      = 1,
   accentBorderOffset    = 0,
   accentBorderColor     = { 0.00, 0.00, 0.00, 1.00 },
   accentBorderClassColor = false,
 }
 
--- Colour field → the boolean field that class-colours it.
+-- Color field → the boolean field that class-colors it.
 --
--- This map is the generic seam: anything that reads a colour goes through Util.ResolveColor, which
--- consults this table. Adding a colour to a panel later means adding the two fields and ONE row
+-- This map is the generic seam: anything that reads a color goes through Util.ResolveColor, which
+-- consults this table. Adding a color to a panel later means adding the two fields and ONE row
 -- here — the renderer, the CLI, the settings page and the field dump all pick it up with no further
--- edit. Without it, "does this colour support class colour?" would be re-decided at every call site.
+-- edit. Without it, "does this color support class color?" would be re-decided at every call site.
 C.COLOR_FIELDS = {
   bgColor     = "bgClassColor",
   borderColor = "borderClassColor",
@@ -186,7 +190,7 @@ C.COLOR_FIELDS = {
 }
 
 -- Field → type, for the CLI's `/pm panel set <name> <field> <value>` coercion and for validation.
--- Derived from the template's own values where the type is unambiguous; colours and media names are
+-- Derived from the template's own values where the type is unambiguous; colors and media names are
 -- called out because a Lua array is a `table` and a media name is a free string with a live list.
 C.PANEL_FIELD_TYPE = {
   name = "string", enabled = "boolean",
@@ -251,8 +255,17 @@ C.MEDIA_FALLBACK = {
 
 -- ── Preview mode ────────────────────────────────────────────────────────────────
 -- The placeholder panels `/pm preview` stands up (preview-mode). Deliberately three, deliberately
--- offset from centre and from each other: one panel proves the render path, three prove that
--- position, size and colour are all really being applied.
+-- offset from center and from each other: one panel proves the render path, three prove that
+-- position, size and color are all really being applied.
+-- The field a preview placeholder carries in the registry. Preview panels are REAL records (that is
+-- what makes preview exercise the real render path, preview-mode) but they are not the user's work,
+-- so they must not survive a reload. The marker is the durable half of the pair whose session half
+-- is NS.State.previewIDs: ids are lost on /reload, this is not.
+--
+-- Deliberately absent from PANEL_FIELD_TYPE, PANEL_FIELD_ORDER and PANEL_TEMPLATE, so the CLI cannot
+-- set it, `/pm panel <name>` does not print it, and a normally-created panel never carries it.
+C.PREVIEW_FIELD = "preview"
+
 C.PREVIEW_PANELS = {
   { name = "Preview: Chat",    width = 380, height = 160, point = "BOTTOMLEFT",
     relPoint = "BOTTOMLEFT", x = 40,  y = 40,  bgColor = { 0.10, 0.14, 0.22, 0.80 } },
@@ -276,8 +289,8 @@ C.PREVIEW_PANELS = {
 C.FRAME_NAME_PREFIX = "PanelMaster_Panel_"
 
 -- ── Unlock-mode styling ─────────────────────────────────────────────────────────
--- The overlay a panel wears while unlocked: a gold outline and a centred name label, so a panel that
--- is otherwise near-invisible (low alpha, dark colour) can still be found and grabbed.
+-- The overlay a panel wears while unlocked: a gold outline and a centered name label, so a panel that
+-- is otherwise near-invisible (low alpha, dark color) can still be found and grabbed.
 C.UNLOCK_OUTLINE_RGB = { 1.00, 0.82, 0.00, 0.90 }
 C.UNLOCK_LABEL_RGB   = { 1.00, 0.82, 0.00 }
 C.UNLOCK_OUTLINE_PX  = 2
@@ -293,7 +306,7 @@ C.FONT_MONO = "Interface\\AddOns\\PanelMaster\\media\\fonts\\JetBrainsMono-Regul
 -- and raises no error, so treat it as required rather than optional.
 C.LOGO_PATH = "Interface\\AddOns\\PanelMaster\\media\\logos\\panelmaster.logo.tga"
 
--- Solid colour is the shipped default for both the background and the border on purpose: a backdrop
+-- Solid color is the shipped default for both the background and the border on purpose: a backdrop
 -- panel's job is to be a quiet block behind other frames, and a decorative texture fights the UI it
 -- is meant to sit under. Anything else the user has installed is offered through LibSharedMedia (see
 -- C.SOLID_MEDIA_NAME and Compat.FetchMedia).

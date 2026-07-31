@@ -160,6 +160,16 @@ test("Slash.CliSet: coerces booleans from words", function()
   assertTrue(NS.Schema:Get("settings.snapToGrid"))
 end)
 
+test("Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)", function()
+  Sl:CliSet("settings.snapToGrid on")
+  local lines = capture(function() Sl:CliSet("settings.snapToGrid ture") end)
+  assertTrue(lines[1]:find("expected true/false", 1, true) ~= nil,
+    "the refusal does not list the accepted tokens")
+  -- `/pm set settings.enabled ture` used to turn panels OFF and echo `= false`. Every other type in
+  -- this dispatcher reports a parse failure; booleans do too now.
+  assertTrue(NS.Schema:Get("settings.snapToGrid"), "a typo turned the setting off")
+end)
+
 test("Slash.CliSet: accepts a lower-case dropdown token", function()
   Sl:CliSet("settings.defaultStrata low")
   assertEqual(NS.Schema:Get("settings.defaultStrata"), "LOW")
@@ -302,7 +312,7 @@ test("Slash.CliPanel: the echo reflects clamping, not what was typed", function(
   assertTrue(lines[1]:find("1.00", 1, true) ~= nil, "the echo showed the typed value, not the stored one")
 end)
 
-test("Slash.CliPanel: sets a colour from a string", function()
+test("Slash.CliPanel: sets a color from a string", function()
   fresh()
   local rec = R:New("Painted")
   Sl:CliPanel("Painted bgColor 1,0,0,0.5")
@@ -336,6 +346,20 @@ test("Slash.CliPanel deleteall: goes through the confirm popup", function()
   fresh()
 end)
 
+test("Slash.CliPanel: a panel genuinely named 'deleteall' is still reachable (F-022)", function()
+  fresh()
+  local rec = R:New("deleteall")
+  local before = #T.mocks.__popupsShown
+  local lines = capture(function() Sl:CliPanel("deleteall") end)
+  -- The verb only wins when no panel answers to the name, so the one panel whose name collides with
+  -- it can still be inspected and edited from the CLI instead of being permanently shadowed.
+  assertEqual(#T.mocks.__popupsShown, before, "the wipe confirm fired for a panel lookup")
+  assertTrue(lines[1]:find("deleteall", 1, true) ~= nil, "the panel dump never appeared")
+  assertEqual(R:Count(), 1, "the panel was deleted instead of shown")
+  R:Delete(rec.id)
+  fresh()
+end)
+
 test("Slash.CliRecover: reports when nothing needed moving", function()
   fresh()
   R:New("Fine", { x = 10, y = 10 })
@@ -361,4 +385,77 @@ test("Slash: every printed line carries the shared cyan tag", function()
     assertTrue(line:sub(1, #NS.PREFIX) == NS.PREFIX, "untagged line: " .. line)
   end
   fresh()
+end)
+
+-- ── The command table ──
+-- These live here rather than beside the settings schema because the table, the dispatcher, the
+-- generated help and the sixteen Cli* implementations are one surface (slash-commands-§3).
+
+test("COMMANDS: the table is defined beside its dispatcher", function()
+  -- It used to sit in settings/Schema.lua, one file away from everything that reads it. A source
+  -- scan is the only way to assert WHERE it lives: at runtime NS.COMMANDS is just a namespace field
+  -- and every file has already loaded by the time the suite looks at it.
+  local f = assert(io.open("settings/Slash.lua", "r"))
+  local slash = f:read("*a")
+  f:close()
+  assertTrue(slash:find("\nNS.COMMANDS = {", 1, true) ~= nil,
+    "NS.COMMANDS should be defined in settings/Slash.lua")
+
+  f = assert(io.open("settings/Schema.lua", "r"))
+  local schema = f:read("*a")
+  f:close()
+  assertEqual(schema:find("NS.COMMANDS", 1, true), nil,
+    "settings/Schema.lua should no longer mention the command table")
+end)
+
+test("COMMANDS: every entry has a name, description and function", function()
+  for _, cmd in ipairs(NS.COMMANDS) do
+    assertTrue(type(cmd.name) == "string" and cmd.name ~= "")
+    assertTrue(type(cmd.desc) == "string" and cmd.desc ~= "")
+    assertTrue(type(cmd.fn) == "function", cmd.name .. " has no function")
+  end
+end)
+
+test("COMMANDS: names are unique and lower-case", function()
+  local seen = {}
+  for _, cmd in ipairs(NS.COMMANDS) do
+    assertEqual(seen[cmd.name], nil, "duplicate command " .. cmd.name)
+    assertEqual(cmd.name, cmd.name:lower(), cmd.name .. " is not lower-case")
+    seen[cmd.name] = true
+  end
+end)
+
+test("COMMANDS: the standard's required verbs are present (slash-commands-§3)", function()
+  local have = {}
+  for _, cmd in ipairs(NS.COMMANDS) do have[cmd.name] = true end
+  for _, required in ipairs({ "config", "version", "get", "set", "list",
+                              "reset", "resetall", "debug", "help" }) do
+    assertTrue(have[required], "missing the required '" .. required .. "' verb")
+  end
+end)
+
+test("COMMANDS: the descs name the sub-verbs their handlers accept (F-011)", function()
+  -- `/pm debug dump` and `/pm panel deleteall` both work, and neither used to appear in the
+  -- generated help index, on the settings landing page or in the README — all three of which
+  -- generate from these descs (slash-commands-§3 forbids a hand-maintained help string, so the desc
+  -- is the only place the text can go).
+  local desc = {}
+  for _, cmd in ipairs(NS.COMMANDS) do desc[cmd.name] = cmd.desc end
+  assertTrue(desc.debug:find("dump", 1, true) ~= nil,
+    "the debug row never mentions 'dump', the verb a bug report asks for")
+  assertTrue(desc.panel:find("deleteall", 1, true) ~= nil,
+    "the panel row never mentions 'deleteall', which destroys every panel")
+end)
+
+test("PrintHelp: the generated rows carry the sub-verbs too", function()
+  -- The help index is generated, so surfacing a sub-verb in the desc is enough. This is the
+  -- assertion that the generation still holds — a hand-written help block would break it.
+  local lines = capture(function() Sl:PrintHelp() end)
+  local found = { dump = false, deleteall = false }
+  for _, line in ipairs(lines) do
+    if line:find("dump", 1, true) then found.dump = true end
+    if line:find("deleteall", 1, true) then found.deleteall = true end
+  end
+  assertTrue(found.dump, "'dump' reaches no help row")
+  assertTrue(found.deleteall, "'deleteall' reaches no help row")
 end)

@@ -16,8 +16,44 @@ local addonName, NS = ...
 -- `global` holds only the schema stamp; everything the user configures lives in `profile`.
 function NS:InitDB()
   NS.db = LibStub("AceDB-3.0"):New(addonName .. "DB", NS.defaults, true)
-  NS:RunMigrations()   -- normalize the persisted schema before any panel is read
+  NS:RunMigrations()          -- normalize the persisted schema before any panel is read
+  NS:SweepPreviewPanels()     -- orphans from a /reload with test mode on
   NS:RegisterProfileCallbacks()
+end
+
+-- Remove every preview placeholder left in the profile, and report how many went.
+--
+-- Preview panels are real records (that is what makes preview exercise the real render path), and
+-- they are withdrawn on the way out of preview — but a /reload with test mode on never gets to that
+-- exit, and the ids that tracked them died with the session. The marker on the record is the
+-- durable half of that pair, so this is the only thing that can find them afterwards.
+--
+-- Walks BACKWARDS so removing an entry cannot make the loop skip the one after it. Runs in
+-- OnInitialize, i.e. before Canvas:Enable and before the first RenderAll, so no orphan is ever
+-- drawn. Idempotent by construction: a second pass finds nothing left to remove.
+--
+-- Deliberately not routed through NS.Registry:Delete — there is nothing on the bus to tell yet at
+-- this point in the lifecycle, and a per-record broadcast here would be N rebuilds of a UI that does
+-- not exist.
+--
+-- Known trade-off: a preview panel the user ran `/pm panel <name> reset` on has lost its marker and
+-- survives as a real panel. Strictly better than every preview panel surviving.
+function NS:SweepPreviewPanels()
+  local p = NS.db and NS.db.profile
+  if not (p and p.panels) then return 0 end
+
+  local removed = 0
+  for i = #p.panels, 1, -1 do
+    if p.panels[i][NS.Constants.PREVIEW_FIELD] then
+      table.remove(p.panels, i)
+      removed = removed + 1
+    end
+  end
+
+  if removed > 0 then
+    NS.Debug("Preview", "swept %s orphaned preview panel(s)", removed)
+  end
+  return removed
 end
 
 -- React to the Profiles page switching, copying into, or resetting the active profile.
@@ -32,7 +68,8 @@ end
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
-    NS:RunMigrations()   -- the incoming profile may predate the current schema
+    NS:RunMigrations()        -- the incoming profile may predate the current schema
+    NS:SweepPreviewPanels()   -- a copied profile can carry someone else's preview orphans
     if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
   end
   NS.db.RegisterCallback(NS, "OnProfileChanged", reload)
@@ -53,9 +90,7 @@ function NS:RunMigrations()
     -- build. It exists so the first real schema change is a body edit rather than a structural one.
     local from = g.schemaVersion
     g.schemaVersion = NS.SCHEMA_VERSION
-    if NS.State.debug and NS.Debug then
-      NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, 0))
-    end
+    NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, 0))
   end
 end
 

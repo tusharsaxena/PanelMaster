@@ -11,7 +11,7 @@ read_globals = {
   "_G", "LibStub", "CreateFrame", "GetTime", "time", "date", "unpack",
   "GetLocale", "C_Timer", "hooksecurefunc", "InCombatLockdown", "PlaySound",
   "C_AddOns", "GetAddOnMetadata", "strtrim",
-  -- Class colour (the classFile token and the palette every UI addon agrees on) and the
+  -- Class color (the classFile token and the palette every UI addon agrees on) and the
   -- cursor test the mouseover fade polls with.
   "UnitClass", "RAID_CLASS_COLORS", "MouseIsOver",
   -- UI globals used by the panels, the console and the settings pages

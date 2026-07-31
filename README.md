@@ -3,17 +3,17 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-415%2F415_passing-green)
+![Tests](https://img.shields.io/badge/Tests-471%2F471_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
      addon actually loads in-game — WoW cannot read .png or .jpg at runtime. -->
 ![Logo](media/logos/panelmaster.logo.256.jpg)
 
-Ka0s Panel Master draws plain coloured panels behind your interface, so a screen full of separate
-frames starts to read as a few deliberate groups.
+Ka0s Panel Master draws plain backdrop panels behind your UI, so a screen full of separate frames
+reads as a few deliberate groups.
 
-That is all a panel is: a rectangle with a colour, a border and a position. It sits **behind**
+That is all a panel is: a rectangle with a color, a border and a position. It sits **behind**
 everything, it holds nothing, and it never moves or touches any of your other frames. Your action
 bars, your chat window and your unit frames stay exactly where their own addons put them — the panel
 is just the backdrop they sit on.
@@ -26,16 +26,16 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 ## What's new in 0.1.0
 
 - First release.
-- Create as many backdrop panels as you like, each with its own size, position, textures, colours,
+- Create as many backdrop panels as you like, each with its own size, position, textures, colors,
   border and frame strata.
 - Pick any background and border texture you have installed — anything that uses LibSharedMedia
   shares its textures with Panel Master.
-- Class-colour a panel's background or border with one tick, and it follows whoever you log in as.
+- Class-color a panel's background or border with one tick, and it follows whoever you log in as.
 - Show a panel only when your cursor is over it, faded to whatever opacity you like the rest of the
   time — without it ever swallowing a click.
 - Offset the border away from the panel's edge for a halo, or inward for an inset frame.
 - **Accent bars** — a thin strip along any edge of a panel, in the style of BenikUI's panels. On
-  out of the box, class-coloured, with any status-bar texture you have installed.
+  out of the box, class-colored, with any status-bar texture you have installed.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
@@ -68,7 +68,7 @@ below.
 | `/pm delete name` | Delete a panel |
 | `/pm rename old new` | Rename a panel |
 | `/pm panels` | List your panels |
-| `/pm panel name [field] [value]` | Look at, or change, one panel |
+| `/pm panel name [field] [value]` | Look at, or change, one panel. `/pm panel deleteall` removes every panel |
 | `/pm unlock` | Show every panel with a drag handle |
 | `/pm lock` | Put them back to normal |
 | `/pm preview` | Toggle three sample panels |
@@ -79,7 +79,7 @@ below.
 | `/pm list` | List every setting |
 | `/pm reset setting` | Put one setting back to normal |
 | `/pm resetall` | Put every setting back to normal (your panels are kept) |
-| `/pm debug` | Show the debug window |
+| `/pm debug` | Show the debug window. `/pm debug on`/`off` turns logging on and off, `/pm debug dump` writes a state dump into the log |
 | `/pm help` | Show this list |
 
 The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `point`, `relPoint`,
@@ -99,7 +99,7 @@ The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `
 /pm panel ChatBG accentEdges top,left
 ```
 
-Colours take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
+Colors take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
 half-transparent red. Texture names are whatever LibSharedMedia has, and are matched however you
 type the capitals. `accentEdges` takes a comma list of `top`, `bottom`, `left`, `right` — or `none`
 for no bars at all.
@@ -154,27 +154,28 @@ Each panel's editor has:
 | Anchor | Which corner or edge of the screen the offsets are measured from. |
 | Frame strata | Which layer the panel sits in. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
-| Background colour / Class colour | The fill colour, or your class colour. Its opacity controls the fill alone. |
+| Background color / Class color | The fill color, or your class color. Its opacity controls the fill alone. |
 | Border texture | Any border style LibSharedMedia knows about, or **None** for no border. |
 | Border size | Thickness. Starts at 0 — the accent bar defines the edge instead. |
 | Border offset | How far the border sits from the panel's edge. Positive pushes it out, negative pulls it in. |
-| Border colour / Class colour | The border colour, or your class colour. The opacity you set applies either way. |
+| Border color / Class color | The border color, or your class color. The opacity you set applies either way. |
 | Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. |
 | Accent bar texture | Any status-bar texture LibSharedMedia knows about. |
 | Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. |
 | Accent bar thickness | How thick the bar is. |
 | Accent bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
-| Accent bar colour / Class colour | The bar colour. Class colour is **on** by default. |
+| Accent bar color / Class color | The bar color. Class color is **on** by default. |
 | Accent bar border texture | An edge style for the bar itself, or **None**. |
 | Accent bar border size | Thickness of the bar's own border. Defaults to a 1px black hairline. |
 | Accent bar border offset | How far that border sits from the bar. |
-| Accent bar border colour / Class colour | The bar border's colour, or your class colour. |
-| Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each colour. |
+| Accent bar border color / Class color | The bar border's color, or your class color. |
+| Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each color. |
 | Show on mouseover only | Keep the panel faded until your cursor is over it. |
 | Faded opacity | How visible it is the rest of the time. 0 hides it completely. |
+| Defaults (the page's own button, not the editor's) | On the **Panels** page this means *delete every panel* — your settings are left alone. It asks first, and nothing goes until you say yes. |
 
-**Two opacities, and they do different things.** Each colour carries its own opacity, which affects
-only what that colour paints — so you can have a see-through fill inside a solid border. **Panel
+**Two opacities, and they do different things.** Each color carries its own opacity, which affects
+only what that color paints — so you can have a see-through fill inside a solid border. **Panel
 opacity** is on top of that and fades the whole panel at once, and it is the level a mouseover panel
 fades *up* to.
 
@@ -183,7 +184,7 @@ fades *up* to.
 1. You create a panel and give it a name. It starts as a mid-sized dark rectangle in the middle of
    the screen.
 2. You unlock the screen. Every panel puts on a gold outline and its name, and becomes draggable.
-3. You drag it where you want it, and resize and recolour it from the settings panel or the command
+3. You drag it where you want it, and resize and recolor it from the settings panel or the command
    line.
 4. You lock the screen again. The outline and the label go away, the panel stops taking mouse clicks
    entirely, and it settles into the background layer — behind your bars, your chat and your unit
@@ -198,9 +199,9 @@ above will cover normal UI, which is occasionally what you want and usually not.
 A panel never takes your mouse, whatever layer it is in. That stays true even with **Show on
 mouseover only** turned on — the panel watches where your cursor is without claiming the click.
 
-Most of a panel's look is the **accent bar** — a thin coloured strip running the full length of an
+Most of a panel's look is the **accent bar** — a thin colored strip running the full length of an
 edge, the look BenikUI's panels are known for. It is on out of the box, so a new panel arrives as a
-dark block with a class-coloured strip along its top, and the panel's own border starts off so one
+dark block with a class-colored strip along its top, and the panel's own border starts off so one
 thing defines the edge rather than two. Tick whichever edges you want, pick a thickness, and push the
 offset positive if you would rather it detached into a separate floating stripe. It draws above the
 panel's border, can carry a thin border of its own, and takes any status-bar texture you have
@@ -243,7 +244,7 @@ perfectly well, but it never depends on one.
 **I made a panel and cannot see it.**
 Three usual causes. It might be behind something opaque — try `/pm unlock`, which shows every panel
 with an outline and a name regardless. It might be switched off — check `/pm panels`, where a
-disabled panel is listed in grey. Or the master switch might be off — `/pm set settings.enabled
+disabled panel is listed in gray. Or the master switch might be off — `/pm set settings.enabled
 true`.
 
 **A panel has ended up off the edge of the screen.**
@@ -251,7 +252,7 @@ true`.
 deliberately parked half off-screen stays exactly where you put it.
 
 **I unlocked panels but nothing became draggable.**
-If you were in combat, the unlock was queued rather than applied — you will have seen a grey notice
+If you were in combat, the unlock was queued rather than applied — you will have seen a gray notice
 saying so. It happens by itself the moment you leave combat.
 
 **`/pm config` says it cannot open during combat.**
@@ -293,4 +294,4 @@ debug log (see above) helps a great deal for anything that looks like a bug.
 
 | Version | Notes |
 |---|---|
-| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-colour option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |
+| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-color option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |

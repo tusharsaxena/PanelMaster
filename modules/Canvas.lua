@@ -7,7 +7,7 @@ local Util = NS.Util
 -- The renderer: turns panel records into on-screen frames and keeps them in step with the registry.
 --
 -- Panels are NON-SECURE frames (standalone-windows), so none of this is combat-gated — creating,
--- moving, recolouring and hiding a plain backdrop frame is all legal in combat, and gating it would
+-- moving, recoloring and hiding a plain backdrop frame is all legal in combat, and gating it would
 -- mean a panel that visibly failed to follow a settings change mid-pull. Unlock mode is the one part
 -- that IS gated, and for a UX reason rather than a taint one (modules/Unlock.lua).
 
@@ -60,8 +60,8 @@ function Canvas.BuildSpec(rec, settings)
     strata    = Util.IsStrata(rec.strata) and rec.strata or C.PANEL_TEMPLATE.strata,
     level     = Util.Clamp(rec.level, 0, 100, 0),
     alpha     = alpha,
-    -- Colours come from the shared resolver, so the class-colour override is applied in exactly one
-    -- place for every colour the addon will ever have (C.COLOR_FIELDS).
+    -- Colors come from the shared resolver, so the class-color override is applied in exactly one
+    -- place for every color the addon will ever have (C.COLOR_FIELDS).
     bg        = Util.ResolveColor(rec, "bgColor"),
     border    = Util.ResolveColor(rec, "borderColor"),
     bgTexture     = rec.bgTexture or C.PANEL_TEMPLATE.bgTexture,
@@ -87,7 +87,7 @@ function Canvas.BuildSpec(rec, settings)
         C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, C.PANEL_TEMPLATE.accentThickness),
       offset    = Util.Clamp(rec.accentOffset,
         C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, C.PANEL_TEMPLATE.accentOffset),
-      -- Through the same shared resolver as every other colour, so the class-colour override needed
+      -- Through the same shared resolver as every other color, so the class-color override needed
       -- no new code here at all — just the C.COLOR_FIELDS row.
       color     = Util.ResolveColor(rec, "accentColor"),
       -- The bar's own border, sharing the panel border's bounds so the two sliders read alike.
@@ -252,7 +252,7 @@ local function applyAccents(f, spec)
 end
 
 -- Paint the background fill. An LSM background name resolves to a texture path that is tinted with
--- the panel's colour via SetVertexColor; the "None" entry means draw no fill at all.
+-- the panel's color via SetVertexColor; the "None" entry means draw no fill at all.
 local function applyBackground(f, spec)
   local path = NS.Compat.FetchMedia("background", spec.bgTexture)
   if not path then
@@ -293,7 +293,7 @@ local function applyBorder(f, spec)
   b:Show()
   -- BackdropTemplate wants the table verbatim on every call; it is not merged with the previous one.
   b:SetBackdrop({ edgeFile = path, edgeSize = spec.borderSize })
-  -- MUST follow SetBackdrop: applying a backdrop resets its border colour to white, so colouring
+  -- MUST follow SetBackdrop: applying a backdrop resets its border color to white, so coloring
   -- first would be silently undone.
   b:SetBackdropBorderColor(spec.border[1], spec.border[2], spec.border[3], spec.border[4])
 end
@@ -323,7 +323,7 @@ local function applySpec(f, spec)
   applyAccents(f, spec)
 
   -- The resting alpha. While unlocked this is overridden to full opacity by Unlock:Decorate — you
-  -- cannot place a panel you cannot see — so the mouseover fade is an editing-mode-off behaviour.
+  -- cannot place a panel you cannot see — so the mouseover fade is an editing-mode-off behavior.
   f.__spec = spec
   f:SetAlpha(spec.mouseover and spec.mouseoverAlpha or spec.alpha)
   Canvas.SetMouseoverTracked(spec.id, f, spec.mouseover)
@@ -405,12 +405,16 @@ local function release(f)
   f:EnableMouse(false)
   f.__spec = nil
   if f.panelID then Canvas.SetMouseoverTracked(f.panelID, nil, false) end
+  -- Cleared only after the untrack above, which reads it. A pooled frame that kept `panelID` would
+  -- name a record it no longer draws — harmless (Canvas:Render reassigns it) but misleading in a
+  -- `/pm debug dump`.
+  f.panelID = nil
   if f.borderFrame and type(f.borderFrame.SetBackdrop) == "function" then
     f.borderFrame:SetBackdrop(nil)
     f.borderFrame:Hide()
   end
   -- Accent bars are anchored OUTSIDE the panel's bounds, so a pooled frame that kept them would
-  -- leave four coloured strips floating where the panel used to be.
+  -- leave four colored strips floating where the panel used to be.
   for _, bar in pairs(f.accents or {}) do
     bar:Hide()
     if bar.borderFrame and type(bar.borderFrame.SetBackdrop) == "function" then
@@ -481,9 +485,7 @@ function Canvas:RenderAll()
       active[id] = nil
     end
   end
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
-  end
+  NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
 end
 
 -- The frame currently showing a given panel, or nil. Unlock mode needs it to attach drag handles;

@@ -45,7 +45,7 @@ test("Canvas.BuildSpec: a zero border is honoured, not floored to 1", function()
   assertEqual(Canvas.BuildSpec({ borderSize = 0 }, {}).borderSize, 0)
 end)
 
-test("Canvas.BuildSpec: normalizes colours to four clamped components", function()
+test("Canvas.BuildSpec: normalizes colors to four clamped components", function()
   local spec = Canvas.BuildSpec({ bgColor = { 2, -1, 0.5 } }, {})
   assertEqual(spec.bg[1], 1)
   assertEqual(spec.bg[2], 0)
@@ -197,6 +197,16 @@ test("Canvas: a released frame is mouse-disabled again", function()
   assertFalse(f:IsMouseEnabled())
 end)
 
+test("Canvas: a released frame stops claiming a panel id (F-024)", function()
+  fresh()
+  local rec = R:New("Retired")
+  local f = Canvas:Render(rec.id)
+  R:Delete(rec.id)
+  -- A pooled frame that kept `panelID` still names a record that no longer exists, which is exactly
+  -- the kind of thing a `/pm debug dump` is read to rule out.
+  assertEqual(f.panelID, nil, "a pooled frame still points at the panel it used to draw")
+end)
+
 test("Canvas: the bus repaints on a registry change", function()
   fresh()
   local rec = R:New("Bussed")
@@ -213,6 +223,39 @@ test("Canvas: a settings change repaints", function()
   assertFalse(Canvas:FrameFor(rec.id):IsShown())
   NS.Schema:Set("settings.enabled", true)
   assertTrue(Canvas:FrameFor(rec.id):IsShown())
+end)
+
+test("Canvas: a grid-only settings write does NOT repaint (F-012)", function()
+  fresh()
+  R:New("Ungridded")
+  -- snapToGrid and gridSize cannot change how any panel looks — they are read live by
+  -- U.SnapPosition at drag-stop, and BuildSpec never touches them. Dragging the Grid size slider
+  -- used to repaint every panel per mouse-up for nothing.
+  local repaints = 0
+  local realRenderAll = Canvas.RenderAll
+  Canvas.RenderAll = function(...) repaints = repaints + 1 return realRenderAll(...) end
+  NS.Schema:Set("settings.gridSize", 8)
+  NS.Schema:Set("settings.snapToGrid", false)
+  NS.Schema:Set("settings.snapToGrid", true)
+  Canvas.RenderAll = realRenderAll
+  assertEqual(repaints, 0, "a grid-only write repainted every panel")
+  NS.Schema:Set("settings.gridSize", 4)
+  fresh()
+end)
+
+test("Canvas: showLabels still repaints — the unlock overlay reads it (F-012)", function()
+  fresh()
+  R:New("Labeled")
+  -- The other half of the same change: showLabels KEEPS its announce, because U:Decorate reads it
+  -- and only ever runs from a render.
+  local repaints = 0
+  local realRenderAll = Canvas.RenderAll
+  Canvas.RenderAll = function(...) repaints = repaints + 1 return realRenderAll(...) end
+  NS.Schema:Set("settings.showLabels", false)
+  Canvas.RenderAll = realRenderAll
+  assertEqual(repaints, 1, "turning names off never reached the overlay")
+  NS.Schema:Set("settings.showLabels", true)
+  fresh()
 end)
 
 test("Canvas: OnEnable subscribes the renderer to the bus", function()

@@ -138,6 +138,22 @@ test("Schema: the master switch reaches the renderer", function()
   R:DeleteAll()
 end)
 
+test("Schema: a gridSize write still changes where the next drag lands (F-012)", function()
+  -- The grid rows lost their announce, NOT their effect: U.SnapPosition reads db.profile.settings
+  -- live at drag-stop, so the new size applies to the very next drag without any repaint.
+  local before = S:Get("settings.gridSize")
+  S:Set("settings.snapToGrid", true)
+  S:Set("settings.gridSize", 16)
+  local x, y = NS.Unlock.SnapPosition(20, -20, NS.db.profile.settings)
+  assertEqual(x, 16)
+  assertEqual(y, -16)
+  S:Set("settings.snapToGrid", false)
+  x = NS.Unlock.SnapPosition(20, -20, NS.db.profile.settings)
+  assertEqual(x, 20, "snapping stayed on after it was turned off")
+  S:Set("settings.snapToGrid", true)
+  S:Set("settings.gridSize", before)
+end)
+
 test("Schema: the settings message has exactly one sender", function()
   local files = {
     "core/PanelMaster.lua", "core/Database.lua", "modules/Registry.lua", "modules/Canvas.lua",
@@ -166,30 +182,4 @@ end)
 test("Schema: defaultAlpha stays a fraction", function()
   assertNear(S:Default("settings.defaultAlpha"), 1.0)
   assertFalse((S:Set("settings.defaultAlpha", 255)))
-end)
-
-test("COMMANDS: every entry has a name, description and function", function()
-  for _, cmd in ipairs(NS.COMMANDS) do
-    assertTrue(type(cmd.name) == "string" and cmd.name ~= "")
-    assertTrue(type(cmd.desc) == "string" and cmd.desc ~= "")
-    assertTrue(type(cmd.fn) == "function", cmd.name .. " has no function")
-  end
-end)
-
-test("COMMANDS: names are unique and lower-case", function()
-  local seen = {}
-  for _, cmd in ipairs(NS.COMMANDS) do
-    assertEqual(seen[cmd.name], nil, "duplicate command " .. cmd.name)
-    assertEqual(cmd.name, cmd.name:lower(), cmd.name .. " is not lower-case")
-    seen[cmd.name] = true
-  end
-end)
-
-test("COMMANDS: the standard's required verbs are present (slash-commands-§3)", function()
-  local have = {}
-  for _, cmd in ipairs(NS.COMMANDS) do have[cmd.name] = true end
-  for _, required in ipairs({ "config", "version", "get", "set", "list",
-                              "reset", "resetall", "debug", "help" }) do
-    assertTrue(have[required], "missing the required '" .. required .. "' verb")
-  end
 end)

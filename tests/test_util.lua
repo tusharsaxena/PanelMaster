@@ -48,6 +48,30 @@ test("Util.Snap: rounds to the nearest multiple", function()
   assertEqual(Util.Snap(-37, 4), -36)
 end)
 
+test("Util.ParseBool: accepts every documented token, in any casing", function()
+  for _, token in ipairs({ "true", "on", "yes", "1", "TRUE", "On", "YES" }) do
+    assertEqual(Util.ParseBool(token), true, token .. " did not read as true")
+  end
+  for _, token in ipairs({ "false", "off", "no", "0", "FALSE", "Off", "NO" }) do
+    assertEqual(Util.ParseBool(token), false, token .. " did not read as false")
+  end
+end)
+
+test("Util.ParseBool: a boolean passes straight through", function()
+  assertEqual(Util.ParseBool(true), true)
+  assertEqual(Util.ParseBool(false), false)
+end)
+
+test("Util.ParseBool: an unrecognized token is nil, NOT false (F-023)", function()
+  -- The whole point of the function: `false` and "I could not read that" must be distinguishable,
+  -- or a typo silently turns a setting off and the echo confirms it as though it had been asked for.
+  assertEqual(Util.ParseBool("ture"), nil)
+  assertEqual(Util.ParseBool(""), nil)
+  assertEqual(Util.ParseBool("2"), nil)
+  assertEqual(Util.ParseBool(nil), nil)
+  assertEqual(Util.ParseBool({}), nil)
+end)
+
 test("Util.Color: fills a missing alpha with 1", function()
   local c = Util.Color({ 0.2, 0.4, 0.6 })
   assertNear(c[4], 1)
@@ -61,7 +85,7 @@ test("Util.Color: clamps out-of-range components", function()
 end)
 
 test("Util.Color: a non-table falls back rather than erroring", function()
-  local c = Util.Color("not a colour", { 0.1, 0.2, 0.3, 0.4 })
+  local c = Util.Color("not a color", { 0.1, 0.2, 0.3, 0.4 })
   assertNear(c[1], 0.1)
 end)
 

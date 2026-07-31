@@ -8,7 +8,7 @@ local function quiet()
   D:Clear()
 end
 
-test("DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no colour codes", function()
+test("DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes", function()
   assertEqual(D.FormatPlain("12:34:56", "Panel", "created"), "12:34:56 | [Panel] created")
 end)
 
@@ -16,7 +16,7 @@ test("DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'", fun
   assertEqual(D.FormatPlain("12:00:00", nil, "x"), "12:00:00 | [] x")
 end)
 
-test("DebugLog.FormatColored: colours the timestamp and the tag", function()
+test("DebugLog.FormatColored: colors the timestamp and the tag", function()
   local line = D.FormatColored("12:34:56", "Panel", "created")
   assertTrue(line:find("|cff6f8faf12:34:56|r", 1, true) ~= nil, "timestamp not steel-blue")
   assertTrue(line:find("|cffc9a66b[Panel]|r", 1, true) ~= nil, "tag not tan/gold")
@@ -118,7 +118,7 @@ test("DebugLog.SetEnabled: emits no [Init] summary on disable", function()
   quiet()
 end)
 
-test("DebugLog.SetEnabled: the chat ack is colour-coded ON green / OFF red", function()
+test("DebugLog.SetEnabled: the chat ack is color-coded ON green / OFF red", function()
   quiet()
   local chat = T.mocks.__chat
   D:SetEnabled(true)
@@ -180,4 +180,58 @@ test("DebugLog.Diagnose: works with logging off", function()
   -- It is a structured DUMP verb, not a log line: it must work whether or not capture is enabled
   -- (debug-logging-§4), otherwise you cannot inspect a live problem without first perturbing it.
   assertTrue(#D:Diagnose() > 0)
+end)
+
+-- ── One gate, at the sink (debug-logging-§4) ──
+
+test("NS.Debug: call sites do not restate the gate", function()
+  -- The sink's first line already gates on NS.State.debug, so `if NS.State.debug and NS.Debug then`
+  -- at a call site is the same invariant spelled a second time — and every restatement is a chance
+  -- to spell it differently (one site used to add a redundant `NS.State and`). The two survivors
+  -- below guard their ARGUMENTS, not the sink, and are named here so the exception stays deliberate.
+  local allowed = {
+    ["modules/Registry.lua"] = 1,   -- Set: R.FormatField builds a string on every field write
+    ["modules/Unlock.lua"]   = 1,   -- SetPanelUnlocked: R:Get is a scan over every panel
+  }
+  local files = {
+    "core/Database.lua", "core/PanelMaster.lua", "core/State.lua", "core/Util.lua",
+    "modules/Registry.lua", "modules/Canvas.lua", "modules/Unlock.lua",
+    "settings/Schema.lua", "settings/Slash.lua", "settings/Panel.lua", "settings/PanelEditor.lua",
+  }
+  for _, path in ipairs(files) do
+    local f = assert(io.open(path, "r"), "missing source file " .. path)
+    local src = f:read("*a")
+    f:close()
+    local found = 0
+    for _ in src:gmatch("NS%.State[^\n]-%.debug[^\n]-NS%.Debug") do found = found + 1 end
+    assertEqual(found, allowed[path] or 0, path .. " restates the NS.Debug gate")
+  end
+end)
+
+test("NS.Debug: the ungated call sites still log when logging is on", function()
+  quiet()
+  NS.Registry:DeleteAll()
+  NS.State.debug = true
+  local rec = NS.Registry:New("Gateless")
+  NS.Registry:Rename(rec.id, "Gateless2")
+  NS.Registry:Reset(rec.id)
+  NS.Registry:Delete(rec.id)
+  local joined = table.concat(D.buffer, "\n")
+  for _, fragment in ipairs({ "created 'Gateless'", "renamed 'Gateless'", "reset 'Gateless2'",
+                              "deleted 'Gateless2'" }) do
+    assertTrue(joined:find(fragment, 1, true) ~= nil, "missing log line: " .. fragment)
+  end
+  quiet()
+  NS.Registry:DeleteAll()
+end)
+
+test("NS.Debug: the ungated call sites stay silent when logging is off", function()
+  quiet()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Silent")
+  NS.Registry:Set(rec.id, "width", 300)
+  NS.Registry:Delete(rec.id)
+  NS.Canvas:RenderAll()
+  assertEqual(#D.buffer, 0, "something logged with the flag off")
+  NS.Registry:DeleteAll()
 end)

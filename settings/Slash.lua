@@ -74,8 +74,8 @@ function Sl.FormatSchemaValue(row, v)
   return tostring(v)
 end
 
--- The shared coloured `key = value` line — gold key, white value, ` = ` left default — reused by the
--- list rows and the get/set echo so the colouring can't drift (slash-commands-§5).
+-- The shared colored `key = value` line — gold key, white value, ` = ` left default — reused by the
+-- list rows and the get/set echo so the coloring can't drift (slash-commands-§5).
 function Sl.FormatKV(path, valueStr)
   return ("|cffffff00%s|r = |cffffffff%s|r"):format(tostring(path), tostring(valueStr))
 end
@@ -151,7 +151,8 @@ function Sl:CliSet(arg)
     value = tonumber(raw)
     if not value then print("expected a number"); return end
   elseif row.type == "boolean" then
-    value = (raw == "true" or raw == "1" or raw == "on" or raw == "yes")
+    value = NS.Util.ParseBool(raw)
+    if value == nil then print(NS.Util.BOOL_USAGE); return end
   elseif row.type == "string" and row.options then
     -- A dropdown-backed string (the strata list) stores an upper-case token; accepting any casing
     -- from the CLI keeps `/pm set settings.defaultStrata low` working.
@@ -219,7 +220,7 @@ function Sl:CliRename(arg)
 end
 
 -- Build the `/pm panels` lines as a pure array, mirroring BuildListLines so the panel listing is
--- unit-testable and colour-consistent with the settings listing (slash-commands-§5).
+-- unit-testable and color-consistent with the settings listing (slash-commands-§5).
 function Sl:BuildPanelLines()
   local records = NS.Registry:All()
   if #records == 0 then
@@ -253,7 +254,7 @@ end
 -- `/pm panel <name>`              → dump every field
 -- `/pm panel <name> <field>`      → one field
 -- `/pm panel <name> <field> <v>`  → set it
--- `/pm panel deleteall`           → the confirm-gated wipe
+-- `/pm panel deleteall`           → the confirm-gated wipe, unless a panel is named that
 --
 -- The name is the first word, so a panel whose name has spaces is addressed from the settings UI
 -- rather than here — the same trade-off `rename` makes, and for the same reason.
@@ -265,7 +266,12 @@ function Sl:CliPanel(arg)
     return
   end
 
-  if key:lower() == "deleteall" then
+  -- The panel wins the name. `deleteall` is only the verb when nothing answers to it, so a user who
+  -- names a panel "deleteall" can still inspect and edit it from the CLI instead of having it
+  -- permanently shadowed by the wipe — and the wipe stays reachable the moment that panel is gone.
+  local rec = NS.Registry:Resolve(key)
+
+  if not rec and key:lower() == "deleteall" then
     if type(StaticPopup_Show) == "function" then
       StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
     else
@@ -275,7 +281,6 @@ function Sl:CliPanel(arg)
     return
   end
 
-  local rec = NS.Registry:Resolve(key)
   if not rec then print(("no panel called '%s'"):format(key)); return end
 
   local field, value = tail:match("^(%S+)%s+(.+)$")
@@ -308,3 +313,62 @@ function Sl:CliRecover()
     print(("moved %d %s back on screen"):format(moved, moved == 1 and "panel" or "panels"))
   end
 end
+
+-- Slash command table. It sits at the BOTTOM of this file, below every Cli* function its entries
+-- call, so the whole slash surface — table, dispatcher (Sl:OnSlash), generated help and the
+-- implementations — reads as one thing. `/pm help`, the README's command table and the settings
+-- landing page all generate from this, so they can never drift (slash-commands-§3).
+NS.COMMANDS = {
+  { name = "config",   desc = "Open settings", fn = function()
+      if NS.Panel then NS.Panel:Open() end
+    end },
+  { name = "new",      desc = "Create a panel: /pm new <name>",
+    fn = function(a) NS.Slash:CliNew(a) end },
+  { name = "delete",   desc = "Delete a panel: /pm delete <name>",
+    fn = function(a) NS.Slash:CliDelete(a) end },
+  { name = "rename",   desc = "Rename a panel: /pm rename <old> <new>",
+    fn = function(a) NS.Slash:CliRename(a) end },
+  { name = "panels",   desc = "List your panels", fn = function() NS.Slash:CliPanels() end },
+  { name = "panel",    desc = "Inspect or edit one: /pm panel <name> [field] [value]; "
+                            .. "'deleteall' removes every panel",
+    fn = function(a) NS.Slash:CliPanel(a) end },
+  { name = "unlock",   desc = "Unlock panels for dragging", fn = function()
+      if NS.Unlock then NS.Unlock:SetUnlocked(true) end
+    end },
+  { name = "lock",     desc = "Lock panels again", fn = function()
+      if NS.Unlock and NS.Unlock:SetUnlocked(false) ~= nil then NS.Print("panels locked") end
+    end },
+  { name = "preview",  desc = "Toggle sample panels", fn = function()
+      if not NS.Unlock then return end
+      local on = NS.Unlock:TogglePreview()
+      NS.Print("preview " .. (on and "on" or "off"))
+    end },
+  { name = "recover",  desc = "Bring off-screen panels back into view",
+    fn = function() NS.Slash:CliRecover() end },
+  { name = "version",  desc = "Print addon version", fn = function() NS.Slash:CliVersion() end },
+  { name = "get",      desc = "Get a setting value", fn = function(a) NS.Slash:CliGet(a) end },
+  { name = "set",      desc = "Set a setting value", fn = function(a) NS.Slash:CliSet(a) end },
+  { name = "list",     desc = "List all settings", fn = function() NS.Slash:CliList() end },
+  { name = "reset",    desc = "Reset one setting", fn = function(a) NS.Slash:CliReset(a) end },
+  { name = "resetall", desc = "Reset all settings", fn = function() NS.Slash:CliResetAll() end },
+  -- Every sub-verb a handler below accepts is named in its own `desc`, because the generated help
+  -- index, the settings landing page and the README's command table all read these strings and
+  -- nothing else. A sub-verb missing here is a sub-verb nobody can discover (slash-commands-§4).
+  { name = "debug",    desc = "Window; 'on'/'off' set logging, 'dump' writes a state dump",
+    fn = function(rest)
+      -- `/pm debug` toggles the WINDOW only (the logging flag is untouched); `/pm debug on|off` sets
+      -- the session-only logging flag through the DebugLog seam. Logging runs even with the console
+      -- closed, so a bug can be reproduced first and the log read afterwards.
+      local arg = rest and tostring(rest):lower():match("^%s*(%S*)") or ""
+      if not NS.DebugLog then return end
+      if arg == "on" then NS.DebugLog:SetEnabled(true)
+      elseif arg == "off" then NS.DebugLog:SetEnabled(false)
+      elseif arg == "dump" then
+        -- Structured dump verb (debug-logging-§4): the registry's and the renderer's views of the
+        -- world, side by side. Uses the RAW append, so it works whether or not logging is enabled.
+        NS.DebugLog:Show()
+        for _, line in ipairs(NS.DebugLog:Diagnose()) do NS.DebugLog:Add("Dump", line) end
+      else NS.DebugLog:Toggle() end
+    end },
+  { name = "help",     desc = "Show this help", fn = function() NS.Slash:PrintHelp() end },
+}

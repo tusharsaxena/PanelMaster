@@ -14,7 +14,7 @@ end
 -- ── Defaults ────────────────────────────────────────────────────────────────────
 
 test("Accent: ON by default \226\128\148 the accent bar is the shipped look", function()
-  -- A new panel arrives as a dark block with a class-coloured strip along its top, so the addon
+  -- A new panel arrives as a dark block with a class-colored strip along its top, so the addon
   -- shows what it is for without the user having to go and find the switch.
   assertTrue(C.PANEL_TEMPLATE.accentEnabled)
   fresh()
@@ -48,12 +48,12 @@ test("Accent: the default bar texture is one LibSharedMedia always ships", funct
   assertEqual(C.PANEL_TEMPLATE.accentTexture, "Blizzard")
 end)
 
-test("Accent: defaults to CLASS colour", function()
+test("Accent: defaults to CLASS color", function()
   assertTrue(C.PANEL_TEMPLATE.accentClassColor)
 end)
 
-test("Accent: the class-colour flag is wired into the generic colour map", function()
-  -- The whole point of C.COLOR_FIELDS: the accent bar needed no new class-colour code anywhere,
+test("Accent: the class-color flag is wired into the generic color map", function()
+  -- The whole point of C.COLOR_FIELDS: the accent bar needed no new class-color code anywhere,
   -- only this row.
   assertEqual(C.COLOR_FIELDS.accentColor, "accentClassColor")
 end)
@@ -225,16 +225,16 @@ test("Canvas.BuildSpec: clamps accent thickness and offset", function()
   assertEqual(spec.accent.offset, C.MAX_ACCENT_OFFSET)
 end)
 
-test("Canvas.BuildSpec: the accent colour goes through the shared resolver", function()
+test("Canvas.BuildSpec: the accent color goes through the shared resolver", function()
   local spec = Canvas.BuildSpec({
     accentColor = { 0, 0, 0, 0.5 }, accentClassColor = true,
   }, {})
-  -- The mock player is a Priest (1, 1, 1); alpha is kept, as for every other colour.
+  -- The mock player is a Priest (1, 1, 1); alpha is kept, as for every other color.
   assertNear(spec.accent.color[1], 1)
   assertNear(spec.accent.color[4], 0.5)
 end)
 
-test("Canvas.BuildSpec: accent class colour is independent of the others", function()
+test("Canvas.BuildSpec: accent class color is independent of the others", function()
   local spec = Canvas.BuildSpec({
     bgColor = { 0, 0, 0, 1 }, bgClassColor = false,
     accentColor = { 0, 0, 0, 1 }, accentClassColor = true,
@@ -345,20 +345,20 @@ test("Canvas: a negative offset pulls the bar over the panel", function()
   assertEqual(y, -4)
 end)
 
-test("Canvas: the bar is painted with the resolved colour", function()
+test("Canvas: the bar is painted with the resolved color", function()
   fresh()
-  local rec = R:New("Coloured", { accentEnabled = true, accentClassColor = false,
+  local rec = R:New("Colored", { accentEnabled = true, accentClassColor = false,
                                   accentColor = { 0.15, 0.85, 0.40, 1 } })
   local c = Canvas:FrameFor(rec.id).accents.TOP.fill.__color
-  assertTrue(c ~= nil, "the accent colour was never applied")
+  assertTrue(c ~= nil, "the accent color was never applied")
   assertNear(c[1], 0.15)
   assertNear(c[2], 0.85)
 end)
 
-test("Canvas: the bar takes the class colour by default", function()
+test("Canvas: the bar takes the class color by default", function()
   fresh()
   local rec = R:New("Classy", { accentEnabled = true })
-  -- accentClassColor defaults true, so a brand-new accented panel is class-coloured with no setup.
+  -- accentClassColor defaults true, so a brand-new accented panel is class-colored with no setup.
   local c = Canvas:FrameFor(rec.id).accents.TOP.fill.__color
   assertNear(c[1], 1)   -- Priest
 end)
@@ -419,9 +419,9 @@ end)
 -- ── The accent bar's own border ─────────────────────────────────────────────────
 
 test("Accent border: a 1px BLACK hairline by default", function()
-  -- Black rather than the panel border's grey because its job is to separate the bar from whatever
-  -- is behind it: against a bright background a bare class colour bleeds into the scenery, and a
-  -- dark hairline restores the edge whatever the class colour happens to be.
+  -- Black rather than the panel border's gray because its job is to separate the bar from whatever
+  -- is behind it: against a bright background a bare class color bleeds into the scenery, and a
+  -- dark hairline restores the edge whatever the class color happens to be.
   assertEqual(C.PANEL_TEMPLATE.accentBorderSize, 1)
   assertFalse(C.PANEL_TEMPLATE.accentBorderClassColor)
   local c = C.PANEL_TEMPLATE.accentBorderColor
@@ -431,7 +431,7 @@ test("Accent border: a 1px BLACK hairline by default", function()
   assertEqual(c[4], 1)
 end)
 
-test("Accent border: its class-colour flag is wired into the generic colour map", function()
+test("Accent border: its class-color flag is wired into the generic color map", function()
   assertEqual(C.COLOR_FIELDS.accentBorderColor, "accentBorderClassColor")
 end)
 
@@ -475,18 +475,18 @@ test("Canvas: the bar border is a backdrop edge at the set thickness", function(
   assertEqual(backdrop.edgeSize, 3)
 end)
 
-test("Canvas: the bar border colour is applied AFTER the backdrop", function()
+test("Canvas: the bar border color is applied AFTER the backdrop", function()
   fresh()
-  local rec = R:New("Coloured", { accentEnabled = true, accentBorderSize = 3,
+  local rec = R:New("Colored", { accentEnabled = true, accentBorderSize = 3,
                                   accentBorderColor = { 1, 0.82, 0, 1 } })
-  -- Applying a backdrop resets its border colour to white, so colouring first is silently undone.
+  -- Applying a backdrop resets its border color to white, so coloring first is silently undone.
   local c = Canvas:FrameFor(rec.id).accents.TOP.borderFrame.__backdropBorderColor
-  assertTrue(c ~= nil, "the bar border colour was never applied")
+  assertTrue(c ~= nil, "the bar border color was never applied")
   assertNear(c[1], 1)
   assertNear(c[2], 0.82)
 end)
 
-test("Canvas: the bar border takes the class colour", function()
+test("Canvas: the bar border takes the class color", function()
   fresh()
   local rec = R:New("ClassOutlined", { accentEnabled = true, accentBorderSize = 3,
                                        accentBorderColor = { 0, 0, 0, 1 },
@@ -536,7 +536,7 @@ test("Canvas: a released frame hides its accent bars", function()
   local f = Canvas:FrameFor(rec.id)
   R:Delete(rec.id)
   -- The bars are anchored OUTSIDE the panel's bounds, so a pooled frame that kept them would leave
-  -- coloured strips floating where the panel used to be.
+  -- colored strips floating where the panel used to be.
   for _, edge in ipairs(C.EDGES) do
     assertFalse(f.accents[edge]:IsShown(), edge .. " bar survived the panel")
   end

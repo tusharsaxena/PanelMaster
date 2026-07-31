@@ -16,8 +16,17 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- is built LAZILY on its first OnShow, because AceGUI lays out against the panel's current width,
 -- which is 0 before the panel is first shown.
 -- Every settings write routes through NS.Schema:Set; every panel write through NS.Registry.
+--
+-- This file is the page CHROME — header, scroll frame, tooltip, schema renderer, landing page and
+-- registration. The Panels page's body (the create box, the selector and one panel's editor) is
+-- settings/PanelEditor.lua, a sibling peeled out of here once this file outgrew a single screenful
+-- of responsibilities (layout-§1).
 
 local ADDON_TITLE   = "Ka0s Panel Master"
+-- The canonical one-line description of the addon: this is the sentence a player reads on the
+-- landing page, so it is the one the other two copies quote. The TOC's `## Notes` carries a
+-- shortened form of it (the client's addon list has room for one short line) and the README's
+-- opening line quotes it whole.
 local ADDON_TAGLINE =
   "Draws plain backdrop panels behind your UI, so a screen full of separate frames reads as a few "
   .. "deliberate groups."
@@ -45,22 +54,26 @@ local registered
 --
 -- Nothing in AceGUI closes it, so the page has to: every dropdown it builds is registered here, and
 -- any user-driven scroll closes whichever one is open first.
-local openDropdowns = {}
-
-local function trackDropdown(widget)
-  openDropdowns[#openDropdowns + 1] = widget
+--
+-- The registry lives on the RENDER CONTEXT, one per page, not at file level. A single shared list
+-- was a bug in both directions: the Panels page's rebuild emptied it wholesale, so the General
+-- page's still-live dropdown stopped closing on scroll, while widgets released by an earlier build
+-- lingered in it and were handed to `pullout:Close()` after release. A page tracks and forgets its
+-- own, because a page is exactly the unit that releases them.
+local function trackDropdown(ctx, widget)
+  ctx.dropdowns[#ctx.dropdowns + 1] = widget
 end
 
 -- Test seams. The headless harness stubs AceGUI out, so no real widget is ever built — these let the
 -- close routine be exercised against hand-built stand-ins, which is how the type-dispatch bug below
--- is pinned.
+-- is pinned. Each takes the context whose dropdowns it is talking about.
 P.__registerDropdownForTest = trackDropdown
-function P.__openDropdownCount() return #openDropdowns end
+function P.__openDropdownCount(ctx) return #ctx.dropdowns end
 
 -- Forget widgets released by a rebuild. Called at the top of every rebuild rather than on release,
 -- because AceGUI has no per-widget "you were released" callback we can hook from here.
-local function forgetDropdowns()
-  for i = #openDropdowns, 1, -1 do openDropdowns[i] = nil end
+local function forgetDropdowns(ctx)
+  for i = #ctx.dropdowns, 1, -1 do ctx.dropdowns[i] = nil end
 end
 P.__forgetDropdownsForTest = forgetDropdowns
 
@@ -85,9 +98,9 @@ for _, widgetType in pairs(LSM_WIDGET) do IS_LSM_WIDGET[widgetType] = true end
 -- AGSMW's pool-return, which expects one of its own frames and iterates a `contentRepo` the Blizzard
 -- frame does not have. The resulting error propagated out of `MoveScroll` and killed mouse-wheel
 -- scrolling on the whole page.
-function P.__closeOpenDropdowns()
+function P.__closeOpenDropdowns(ctx)
   local AGSMW
-  for _, widget in ipairs(openDropdowns) do
+  for _, widget in ipairs(ctx.dropdowns) do
     if IS_LSM_WIDGET[widget.type] then
       -- AceGUI-3.0-SharedMediaWidgets: a plain frame from its own pool, RETURNED rather than hidden,
       -- so the widget's next click opens it instead of toggling it shut.
@@ -212,7 +225,8 @@ local function createPanel(title, opts)
   -- tear down and recreate list rows (structural, expensive). Per options-ui-§11 a structural
   -- rebuild runs only on first paint, on an on-screen edit, or when `dirty` marks an off-screen
   -- change — never on every OnShow.
-  return { panel = panel, body = body, scroll = nil,
+  -- `dropdowns` is this page's own open-dropdown registry — see the note at the top of the file.
+  return { panel = panel, body = body, scroll = nil, dropdowns = {},
            refreshers = {}, rebuilders = {}, dirty = false, lastGroup = nil }
 end
 
@@ -222,7 +236,7 @@ end
 -- fits, which shifts the body width between pages and makes the panel jitter as you tab around.
 -- Mirrors the stock FixScroll maths — note AceGUI's swapped names: `height` is the visible frame
 -- height, `viewheight` the content height.
-local function installAlwaysShownScrollbar(scroll)
+local function installAlwaysShownScrollbar(ctx, scroll)
   local bar = scroll.scrollbar
   if not (bar and scroll.scrollframe and scroll.content) then return end
 
@@ -246,7 +260,7 @@ local function installAlwaysShownScrollbar(scroll)
     if viewheight < height + 2 then return end
     -- The wheel path. MoveScroll is only ever called from the wheel handler, so this is a genuine
     -- user gesture and closing an open dropdown here can never fight a programmatic scroll.
-    closeOpenDropdowns()
+    closeOpenDropdowns(ctx)
     return stockMoveScroll(self, value)
   end
 
@@ -254,7 +268,7 @@ local function installAlwaysShownScrollbar(scroll)
   -- OnValueChanged also fires from FixScroll's own SetValue during layout — closing there would
   -- shut a dropdown the instant it opened, since opening one triggers a relayout.
   if bar.HookScript then
-    bar:HookScript("OnMouseDown", closeOpenDropdowns)
+    bar:HookScript("OnMouseDown", function() closeOpenDropdowns(ctx) end)
   end
 
   scroll.FixScroll = function(self)
@@ -275,7 +289,7 @@ local function installAlwaysShownScrollbar(scroll)
       self:DoLayout()
     end
     if viewheight < height + 2 then
-      self.scrollbar:SetValue(0)   -- content fits: park the thumb and grey the bar out
+      self.scrollbar:SetValue(0)   -- content fits: park the thumb and gray the bar out
       setInert(true)
     else
       setInert(false)
@@ -303,7 +317,7 @@ local function ensureScroll(ctx)
   scroll.frame:SetPoint("TOPLEFT",     ctx.body, "TOPLEFT",      PADDING_X - 4, -8)
   scroll.frame:SetPoint("BOTTOMRIGHT", ctx.body, "BOTTOMRIGHT", -(PADDING_X + 12), 8)
   scroll.frame:Show()
-  installAlwaysShownScrollbar(scroll)
+  installAlwaysShownScrollbar(ctx, scroll)
   ctx.scroll = scroll
   return scroll
 end
@@ -314,7 +328,7 @@ local function addSpacer(scroll, height)
   scroll:AddChild(sp)
 end
 
--- A section heading: a centred gold label flanked by dividers (options-ui-§7). The same widget the
+-- A section heading: a centered gold label flanked by dividers (options-ui-§7). The same widget the
 -- landing page uses for "Slash Commands", so headings read identically everywhere.
 local function section(ctx, label)
   local scroll = ensureScroll(ctx)
@@ -358,7 +372,7 @@ end
 
 local function makeDropdown(ctx, row, parent, rel)
   local dd = AceGUI:Create("Dropdown")
-  trackDropdown(dd)
+  trackDropdown(ctx, dd)
   dd:SetLabel(row.label); applyWidth(dd, rel)
   local list, order = {}, {}
   for i, opt in ipairs(row.options) do list[opt.value] = opt.label; order[i] = opt.value end
@@ -432,638 +446,34 @@ local function renderSchema(ctx, companions)
   flushRow()
 end
 
--- ── Panels subcategory ──────────────────────────────────────────────────────────
--- One editor block per panel, plus the create control. This is the structural page: its content
--- depends on how many panels exist, so it lives behind `rebuilders` and is repainted only when the
--- SET of panels changes (options-ui-§11), never on every OnShow.
-
+-- Run one page closure, and let a broken one break only itself. A refresher or rebuilder that
+-- raised used to abort every closure queued behind it, leaving half the page showing stale values.
 local function safeRun(fn, tag)
   local ok, err = pcall(fn)
-  if not ok and NS.State.debug and NS.Debug then
+  if not ok then
     NS.Debug("Panel", "%s failed: %s", tostring(tag), tostring(err))
   end
 end
 
-local function runRebuilders(ctx)
-  for i, fn in ipairs(ctx.rebuilders) do safeRun(fn, "Panels rebuilder " .. i) end
-  ctx.dirty = false
-end
-
--- One panel's editor: a titled group holding its geometry, layer and colour fields. Every control
--- The panel currently being edited, as an id. The Panels page shows ONE editor at a time, chosen
--- from a dropdown: a page that stacked every panel's editor grew past a screen at three panels and
--- past a scrollbar's usefulness at ten, and rebuilding all of them on every create/delete is the
--- O(N) teardown options-ui-§11 exists to prevent. nil means "nothing selected yet".
-local selectedID
-
--- ── Editor layout constants ─────────────────────────────────────────────────────
--- Vertical rhythm inside the panel editor. Named, never inlined (options-ui-§8), and deliberately
--- three distinct sizes so the spacing itself communicates structure: a big gap means "new part of
--- the page", a medium one "new group of settings", a small one "still the same thought".
-local EDITOR_SELECT_GAP  = 20   -- panel dropdown → the editor box
-local EDITOR_SECTION_GAP = 14   -- between subsections inside the editor
-local EDITOR_ROW_GAP     = 6    -- between rows within one subsection
--- The height an AceGUI control's label row occupies (a labelled Dropdown is 40 tall, an unlabelled
--- one 26). A section heading is followed by a fixed gap, so a control with NO label starts 14px
--- higher than a labelled one and the heading above it looks tighter than every other heading on the
--- page. Adding this back before an unlabelled control makes the gaps read as equal.
-local LABEL_ROW_H        = 14
-
--- ── Editor building blocks ──────────────────────────────────────────────────────
--- The editor emits into a List-layout container as a sequence of full-width ROWS, rather than
--- pouring every widget into one Flow group. A single Flow reflows controls of differing heights into
--- whatever gaps it can find — which is what made the first version look cluttered: a checkbox would
--- ride up beside a slider's label and two unrelated settings would end up sharing a line.
--- Explicit rows mean a row holds exactly what it is meant to and nothing drifts into it.
-local function editorRow(parent)
-  local row = AceGUI:Create("SimpleGroup")
-  row:SetLayout("Flow")
-  row:SetFullWidth(true)
-  parent:AddChild(row)
-  return row
-end
-
-local function editorSpacer(parent, height)
-  local sp = AceGUI:Create("SimpleGroup")
-  sp:SetLayout(nil)
-  sp:SetFullWidth(true)
-  sp:SetHeight(height)
-  parent:AddChild(sp)
-end
-
--- A subsection heading inside the editor: the same divider-flanked Heading the page-level sections
--- use, at the DEFAULT font rather than the larger one, so it reads as a level below them.
-local function editorHeading(parent, text)
-  editorSpacer(parent, EDITOR_SECTION_GAP)
-  local h = AceGUI:Create("Heading")
-  h:SetText(text)
-  h:SetFullWidth(true)
-  parent:AddChild(h)
-  editorSpacer(parent, EDITOR_ROW_GAP)
-end
-
--- A LibSharedMedia picker for one of a panel's media fields.
-local function makeMediaDropdown(row, rec, field, label, tooltip)
-  local mediaType = C.PANEL_FIELD_MEDIA[field]
-  local dd = AceGUI:Create(LSM_WIDGET[mediaType] or "Dropdown")
-  trackDropdown(dd)
-  dd:SetLabel(label)
-  dd:SetRelativeWidth(0.5)
-
-  -- The list is rebuilt at build time rather than captured once at file load: other addons register
-  -- media throughout the session, so a list snapshotted early would be missing whatever loaded after
-  -- this addon.
-  local list, order = {}, {}
-  for i, name in ipairs(NS.Compat.MediaList(mediaType)) do
-    list[name] = name
-    order[i] = name
-  end
-  dd:SetList(list, order)
-  dd:SetValue(rec[field])
-
-  dd:SetCallback("OnValueChanged", function(_, _, value)
-    NS.Registry:Set(rec.id, field, value)
-    -- The AceGUI-3.0-SharedMediaWidgets widgets fire OnValueChanged from their own click handler
-    -- WITHOUT calling SetValue first — upstream assumes AceConfigDialog re-renders the whole panel
-    -- afterwards. This is a canvas panel that does not re-render on a value change, so without this
-    -- push the widget keeps displaying the old name even though the write landed. Harmlessly
-    -- idempotent for the stock Dropdown, which already SetValue'd itself.
-    dd:SetValue(value)
-  end)
-  attachTooltip(dd, label, tooltip)
-  row:AddChild(dd)
-  return dd
-end
-
--- A colour control plus its "use class colour" companion.
+-- ── What settings/PanelEditor.lua draws with ────────────────────────────────────
+-- The panel editor was peeled into a sibling file (C-07), but it is still drawn INTO this page: it
+-- emits into this file's scroll frame, under this file's section headings, with this file's tooltip
+-- attacher, paired-button width and open-dropdown registry. Those helpers are published here rather
+-- than duplicated there, so the two halves cannot drift into two different looks.
 --
--- Driven off C.COLOR_FIELDS rather than written out per colour, so a colour added to the panel
--- record later gets its class-colour checkbox for free.
---
--- The picker stays ENABLED while the class colour is on, and this is a deliberate reversal. It used
--- to be greyed out on the reasoning that its RGB was being overridden — but a colour's ALPHA is not
--- overridden, it still decides how solid the result is, and the picker is the only control that sets
--- it. Disabling it therefore contradicted its own tooltip ("the opacity you picked still applies")
--- and left the user unable to fix a washed-out class-coloured border at all. The label says which
--- half is live instead.
-local function makeColorPair(row, rec, field, label)
-  local flag = C.COLOR_FIELDS[field]
-  local usingClass = flag and rec[flag] and true or false
-
-  -- What the control actually governs right now: everything, or only the opacity.
-  local function labelFor(classOn)
-    if classOn then return label .. " |cff808080(opacity)|r" end
-    return label
-  end
-
-  local picker = AceGUI:Create("ColorPicker")
-  picker:SetLabel(labelFor(usingClass))
-  picker:SetRelativeWidth(0.5)
-  picker:SetHasAlpha(true)
-  local col = NS.Util.Color(rec[field])
-  picker:SetColor(col[1], col[2], col[3], col[4])
-
-  local function store(_, _, r, g, b, a)
-    NS.Registry:Set(rec.id, field, { r, g, b, a })
-  end
-
-  -- BOTH callbacks, and this is a correctness fix rather than belt-and-braces.
-  --
-  -- AceGUI's ColorPicker (v28) only fires OnValueConfirmed from the ALPHA callback, after the
-  -- Blizzard picker closes — and its own "no change, skip update" guard returns early when the alpha
-  -- callback reports the same values the colour callback already applied. So for the overwhelmingly
-  -- common case of changing the colour WITHOUT touching the opacity slider, OnValueConfirmed never
-  -- fires at all: the widget's swatch updated (it calls SetColor on itself first) while the value
-  -- was never handed to the addon. That is exactly the shape of "the swatch is green but the panel
-  -- is still black".
-  --
-  -- OnValueChanged fires while the picker is open, so binding it also gives a live preview as the
-  -- user drags — which is what a colour picker should do anyway.
-  picker:SetCallback("OnValueChanged", store)
-  picker:SetCallback("OnValueConfirmed", store)
-  attachTooltip(picker, label,
-    "Sets the colour and its opacity. With Class colour ticked the colour part is overridden, "
-    .. "but the opacity you set here still decides how solid the result is.")
-  row:AddChild(picker)
-
-  if not flag then return end
-
-  local cb = AceGUI:Create("CheckBox")
-  cb:SetLabel("Class colour")
-  cb:SetRelativeWidth(0.5)
-  cb:SetValue(usingClass)
-  cb:SetCallback("OnValueChanged", function(_, _, v)
-    NS.Registry:Set(rec.id, flag, v and true or false)
-    picker:SetLabel(labelFor(v and true or false))
-  end)
-  attachTooltip(cb, "Class colour",
-    "Use your class colour for " .. label:lower() .. ". The opacity from the colour picker still "
-    .. "applies \226\128\148 a class colour at low opacity looks just as washed out as any other.")
-  row:AddChild(cb)
-end
-
--- The four edge checkboxes for the accent bar, as one quarter-width row.
---
--- A set of independent booleans rather than a dropdown, because the edges are not exclusive — "top
--- and left" is an ordinary choice, and a dropdown would have to enumerate all fifteen combinations
--- to offer it. Each tick writes the WHOLE set through Registry:Set, so the single write seam still
--- sees one complete value rather than four partial ones.
-local function makeEdgeChecks(row, rec)
-  for _, edge in ipairs(C.EDGES) do
-    local cb = AceGUI:Create("CheckBox")
-    cb:SetLabel(C.EDGE_LABEL[edge])
-    cb:SetRelativeWidth(0.25)
-    cb:SetValue(NS.Util.EdgeSet(rec.accentEdges)[edge] and true or false)
-    cb:SetCallback("OnValueChanged", function(_, _, v)
-      local edges = NS.Util.EdgeSet(rec.accentEdges)
-      edges[edge] = v and true or nil
-      NS.Registry:Set(rec.id, "accentEdges", edges)
-    end)
-    attachTooltip(cb, C.EDGE_LABEL[edge],
-      ("Draw an accent bar along the %s edge."):format(C.EDGE_LABEL[edge]:lower()))
-    row:AddChild(cb)
-  end
-end
-
--- One panel's editor. Every control writes through NS.Registry:Set, which is the same seam the CLI
--- and the drag handler use.
-local function buildPanelEditor(ctx, parent, rec)
-  local group = AceGUI:Create("InlineGroup")
-  -- No title: the panel's name is rendered above this box as a full section heading (editorTitle),
-  -- so repeating it here as the group's small left-aligned caption would say the same thing twice.
-  group:SetTitle("")
-  group:SetFullWidth(true)
-  group:SetLayout("List")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-
-  local function numberField(row, label, field, minV, maxV, step, tooltip)
-    local s = AceGUI:Create("Slider")
-    s:SetLabel(label)
-    s:SetSliderValues(minV, maxV, step or 1)
-    s:SetRelativeWidth(0.5)
-    s:SetValue(tonumber(rec[field]) or 0)
-    s:SetCallback("OnMouseUp", function(_, _, v) NS.Registry:Set(rec.id, field, v) end)
-    if tooltip then attachTooltip(s, label, tooltip) end
-    row:AddChild(s)
-    return s
-  end
-
-  local function tokenDropdown(row, label, field, tokens, tooltip)
-    local dd = AceGUI:Create("Dropdown")
-    trackDropdown(dd)
-    dd:SetLabel(label)
-    dd:SetRelativeWidth(0.5)
-    local list, order = {}, {}
-    for i, token in ipairs(tokens) do list[token] = token; order[i] = token end
-    dd:SetList(list, order)
-    dd:SetValue(rec[field])
-    dd:SetCallback("OnValueChanged", function(_, _, key) NS.Registry:Set(rec.id, field, key) end)
-    if tooltip then attachTooltip(dd, label, tooltip) end
-    row:AddChild(dd)
-    return dd
-  end
-
-  -- ── General ──
-  -- Identity first, then the switches, then the two whole-panel actions. Reading order matches
-  -- decision order: which panel is this, is it on, and am I done with it.
-  editorHeading(group, "General")
-
-  local nameRow = editorRow(group)
-
-  local nameBox = AceGUI:Create("EditBox")
-  nameBox:SetLabel("Panel name")
-  nameBox:SetRelativeWidth(0.5)
-  nameBox:SetText(rec.name)
-  nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
-    local ok, err = NS.Registry:Rename(rec.id, text)
-    if not ok then
-      print("error: " .. tostring(err))
-      widget:SetText(rec.name)   -- put the rejected edit back rather than leaving a lie on screen
-      return
-    end
-    -- Renaming changes the frame name and the selector entry, so the page is rebuilt rather than
-    -- patched in two places.
-    ctx.dirty = true
-    if ctx.panel:IsShown() then runRebuilders(ctx) end
-  end)
-  -- The frame name lives in the TOOLTIP rather than as a second label beside the box. It is
-  -- reference information you need once, when wiring something else up to this panel — not
-  -- something worth a permanent line of chrome in the editor.
-  attachTooltip(nameBox, "Panel name",
-    ("Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor to this frame by name. "
-     .. "Renaming the panel changes it, so anything anchored to the old name will need updating.")
-      :format(NS.Registry.FrameName(rec)))
-  nameRow:AddChild(nameBox)
-
-  -- Copy every appearance setting from another panel. Position is deliberately not copied — see
-  -- Registry.CopyFrom — so the panel takes on the other's look without moving on top of it.
-  local others, order = {}, {}
-  for _, other in ipairs(NS.Registry:All()) do
-    if other.id ~= rec.id then
-      others[other.id] = other.name
-      order[#order + 1] = other.id
-    end
-  end
-
-  local copyFrom = AceGUI:Create("Dropdown")
-  trackDropdown(copyFrom)
-  copyFrom:SetLabel("Copy settings from panel")
-  copyFrom:SetRelativeWidth(0.5)
-  copyFrom:SetList(others, order)
-  -- Deliberately valueless: this is an ACTION, not a stored setting. Showing a "current" entry would
-  -- imply an ongoing link between the two panels, when the copy is a one-off.
-  copyFrom:SetValue(nil)
-  if #order == 0 then
-    copyFrom:SetDisabled(true)
-  end
-  copyFrom:SetCallback("OnValueChanged", function(widget, _, sourceID)
-    -- On success the second return is the SOURCE's name, not an error.
-    local ok, result = NS.Registry:CopyFrom(rec.id, sourceID)
-    widget:SetValue(nil)   -- snap back: nothing is selected, something was done
-    if not ok then print("error: " .. tostring(result)); return end
-    print(("copied settings from '%s'"):format(tostring(result)))
-    -- Every control in this editor now holds a stale value.
-    ctx.dirty = true
-    if ctx.panel:IsShown() then runRebuilders(ctx) end
-  end)
-  attachTooltip(copyFrom, "Copy settings from panel",
-    #order == 0
-      and "Make another panel first, then you can copy its settings onto this one."
-      or ("Take on another panel's appearance \226\128\148 size, textures, colours, border and "
-          .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
-  nameRow:AddChild(copyFrom)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local switches = editorRow(group)
-
-  local enabled = AceGUI:Create("CheckBox")
-  enabled:SetLabel("Enabled")
-  enabled:SetRelativeWidth(0.5)
-  enabled:SetValue(rec.enabled ~= false)
-  enabled:SetCallback("OnValueChanged", function(_, _, v)
-    NS.Registry:Set(rec.id, "enabled", v and true or false)
-  end)
-  attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
-  switches:AddChild(enabled)
-
-  -- Per-panel unlock, alongside Enabled. The global unlock is all-or-nothing; this one puts a drag
-  -- handle on just the panel being edited, which is what you want with a dozen of them on screen.
-  local unlocked = AceGUI:Create("CheckBox")
-  unlocked:SetLabel("Unlock")
-  unlocked:SetRelativeWidth(0.5)
-  unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id))
-  unlocked:SetCallback("OnValueChanged", function(widget, _, v)
-    local result = NS.Unlock:SetPanelUnlocked(rec.id, v and true or false)
-    -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
-    -- rather than claiming a state the panel is not in.
-    if result == nil then widget:SetValue(false) end
-  end)
-  attachTooltip(unlocked, "Unlock",
-    "Give just this panel a drag handle and a name label, so it can be moved. "
-    .. "Session-only \226\128\148 always locked again after a reload.")
-  switches:AddChild(unlocked)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local actions = editorRow(group)
-
-  local resetBtn = makePairButton("Reset", function()
-    local ok, err = NS.Registry:Reset(rec.id)
-    if not ok then print("error: " .. tostring(err)); return end
-    -- Every widget in this editor now holds a stale value, so the page is rebuilt rather than each
-    -- control being poked individually.
-    ctx.dirty = true
-    if ctx.panel:IsShown() then runRebuilders(ctx) end
-  end)
-  attachTooltip(resetBtn, "Reset",
-    "Put this panel back to how a new one starts \226\128\148 size, position, textures, colours and "
-    .. "all. Its name is kept, so anything anchored to it stays anchored.")
-  actions:AddChild(resetBtn)
-
-  local deleteBtn = makePairButton("Delete", function()
-    NS.Registry:Delete(rec.id)
-    selectedID = nil
-    ctx.dirty = true
-    if ctx.panel:IsShown() then runRebuilders(ctx) end
-  end)
-  attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
-  actions:AddChild(deleteBtn)
-
-  -- ── Position and size ──
-  editorHeading(group, "Position and size")
-
-  local sizeRow = editorRow(group)
-  numberField(sizeRow, "Width", "width", C.MIN_SIZE, 1200)
-  numberField(sizeRow, "Height", "height", C.MIN_SIZE, 1200)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local offsetRow = editorRow(group)
-  numberField(offsetRow, "X offset", "x", -2000, 2000)
-  numberField(offsetRow, "Y offset", "y", -2000, 2000)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local anchorRow = editorRow(group)
-  tokenDropdown(anchorRow, "Anchor", "point", C.POINTS,
-    "Which corner or edge of the screen the offsets are measured from.")
-  tokenDropdown(anchorRow, "Frame strata", "strata", C.STRATA,
-    "Which layer the panel sits in. LOW keeps it under essentially all interface frames, which is "
-    .. "what a backdrop usually wants. DIALOG and above will cover normal UI.")
-
-  -- ── Background ──
-  editorHeading(group, "Background")
-
-  local bgRow = editorRow(group)
-  makeMediaDropdown(bgRow, rec, "bgTexture", "Background texture",
-    "The texture the panel is filled with. 'Solid' is a flat colour; 'None' draws no fill.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local bgColorRow = editorRow(group)
-  -- The fill's own opacity lives in this colour's alpha. Panel opacity (under Visibility) is a
-  -- separate, panel-wide multiplier — see the note there.
-  makeColorPair(bgColorRow, rec, "bgColor", "Background colour")
-
-  -- ── Border ──
-  editorHeading(group, "Border")
-
-  local borderRow = editorRow(group)
-  makeMediaDropdown(borderRow, rec, "borderTexture", "Border texture",
-    "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it.")
-  numberField(borderRow, "Border size", "borderSize", C.MIN_BORDER, C.MAX_BORDER, 1,
-    "Border thickness. 0 removes the border entirely.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local borderOffsetRow = editorRow(group)
-  numberField(borderOffsetRow, "Border offset", "borderOffset",
-    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-    "How far the border sits from the panel's edge. Positive pushes it outward, "
-    .. "negative pulls it inward.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local borderColorRow = editorRow(group)
-  makeColorPair(borderColorRow, rec, "borderColor", "Border colour")
-
-  -- ── Accent bar ──
-  editorHeading(group, "Accent bar")
-
-  local accentRow = editorRow(group)
-  local accentOn = AceGUI:Create("CheckBox")
-  accentOn:SetLabel("Enable accent bar")
-  accentOn:SetRelativeWidth(0.5)
-  accentOn:SetValue(rec.accentEnabled and true or false)
-  accentOn:SetCallback("OnValueChanged", function(_, _, v)
-    NS.Registry:Set(rec.id, "accentEnabled", v and true or false)
-  end)
-  attachTooltip(accentOn, "Enable accent bar",
-    "Draw a thin coloured strip along the panel's edges, in the style of BenikUI's panels. "
-    .. "Off by default.")
-  accentRow:AddChild(accentOn)
-
-  makeMediaDropdown(accentRow, rec, "accentTexture", "Accent bar texture",
-    "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
-    .. "'Solid' is a flat colour.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local edgeLabel = AceGUI:Create("Label")
-  edgeLabel:SetFullWidth(true)
-  edgeLabel:SetText("|cffffd100Edges|r")
-  group:AddChild(edgeLabel)
-  local edgeRow = editorRow(group)
-  makeEdgeChecks(edgeRow, rec)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentSizeRow = editorRow(group)
-  numberField(accentSizeRow, "Accent bar thickness", "accentThickness",
-    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
-    "How thick the accent bar is, in screen units.")
-  numberField(accentSizeRow, "Accent bar offset", "accentOffset",
-    C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
-    "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
-    .. "which is the look this is modelled on; 0 sits flush; negative overlaps the panel.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentColorRow = editorRow(group)
-  makeColorPair(accentColorRow, rec, "accentColor", "Accent bar colour")
-
-  -- The bar's own border. Same four controls as the panel's, in the same order, so the two read
-  -- alike — the only difference is what they outline.
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentBorderRow = editorRow(group)
-  makeMediaDropdown(accentBorderRow, rec, "accentBorderTexture", "Accent bar border texture",
-    "The edge style drawn around the accent bar. 'None' removes it, as does a size of 0.")
-  numberField(accentBorderRow, "Accent bar border size", "accentBorderSize",
-    C.MIN_BORDER, C.MAX_BORDER, 1,
-    "Thickness of the accent bar's own border. 0 removes it entirely, which is the default.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentBorderOffsetRow = editorRow(group)
-  numberField(accentBorderOffsetRow, "Accent bar border offset", "accentBorderOffset",
-    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-    "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentBorderColorRow = editorRow(group)
-  makeColorPair(accentBorderColorRow, rec, "accentBorderColor", "Accent bar border colour")
-
-  -- ── Visibility ──
-  editorHeading(group, "Visibility")
-
-  -- Panel opacity gets its own row: it applies whatever else is set, whereas the two controls below
-  -- are a pair that only mean anything together. Putting the checkbox up here beside it implied the
-  -- opposite grouping.
-  --
-  -- "Panel opacity", not "Background opacity". It is the FRAME's alpha, so it fades the border as
-  -- well as the fill, and it multiplies with the alpha already carried by each colour. It is also
-  -- the value the mouseover fade rises to — which is why it cannot simply be folded into the
-  -- background colour's alpha, however much the two look alike.
-  local opacityRow = editorRow(group)
-  numberField(opacityRow, "Panel opacity", "alpha", 0, 1, 0.05,
-    "How visible the whole panel is \226\128\148 background and border together. Multiplies with "
-    .. "the opacity set in each colour. This is also the opacity a mouseover panel fades up to.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local mouseoverRow = editorRow(group)
-  numberField(mouseoverRow, "Faded opacity", "mouseoverAlpha", 0, 1, 0.05,
-    "How visible the panel is while the cursor is elsewhere. 0 hides it completely. "
-    .. "Only used when 'Show on mouseover only' is ticked.")
-
-  local mouseover = AceGUI:Create("CheckBox")
-  mouseover:SetLabel("Show on mouseover only")
-  mouseover:SetRelativeWidth(0.5)
-  mouseover:SetValue(rec.mouseover and true or false)
-  mouseover:SetCallback("OnValueChanged", function(_, _, v)
-    NS.Registry:Set(rec.id, "mouseover", v and true or false)
-  end)
-  attachTooltip(mouseover, "Show on mouseover only",
-    "Keep the panel faded until the cursor is over it. The panel still never takes your clicks.")
-  mouseoverRow:AddChild(mouseover)
-
-  -- Delete and Reset live at the TOP of the editor, beside Enabled and Unlock — see the note there.
-  editorSpacer(group, EDITOR_ROW_GAP)
-
-  parent:AddChild(group)
-end
-
-local function buildPanelsPage(ctx)
-  local scroll = ensureScroll(ctx)
-
-  -- ── Create ──
-  section(ctx, "Create")
-
-  local createRow = AceGUI:Create("SimpleGroup")
-  createRow:SetLayout("Flow"); createRow:SetFullWidth(true)
-
-  local nameBox = AceGUI:Create("EditBox")
-  nameBox:SetLabel("New panel name")
-  nameBox:SetFullWidth(true)
-  -- The EditBox's own "Okay" button is the confirm, matching the rename box in the editor below —
-  -- one confirmation gesture for both places you type a panel name.
-  --
-  -- Safe because AceGUI's EditBox does NOT commit on focus loss: `OnEnterPressed` is fired only by
-  -- the Enter key, the Okay button and a drag-receive. `OnEditFocusLost` is not even registered. (An
-  -- earlier version disabled the button and added a separate Create button on the mistaken
-  -- assumption that tabbing away would create a panel.)
-  nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
-    local rec, err = NS.Registry:New(text)
-    if not rec then
-      print("error: " .. tostring(err))
-      return   -- leave the text in place so the user can correct it rather than retype it
-    end
-    widget:SetText("")
-    selectedID = rec.id            -- jump straight to the new panel's editor
-    ctx.dirty = true
-    if ctx.panel:IsShown() then runRebuilders(ctx) end
-  end)
-  attachTooltip(nameBox, "New panel name",
-    "Type a name and press Enter, or click Okay, to create the panel.")
-  createRow:AddChild(nameBox)
-  scroll:AddChild(createRow)
-  addSpacer(scroll, ROW_VSPACER)
-
-  -- ── Edit ──
-  section(ctx, "Edit")
-
-  -- The selector, plus the editor container beneath it. Both are rebuilt together: the dropdown's
-  -- contents and the editor's contents are two views of the same panel list.
-  local selectRow = AceGUI:Create("SimpleGroup")
-  selectRow:SetLayout("List"); selectRow:SetFullWidth(true)
-  -- The panel dropdown carries no label, so without this it would sit 14px closer to the "Edit"
-  -- heading than the Create box sits to "Create", and the two headings would look inconsistently
-  -- spaced despite both using the same section spacer.
-  addSpacer(scroll, LABEL_ROW_H)
-  scroll:AddChild(selectRow)
-
-  local listGroup = AceGUI:Create("SimpleGroup")
-  listGroup:SetLayout("List"); listGroup:SetFullWidth(true)
-  scroll:AddChild(listGroup)
-
-  ctx.rebuilders[#ctx.rebuilders + 1] = function()
-    -- The widgets about to be released include every dropdown registered for scroll-close, so the
-    -- registry is emptied before the new ones re-register.
-    forgetDropdowns()
-    selectRow:ReleaseChildren()
-    listGroup:ReleaseChildren()
-
-    local records = NS.Registry:All()
-    if #records == 0 then
-      local empty = AceGUI:Create("Label")
-      empty:SetFullWidth(true)
-      empty:SetText("No panels yet. Type a name above and press Create.")
-      listGroup:AddChild(empty)
-      if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
-      return
-    end
-
-    -- Keep the selection if it still exists, otherwise fall back to the first panel. A deleted
-    -- selection must not leave the page blank with a dropdown pointing at nothing.
-    if not (selectedID and NS.Registry:Get(selectedID)) then
-      selectedID = records[1].id
-    end
-
-    local dd = AceGUI:Create("Dropdown")
-    trackDropdown(dd)
-    -- No label, full width. The section heading directly above already says "Edit", and the
-    -- dropdown's only content is panel names — a "Panel" label above it was restating the obvious
-    -- while costing a row of height and leaving the control stranded in the left column.
-    dd:SetLabel("")
-    dd:SetFullWidth(true)
-    local list, order = {}, {}
-    for i, rec in ipairs(records) do
-      -- A disabled panel is marked in the list, so it is obvious why editing it changes nothing
-      -- on screen.
-      list[rec.id] = rec.enabled and rec.name or (rec.name .. " |cff808080(disabled)|r")
-      order[i] = rec.id
-    end
-    dd:SetList(list, order)
-    dd:SetValue(selectedID)
-    dd:SetCallback("OnValueChanged", function(_, _, id)
-      selectedID = id
-      runRebuilders(ctx)
-    end)
-    selectRow:AddChild(dd)
-    -- The gap between the selector and the editor's title. The largest of the editor's three gaps:
-    -- it separates two different things (choosing a panel, and configuring it) rather than two
-    -- groups of the same thing.
-    editorSpacer(selectRow, EDITOR_SELECT_GAP)
-
-    -- No heading naming the panel: the dropdown directly above already shows which one is selected,
-    -- and a heading repeating it was a third line of chrome between choosing a panel and editing it.
-    buildPanelEditor(ctx, listGroup, NS.Registry:Get(selectedID))
-    if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
-  end
-
-  -- Repaint when the SET of panels changes. Scoped to the on-screen page (options-ui-§11): an
-  -- off-screen page is only flagged dirty, so a `/pm new` while the options window is closed costs
-  -- nothing and is picked up by the next OnShow.
-  if not P.__evPanels then
-    local ev = NS.NewBusTarget()
-    if ev then
-      ev:RegisterMessage(NS.Registry.MSG_PANELS, function()
-        if ctx.panel:IsShown() then runRebuilders(ctx) else ctx.dirty = true end
-      end)
-      P.__evPanels = ev
-    end
-  end
-end
+-- Internal (`__`), not API: nothing outside settings/ may reach for these.
+P.__ui = {
+  attachTooltip   = attachTooltip,
+  addSpacer       = addSpacer,
+  section         = section,
+  ensureScroll    = ensureScroll,
+  makePairButton  = makePairButton,
+  trackDropdown   = trackDropdown,
+  forgetDropdowns = forgetDropdowns,
+  safeRun         = safeRun,
+  LSM_WIDGET      = LSM_WIDGET,
+  ROW_VSPACER     = ROW_VSPACER,
+}
 
 -- ── Landing page: logo + tagline + slash-command list (options-ui-§5) ───────────
 local function buildMainContent(ctx)
@@ -1112,6 +522,15 @@ function P:Refresh()
   local ctx = P.general
   if not (ctx and ctx.refreshers and ctx.panel and ctx.panel:IsShown()) then return end
   for i, fn in ipairs(ctx.refreshers) do safeRun(fn, "General refresher " .. i) end
+end
+
+-- The same contract for the Panels page's editor: run each control's updater against the live
+-- record, and never rebuild. A hidden page is skipped — its `dirty` flag already has it queued for a
+-- rebuild on the next OnShow.
+function P:RefreshPanels(ctx)
+  ctx = ctx or P.panels
+  if not (ctx and ctx.refreshers) then return end
+  for i, fn in ipairs(ctx.refreshers) do safeRun(fn, "Panel refresher " .. i) end
 end
 
 function P:RestoreDefaults()
@@ -1166,9 +585,12 @@ function P:Register()
   end)
   Settings.RegisterCanvasLayoutSubcategory(mainCategory, ctx.panel, "General")
 
-  -- Panels subcategory = create, edit and delete the panels themselves.
+  -- Panels subcategory = create, edit and delete the panels themselves. The page is registered and
+  -- laid out here; its BODY is settings/PanelEditor.lua's, which this file only ever drives through
+  -- the three calls below.
   local pctx = createPanel("Panels", { defaultsButton = true })
   P.panels = pctx
+  NS.PanelEditor:WireBus(pctx)
   -- Defaults here = delete every panel, which IS the stock state of this page (a fresh install has
   -- none). Destructive, so it is confirm-gated.
   setDefaultsAction(pctx.panel, function()
@@ -1183,10 +605,10 @@ function P:Register()
     ensureDefaultsButton(pctx.panel)
     if not pRendered then
       pRendered = true
-      buildPanelsPage(pctx)
-      runRebuilders(pctx)      -- first paint of the editor list
+      NS.PanelEditor:BuildPage(pctx)
+      NS.PanelEditor:Rebuild(pctx)   -- first paint of the editor list
     elseif pctx.dirty then
-      runRebuilders(pctx)      -- panels changed while hidden → repaint once (options-ui-§11)
+      NS.PanelEditor:Rebuild(pctx)   -- panels changed while hidden → repaint once (options-ui-§11)
     end
   end)
   Settings.RegisterCanvasLayoutSubcategory(mainCategory, pctx.panel, "Panels")
@@ -1239,7 +661,7 @@ end
 
 function P:Open()
   -- options-ui-§2: REFUSE in combat — Blizzard's category-switch is protected, and calling it under
-  -- lockdown taints the panel for the rest of the session. A grey notice and an early return; never
+  -- lockdown taints the panel for the rest of the session. A gray notice and an early return; never
   -- defer-and-replay on PLAYER_REGEN_ENABLED (a panel that pops itself open the instant combat drops
   -- steals focus during post-pull recovery). \226\128\148 = em-dash.
   if InCombatLockdown and InCombatLockdown() then
@@ -1247,7 +669,16 @@ function P:Open()
       .. "Blizzard's category-switch is protected|r")
     return
   end
-  if Settings and Settings.OpenToCategory and mainCategoryID then
-    Settings.OpenToCategory(mainCategoryID)
+  -- No category means BOTH eager registration attempts found no Settings API — OnInitialize's and
+  -- the PLAYER_LOGIN retry's (core/PanelMaster.lua). Say so: a command that returns silently reads
+  -- as broken, where a named prerequisite reads as a missing one.
+  if not (Settings and Settings.OpenToCategory and mainCategoryID) then
+    print("settings are not available on this client, so there is no page to open")
+    return
   end
+  Settings.OpenToCategory(mainCategoryID)
 end
+
+-- Test seam. mainCategoryID is a file-local written only by Register, so the branch above is
+-- unreachable in a suite where registration succeeded — this drives it directly.
+function P.__setCategoryIDForTest(id) mainCategoryID = id end

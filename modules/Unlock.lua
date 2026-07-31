@@ -7,7 +7,7 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 -- Unlock mode and preview mode: the two ways a panel becomes visible and grabbable.
 --
--- A locked panel is deliberately inert scenery — mouse-transparent, unlabelled, often nearly
+-- A locked panel is deliberately inert scenery — mouse-transparent, unlabeled, often nearly
 -- invisible. That is the product, and it is also why it needs an explicit editing mode: you cannot
 -- drag what does not take the mouse, and you cannot tell two dark rectangles apart without labels.
 
@@ -32,7 +32,7 @@ end
 
 -- ── Overlay ─────────────────────────────────────────────────────────────────────
 
--- Give a panel frame its unlock-mode furniture: a gold outline and a centred name label. Built
+-- Give a panel frame its unlock-mode furniture: a gold outline and a centered name label. Built
 -- lazily on first unlock — a user who never unlocks never pays for four textures and a FontString
 -- per panel.
 local function ensureOverlay(f)
@@ -40,7 +40,7 @@ local function ensureOverlay(f)
   local o = { edges = {} }
   for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
     -- OVERLAY, above the panel's own BORDER-layer edges, so the unlock outline is visible even on a
-    -- panel whose own border is the same colour.
+    -- panel whose own border is the same color.
     o.edges[side] = f:CreateTexture(nil, "OVERLAY")
   end
   o.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -96,6 +96,8 @@ function U:SetPanelUnlocked(id, on)
   NS.State.unlockedPanels[id] = on or nil
   if not on then pendingPanels[id] = nil end
   if NS.Canvas then NS.Canvas:Render(id) end
+  -- Gated on purpose, and NOT the sink's gate restated: it guards the LOOKUP. R:Get scans every
+  -- panel to turn the id into a name, which is work nobody with logging off should pay for.
   if NS.State.debug and NS.Debug then
     local rec = NS.Registry:Get(id)
     NS.Debug("Unlock", "'%s' %s", rec and rec.name or id, on and "unlocked" or "locked")
@@ -183,9 +185,16 @@ end
 -- the request is DEFERRED to PLAYER_REGEN_ENABLED (events-frames-taint-§2) rather than refused.
 -- Locking is never deferred — it only ever makes the UI quieter, and refusing to lock during combat
 -- would be the one case where the gate made things worse.
-function U:SetUnlocked(on)
+--
+-- `immediate` skips the gate. It has exactly one caller — preview mode, which is bypassing the gate
+-- deliberately (see U:SetPreview): its frames are plain non-secure placeholders it has just created
+-- itself, so there is no secure write for the gate to protect and events-frames-taint-§2 is not in
+-- play. Deferring only preview's half would leave the user mid-pull with unlabeled scenery. It is a
+-- private argument, not part of the lock surface: the CLI, the schema switch and Toggle all go
+-- through the gated path.
+function U:SetUnlocked(on, immediate)
   on = not not on
-  if on and InCombatLockdown and InCombatLockdown() then
+  if on and not immediate and InCombatLockdown and InCombatLockdown() then
     pendingUnlock = true
     print("|cff808080unlock queued \226\128\148 panels unlock when you leave combat|r")
     return nil
@@ -200,9 +209,7 @@ function U:SetUnlocked(on)
     for id in pairs(pendingPanels) do pendingPanels[id] = nil end
   end
   if NS.Canvas then NS.Canvas:RenderAll() end
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Unlock", "panels %s", on and "unlocked" or "locked")
-  end
+  NS.Debug("Unlock", "panels %s", on and "unlocked" or "locked")
   return on
 end
 
@@ -262,32 +269,45 @@ function U:SetPreview(on)
     -- caused it — you turned test mode off and were left with every panel still draggable.
     U.__unlockBeforePreview = NS.State.unlocked
     NS.State.previewIDs = {}
+    -- Marked on the way in, so a /reload that never reaches the exit below can still find them
+    -- (NS:SweepPreviewPanels). A name collision with a real panel is the user's, not ours: NewBatch
+    -- skips that placeholder rather than refusing the whole preview or overwriting their panel.
+    local specs = {}
     for _, spec in ipairs(C.PREVIEW_PANELS) do
-      -- A name collision with a real panel is the user's, not ours: skip that placeholder rather
-      -- than refuse the whole preview or overwrite their panel.
-      local rec = NS.Registry:New(spec.name, spec)
-      if rec then NS.State.previewIDs[#NS.State.previewIDs + 1] = rec.id end
+      local marked = Util.DeepCopy(spec)
+      marked[C.PREVIEW_FIELD] = true
+      specs[#specs + 1] = marked
+    end
+    -- Registry first, lock second: SetUnlocked repaints, so the placeholders have to exist before it
+    -- runs or the repaint draws the screen as it was.
+    for _, rec in ipairs(NS.Registry:NewBatch(specs)) do
+      NS.State.previewIDs[#NS.State.previewIDs + 1] = rec.id
     end
     NS.State.preview = true
-    -- Preview is worthless locked — the placeholders would be unlabelled scenery — so it implies
-    -- unlock. Not routed through SetUnlocked's combat gate: these frames are already on screen and
-    -- the user explicitly asked to see them.
-    NS.State.unlocked = true
+    -- Preview is worthless locked — the placeholders would be unlabeled scenery — so it implies
+    -- unlock. Routed through SetUnlocked rather than writing the flag here, so the implied unlock is
+    -- the SAME unlock as every other one: it repaints, it logs, and it leaves the per-panel sets in
+    -- a state the matching lock can undo. Writing NS.State directly was what let preview leave the
+    -- screen unlocked with nothing tracking it.
+    --
+    -- The combat gate is bypassed on purpose (`immediate`). These placeholders are non-secure frames
+    -- this call has just put on screen, so no secure write is involved and events-frames-taint-§2 is
+    -- not in play. Queueing this half would apply preview and defer its unlock — three anonymous,
+    -- mouse-transparent rectangles mid-pull, under a message that never mentions preview.
+    U:SetUnlocked(true, true)
   else
-    for _, id in ipairs(NS.State.previewIDs) do
-      NS.Registry:Delete(id)
-    end
+    NS.Registry:DeleteBatch(NS.State.previewIDs)
     NS.State.previewIDs = {}
     NS.State.preview = false
     -- Undo the implied unlock, unless the user had already unlocked before starting preview — in
-    -- which case they were mid-edit and leaving them locked would be just as surprising.
-    NS.State.unlocked = U.__unlockBeforePreview and true or false
+    -- which case they were mid-edit and leaving them locked would be just as surprising. Routed
+    -- through SetUnlocked so a lock also clears the per-panel unlocks it is supposed to clear, and
+    -- past the gate for the same reason the way in was: restoring the state the user was in is not
+    -- a request they should have to wait out a fight for.
+    U:SetUnlocked(U.__unlockBeforePreview and true or false, true)
   end
 
-  if NS.Canvas then NS.Canvas:RenderAll() end
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Preview", "preview %s", on and "on" or "off")
-  end
+  NS.Debug("Preview", "preview %s", on and "on" or "off")
   return on
 end
 

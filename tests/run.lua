@@ -18,7 +18,7 @@ local function assertEqual(got, want, msg)
 end
 local function assertTrue(c, msg) if not c then fail(msg or "assertTrue failed", 1) end end
 local function assertFalse(c, msg) if c then fail(msg or "assertFalse failed", 1) end end
--- Float comparison for the geometry and colour maths, where an exact == would be a false failure.
+-- Float comparison for the geometry and color maths, where an exact == would be a false failure.
 local function assertNear(got, want, tol, msg)
   tol = tol or 1e-6
   if type(got) ~= "number" or math.abs(got - want) > tol then
@@ -49,6 +49,7 @@ Loader.loadAll({
   "modules/DebugLog.lua",
   "settings/Schema.lua",
   "settings/Slash.lua",
+  "settings/PanelEditor.lua",
   "settings/Panel.lua",
 }, NS, mocks)
 
@@ -80,6 +81,7 @@ local SUITE_FILES = {
   "test_accent.lua",
   "test_database.lua", "test_debuglog.lua",
   "test_schema.lua", "test_slash.lua", "test_panel.lua", "test_profiles.lua",
+  "test_spelling.lua",
 }
 for _, s in ipairs(SUITE_FILES) do
   currentSuite = s

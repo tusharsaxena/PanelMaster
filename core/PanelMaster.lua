@@ -35,6 +35,22 @@ function addon:OnInitialize()
   -- Eager settings-category registration (options-ui-§1): the entry is present in the Blizzard
   -- options list from load, even though each panel BODY is built lazily on its first OnShow.
   if NS.Panel and NS.Panel.Register then NS.Panel:Register() end
+
+  -- A SECOND eager attempt at the same registration, not a deferral. P:Register's guard returns
+  -- without setting `registered` when Settings or AceGUI are not there yet, and nothing used to try
+  -- again — so a load order that lost that race left the addon absent from Blizzard's options list
+  -- for the whole session, with `/pm config` doing nothing and saying nothing. Register is
+  -- idempotent, so on a normal login (where the call above succeeded) this costs one table lookup.
+  --
+  -- Subscribed HERE and not from OnEnable, which is the only placement that can be delivered:
+  -- AceAddon runs OnEnable from inside its own PLAYER_LOGIN handler, and a frame that subscribes to
+  -- an event mid-dispatch does not receive that firing — for a non-LoD addon there is no second one.
+  -- OnInitialize runs at ADDON_LOADED, strictly before PLAYER_LOGIN. Registering from a
+  -- PLAYER_LOGIN bootstrap is exactly what options-ui-§1 sanctions; waiting for the user's first
+  -- /pm config is what anti-pattern #22 forbids.
+  self:RegisterEvent("PLAYER_LOGIN", function()
+    if NS.Panel and NS.Panel.Register then NS.Panel:Register() end
+  end)
 end
 
 function addon:OnEnable()
@@ -49,6 +65,7 @@ function addon:OnEnable()
   -- too early would judge every stored position against the wrong screen.
   self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnterWorld")
   self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnRegenEnabled")
+
   -- No [Init] line here: the debug flag is session-only and off at login, so a boot-time summary
   -- would always be gated off and never render. It rides the DebugLog:SetEnabled seam instead,
   -- emitted when capture is actually enabled (debug-logging-§5/§8).

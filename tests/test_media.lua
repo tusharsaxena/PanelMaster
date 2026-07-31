@@ -151,29 +151,29 @@ test("Canvas: the border is drawn as a backdrop edge, at the set thickness", fun
   assertEqual(backdrop.edgeFile, C.SOLID_TEXTURE)
 end)
 
-test("Canvas: the border colour is applied AFTER the backdrop", function()
+test("Canvas: the border color is applied AFTER the backdrop", function()
   fresh()
-  local rec = R:New("Coloured", { borderSize = 4, borderColor = { 1, 0.82, 0, 1 } })
+  local rec = R:New("Colored", { borderSize = 4, borderColor = { 1, 0.82, 0, 1 } })
   local b = Canvas:FrameFor(rec.id).borderFrame
-  -- Applying a backdrop resets its border colour to white, so colouring first is silently undone.
-  -- The recorded colour proves SetBackdropBorderColor ran, and ran second.
+  -- Applying a backdrop resets its border color to white, so coloring first is silently undone.
+  -- The recorded color proves SetBackdropBorderColor ran, and ran second.
   local c = b.__backdropBorderColor
-  assertTrue(c ~= nil, "the border colour was never applied")
+  assertTrue(c ~= nil, "the border color was never applied")
   assertNear(c[1], 1)
   assertNear(c[2], 0.82)
   assertNear(c[3], 0)
 end)
 
-test("Canvas: the border picks up a colour change", function()
+test("Canvas: the border picks up a color change", function()
   fresh()
-  local rec = R:New("Recoloured", { borderSize = 4 })
+  local rec = R:New("Recolored", { borderSize = 4 })
   R:Set(rec.id, "borderColor", { 0, 1, 0, 1 })
   local c = Canvas:FrameFor(rec.id).borderFrame.__backdropBorderColor
   assertNear(c[2], 1)
   assertNear(c[1], 0)
 end)
 
-test("Canvas: the border takes the class colour too", function()
+test("Canvas: the border takes the class color too", function()
   fresh()
   local rec = R:New("ClassBordered", { borderSize = 4, borderColor = { 0, 0, 0, 1 } })
   R:Set(rec.id, "borderClassColor", true)
@@ -320,7 +320,7 @@ test("Registry.Reset: applies the profile's New-Panel-Defaults, like New does", 
   NS.db.profile.settings.defaultAlpha = 1.0
 end)
 
-test("Registry.Reset: clears class-colour flags", function()
+test("Registry.Reset: clears class-color flags", function()
   fresh()
   local rec = R:New("Classy")
   R:Set(rec.id, "bgClassColor", true)
@@ -364,13 +364,13 @@ test("Registry.Reset: leaves other panels alone", function()
   assertEqual(R:Get(two.id).width, 900)
 end)
 
--- ── Class colour vs a picked colour: identical apart from RGB ───────────────────
--- Raised as "the border looks less well defined in class-colour mode". It is not: both paths go
+-- ── Class color vs a picked color: identical apart from RGB ───────────────────
+-- Raised as "the border looks less well defined in class-color mode". It is not: both paths go
 -- through Util.ResolveColor and produce the same backdrop, the same edge size, the same alpha and
 -- the same anchoring. These pin that, so a future change cannot quietly introduce the asymmetry
 -- that was suspected.
 
-test("Border: class colour and a picked colour produce the same backdrop", function()
+test("Border: class color and a picked color produce the same backdrop", function()
   fresh()
   local picked = R:New("Picked", { borderSize = 1, borderColor = { 0, 1, 0, 1 },
                                    borderClassColor = false })
@@ -384,9 +384,9 @@ test("Border: class colour and a picked colour produce the same backdrop", funct
   assertEqual(a:GetNumPoints(), b:GetNumPoints(), "different anchoring")
 end)
 
-test("Border: class colour preserves the picked colour's ALPHA exactly", function()
+test("Border: class color preserves the picked color's ALPHA exactly", function()
   fresh()
-  -- The half of the colour a class colour does NOT override. If this drifted, a class-coloured
+  -- The half of the color a class color does NOT override. If this drifted, a class-colored
   -- border really would render fainter than a picked one — which is the defect that was suspected.
   local picked = R:New("Picked", { borderSize = 1, borderColor = { 0, 1, 0, 0.6 },
                                    borderClassColor = false })
@@ -395,7 +395,7 @@ test("Border: class colour preserves the picked colour's ALPHA exactly", functio
   local a = Canvas:FrameFor(picked.id).borderFrame.__backdropBorderColor
   local b = Canvas:FrameFor(classy.id).borderFrame.__backdropBorderColor
   assertNear(a[4], 0.6)
-  assertNear(b[4], 0.6, 1e-6, "the class-coloured border lost the stored alpha")
+  assertNear(b[4], 0.6, 1e-6, "the class-colored border lost the stored alpha")
 end)
 
 test("Border: only the RGB differs between the two modes", function()
@@ -405,12 +405,12 @@ test("Border: only the RGB differs between the two modes", function()
   local pickedAlpha = before[4]
   R:Set(rec.id, "borderClassColor", true)
   local after = Canvas:FrameFor(rec.id).borderFrame.__backdropBorderColor
-  assertNear(after[4], pickedAlpha, 1e-6, "toggling class colour changed the alpha")
+  assertNear(after[4], pickedAlpha, 1e-6, "toggling class color changed the alpha")
   -- The mock player is a Priest (1,1,1), so the RGB does change — that is the whole point.
   assertNear(after[1], 1)
 end)
 
-test("Accent bar: class colour likewise preserves alpha", function()
+test("Accent bar: class color likewise preserves alpha", function()
   fresh()
   local rec = R:New("Accented", { accentEnabled = true,
                                   accentColor = { 0, 1, 0, 0.4 }, accentClassColor = true })
@@ -418,19 +418,19 @@ test("Accent bar: class colour likewise preserves alpha", function()
   assertNear(c[4], 0.4)
 end)
 
--- ── Background colour actually reaches the frame ────────────────────────────────
+-- ── Background color actually reaches the frame ────────────────────────────────
 
-test("Canvas: the background colour is applied to the fill texture", function()
+test("Canvas: the background color is applied to the fill texture", function()
   fresh()
   local rec = R:New("Filled", { bgColor = { 0.2, 0.9, 0.3, 0.75 } })
   local c = Canvas:FrameFor(rec.id).bg.__color
-  assertTrue(c ~= nil, "the background colour was never applied")
+  assertTrue(c ~= nil, "the background color was never applied")
   assertNear(c[1], 0.2)
   assertNear(c[2], 0.9)
   assertNear(c[4], 0.75)
 end)
 
-test("Canvas: the background picks up a colour change", function()
+test("Canvas: the background picks up a color change", function()
   fresh()
   local rec = R:New("Repainted")
   R:Set(rec.id, "bgColor", { 1, 0, 0, 1 })
@@ -467,25 +467,25 @@ test("Registry.Sanitize: an empty or non-string texture falls back to the defaul
   assertEqual(R.Sanitize({ borderTexture = 42 }).borderTexture, C.SOLID_MEDIA_NAME)
 end)
 
--- ── Class colour ────────────────────────────────────────────────────────────────
+-- ── Class color ────────────────────────────────────────────────────────────────
 
-test("Constants: every class-colour flag names a real colour field", function()
+test("Constants: every class-color flag names a real color field", function()
   for colorField, flag in pairs(C.COLOR_FIELDS) do
-    assertEqual(C.PANEL_FIELD_TYPE[colorField], "color", colorField .. " is not a colour field")
+    assertEqual(C.PANEL_FIELD_TYPE[colorField], "color", colorField .. " is not a color field")
     assertEqual(C.PANEL_FIELD_TYPE[flag], "boolean", flag .. " is not a boolean field")
     assertTrue(C.PANEL_TEMPLATE[flag] ~= nil, flag .. " is missing from the template")
   end
 end)
 
-test("Util.ResolveColor: returns the stored colour when the flag is off", function()
+test("Util.ResolveColor: returns the stored color when the flag is off", function()
   local rec = { bgColor = { 0.2, 0.3, 0.4, 0.5 }, bgClassColor = false }
   local c = Util.ResolveColor(rec, "bgColor")
   assertNear(c[1], 0.2)
   assertNear(c[4], 0.5)
 end)
 
-test("Util.ResolveColor: the class colour replaces RGB but keeps the stored alpha", function()
-  -- "Class coloured" is a statement about hue, not about how see-through the user wanted it.
+test("Util.ResolveColor: the class color replaces RGB but keeps the stored alpha", function()
+  -- "Class colored" is a statement about hue, not about how see-through the user wanted it.
   local rec = { bgColor = { 0.2, 0.3, 0.4, 0.5 }, bgClassColor = true }
   local c = Util.ResolveColor(rec, "bgColor")
   assertNear(c[1], 1)      -- the mock player is a Priest: 1, 1, 1
@@ -493,44 +493,44 @@ test("Util.ResolveColor: the class colour replaces RGB but keeps the stored alph
   assertNear(c[4], 0.5, 1e-6, "the stored alpha was overwritten")
 end)
 
-test("Util.ResolveColor: falls back to the stored colour when the class is unknown", function()
+test("Util.ResolveColor: falls back to the stored color when the class is unknown", function()
   local saved = T.mocks.UnitClass
   T.mocks.UnitClass = function() return "Tinker", "TINKER", 99 end
   local c = Util.ResolveColor({ bgColor = { 0.2, 0.3, 0.4, 1 }, bgClassColor = true }, "bgColor")
   T.mocks.UnitClass = saved
-  -- Never a white panel: an unresolvable class colour keeps what the user picked.
+  -- Never a white panel: an unresolvable class color keeps what the user picked.
   assertNear(c[1], 0.2)
 end)
 
-test("Util.ResolveColor: a colour with no class-colour companion is returned as stored", function()
+test("Util.ResolveColor: a color with no class-color companion is returned as stored", function()
   local c = Util.ResolveColor({ someColor = { 0.1, 0.2, 0.3, 1 } }, "someColor")
   assertNear(c[1], 0.1)
 end)
 
-test("Canvas.BuildSpec: applies the class colour to the background", function()
+test("Canvas.BuildSpec: applies the class color to the background", function()
   local spec = Canvas.BuildSpec({ bgColor = { 0, 0, 0, 0.5 }, bgClassColor = true }, {})
   assertNear(spec.bg[1], 1)
   assertNear(spec.bg[4], 0.5)
 end)
 
-test("Canvas.BuildSpec: applies the class colour to the border independently", function()
+test("Canvas.BuildSpec: applies the class color to the border independently", function()
   local spec = Canvas.BuildSpec({
     bgColor = { 0, 0, 0, 1 }, bgClassColor = false,
     borderColor = { 0, 0, 0, 1 }, borderClassColor = true,
   }, {})
-  -- The two flags are separate: class-colouring the border must not drag the background with it.
+  -- The two flags are separate: class-coloring the border must not drag the background with it.
   assertNear(spec.bg[1], 0)
   assertNear(spec.border[1], 1)
 end)
 
-test("Registry.Set: the class-colour flags coerce from the CLI", function()
+test("Registry.Set: the class-color flags coerce from the CLI", function()
   fresh()
   local rec = R:New("Classy")
   assertTrue((R:Set(rec.id, "bgClassColor", "on")))
   assertTrue(R:Get(rec.id).bgClassColor)
 end)
 
-test("Registry.Sanitize: class-colour flags are always booleans", function()
+test("Registry.Sanitize: class-color flags are always booleans", function()
   local rec = R.Sanitize({ bgClassColor = "yes", borderClassColor = nil })
   assertEqual(rec.bgClassColor, true)
   assertEqual(rec.borderClassColor, false)

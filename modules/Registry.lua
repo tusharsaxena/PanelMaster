@@ -82,7 +82,7 @@ function R.Sanitize(rec)
     rec.borderTexture = t.borderTexture
   end
 
-  -- Class-colour flags, driven off C.COLOR_FIELDS so a colour added later needs no edit here.
+  -- Class-color flags, driven off C.COLOR_FIELDS so a color added later needs no edit here.
   for _, flag in pairs(C.COLOR_FIELDS) do
     rec[flag] = rec[flag] and true or false
   end
@@ -179,7 +179,10 @@ end
 --
 -- `overrides` is an optional partial record (preview mode and the CLI both pass one). New panels
 -- pick up the profile's default strata/alpha, which is what makes those settings meaningful.
-function R:New(name, overrides)
+-- The create itself, WITHOUT the broadcast. Split out so a batch (preview mode stands up three
+-- placeholders at once) can make every record and then announce the new set exactly once, rather
+-- than making every consumer rebuild itself once per record.
+local function create(name, overrides)
   local p = NS.db and NS.db.profile
   if not p then return nil, "database not ready" end
 
@@ -209,19 +212,35 @@ function R:New(name, overrides)
   R.Sanitize(rec)
   p.panels[#p.panels + 1] = rec
 
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "created '%s' (id %s)", rec.name, rec.id)
-  end
+  NS.Debug("Panel", "created '%s' (id %s)", rec.name, rec.id)
+  return rec
+end
+
+function R:New(name, overrides)
+  local rec, reason = create(name, overrides)
+  if not rec then return nil, reason end
   fire(MSG_PANELS)
   return rec
 end
 
-function R:Delete(key)
-  local p = NS.db and NS.db.profile
-  if not p then return false, "database not ready" end
-  local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+-- Create several panels as ONE structural change. Returns the records that were made, in order.
+--
+-- A spec that cannot be created (a name the user has already taken) is SKIPPED rather than failing
+-- the batch: preview mode's placeholders are a convenience, and refusing all three because one name
+-- collides would be the wrong trade. Callers that need the reason use R:New per record.
+function R:NewBatch(specs)
+  local made = {}
+  for _, spec in ipairs(specs or {}) do
+    local rec = create(spec.name, spec)
+    if rec then made[#made + 1] = rec end
+  end
+  if #made > 0 then fire(MSG_PANELS) end
+  return made
+end
 
+-- The delete itself, WITHOUT the broadcast — the mirror of `create`, and there for the same reason:
+-- withdrawing preview's placeholders is one structural change, not three.
+local function destroy(p, rec)
   for i, candidate in ipairs(p.panels) do
     if candidate.id == rec.id then
       table.remove(p.panels, i)
@@ -234,16 +253,41 @@ function R:Delete(key)
   -- panel that does not exist.
   NS.State.unlockedPanels[rec.id] = nil
 
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "deleted '%s' (id %s)", rec.name, rec.id)
-  end
+  NS.Debug("Panel", "deleted '%s' (id %s)", rec.name, rec.id)
+end
+
+function R:Delete(key)
+  local p = NS.db and NS.db.profile
+  if not p then return false, "database not ready" end
+  local rec = R:Resolve(key)
+  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+
+  destroy(p, rec)
   fire(MSG_PANELS)
   return true, rec.name
 end
 
+-- Remove several panels as ONE structural change. Returns how many went. Anything that no longer
+-- resolves is skipped silently: the caller's list is a snapshot, and a panel the user deleted in the
+-- meantime is not an error.
+function R:DeleteBatch(keys)
+  local p = NS.db and NS.db.profile
+  if not p then return 0 end
+  local gone = 0
+  for _, key in ipairs(keys or {}) do
+    local rec = R:Resolve(key)
+    if rec then
+      destroy(p, rec)
+      gone = gone + 1
+    end
+  end
+  if gone > 0 then fire(MSG_PANELS) end
+  return gone
+end
+
 -- Restore one panel to how a freshly created panel would look, keeping only its identity.
 --
--- "Reset" means the whole record — size, position, anchor, strata, textures, colours, mouseover —
+-- "Reset" means the whole record — size, position, anchor, strata, textures, colors, mouseover —
 -- not just appearance. A partial reset that left the panel where it was would be a different,
 -- fuzzier promise, and the user would have to work out which half it covered.
 --
@@ -267,9 +311,7 @@ function R:Reset(key)
   rec.alpha  = p.settings.defaultAlpha
   R.Sanitize(rec)
 
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "reset '%s' (id %s)", rec.name, rec.id)
-  end
+  NS.Debug("Panel", "reset '%s' (id %s)", rec.name, rec.id)
   -- A field-level change, not a structural one: the SET of panels is unchanged, so the targeted
   -- repaint is the honest message. The settings editor rebuilds itself separately — its widgets all
   -- hold stale values now, which is a UI concern rather than something the bus should imply.
@@ -285,15 +327,19 @@ end
 -- while staying where it is; a copy that also moved it would land the two exactly on top of each
 -- other, which is never what was wanted. Size IS copied: two panels of matching appearance usually
 -- want matching dimensions, and unlike position that does not make one of them disappear.
+--
+-- The preview marker is excluded for a different reason: it is not appearance at all but a lifetime
+-- flag, and smearing it onto a real panel would make that panel vanish at the next sweep.
 local COPY_EXCLUDED = {
   id = true, name = true,
   point = true, relPoint = true, x = true, y = true,
+  [C.PREVIEW_FIELD] = true,
 }
 
 -- Copy every appearance setting from one panel onto another.
 --
 -- Returns (true, sourceName) or (false, reason). Deep-copies each value, so the two panels do not
--- end up sharing a colour array — an in-place edit of one would otherwise silently change the other.
+-- end up sharing a color array — an in-place edit of one would otherwise silently change the other.
 function R:CopyFrom(targetKey, sourceKey)
   local target = R:Resolve(targetKey)
   if not target then return false, ("no panel called '%s'"):format(tostring(targetKey)) end
@@ -308,9 +354,7 @@ function R:CopyFrom(targetKey, sourceKey)
   end
   R.Sanitize(target)
 
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "'%s' copied settings from '%s'", target.name, source.name)
-  end
+  NS.Debug("Panel", "'%s' copied settings from '%s'", target.name, source.name)
   fire(MSG_PANEL, target.id)
   return true, source.name
 end
@@ -325,10 +369,8 @@ end
 -- one, can be missing fields this build expects, and this is the first moment it is looked at.
 function R:ReloadProfile()
   for _, rec in ipairs(R:All()) do R.Sanitize(rec) end
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Profile", "switched to '%s', %s panels",
-      (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?", R:Count())
-  end
+  NS.Debug("Profile", "switched to '%s', %s panels",
+    (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?", R:Count())
   fire(MSG_PANELS)
 end
 
@@ -338,6 +380,14 @@ function R:DeleteAll()
   if not p then return 0 end
   local n = #p.panels
   for i = n, 1, -1 do p.panels[i] = nil end
+
+  -- Same sweep `destroy` does per panel, and for the same reason: an id that no longer exists would
+  -- linger in the session state for the rest of the session and show up in a debug dump as an
+  -- unlocked (or previewed) panel that is not there. Nothing survives an empty registry, so both
+  -- tables go wholesale rather than id by id.
+  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
+  for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
+
   if n > 0 then fire(MSG_PANELS) end
   return n
 end
@@ -363,9 +413,7 @@ function R:Rename(key, newName)
 
   local old = rec.name
   rec.name = newName
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "renamed '%s' -> '%s'", old, newName)
-  end
+  NS.Debug("Panel", "renamed '%s' -> '%s'", old, newName)
   fire(MSG_PANELS)   -- structural: the name is how every list and dropdown labels the panel
   return true, old
 end
@@ -391,10 +439,9 @@ function R:Set(key, field, value)
     if n == nil then return false, "expected a number" end
     value = n
   elseif kind == "boolean" then
-    if type(value) ~= "boolean" then
-      local s = tostring(value):lower()
-      value = (s == "true" or s == "1" or s == "on" or s == "yes")
-    end
+    local parsed = Util.ParseBool(value)
+    if parsed == nil then return false, Util.BOOL_USAGE end
+    value = parsed
   elseif kind == "point" then
     value = tostring(value):upper()
     if not Util.IsPoint(value) then
@@ -444,7 +491,14 @@ function R:Set(key, field, value)
   R.Sanitize(rec)
 
   -- Every panel mutation is logged ONCE, here at the write seam, mirroring the settings rule
-  -- (debug-logging-§10). Downstream reactors must not re-echo the same change.
+  -- (debug-logging-§10). Downstream reactors must not re-echo the same change. The one field this
+  -- seam does not log is `name`: it returned into R:Rename above, which logs the old and new names
+  -- itself, and only once its uniqueness checks have passed.
+  --
+  -- The gate here is deliberate and is NOT the sink's gate restated: it guards the ARGUMENT.
+  -- R.FormatField formats (and for colors and edge sets, builds) a string, and this seam runs on
+  -- every field write — every slider mouse-up, every drag stop, every `/pm panel set`. Without it,
+  -- a user with logging off would pay for a log line nobody reads.
   if NS.State.debug and NS.Debug then
     NS.Debug("Panel", "'%s'.%s = %s", rec.name, field, R.FormatField(rec, field))
   end
@@ -459,9 +513,7 @@ function R:SetPosition(key, x, y)
   if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
   rec.x, rec.y = tonumber(x) or rec.x, tonumber(y) or rec.y
   R.Sanitize(rec)
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "'%s' moved to %s, %s", rec.name, rec.x, rec.y)
-  end
+  NS.Debug("Panel", "'%s' moved to %s, %s", rec.name, rec.x, rec.y)
   fire(MSG_PANEL, rec.id)
   return true
 end
@@ -494,18 +546,43 @@ end
 -- silently rearranging the user's layout. Nothing here runs automatically: a panel deliberately
 -- parked mostly off-screen is a legitimate design, so recovery is `/pm recover` and the settings
 -- button, never a login-time sweep.
+-- The legal offset range depends on WHICH point the offset is measured from: a CENTER-anchored
+-- panel runs -w/2..+w/2, a LEFT-anchored one 0..w, a RIGHT-anchored one -w..0. Using the CENTER
+-- range for all nine points is what let `recover` drag a perfectly visible TOPLEFT panel inward.
+local function offsetRange(point, extent)
+  if point:find("LEFT")   then return 0, extent end
+  if point:find("RIGHT")  then return -extent, 0 end
+  return -extent / 2, extent / 2
+end
+
+-- The same rule on the vertical axis, where WoW's y grows UPWARD: a TOP-anchored panel is already at
+-- the top edge, so it runs -h..0, and a BOTTOM-anchored one 0..h.
+local function offsetRangeY(point, extent)
+  if point:find("TOP")    then return -extent, 0 end
+  if point:find("BOTTOM") then return 0, extent end
+  return -extent / 2, extent / 2
+end
+
 function R:Recover()
   local w, h = NS.Compat.GetScreenSize()
   if not w then return 0 end   -- cannot measure the screen: do nothing rather than guess
 
-  -- A panel counts as lost when its anchor offset alone puts it beyond the screen edge. Half the
-  -- screen in each direction is the bound because offsets are measured from an anchor POINT, and
-  -- CENTER — the default — sits at the middle.
-  local maxX, maxY = w / 2, h / 2
+  -- A panel counts as lost when its anchor offset alone puts it beyond the screen edge. The bound is
+  -- taken from `relPoint` — the point on UIParent the offset is measured FROM, i.e. where on the
+  -- screen the panel's origin sits — not from `point`, which only says which corner of the panel
+  -- lands there.
   local moved = 0
   for _, rec in ipairs(R:All()) do
-    local x = Util.Clamp(rec.x, -maxX, maxX, 0)
-    local y = Util.Clamp(rec.y, -maxY, maxY, 0)
+    -- Guarded the way the renderer guards it (Canvas.BuildSpec): Sanitize runs per write and on a
+    -- profile switch, never as a login sweep, so a hand-edited or pre-anchor SavedVariables record
+    -- reaches this loop with relPoint missing or non-string. Indexing it would throw out of the
+    -- loop, leaving the panels already visited rewritten in the DB with no broadcast and no
+    -- repaint — a half-applied recover is worse than none.
+    local relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
+    local minX, maxX = offsetRange(relPoint, w)
+    local minY, maxY = offsetRangeY(relPoint, h)
+    local x = Util.Clamp(rec.x, minX, maxX, 0)
+    local y = Util.Clamp(rec.y, minY, maxY, 0)
     if x ~= rec.x or y ~= rec.y then
       rec.x, rec.y = x, y
       moved = moved + 1

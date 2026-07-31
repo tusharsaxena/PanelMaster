@@ -204,6 +204,101 @@ test("Unlock.SetPreview: turning it on twice is a no-op", function()
   U:SetPreview(false)
 end)
 
+test("Unlock.SetPreview: every placeholder carries the preview marker", function()
+  fresh()
+  local mine = R:New("Mine")
+  U:SetPreview(true)
+  local marked = 0
+  for _, rec in ipairs(R:All()) do
+    if rec.id ~= mine.id then
+      -- The marker is the durable half of the pair whose session half is NS.State.previewIDs: it is
+      -- what lets a reload find these records again.
+      assertTrue(rec[NS.Constants.PREVIEW_FIELD] == true, rec.name .. " was not marked as preview")
+      marked = marked + 1
+    end
+  end
+  assertEqual(marked, #NS.Constants.PREVIEW_PANELS)
+  assertEqual(mine[NS.Constants.PREVIEW_FIELD], nil, "a normally-created panel carries the marker")
+  U:SetPreview(false)
+end)
+
+test("Unlock.SetPreview: each transition broadcasts the panel set ONCE", function()
+  fresh()
+  local target, count = {}, 0
+  NS.bus.RegisterMessage(target, R.MSG_PANELS, function() count = count + 1 end)
+
+  U:SetPreview(true)
+  assertEqual(count, 1, "preview on broadcast the panel set more than once")
+  count = 0
+  U:SetPreview(false)
+  assertEqual(count, 1, "preview off broadcast the panel set more than once")
+
+  NS.bus.UnregisterMessage(target, R.MSG_PANELS)
+end)
+
+test("Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked", function()
+  fresh()
+  U:SetPreview(true)
+  -- A per-panel unlock taken while previewing must not outlive the preview: leaving goes through
+  -- SetUnlocked, which is the one place that clears the per-panel sets.
+  local rec = R:New("Mine")
+  U:SetPanelUnlocked(rec.id, true)
+  T.mocks.__inCombat = true
+  U:SetPanelUnlocked(rec.id, true)   -- queued rather than applied
+  T.mocks.__inCombat = false
+
+  U:SetPreview(false)
+  assertFalse(NS.State.unlocked)
+  assertEqual(next(NS.State.unlockedPanels), nil, "a per-panel unlock survived the preview")
+  assertFalse(U:HasPending(rec.id), "a queued per-panel unlock survived the preview")
+end)
+
+test("Unlock.SetPreview: preview during combat applies whole, it is never queued (F-014)", function()
+  fresh()
+  T.mocks.__inCombat = true
+  -- The implied unlock goes through SetUnlocked, but with the combat gate deliberately bypassed:
+  -- the placeholders are plain non-secure frames that this call has just put on screen, so no
+  -- secure write is involved (events-frames-taint-§2 is not in play). Deferring only this half
+  -- would leave the user mid-pull with three anonymous, mouse-transparent rectangles they cannot
+  -- label, move or dismiss — the "worthless locked" state preview exists to avoid.
+  U:SetPreview(true)
+  assertTrue(NS.State.preview, "preview did not turn on during combat")
+  assertTrue(NS.State.unlocked, "preview during combat left its own placeholders locked")
+  assertFalse(U:HasPending(), "preview queued its implied unlock instead of applying it")
+
+  -- And leaving again is symmetrical: the lock lands now, not on the next PLAYER_REGEN_ENABLED,
+  -- and it does not leave a stray "panels unlocked" queued behind it.
+  U:SetPreview(false)
+  assertFalse(NS.State.preview)
+  assertFalse(NS.State.unlocked, "leaving preview during combat left the screen unlocked")
+  assertFalse(U:HasPending(), "leaving preview during combat queued an unlock")
+  T.mocks.__inCombat = false
+end)
+
+test("Unlock.SetPreview: previewing while already unlocked in combat queues nothing (F-014)", function()
+  fresh()
+  U:SetUnlocked(true)
+  T.mocks.__inCombat = true
+  U:SetPreview(true)
+  U:SetPreview(false)
+  -- The user was unlocked before preview, so they are unlocked after it — and no phantom unlock is
+  -- sitting in the queue to print "panels unlocked" at them when the fight ends.
+  assertTrue(NS.State.unlocked, "preview took away an unlock the user already had")
+  assertFalse(U:HasPending(), "a preview round-trip queued a redundant unlock")
+  T.mocks.__inCombat = false
+end)
+
+test("Unlock: the global combat gate still defers a plain unlock (F-014)", function()
+  -- The bypass belongs to preview alone. A bare /pm unlock mid-pull must still be deferred.
+  fresh()
+  T.mocks.__inCombat = true
+  assertEqual(U:SetUnlocked(true), nil, "the combat gate stopped deferring a plain unlock")
+  assertFalse(NS.State.unlocked)
+  assertTrue(U:HasPending())
+  T.mocks.__inCombat = false
+  U:SetUnlocked(false)
+end)
+
 test("Unlock.TogglePreview: alternates", function()
   fresh()
   assertEqual(U:TogglePreview(), true)

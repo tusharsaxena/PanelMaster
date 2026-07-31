@@ -21,7 +21,7 @@ end
 -- GEOMETRY is the other piece of real state. A panel's position and size are the whole product here
 -- — they are persisted, restored, snapped and recovered — and a blanket no-op would make every one
 -- of those round trips untestable: GetPoint() would hand back the frame itself, so "we applied the
--- stored position" and "we applied garbage" would look identical. SetPoint's overloads are modelled
+-- stored position" and "we applied garbage" would look identical. SetPoint's overloads are modeled
 -- because addon code uses both the (point, x, y) and (point, relativeTo, relativePoint, x, y) forms.
 local function recordPoint(point, ...)
   local a, b, c, d = ...
@@ -62,7 +62,7 @@ local function stubFrame()
       end
     end
     -- Scripts are RECORDED rather than dropped: the drag handler and every panel OnShow are real
-    -- behaviour, and a test that cannot invoke them can only assert that registration happened, not
+    -- behavior, and a test that cannot invoke them can only assert that registration happened, not
     -- that the handler does the right thing.
     if k == "SetScript" then
       return function(_, script, handler) f.__scripts[script] = handler; return f end
@@ -95,8 +95,8 @@ local function stubFrame()
     if k == "GetFrameLevel" then return function() return f.__level end end
     if k == "EnableMouse" then return function(_, v) f.__mouse = v and true or false; return f end end
     if k == "IsMouseEnabled" then return function() return f.__mouse end end
-    -- Colour is the other half of "what does this panel look like", so a texture stub records what
-    -- it was told to draw. Without this, every colour assertion would have to trust the code.
+    -- Color is the other half of "what does this panel look like", so a texture stub records what
+    -- it was told to draw. Without this, every color assertion would have to trust the code.
     if k == "SetColorTexture" then
       return function(_, r, g, b, a) f.__color = { r, g, b, a }; return f end
     end
@@ -116,7 +116,7 @@ local function stubFrame()
     if k == "SetTexture" then return function(_, path) f.__texture = path; return f end end
     if k == "GetTexture" then return function() return f.__texture end end
     -- Child regions are fresh stubs, not the parent: a texture that WAS the frame would make every
-    -- edge share one colour slot and hide a whole class of border bug.
+    -- edge share one color slot and hide a whole class of border bug.
     if k == "CreateTexture" or k == "CreateFontString" then
       return function() return stubFrame() end
     end
@@ -141,7 +141,7 @@ return function()
   M.C_Timer = { After = function() end }
 
   -- Combat state. Tests flip __inCombat to exercise the unlock deferral and the options-panel
-  -- refusal, which are the two combat-shaped behaviours the addon has.
+  -- refusal, which are the two combat-shaped behaviors the addon has.
   M.__inCombat = false
   M.InCombatLockdown = function() return M.__inCombat end
 
@@ -205,7 +205,7 @@ return function()
 
   -- LibStub + Ace library mocks
   local libs = {}
-  -- AceDB, including its CALLBACK surface. The callbacks are modelled rather than stubbed because
+  -- AceDB, including its CALLBACK surface. The callbacks are modeled rather than stubbed because
   -- switching profiles swaps `db.profile` wholesale — if the addon does not react, the previous
   -- profile's panels stay on screen. `__switchProfile` reproduces exactly that: replace the table,
   -- then fire, which is what AceDB does.
@@ -249,7 +249,7 @@ return function()
   -- AceGUI is present but hands back nothing: P:Register only needs the library to EXIST (the panel
   -- bodies are built lazily on first OnShow, which never fires headless), and every widget call site
   -- already guards on the create returning a usable widget. That is enough to exercise registration
-  -- and the framework callback contract without modelling AceGUI's whole widget tree.
+  -- and the framework callback contract without modeling AceGUI's whole widget tree.
   libs["AceGUI-3.0"] = { Create = function() return nil end }
 
   -- AceConfig / AceDBOptions back the Profiles page. Present so P:Register exercises the real
@@ -271,7 +271,7 @@ return function()
   -- run without it (library-stack-§6) — so the default headless environment is the one where it is
   -- missing, which is what makes Compat.FetchTexture's nil path the tested path.
 
-  -- Message bus modelled on CallbackHandler: callbacks keyed by (message, target). Registering the
+  -- Message bus modeled on CallbackHandler: callbacks keyed by (message, target). Registering the
   -- same message twice on ONE target overwrites (only the last survives); SendMessage fires to every
   -- distinct target. Mirroring the real semantics is what lets a test catch same-target clobbering
   -- (architecture-§4) — a bare no-op mock hides that whole bug class.
@@ -310,12 +310,12 @@ return function()
       target.UnregisterEvent = noop
       target.RegisterChatCommand = function(_, cmd) M.__chatCommands[cmd] = true end
       target.ScheduleTimer = function(_, callback, delay)
-        local handle = { callback = callback, delay = delay, cancelled = false }
+        local handle = { callback = callback, delay = delay, canceled = false }
         M.__timers[#M.__timers + 1] = handle
         return handle
       end
       target.CancelTimer = function(_, handle)
-        if type(handle) == "table" then handle.cancelled = true end
+        if type(handle) == "table" then handle.canceled = true end
       end
       -- AceConsole's :Print mixin, reproduced faithfully: embedding it CLOBBERS a same-named custom
       -- NS.Print, and renders "|cff33ff99<msg>|r:" (green, trailing colon, no cyan tag). The addon
@@ -333,7 +333,7 @@ return function()
     M.__timers = {}
     local fired = 0
     for _, handle in ipairs(due) do
-      if not handle.cancelled then
+      if not handle.canceled then
         fired = fired + 1
         handle.callback()
       end

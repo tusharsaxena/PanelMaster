@@ -67,6 +67,37 @@ test("Constants: the template's own values are valid by its own rules", function
   assertTrue(C.PANEL_TEMPLATE.height >= C.MIN_SIZE and C.PANEL_TEMPLATE.height <= C.MAX_SIZE)
 end)
 
+test("Constants: the editor's offset reach is named, symmetric and wide enough to be useful", function()
+  -- It is a slider REACH, not a clamp — Registry.Sanitize leaves x/y unbounded on purpose — so the
+  -- only thing to pin is that it exists, is a positive number, and is not narrower than the screen
+  -- sizes the addon already contemplates.
+  assertEqual(type(C.EDITOR_OFFSET_RANGE), "number")
+  assertTrue(C.EDITOR_OFFSET_RANGE > 0)
+  assertTrue(C.EDITOR_OFFSET_RANGE >= C.MAX_SIZE / 4, "the X/Y sliders should reach off-center far")
+end)
+
+test("Constants: no slider in the panel editor decides its own bounds", function()
+  -- options-ui-§8, "Named, never inlined". The editor used to pin Width/Height at 1200 and X/Y at
+  -- ±2000, which silently rewrote any panel that lived outside those numbers the first time its
+  -- slider was touched. A source scan is the only headless way to catch a relapse: AceGUI is stubbed
+  -- in the suite, so the editor's builders never run and the bounds are never observable at runtime.
+  local f = assert(io.open("settings/PanelEditor.lua", "r"))
+  local src = f:read("*a")
+  f:close()
+
+  local expected = {
+    ['"Width", "width"']      = "C.MIN_SIZE, C.MAX_SIZE",
+    ['"Height", "height"']    = "C.MIN_SIZE, C.MAX_SIZE",
+    ['"X offset", "x"']       = "-C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE",
+    ['"Y offset", "y"']       = "-C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE",
+  }
+  for field, bounds in pairs(expected) do
+    local call = src:match("numberField%([%w_]+, " .. field:gsub("%p", "%%%0") .. ", ([^)]*)%)")
+    assertTrue(call ~= nil, "no numberField call for " .. field)
+    assertEqual(call, bounds, field .. " should take its bounds from Constants")
+  end
+end)
+
 test("Constants: preview panels are valid panel overrides", function()
   for _, spec in ipairs(C.PREVIEW_PANELS) do
     assertTrue(NS.Util.IsPoint(spec.point), spec.name .. " has a bad anchor")

@@ -7,7 +7,7 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 -- The on-screen debug console (debug-logging). Debug output goes HERE, never to the chat frame: the
 -- console is monospace, timestamped and tagged, so a pasted log reconstructs what the addon did.
 
--- Plain-text mirror of the log (no colour codes), for the Copy window. Capped like the log.
+-- Plain-text mirror of the log (no color codes), for the Copy window. Capped like the log.
 D.buffer = D.buffer or {}
 local MAX_BUFFER = 500
 
@@ -15,7 +15,7 @@ local STATUS_H = 16   -- height reserved at the window bottom for the line-count
 local BAR_W    = 8    -- scrollbar track width
 
 -- The console's own skin seam (standalone-windows). PanelMaster has no other standalone window, so
--- the seam lives here; a future window reuses it rather than re-deriving these colours.
+-- the seam lives here; a future window reuses it rather than re-deriving these colors.
 local SKIN = {
   backdrop = { 0.05, 0.05, 0.07, 0.94 },
   border   = { 0.24, 0.24, 0.27, 1.00 },
@@ -86,7 +86,7 @@ local function EnsureFrame()
   local copy = makeTextButton(titleBar, "Copy", 40, function() D:ShowCopy() end)
   copy:SetPoint("RIGHT", clear, "LEFT", -6, 0)
 
-  -- Left-aligned debug on/off toggle. Same flat look as Copy/Clear, but its resting colour reflects
+  -- Left-aligned debug on/off toggle. Same flat look as Copy/Clear, but its resting color reflects
   -- state (green ON / red OFF); clicking flips state through the shared SetEnabled seam.
   local toggleBtn = CreateFrame("Button", nil, titleBar)
   toggleBtn:SetSize(80, 18)
@@ -178,15 +178,15 @@ local function EnsureFrame()
   return frame
 end
 
--- Pure plain-text line formatter (no frames, no colour codes): "<ts> | [<tag>] <msg>". This is what
+-- Pure plain-text line formatter (no frames, no color codes): "<ts> | [<tag>] <msg>". This is what
 -- the Copy buffer mirrors — clean text with the tag rendered verbatim.
 function D.FormatPlain(ts, tag, msg)
   return ("%s | [%s] %s"):format(tostring(ts), tostring(tag or ""), tostring(msg))
 end
 
--- Pure colour-coded line formatter for the console view. The timestamp is muted steel-blue (6f8faf)
+-- Pure color-coded line formatter for the console view. The timestamp is muted steel-blue (6f8faf)
 -- and the [tag] muted tan/gold (c9a66b); the "|" separator and the message stay the frame's default
--- colour. "||" renders one literal pipe inside a colour-coded string.
+-- color. "||" renders one literal pipe inside a color-coded string.
 function D.FormatColored(ts, tag, msg)
   return ("|cff6f8faf%s|r || |cffc9a66b[%s]|r %s"):format(
     tostring(ts), tostring(tag or ""), tostring(msg))
@@ -319,7 +319,7 @@ function D:SetEnabled(on)
   on = not not on
   NS.State.debug = on
   D:RefreshHeader()
-  -- Colour-coded chat ack: ON green (40ff40) / OFF red (ff4040), mirroring the title-bar toggle so
+  -- Color-coded chat ack: ON green (40ff40) / OFF red (ff4040), mirroring the title-bar toggle so
   -- the flag reads identically in chat and on the console header.
   print("debug logging " .. (on and "|cff40ff40ON|r" or "|cffff4040OFF|r"))
   -- A console line at BOTH transitions, so the log itself records when capture started and stopped.
@@ -397,6 +397,11 @@ end
 -- BEFORE it reaches string.format, so a combat-protected "secret" value logs as "<secret>" instead
 -- of raising the format call (events-frames-taint-§8). Because every arg arrives as a string, the
 -- sink's format strings use %s for every placeholder — never %d/%f.
+--
+-- This is the ONLY gate (debug-logging-§4). Call sites must not re-spell `if NS.State.debug then`
+-- around a NS.Debug call — the invariant restated is the invariant that drifts. The one sanctioned
+-- exception is a site whose ARGUMENTS cost something to build (a scan, a formatted string): there
+-- the gate guards the arguments, not the sink, and says so in a comment.
 function NS.Debug(tag, fmt, ...)
   if not (NS.State and NS.State.debug) then return end
   local n = select("#", ...)

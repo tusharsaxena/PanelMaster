@@ -76,14 +76,14 @@ test("Registry.CopyFrom: DOES copy size", function()
   assertEqual(R:Get(target.id).height, 40)
 end)
 
-test("Registry.CopyFrom: colours are deep-copied, not shared", function()
+test("Registry.CopyFrom: colors are deep-copied, not shared", function()
   fresh()
   local source = R:New("Source", { bgColor = { 0.1, 0.2, 0.3, 1 } })
   local target = R:New("Target")
   R:CopyFrom(target.id, source.id)
 
   R:Get(target.id).bgColor[1] = 0.99
-  -- A shared array would mean editing one panel's colour silently changed the other's.
+  -- A shared array would mean editing one panel's color silently changed the other's.
   assertNear(R:Get(source.id).bgColor[1], 0.1)
 end)
 
