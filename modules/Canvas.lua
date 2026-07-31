@@ -245,6 +245,14 @@ local function applyAccents(f, spec)
       else
         bar.fill:SetColorTexture(a.color[1], a.color[2], a.color[3], a.color[4])
       end
+      -- A statusbar texture is authored horizontally, so the vertical edges need it turned a quarter
+      -- turn or the bevel runs the wrong way (see C.ACCENT_TEXCOORD_ROT90). Applied AFTER SetTexture,
+      -- which resets a texture's coords, and on every repaint rather than once at creation — a
+      -- pooled frame reused for another panel would otherwise keep whatever the last one asked for.
+      local coord = (edge == "LEFT" or edge == "RIGHT")
+        and C.ACCENT_TEXCOORD_ROT90 or C.ACCENT_TEXCOORD_FLAT
+      bar.fill:SetTexCoord(coord[1], coord[2], coord[3], coord[4],
+                           coord[5], coord[6], coord[7], coord[8])
       applyAccentBorder(bar, spec)
       bar:Show()
     end

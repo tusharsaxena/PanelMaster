@@ -53,6 +53,24 @@ for _, e in ipairs(C.EDGES) do C.EDGE_SET[e] = true end
 
 C.EDGE_LABEL = { TOP = "Top", BOTTOM = "Bottom", LEFT = "Left", RIGHT = "Right" }
 
+-- How an accent bar's texture is oriented on each edge.
+--
+-- A LibSharedMedia STATUSBAR texture is authored as a HORIZONTAL bar: its height carries the bevel
+-- (lit along the top, shaded along the bottom) and its width is the fill direction. Stretched into a
+-- tall thin LEFT/RIGHT bar with no rotation, that bevel runs along the bar's LENGTH instead of
+-- across its thickness — which is why a vertical bar used to read as a vertical smear rather than an
+-- edge, while the TOP and BOTTOM bars looked correct.
+--
+-- These are the EIGHT-argument SetTexCoord form, which maps a texture-space coordinate to each
+-- screen corner in the order UL, LL, UR, LR. That form is what makes a true rotation possible at
+-- all: the familiar four-argument form can only crop and flip, never transpose the axes.
+--
+-- LEFT and RIGHT take the SAME rotation rather than mirrored ones, matching TOP and BOTTOM, which
+-- are also drawn identically rather than flipped. Mirroring the pair would light the two sides
+-- symmetrically, which is a defensible look but a different decision from this one.
+C.ACCENT_TEXCOORD_FLAT  = { 0, 0, 0, 1, 1, 0, 1, 1 }   -- as authored
+C.ACCENT_TEXCOORD_ROT90 = { 0, 1, 1, 1, 0, 0, 1, 0 }   -- 90 degrees clockwise
+
 -- ── Geometry bounds ─────────────────────────────────────────────────────────────
 -- Clamps applied by the registry on every write (Registry.Sanitize), so neither the settings UI, the
 -- CLI, nor a hand-edited SavedVariables file can produce a panel that cannot be seen or grabbed.

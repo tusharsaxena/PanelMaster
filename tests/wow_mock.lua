@@ -115,6 +115,15 @@ local function stubFrame()
     end
     if k == "SetTexture" then return function(_, path) f.__texture = path; return f end end
     if k == "GetTexture" then return function() return f.__texture end end
+    -- Texture ORIENTATION, recorded for the same reason as color: which way a texture was rotated is
+    -- part of "what does this look like", and an accent bar on a vertical edge is drawn with the
+    -- 8-argument form. Stored as the flat 8-number list the caller passed, in SetTexCoord's own
+    -- UL, LL, UR, LR order, so a test asserts on exactly what the renderer said. The 4-argument
+    -- (crop) form is recorded too — nothing uses it today, but silently dropping it would make a
+    -- future crop look like no call at all.
+    if k == "SetTexCoord" then
+      return function(_, ...) f.__texCoord = { ... }; return f end
+    end
     -- Child regions are fresh stubs, not the parent: a texture that WAS the frame would make every
     -- edge share one color slot and hide a whole class of border bug.
     if k == "CreateTexture" or k == "CreateFontString" then

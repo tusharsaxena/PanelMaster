@@ -259,7 +259,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Registry.Delete: drops the panel's session unlock state
 - Database: per-panel unlock state is NOT persisted
 
-### test_accent.lua (60)
+### test_accent.lua (63)
 
 - Accent: ON by default — the accent bar is the shipped look
 - Accent: the panel's OWN border is off, so only one thing defines the edge
@@ -321,6 +321,9 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Canvas: a 'None' bar border texture removes it
 - Registry.Reset: puts the bar border back to the shipped hairline
 - Canvas: a released frame hides its accent bars
+- Canvas: a vertical bar rotates its texture 90 degrees
+- Canvas: a horizontal bar draws its texture as authored
+- Canvas: the orientation is re-applied on every repaint, not just the first
 
 ### test_database.lua (18)
 
@@ -533,7 +536,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_canvas.lua | 27 |
 | test_unlock.lua | 28 |
 | test_media.lua | 79 |
-| test_accent.lua | 60 |
+| test_accent.lua | 63 |
 | test_database.lua | 18 |
 | test_debuglog.lua | 22 |
 | test_schema.lua | 21 |
@@ -541,4 +544,4 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
 | test_spelling.lua | 2 |
-| **Total** | **471** |
+| **Total** | **474** |

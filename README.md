@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-471%2F471_passing-green)
+![Tests](https://img.shields.io/badge/Tests-474%2F474_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
@@ -161,7 +161,7 @@ Each panel's editor has:
 | Border color / Class color | The border color, or your class color. The opacity you set applies either way. |
 | Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. |
 | Accent bar texture | Any status-bar texture LibSharedMedia knows about. |
-| Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. |
+| Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. Left and right bars turn the texture a quarter turn, so a bar reads the same way round whichever edge it is on. |
 | Accent bar thickness | How thick the bar is. |
 | Accent bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
 | Accent bar color / Class color | The bar color. Class color is **on** by default. |

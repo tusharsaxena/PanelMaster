@@ -541,3 +541,52 @@ test("Canvas: a released frame hides its accent bars", function()
     assertFalse(f.accents[edge]:IsShown(), edge .. " bar survived the panel")
   end
 end)
+
+-- ── Texture orientation ─────────────────────────────────────────────────────────
+
+test("Canvas: a vertical bar rotates its texture 90 degrees", function()
+  fresh()
+  -- A statusbar texture is authored as a HORIZONTAL bar: the bevel runs across its height. Stretched
+  -- into a tall thin LEFT/RIGHT bar unrotated, that bevel runs along the bar's LENGTH instead of
+  -- across its thickness, which reads as a smear rather than an edge.
+  local rec = R:New("Sided", { accentEnabled = true,
+                               accentEdges = { LEFT = true, RIGHT = true } })
+  local f = Canvas:FrameFor(rec.id)
+  for _, edge in ipairs({ "LEFT", "RIGHT" }) do
+    local got = f.accents[edge].fill.__texCoord
+    assertTrue(got ~= nil, edge .. " bar never set a texcoord")
+    for i = 1, 8 do
+      assertEqual(got[i], C.ACCENT_TEXCOORD_ROT90[i],
+        edge .. " bar texcoord differs at index " .. i)
+    end
+  end
+end)
+
+test("Canvas: a horizontal bar draws its texture as authored", function()
+  fresh()
+  -- The rotation is for the vertical edges only. TOP and BOTTOM already run along the texture's own
+  -- axis, so rotating them would introduce exactly the defect it fixes on the other two.
+  local rec = R:New("Capped", { accentEnabled = true,
+                                accentEdges = { TOP = true, BOTTOM = true } })
+  local f = Canvas:FrameFor(rec.id)
+  for _, edge in ipairs({ "TOP", "BOTTOM" }) do
+    local got = f.accents[edge].fill.__texCoord
+    assertTrue(got ~= nil, edge .. " bar never set a texcoord")
+    for i = 1, 8 do
+      assertEqual(got[i], C.ACCENT_TEXCOORD_FLAT[i],
+        edge .. " bar texcoord differs at index " .. i)
+    end
+  end
+end)
+
+test("Canvas: the orientation is re-applied on every repaint, not just the first", function()
+  fresh()
+  -- SetTexture resets a texture's coords on a live client, so the rotation has to follow it every
+  -- time. A pooled frame reused for a different panel would otherwise draw the bar unrotated.
+  local rec = R:New("Repainted", { accentEnabled = true, accentEdges = { LEFT = true } })
+  local fill = Canvas:FrameFor(rec.id).accents.LEFT.fill
+  fill.__texCoord = nil
+  R:Set(rec.id, "accentThickness", 9)
+  assertTrue(fill.__texCoord ~= nil, "the rotation was not re-applied on repaint")
+  assertEqual(fill.__texCoord[2], C.ACCENT_TEXCOORD_ROT90[2])
+end)

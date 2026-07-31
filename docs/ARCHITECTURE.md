@@ -273,6 +273,17 @@ Each bar is pinned to **both corners** of its edge, which makes "covers the enti
 true by construction — the bar tracks the panel's size with no recalculation. `accentOffset` pushes
 it outward (the detached look) or, when negative, over the panel's own area.
 
+The **left and right bars turn their texture a quarter turn** (`C.ACCENT_TEXCOORD_ROT90`). A
+LibSharedMedia statusbar texture is authored as a horizontal bar — its height carries the bevel, its
+width is the fill direction — so stretched into a tall thin strip unrotated, the bevel runs along the
+bar's length instead of across its thickness and reads as a smear. The rotation uses the
+**eight-argument** `SetTexCoord`, which maps a texture coordinate to each screen corner and is the
+only form that can transpose the axes; the four-argument form crops and flips but cannot rotate. It
+is re-applied on every repaint rather than once at creation, because `SetTexture` resets a texture's
+coords and a pooled frame would otherwise inherit the previous panel's orientation. Left and right
+take the *same* rotation, matching top and bottom, which are also drawn identically rather than
+mirrored.
+
 `accentEdges` is a **set**, not a single value, because any combination is legal. Two consequences:
 `Util.EdgeSet` normalizes it on the way in so a hand-edited SavedVariables file cannot smuggle a
 fifth "edge" into the render loop; and an **empty** set is preserved rather than defaulted back to
