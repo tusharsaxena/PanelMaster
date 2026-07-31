@@ -281,16 +281,17 @@ silently applied, per `CLAUDE.md`.
 | **C-06 / F-003** | Have the X/Y sliders span `±C.EDITOR_OFFSET_RANGE`. | A Blizzard slider *clamps its reported value*, so a named constant alone left the bound a de-facto clamp: `/pm panel Chat x 3000` was still rewritten to 2000 on first touch, destroying exactly the multi-monitor offset `Registry.Sanitize` and audit decision A-003 exist to protect. `E.SliderSpan(value, min, max)` widens the nominal span to *reach* an out-of-range stored value; bounds and value are set together on build and on every in-place refresh. |
 | **C-02 / F-014** | "Route both transitions through `U:SetUnlocked`." | Taken literally, this removed the deliberate combat-gate bypass: `/pm preview` mid-combat produced three anonymous, mouse-transparent placeholders plus an "unlock queued" message that never mentioned preview — the exact state `modules/Unlock.lua` says preview must never be in. `SetUnlocked(on, immediate)` gained a private second argument used **only** by `SetPreview`, in both directions, documented at both ends. The gated path is untouched for the CLI, the schema switch and `Toggle`, and is pinned by a test. |
 | **C-06 / F-006** | The `offsetRange` helper, verbatim. | As written it indexes `rec.relPoint` with no type guard, so a nil or non-string `relPoint` from a hand-edited or older SavedVariables threw *out of* `R:Recover`'s loop — leaving already-visited panels rewritten in the DB with no broadcast and no repaint, a half-applied recover. Guarded with `Util.IsPoint`, matching `modules/Canvas.lua`'s existing shape. |
-| **F-018** | Two stale "Delete and Reset live at the TOP" comments. | Only **one** exists — confirmed against `git show HEAD:settings/Panel.lua`, so not a peel artefact. The other comment at that location is accurate and was left alone. |
+| **F-018** | Two stale "Delete and Reset live at the TOP" comments. | **Did not reproduce.** Only **one** exists — confirmed against `git show HEAD:settings/Panel.lua`, so not a peel artefact. The other comment at that location is accurate and was left alone. Ratified 2026-07-31: F-018 is recorded as a finding that was half wrong, not as work left undone. |
 
 ### Scope taken beyond the literal wording
 
 - **`R:DeleteBatch(keys)`** added alongside `R:NewBatch`. C-02 mandates "a batched teardown" but names
   only `NewBatch`; `R:DeleteAll` would have deleted the user's own panels. Same shape, same
-  one-sender guarantee.
+  one-sender guarantee. **Ratified 2026-07-31.**
 - **`offsetRange` keys on `relPoint`, not `point`.** The offset is measured from the point on
   UIParent, so `relPoint` decides where the origin sits. F-006 says "point/relPoint"; drags write
-  both together, so they agree in practice.
+  both together, so they agree in practice, and a nil or non-string `relPoint` falls back to the
+  template via `Util.IsPoint`. **Ratified 2026-07-31.**
 - **The peel moved slightly more than C-07's list** — `pageAction`, `runRebuilders` and
   `wirePanelsBus` went with the editor, because all three read and write the moved `selectedID`
   file-local; leaving them behind would have meant *rewriting* them rather than moving them.
@@ -309,22 +310,27 @@ silently applied, per `CLAUDE.md`.
 
 ### Targets missed
 
-- **`settings/PanelEditor.lua` is 814 LOC against C-07's "~500" target.** `settings/Panel.lua` fell
-  1253 → 684, beating its own "~800". Hitting 500 on the new file would need a third settings file or
-  a real restructure of the editor — neither authorized by a change scoped as a pure move. Both files
-  are inside `layout-§1`'s 1000-line "on notice" threshold, so the stated goal of the split (no file
-  in the oversized band) is met.
-- **Two debug gates survive C-08**, at `modules/Registry.lua` and `modules/Unlock.lua`, under C-08's
-  own escape clause. C-08's risk note asserts every site's arguments are plain field reads; that is
-  factually wrong for these two — one wraps `R.FormatField` (a `string.format` on a seam that fires
-  on every field write), the other `NS.Registry:Get` (an O(n) scan, and a statement inside the block
-  rather than an argument). Both carry a comment saying the gate guards the *argument*, not the sink,
-  and `modules/DebugLog.lua` names this as the one sanctioned exception. Making the grep literally
-  empty means having the sink format lazily — recorded as a follow-up.
-- **Four sites were un-gated despite a call in their arguments** — `core/Database.lua`'s migrate
-  line, `modules/Canvas.lua`'s `RenderAll` line, `modules/Registry.lua`'s `ReloadProfile` line, and
-  `settings/Panel.lua`'s `safeRun`. None is a repeated cost when logging is off (once per session,
-  once per profile switch, or already on an O(n) path). A judgement call, reversible.
+- **`settings/PanelEditor.lua` is 814 LOC against C-07's "~500" target.** **Accepted and closed
+  2026-07-31.** `settings/Panel.lua` fell 1253 → 684, beating its own "~800". Hitting 500 on the new
+  file would need a third settings file or a real restructure of the editor — neither authorized by a
+  change scoped as a pure move. Both files are inside `layout-§1`'s 1000-line "on notice" threshold,
+  so the stated goal of the split — no file in the oversized band — **is** met. The "~500" figure was
+  an estimate made before the peel, not a requirement; it is not an outstanding target.
+- ~~**Two debug gates survive C-08**~~ — **closed 2026-07-31.** C-08's risk note asserted every site's
+  arguments are plain field reads, which was factually wrong for two of them: one wrapped
+  `R.FormatField` (a `string.format` on a seam that fires on every field write), the other
+  `NS.Registry:Get` (an O(n) scan). Rather than keep the exception, `modules/DebugLog.lua` gained
+  `NS.DebugBuild(tag, fmt, build, ...)`, which calls `build` only past the sink's own gate. Both sites
+  now use it with a plain file-local builder (`describeWrite`, `describeLock`) and their arguments
+  passed unbound — deliberately **not** a closure, which would be allocated at the call site before
+  the gate and would have been strictly worse than the gate it replaced. `grep -rn "NS.State.debug"`
+  outside `modules/DebugLog.lua` is now empty, so C-08's exit criterion is met literally.
+- ~~**Four sites were un-gated despite a call in their arguments**~~ — **closed 2026-07-31 by the same
+  change.** `core/Database.lua`'s migrate line, `modules/Canvas.lua`'s `RenderAll` line,
+  `modules/Registry.lua`'s `ReloadProfile` line and `settings/Panel.lua`'s `safeRun` stay un-gated.
+  None is a repeated cost when logging is off (once per session, once per profile switch, already on
+  an O(n) path, or only on a `pcall` failure), and with the deferral seam now available, any of them
+  can move to `NS.DebugBuild` if that ever changes. Ratified as the intended end state.
 - **Two opacity sliders still pass literal `0` and `1`.** `Constants` carries no `MIN_/MAX_ALPHA` and
   C-06 names only the size and offset sliders. `0..1` is the definition of a fraction rather than a
   chosen bound — but read literally, "no editor slider carries an inline bound" is not quite true.
@@ -346,7 +352,7 @@ restored. Not decided here.
 | **`Registry:Reset` on a preview placeholder strips its marker**, promoting it to a permanent panel. | An acknowledged, documented edge of C-01 and strictly better than the pre-fix behavior. A cheap guard (refuse `Reset` on a marked record) is possible if it ever bites. |
 | **`/pm rename` and `/pm panel` address a panel by its first word only.** | Pre-existing accepted deviation A-008 in the audit bundle, recorded in the README's Troubleshooting section. Not re-litigated here. |
 | **Slider live preview.** Editor sliders commit on `OnMouseUp` only, so a panel does not follow the slider while it is being dragged. | Deliberate — a per-frame write through `Registry:Set` would broadcast a repaint per frame. Revisit only with a throttled preview path. |
-| **Lazy formatting at the debug sink**, so the last two `if NS.State.debug` gates can go. | `modules/Registry.lua`'s gate exists because its argument is a `string.format` on a per-write seam, not because the sink needs a second gate. Having `NS.Debug` accept a formatter to call only when enabled would remove the reason. Out of scope for C-08, which was a mechanical removal. |
+| ~~**Lazy formatting at the debug sink**~~ | **Done 2026-07-31** — `NS.DebugBuild`. See **Accepted deviations**. |
 | **Capture the two performance baselines** — memory delta across five preview cycles, and `GetAddOnCPUUsage` over 60s with 20 mouseover panels. | They are baselines for future comparison rather than pass/fail checks, and were not taken during the 2026-07-31 client run. Nothing depends on them. |
 
 ---

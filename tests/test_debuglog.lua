@@ -187,12 +187,10 @@ end)
 test("NS.Debug: call sites do not restate the gate", function()
   -- The sink's first line already gates on NS.State.debug, so `if NS.State.debug and NS.Debug then`
   -- at a call site is the same invariant spelled a second time — and every restatement is a chance
-  -- to spell it differently (one site used to add a redundant `NS.State and`). The two survivors
-  -- below guard their ARGUMENTS, not the sink, and are named here so the exception stays deliberate.
-  local allowed = {
-    ["modules/Registry.lua"] = 1,   -- Set: R.FormatField builds a string on every field write
-    ["modules/Unlock.lua"]   = 1,   -- SetPanelUnlocked: R:Get is a scan over every panel
-  }
+  -- to spell it differently (one site used to add a redundant `NS.State and`). There are now NO
+  -- exceptions: the two sites that used to guard their expensive ARGUMENTS go through NS.DebugBuild,
+  -- which defers building them past the gate. An empty table here is the point of that change.
+  local allowed = {}
   local files = {
     "core/Database.lua", "core/PanelMaster.lua", "core/State.lua", "core/Util.lua",
     "modules/Registry.lua", "modules/Canvas.lua", "modules/Unlock.lua",
@@ -234,4 +232,45 @@ test("NS.Debug: the ungated call sites stay silent when logging is off", functio
   NS.Canvas:RenderAll()
   assertEqual(#D.buffer, 0, "something logged with the flag off")
   NS.Registry:DeleteAll()
+end)
+
+-- ── Deferred arguments (NS.DebugBuild) ──
+
+test("NS.DebugBuild: does not call its builder when logging is off", function()
+  quiet()
+  NS.State.debug = false
+  -- The whole point. A site whose arguments cost something to make — a scan, a formatted string —
+  -- used to restate the gate to avoid paying for them. Deferring the build past the sink's own gate
+  -- removes the reason without moving the invariant back out to the call site.
+  local calls = 0
+  local function build() calls = calls + 1; return "x" end
+  NS.DebugBuild("Test", "%s", build)
+  assertEqual(calls, 0, "the builder ran with logging off")
+end)
+
+test("NS.DebugBuild: calls the builder and logs when logging is on", function()
+  quiet()
+  NS.State.debug = true
+  local calls = 0
+  local function build(a, b) calls = calls + 1; return a .. b end
+  NS.DebugBuild("Test", "value %s", build, "on", "e")
+  assertEqual(calls, 1)
+  assertTrue(D.buffer[#D.buffer]:find("value one", 1, true) ~= nil,
+    "the built argument never reached the message")
+  quiet()
+end)
+
+test("NS.DebugBuild: passes the builder's arguments through unbound", function()
+  quiet()
+  NS.State.debug = true
+  -- Arguments travel separately from the builder rather than captured in a closure. A closure would
+  -- be allocated at the CALL SITE, before this function is entered — which is exactly the cost the
+  -- deferral exists to avoid, so the shape matters as much as the gate.
+  local got
+  local function build(...) got = { ... }; return "ok" end
+  NS.DebugBuild("Test", "%s", build, 1, "two", true)
+  assertEqual(got[1], 1)
+  assertEqual(got[2], "two")
+  assertEqual(got[3], true)
+  NS.State.debug = false
 end)

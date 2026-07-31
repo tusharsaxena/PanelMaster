@@ -24,6 +24,13 @@ local function fire(message, ...)
   if NS.bus then NS.bus:SendMessage(message, ...) end
 end
 
+-- The write seam's log arguments, built only once NS.DebugBuild is past the gate. A plain function
+-- taking (rec, field) rather than a closure over them: a closure would be created at the call site
+-- on every field write whether or not logging is on, which is the cost this defers.
+local function describeWrite(rec, field)
+  return rec.name, field, R.FormatField(rec, field)
+end
+
 -- The live registry array. Returns an empty table (not nil) before the DB exists, so every caller
 -- can iterate unconditionally.
 function R:All()
@@ -495,13 +502,11 @@ function R:Set(key, field, value)
   -- seam does not log is `name`: it returned into R:Rename above, which logs the old and new names
   -- itself, and only once its uniqueness checks have passed.
   --
-  -- The gate here is deliberate and is NOT the sink's gate restated: it guards the ARGUMENT.
-  -- R.FormatField formats (and for colors and edge sets, builds) a string, and this seam runs on
-  -- every field write — every slider mouse-up, every drag stop, every `/pm panel set`. Without it,
-  -- a user with logging off would pay for a log line nobody reads.
-  if NS.State.debug and NS.Debug then
-    NS.Debug("Panel", "'%s'.%s = %s", rec.name, field, R.FormatField(rec, field))
-  end
+  -- Through DebugBuild rather than Debug: R.FormatField formats (and for colors and edge sets,
+  -- builds) a string, and this seam runs on every field write — every slider mouse-up, every drag
+  -- stop, every `/pm panel set`. describeWrite is called only once past the sink's gate, so a user
+  -- with logging off pays nothing for a line nobody reads, and the gate stays in one place.
+  NS.DebugBuild("Panel", "'%s'.%s = %s", describeWrite, rec, field)
   fire(MSG_PANEL, rec.id)
   return true
 end

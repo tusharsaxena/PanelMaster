@@ -33,10 +33,12 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `core/Database.lua` | `NS:InitDB`, `NS:RunMigrations`, `NS:SweepPreviewPanels` | AceDB open on the shared "Default" profile, the migration seam, the preview-orphan sweep, the profile-change callbacks, the `[Init]` summary. |
 | `defaults/Profile.lua` | `NS.defaults.profile` | Per-character defaults: the (empty) panel registry, `nextID`, and the settings block. |
 | `defaults/Global.lua` | `NS.defaults.global` | The `schemaVersion` stamp — the one account-wide value. |
+| `locales/enUS.lua` | `NS.L` | The canonical locale table and its key-is-the-string fallback. Carries no keys in 0.1.0 — see **Localization**. |
+| `locales/PostLoad.lua` | — | Derived-key aliases, loaded after every locale file so it reads whatever the active locale resolved. Empty in 0.1.0. |
 | `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, copy-from, field edits, sanitizing, slug-uniqueness, off-screen recovery, profile reload. Sole sender of both panel messages. |
 | `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the offset border child frame, the four accent-bar frames and their lazy borders, the shared mouseover ticker, targeted and full repaints. |
 | `modules/Unlock.lua` | `NS.Unlock` | Unlock mode (outline, label, drag, snap), global and per-panel, and preview mode. |
-| `modules/DebugLog.lua` | `NS.DebugLog`, `NS.Debug` | The on-screen debug console and the gated logging sink. |
+| `modules/DebugLog.lua` | `NS.DebugLog`, `NS.Debug`, `NS.DebugBuild` | The on-screen debug console and the gated logging sink. `NS.Debug` carries the addon's **only** debug gate (`debug-logging-§4`); `NS.DebugBuild` is the same sink for a site whose arguments cost something to produce, deferring that work past the same gate rather than growing a second one. Its builder must be a plain function reference with its arguments passed unbound — a closure would be allocated at the call site, before the gate, which is the cost being avoided. |
 | `settings/Schema.lua` | `NS.Schema` | The settings schema (one row per setting). Sole sender of `SettingsChanged`. |
 | `settings/Slash.lua` | `NS.Slash`, `NS.COMMANDS` | `/pm` dispatch, the generated help index, every CLI verb, and the command table they all read (at the bottom of the file, below the verbs it calls). |
 | `settings/PanelEditor.lua` | `NS.PanelEditor` | The Panels page's body: the create box, the panel selector, one panel's editor, the page's mutation actions and its two bus triggers. Peeled out of `settings/Panel.lua` (`layout-§1`) and drawn with that file's helpers, which it reads from `NS.Panel.__ui`. |
@@ -505,6 +507,31 @@ summary.
 `/pm debug dump` is the structured-dump verb (`debug-logging-§4`): it prints the registry's and the
 renderer's views of the world side by side, including orphaned frames. A panel in the registry with
 no frame — or the reverse — is the shape of every rendering bug this addon can have.
+
+## Localization
+
+`locales/enUS.lua` publishes `NS.L` with a metatable whose `__index` returns the key itself, so an
+unwrapped or untranslated string renders as its English source rather than erroring or showing a raw
+token (`localization-§1`). Keys **are** the English source strings (`localization-§2`), which is why
+the US-English sweep mattered: a locale key is the one place a spelling is not merely cosmetic, and
+renaming one later means moving every key and every call site in a single change.
+
+`locales/PostLoad.lua` loads after every locale file and holds derived-key aliases — strings whose
+translation always matches another key's — so a translator never does the same work twice.
+
+**Both files are deliberately empty of keys in 0.1.0.** No user-facing string routes through `NS.L`
+yet; every label, tooltip and message is hardcoded English. That is a scope decision for the first
+release rather than an oversight, and it is precisely what made the US-English sweep cheap to do —
+there were no keys to move alongside the strings. The seam is kept so a later pass can wrap strings
+(`NS.L["Enable panels"]`) without touching call sites. There is no `local L` alias until the first
+string is wrapped, so the file stays luacheck-clean.
+
+Two things must **never** be routed through `NS.L`:
+
+| Not localized | Why |
+|---|---|
+| Panel names | User-supplied data, not UI strings. A user's "Chat" is their text, and translating it would rename their panel — and with it the `PanelMaster_Panel_<slug>` frame name other addons anchor to. |
+| Stored `point` / `strata` tokens | Matched on stable identifiers, never on a localized display string (`localization-§4`). A dropdown may show a translated label, but the value written to SavedVariables stays `TOPLEFT` / `LOW`. |
 
 ## Taint
 

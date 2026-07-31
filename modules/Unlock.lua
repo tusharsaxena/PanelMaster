@@ -16,6 +16,14 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 local pendingUnlock = false
 local pendingPanels = {}
 
+-- The per-panel lock line's arguments, built only once NS.DebugBuild is past the gate. A plain
+-- function taking (id, on) rather than a closure over them: a closure would be created on every
+-- per-panel lock change whether or not logging is on, which is the scan this defers.
+local function describeLock(id, on)
+  local rec = NS.Registry:Get(id)
+  return rec and rec.name or id, on and "unlocked" or "locked"
+end
+
 -- ── Snap ────────────────────────────────────────────────────────────────────────
 
 -- PURE: a dragged position → the position that is actually stored. The whole of the drag maths lives
@@ -96,12 +104,9 @@ function U:SetPanelUnlocked(id, on)
   NS.State.unlockedPanels[id] = on or nil
   if not on then pendingPanels[id] = nil end
   if NS.Canvas then NS.Canvas:Render(id) end
-  -- Gated on purpose, and NOT the sink's gate restated: it guards the LOOKUP. R:Get scans every
-  -- panel to turn the id into a name, which is work nobody with logging off should pay for.
-  if NS.State.debug and NS.Debug then
-    local rec = NS.Registry:Get(id)
-    NS.Debug("Unlock", "'%s' %s", rec and rec.name or id, on and "unlocked" or "locked")
-  end
+  -- Through DebugBuild rather than Debug: R:Get scans every panel to turn the id into a name, which
+  -- is work nobody with logging off should pay for. describeLock runs only past the sink's gate.
+  NS.DebugBuild("Unlock", "'%s' %s", describeLock, id, on)
   return on
 end
 

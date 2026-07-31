@@ -399,9 +399,9 @@ end
 -- sink's format strings use %s for every placeholder — never %d/%f.
 --
 -- This is the ONLY gate (debug-logging-§4). Call sites must not re-spell `if NS.State.debug then`
--- around a NS.Debug call — the invariant restated is the invariant that drifts. The one sanctioned
--- exception is a site whose ARGUMENTS cost something to build (a scan, a formatted string): there
--- the gate guards the arguments, not the sink, and says so in a comment.
+-- around a NS.Debug call — the invariant restated is the invariant that drifts. There are no
+-- exceptions: a site whose ARGUMENTS cost something to build uses NS.DebugBuild below, which defers
+-- that cost past this same gate instead of growing a second one.
 function NS.Debug(tag, fmt, ...)
   if not (NS.State and NS.State.debug) then return end
   local n = select("#", ...)
@@ -412,4 +412,18 @@ function NS.Debug(tag, fmt, ...)
     msg = fmt:format(unpack(parts))
   end
   D:Add(tag, msg)
+end
+
+-- NS.Debug for a call site whose arguments are not free to produce — a scan over every panel, a
+-- formatted or concatenated string. `build(...)` is called only AFTER the gate, and whatever it
+-- returns becomes the message's arguments.
+--
+-- `build` MUST be a plain function reference and its arguments MUST travel separately, exactly as
+-- they do here — never `function() return f(x) end`. A closure capturing upvalues is allocated at
+-- the CALL SITE, before this function is entered, so the closure form would pay the very cost the
+-- deferral exists to avoid and would be strictly worse than the gate it replaced. Passing the
+-- function unbound keeps the off case at one call and one boolean test, allocating nothing.
+function NS.DebugBuild(tag, fmt, build, ...)
+  if not (NS.State and NS.State.debug) then return end
+  return NS.Debug(tag, fmt, build(...))
 end

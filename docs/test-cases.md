@@ -346,7 +346,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (22)
+### test_debuglog.lua (25)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -370,6 +370,9 @@ whenever the suite changes (see [testing.md](testing.md)).
 - NS.Debug: call sites do not restate the gate
 - NS.Debug: the ungated call sites still log when logging is on
 - NS.Debug: the ungated call sites stay silent when logging is off
+- NS.DebugBuild: does not call its builder when logging is off
+- NS.DebugBuild: calls the builder and logs when logging is on
+- NS.DebugBuild: passes the builder's arguments through unbound
 
 ### test_schema.lua (21)
 
@@ -538,10 +541,10 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_media.lua | 79 |
 | test_accent.lua | 63 |
 | test_database.lua | 18 |
-| test_debuglog.lua | 22 |
+| test_debuglog.lua | 25 |
 | test_schema.lua | 21 |
 | test_slash.lua | 55 |
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
 | test_spelling.lua | 2 |
-| **Total** | **474** |
+| **Total** | **477** |
