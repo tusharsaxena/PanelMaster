@@ -157,7 +157,7 @@ end)
 test("Schema: the settings message has exactly one sender", function()
   local files = {
     "core/PanelMaster.lua", "core/Database.lua", "modules/Registry.lua", "modules/Canvas.lua",
-    "modules/Unlock.lua", "modules/DebugLog.lua", "settings/Slash.lua", "settings/Panel.lua",
+    "modules/Unlock.lua", "core/DebugLogSetup.lua", "settings/Slash.lua", "settings/Panel.lua",
   }
   for _, path in ipairs(files) do
     local f = io.open(path, "r")

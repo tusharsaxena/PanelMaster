@@ -55,6 +55,28 @@ Then keep it compliant over time with the `wow-addon:` skills listed at the end 
 
 Every Ka0s addon uses one **modular** layout — `core/ defaults/ settings/ locales/ modules/` — no matter how small (layout). There is no flat variant: a three-file utility and a multi-feature suite share the same skeleton, so every repo reads identically and each file has one obvious home. A small addon simply has thin folders (a single `modules/` file, a one-row `settings/Schema.lua`), not a different structure.
 
+### The shared library
+
+Ka0s addons do not hand-write the console, the slash dispatcher, the settings-canvas shell or the
+secret-safe printer. All four are **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)**, vendored
+whole-folder into `libs/LibKa0s/` (and its test kit into `tests/_kit/`) the way Ace3 is — copied in,
+not depended on at runtime. Five majors ship: `Core`, `DebugLog`, `Slash`, `Options`, `Perf`. This
+addon adopts the first four and declines `Perf` on structural grounds (`LIBKA0S-31`).
+
+Three rules, and none of them has an exception:
+
+- **Never edit `libs/` or `tests/_kit/`.** A library problem is fixed in `../LibKa0s`, gets that
+  file's LibStub `MINOR` bumped, and comes back through a re-vendor. A local patch is reverted
+  silently by the next copy, and the revert reads as a regression with no cause in this repo.
+- **Re-vendor whole-folder**, never a file at a time: four of the five majors resolve
+  `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name.
+- **Every seam must degrade, not error**, when its major is absent, and must explain the absence
+  through the shared `NS.LIBKA0S_MISSING` cause clause rather than wording of its own.
+
+The seam files, what each one keeps, and the load order they pin are in
+`docs/ARCHITECTURE.md` ▸ *The LibKa0s seams*. Every adoption decision — what was taken, what was
+declined and why — is one row per item in `docs/pending/LEDGER.md` (`LIBKA0S-01` … `-32`).
+
 ---
 
 ## Starter tree
@@ -121,6 +143,9 @@ libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 libs\AceAddon-3.0\AceAddon-3.0.xml
 # ...(one line per lib you LibStub)
+# LibKa0s LAST in the block: Core resolves LibStub, and DebugLog/Slash/Options/Perf each resolve
+# LibKa0s-Core-1.0 and return BEFORE NewLibrary when it is absent, so the major never registers.
+libs\LibKa0s\LibKa0s.xml
 
 # Locales
 locales\enUS.lua
@@ -130,6 +155,8 @@ core\Compat.lua
 core\Constants.lua
 core\State.lua
 core\Util.lua
+core\CoreSetup.lua       # LibKa0s-Core seam: printer + secret-safe stringifier
+core\DebugLogSetup.lua   # LibKa0s-DebugLog seam: the console
 core\<Addon>.lua
 core\Database.lua
 
@@ -141,8 +168,9 @@ modules\<Feature>.lua
 
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
-settings\Panel.lua
 settings\Slash.lua
+settings\OptionsSetup.lua  # LibKa0s-Options seam: the canvas shell
+settings\Panel.lua
 ```
 
 The `## Interface:` is a **single** latest-Retail number (Retail only, toc-file-§3); bump it each patch with `wow-addon:bump-interface`, and keep the README `[wow]` badge in lockstep. Field order and section comments are fixed (toc-file-§1, toc-file-§5).
@@ -569,11 +597,11 @@ named evidence is in `INDUSTRY_RESEARCH.md`.)
 | Taint-free chat formatting | Override `_G[GLOBALSTRING]` values rather than hooking chat events or replacing `AddMessage`; order filter registration deterministically. |
 | Combat-lockdown cascade | A layered `InCombatLockdown()` guard on secure writes (settings-setter → secure-frame-show), each deferring on `PLAYER_REGEN_ENABLED`. **Config-open is the exception: it refuses with a gray notice, never defers** (options-ui-§2). |
 | Eager settings registration + lazy body | Register the Blizzard **category** at load (bootstrap on `ADDON_LOADED(Blizzard_Settings)`/`PLAYER_LOGIN`, or in `OnInitialize`); build the panel body only in the first `OnShow`. |
-| On-screen debug console | A `DIALOG`-strata `700×344` `BackdropTemplate` window; a `ScrollingMessageFrame` in a shipped monospace font (10pt) with tagged, color-coded lines (`<ts> \| [<Tag>] <content>`), a right-edge scrollbar + bottom `N / MAX lines` counter (debug-logging-§11), Clear/Copy, `UISpecialFrames`, reusing the main window's `SKIN`/`ApplySkin`; a gated `NS.Debug(tag, …)` sink that appends there instead of chat; session-only window-independent enabled-state with a title-bar `Debug: ON/OFF` toggle. |
+| On-screen debug console | **Do not hand-write this — it is `LibKa0s-DebugLog-1.0`'s**, wired in `core/DebugLogSetup.lua`. The library owns the window, both formatters, the buffer and its cap, the copy window and the enable seam; the host supplies a descriptor and keeps only what the library cannot know — here `NS.DebugBuild` and `D:Diagnose()`. The window wears `Core.SKIN` (the shared Ka0s edge) and Core's `×`, deliberately: those are the library's windows. |
 | Preview/test mode | Placeholder data fed through the real render path while the display is unlocked and/or via `/<slash> preview`. |
-| Headless test harness | `tests/run.lua` micro-framework + `tests/loader.lua` (`setfenv` over ordered sources) + `tests/wow_mock.lua` (self-returning no-op frame; CreateFrame/Settings/LibStub fakes); per-module `test_*.lua` suites. |
-| Lazy first-OnShow panel build | Latch (`rendered` flag) so the AceGUI body builds once, on first `OnShow`, when the panel width is non-zero. |
-| Lazy header Defaults button | `ensureDefaultsButton(panel)` at the top of every `OnShow` builds the AceGUI `Button` once, after every addon has loaded — so a UI skin's `RegisterAsWidget` hook is already in place and the button isn't left on stock red art (options-ui-§5). |
+| Headless test harness | The registry, the assertions, the `--list` renderer and the source loader are the **shared kit**, vendored to `tests/_kit/` and never edited here. `tests/run.lua` is a thin consumer (`Kit.expose` + `Kit.run`) that derives the addon's load order from the TOC via `Loader.tocFiles` rather than keeping a second copy of it. `tests/wow_mock.lua` **extends** `tests/_kit/mock_base.lua` rather than replacing it — the base is the only source of a `LibStub` with a real `NewLibrary` (without which no vendored library registers headlessly) and of a fireable AceGUI; the host overrides only what is genuinely its own, each with its reason in that file's header. Per-module `test_*.lua` suites. |
+| Lazy first-OnShow panel build | **`O.SetRenderer(ctx, fn)`** owns *when* — first show, and again after a refresh marked the page dirty while it was hidden — so no hand-rolled `rendered` latch is needed. It also gives every page the combat guard, which matters because the Blizzard AddOns sidebar reaches a panel without going through the config verb. |
+| Lazy header Defaults button | **`LibKa0s-Options-1.0`'s `O.EnsureDefaultsButton`**, called from `O.SetRenderer`'s `OnShow`. It builds the AceGUI `Button` once, after every addon has loaded — so a UI skin's `RegisterAsWidget` hook is already in place and the button isn't left on stock red art (options-ui-§5). Do not re-implement it; the same reasoning is why the panel BODY is deferred too, and the library owns *when* for both. |
 | Soft-fallback discipline | Load-safe shims for missing optional libs (AceDB-missing flat table, LSM-missing Blizzard constants) so the addon runs with `OptionalDeps` absent. |
 
 ---

@@ -151,10 +151,26 @@ test("Panel: the pages that want a Defaults button declare the intent and park a
   end
 end)
 
-test("Panel: the header Defaults action and Blizzard's OnDefault are the same function", function()
-  -- Two routes to one action; setting them apart is how they would drift.
-  assertEqual(P.general.panel.defaultsOnClick, P.general.panel.OnDefault)
-  assertEqual(P.panels.panel.defaultsOnClick, P.panels.panel.OnDefault)
+test("Panel: the header Defaults action and Blizzard's OnDefault reach ONE implementation", function()
+  -- Two routes to one action; setting them apart is how they would drift. They are no longer the
+  -- same OBJECT, and that is a deliberate library change rather than a regression: LibKa0s's
+  -- O.CreatePanel stamps OnDefault as a FORWARDER that resolves panel.defaultsOnClick at CALL time,
+  -- because every host parks its click handler on the panel AFTER CreatePanel returns — the button
+  -- does not exist yet, being built on first OnShow. A plain assignment there would capture nil
+  -- forever while looking perfectly correct.
+  --
+  -- So the assertion moves from identity to BEHAVIOR: firing Blizzard's footer control must run
+  -- the same closure the header button runs.
+  for _, ctx in ipairs({ P.general, P.panels }) do
+    assertEqual(type(ctx.panel.defaultsOnClick), "function", "no parked Defaults callback")
+    assertEqual(type(ctx.panel.OnDefault), "function", "no Blizzard OnDefault")
+    local ran = 0
+    local parked = ctx.panel.defaultsOnClick
+    ctx.panel.defaultsOnClick = function() ran = ran + 1 end
+    ctx.panel.OnDefault()
+    ctx.panel.defaultsOnClick = parked
+    assertEqual(ran, 1, "Blizzard's footer Defaults control does not reach the page's own action")
+  end
 end)
 
 test("Panel: the landing page is the parent category, not a subcategory", function()
@@ -178,7 +194,10 @@ test("Panel.Open: the combat refusal is gray", function()
   local chat = T.mocks.__chat
   P:Open()
   T.mocks.__inCombat = false
-  assertTrue(chat[#chat]:find("|cff808080", 1, true) ~= nil, "the refusal is not gray")
+  -- |cffaaaaaa, not this addon's old |cff808080: the refusal string is LibKa0s-Options-1.0's now,
+  -- one implementation shared with every other Ka0s addon rather than six copies of the sentence.
+  -- The wording is byte-identical; only the shade of gray moved, and it moved lighter.
+  assertTrue(chat[#chat]:find("|cffaaaaaa", 1, true) ~= nil, "the refusal is not gray")
 end)
 
 test("Panel.Open: does NOT defer-and-replay on leaving combat", function()

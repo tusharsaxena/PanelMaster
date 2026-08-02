@@ -24,31 +24,6 @@ function Sl:Register()
   NS.addon:RegisterChatCommand("panelmaster", function(input) Sl:OnSlash(input) end)
 end
 
--- Bare `/pm` prints the help index (slash-commands-§4). Only the VERB is lower-cased — `rest` keeps
--- its case, so panel names and schema paths survive `/pm rename Chat BG ChatBG`.
-function Sl:OnSlash(input)
-  if input == nil or input:match("^%s*$") then
-    return Sl:PrintHelp()
-  end
-  local verb, rest = input:match("^(%S+)%s*(.-)$")
-  verb = verb and verb:lower()
-  for _, cmd in ipairs(NS.COMMANDS) do
-    if cmd.name == verb then return cmd.fn(rest) end
-  end
-  print("unknown command '" .. tostring(verb) .. "'")
-  Sl:PrintHelp()
-end
-
--- The help index, generated from NS.COMMANDS (slash-commands-§4): a version/alias header, then one
--- prefixed row per command — gold command, em-dash, white description. Never hand-maintained.
-function Sl:PrintHelp()
-  print("v" .. tostring(Sl:Version()) ..
-    " slash commands (|cffffff00/panelmaster|r is an alias for |cffffff00/pm|r)")
-  for _, cmd in ipairs(NS.COMMANDS) do
-    print(("|cffffff00/pm %s|r — |cffffffff%s|r"):format(cmd.name, cmd.desc))
-  end
-end
-
 -- `/pm version` → the canonical single-line answer every Ka0s addon shares (slash-commands-§3). Read
 -- from the TOC metadata so it can't drift from the packaged manifest, with the in-code constant as
 -- the fallback. `/pm version` and the help header both come through here, so they cannot report
@@ -58,136 +33,13 @@ function Sl:Version()
     and NS.Compat.GetAddOnMetadata(NS.name, "Version")) or NS.version or "?"
 end
 
-function Sl:CliVersion()
-  print("v" .. tostring(Sl:Version()))
-end
-
--- ── Schema-driven CLI: list / get / set / reset (slash-commands-§5 output format) ──
-
--- The shared value formatter for list/get/set, so the three can never diverge. Type-aware and
--- schema-driven: a row's optional `fmt` formats numbers (gridSize "%d px" → "4 px"); booleans render
--- true/false.
-function Sl.FormatSchemaValue(row, v)
-  if v == nil then return "nil" end
-  if row and row.fmt and type(v) == "number" then return row.fmt:format(v) end
-  if row and row.type == "boolean" then return v and "true" or "false" end
-  return tostring(v)
-end
-
--- The shared colored `key = value` line — gold key, white value, ` = ` left default — reused by the
--- list rows and the get/set echo so the coloring can't drift (slash-commands-§5).
-function Sl.FormatKV(path, valueStr)
-  return ("|cffffff00%s|r = |cffffffff%s|r"):format(tostring(path), tostring(valueStr))
-end
-
--- The declared group order for `/pm list` (slash-commands-§5's "stable, declared page order"). These
--- are SCHEMA GROUP NAMES and must match them exactly — a name that matches nothing fails invisibly,
--- so a test asserts each one still resolves. Any group not named here is appended in first-seen
--- order, so a new group is never silently dropped from the listing.
-local LIST_GROUP_ORDER = { "Master Controls", "Editing", "New Panel Defaults" }
-Sl.LIST_GROUP_ORDER = LIST_GROUP_ORDER
-
--- Build the `/pm list` lines (tag-less content; CliList prints each through NS.Print, which prepends
--- the cyan tag) as a pure array, so the output shape is unit-testable without capturing chat. Header
--- green, [group] headers azure, value rows via FormatKV — two-space indent on group headers,
--- four-space on value rows (slash-commands-§5).
-function Sl:BuildListLines()
-  local lines = { "|cff33ff99Available settings|r" }
-
-  local byGroup, seenOrder = {}, {}
-  for _, row in ipairs(NS.Schema.Schema) do
-    local g = row.group or "?"
-    if not byGroup[g] then byGroup[g] = {}; seenOrder[#seenOrder + 1] = g end
-    byGroup[g][#byGroup[g] + 1] = row
-  end
-
-  local emitted = {}
-  local function emit(g)
-    if emitted[g] or not byGroup[g] then return end
-    emitted[g] = true
-    lines[#lines + 1] = "  |cff3399ff[" .. g .. "]|r"
-    for _, row in ipairs(byGroup[g]) do
-      local v = NS.Schema:Get(row.path)
-      lines[#lines + 1] = "    " .. Sl.FormatKV(row.path, Sl.FormatSchemaValue(row, v))
-    end
-  end
-
-  for _, g in ipairs(LIST_GROUP_ORDER) do emit(g) end
-  for _, g in ipairs(seenOrder) do emit(g) end
-  return lines
-end
-
-function Sl:CliList()
-  for _, line in ipairs(Sl:BuildListLines()) do print(line) end
-end
-
-function Sl:CliGet(arg)
-  local path = (strtrim and strtrim(tostring(arg or "")) or tostring(arg or "")):match("^(%S+)")
-  if not path then
-    print("Usage: /pm get <path>")
-    return
-  end
-  local row = NS.Schema:FindRow(path)
-  if not row then
-    print("Setting not found: " .. path)
-    return
-  end
-  print(Sl.FormatKV(path, Sl.FormatSchemaValue(row, NS.Schema:Get(path))))
-end
-
-function Sl:CliSet(arg)
-  local path, raw = tostring(arg or ""):match("^(%S+)%s+(.+)$")
-  if not path then
-    print("Usage: /pm set <path> <value>  (try /pm list)")
-    return
-  end
-  local row = NS.Schema:FindRow(path)
-  if not row then
-    print("Setting not found: " .. path)
-    return
-  end
-  local value = raw
-  if row.type == "number" then
-    value = tonumber(raw)
-    if not value then print("expected a number"); return end
-  elseif row.type == "boolean" then
-    value = NS.Util.ParseBool(raw)
-    if value == nil then print(NS.Util.BOOL_USAGE); return end
-  elseif row.type == "string" and row.options then
-    -- A dropdown-backed string (the strata list) stores an upper-case token; accepting any casing
-    -- from the CLI keeps `/pm set settings.defaultStrata low` working.
-    value = raw:upper()
-  end
-  local ok, err = NS.Schema:Set(path, value)
-  if ok then
-    -- Read back the STORED value so the echo reflects any clamping or coercion (slash-commands-§5).
-    print(Sl.FormatKV(path, Sl.FormatSchemaValue(row, NS.Schema:Get(path))))
-  else
-    print("error: " .. tostring(err))
-  end
-end
-
-function Sl:CliReset(arg)
-  local path = arg and tostring(arg):match("^%S+") or nil
-  if not path then print("Usage: /pm reset <path>"); return end
-  local row = NS.Schema:FindRow(path)
-  local def = NS.Schema:Default(path)
-  if not row or def == nil then print("Setting not found: " .. tostring(path)); return end
-  NS.Schema:Set(path, def)
-  print(Sl.FormatKV(path, Sl.FormatSchemaValue(row, NS.Schema:Get(path))))
-end
-
--- Reset every setting to its default. Non-destructive: the user's PANELS are left completely alone,
--- because "reset my settings" and "delete my work" are different requests. Deleting panels is the
--- confirm-gated `/pm panel deleteall`.
-function Sl:CliResetAll()
-  for _, row in ipairs(NS.Schema.Schema) do
-    NS.Schema:Set(row.path, row.default)
-  end
-  print("all settings reset to defaults (your panels are untouched)")
-end
-
 -- ── Panel CLI ───────────────────────────────────────────────────────────────────
+--
+-- These verbs stay HOST-OWNED and are untouched by the LibKa0s adoption. They act on PANEL RECORDS
+-- — variable-length user-created objects the registry owns (architecture-§5) — not on schema rows,
+-- so the library's schema CLI has nothing to say about them. What they DO now share with it is the
+-- one `key = value` formatter: `Sl.FormatKV` below is the library's, so a panel field and a setting
+-- read identically wherever either is printed.
 
 function Sl:CliNew(arg)
   local name = NS.Util.CleanName(arg)
@@ -315,47 +167,57 @@ function Sl:CliRecover()
 end
 
 -- Slash command table. It sits at the BOTTOM of this file, below every Cli* function its entries
--- call, so the whole slash surface — table, dispatcher (Sl:OnSlash), generated help and the
--- implementations — reads as one thing. `/pm help`, the README's command table and the settings
--- landing page all generate from this, so they can never drift (slash-commands-§3).
+-- call, so the whole slash surface — table, dispatcher, generated help and the implementations —
+-- reads as one thing. `/pm help`, the README's command table and the settings landing page all
+-- generate from this, so they can never drift (slash-commands-§3).
+--
+-- POSITIONAL `{ name, description, handler }` triples, which is the shape LibKa0s-Slash-1.0 reads.
+-- They used to be keyed (`{ name =, desc =, fn = }`); the flip moved 18 entries, the dispatcher, the
+-- help renderer, the settings landing page and seven test cases together.
+--
+-- The table STAYS THIS ADDON'S and is passed in rather than owned, and that is the load-bearing
+-- decision rather than an oversight: the settings landing page renders these same rows, and if the
+-- library owned the table then the options major drawing that page would have to resolve the slash
+-- major to read it — a real dependency cycle between two majors at load time. Crossing between them
+-- as plain data is what keeps them independent.
 NS.COMMANDS = {
-  { name = "config",   desc = "Open settings", fn = function()
+  { "config",   "Open settings", function()
       if NS.Panel then NS.Panel:Open() end
     end },
-  { name = "new",      desc = "Create a panel: /pm new <name>",
-    fn = function(a) NS.Slash:CliNew(a) end },
-  { name = "delete",   desc = "Delete a panel: /pm delete <name>",
-    fn = function(a) NS.Slash:CliDelete(a) end },
-  { name = "rename",   desc = "Rename a panel: /pm rename <old> <new>",
-    fn = function(a) NS.Slash:CliRename(a) end },
-  { name = "panels",   desc = "List your panels", fn = function() NS.Slash:CliPanels() end },
-  { name = "panel",    desc = "Inspect or edit one: /pm panel <name> [field] [value]; "
+  { "new",      "Create a panel: /pm new <name>",
+    function(a) NS.Slash:CliNew(a) end },
+  { "delete",   "Delete a panel: /pm delete <name>",
+    function(a) NS.Slash:CliDelete(a) end },
+  { "rename",   "Rename a panel: /pm rename <old> <new>",
+    function(a) NS.Slash:CliRename(a) end },
+  { "panels",   "List your panels", function() NS.Slash:CliPanels() end },
+  { "panel",    "Inspect or edit one: /pm panel <name> [field] [value]; "
                             .. "'deleteall' removes every panel",
-    fn = function(a) NS.Slash:CliPanel(a) end },
-  { name = "unlock",   desc = "Unlock panels for dragging", fn = function()
+    function(a) NS.Slash:CliPanel(a) end },
+  { "unlock",   "Unlock panels for dragging", function()
       if NS.Unlock then NS.Unlock:SetUnlocked(true) end
     end },
-  { name = "lock",     desc = "Lock panels again", fn = function()
+  { "lock",     "Lock panels again", function()
       if NS.Unlock and NS.Unlock:SetUnlocked(false) ~= nil then NS.Print("panels locked") end
     end },
-  { name = "preview",  desc = "Toggle sample panels", fn = function()
+  { "preview",  "Toggle sample panels", function()
       if not NS.Unlock then return end
       local on = NS.Unlock:TogglePreview()
       NS.Print("preview " .. (on and "on" or "off"))
     end },
-  { name = "recover",  desc = "Bring off-screen panels back into view",
-    fn = function() NS.Slash:CliRecover() end },
-  { name = "version",  desc = "Print addon version", fn = function() NS.Slash:CliVersion() end },
-  { name = "get",      desc = "Get a setting value", fn = function(a) NS.Slash:CliGet(a) end },
-  { name = "set",      desc = "Set a setting value", fn = function(a) NS.Slash:CliSet(a) end },
-  { name = "list",     desc = "List all settings", fn = function() NS.Slash:CliList() end },
-  { name = "reset",    desc = "Reset one setting", fn = function(a) NS.Slash:CliReset(a) end },
-  { name = "resetall", desc = "Reset all settings", fn = function() NS.Slash:CliResetAll() end },
+  { "recover",  "Bring off-screen panels back into view",
+    function() NS.Slash:CliRecover() end },
+  { "version",  "Print addon version", function() NS.Slash:CliVersion() end },
+  { "get",      "Get a setting value", function(a) NS.Slash:CliGet(a) end },
+  { "set",      "Set a setting value", function(a) NS.Slash:CliSet(a) end },
+  { "list",     "List all settings", function() NS.Slash:CliList() end },
+  { "reset",    "Reset one setting", function(a) NS.Slash:CliReset(a) end },
+  { "resetall", "Reset all settings", function() NS.Slash:CliResetAll() end },
   -- Every sub-verb a handler below accepts is named in its own `desc`, because the generated help
   -- index, the settings landing page and the README's command table all read these strings and
   -- nothing else. A sub-verb missing here is a sub-verb nobody can discover (slash-commands-§4).
-  { name = "debug",    desc = "Window; 'on'/'off' set logging, 'dump' writes a state dump",
-    fn = function(rest)
+  { "debug",    "Window; 'on'/'off' set logging, 'dump' writes a state dump",
+    function(rest)
       -- `/pm debug` toggles the WINDOW only (the logging flag is untouched); `/pm debug on|off` sets
       -- the session-only logging flag through the DebugLog seam. Logging runs even with the console
       -- closed, so a bug can be reproduced first and the log read afterwards.
@@ -370,5 +232,119 @@ NS.COMMANDS = {
         for _, line in ipairs(NS.DebugLog:Diagnose()) do NS.DebugLog:Add("Dump", line) end
       else NS.DebugLog:Toggle() end
     end },
-  { name = "help",     desc = "Show this help", fn = function() NS.Slash:PrintHelp() end },
+  { "help",     "Show this help", function() NS.Slash:PrintHelp() end },
 }
+
+-- ── LibKa0s-Slash-1.0 seam ──────────────────────────────────────────────────────
+--
+-- What moves to the library: the dispatcher, the help renderer, the landing-page row formatter, the
+-- schema CLI (list/get/set/reset/resetall/version) and the type-aware value parser. What stays here:
+-- NS.COMMANDS above (see its note) and every PANEL verb, which act on registry records rather than
+-- on schema rows.
+--
+-- This file sits after settings/Schema.lua, which the descriptor's callbacks read, and before
+-- settings/Panel.lua, whose landing page calls Sl:LandingRows(). Every callback below resolves
+-- through NS at CALL time, so the only ordering that actually binds is NS.COMMANDS existing above.
+
+local UNAVAILABLE = NS.LIBKA0S_MISSING ..
+  ", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."
+
+local lib = LibStub and LibStub("LibKa0s-Slash-1.0", true)
+
+if not lib then
+  -- Degrade, never error — and here that matters more than anywhere else, because the slash surface
+  -- is the only way to reach this addon at all when the settings panel is also gone. The PANEL verbs
+  -- above are untouched by the library and keep working; a minimal dispatcher is re-implemented so
+  -- they stay reachable, and every schema verb explains itself instead of drawing nothing.
+  local function explain() print(UNAVAILABLE) end
+  Sl.PrintHelp      = explain
+  Sl.BuildListLines = function() return { UNAVAILABLE } end
+  Sl.CliList        = explain
+  Sl.CliGet         = explain
+  Sl.CliSet         = explain
+  Sl.CliReset       = explain
+  Sl.LandingRows    = function() return {} end
+  Sl.HelpRows       = function() return {} end
+  function Sl:CliVersion() print("v" .. tostring(Sl:Version())) end
+  -- Kept WORKING rather than explained away: it is the one schema verb with no library dependency —
+  -- it is a loop over the schema through this addon's own write seam.
+  function Sl:CliResetAll()
+    for _, row in ipairs(NS.Schema.Schema) do NS.Schema:Set(row.path, row.default) end
+    print("all settings reset to defaults (your panels are untouched)")
+  end
+  function Sl:OnSlash(input)
+    if input == nil or input:match("^%s*$") then return explain() end
+    local verb, rest = input:match("^(%S+)%s*(.-)$")
+    verb = verb and verb:lower()
+    for _, cmd in ipairs(NS.COMMANDS) do
+      if cmd[1] == verb then return cmd[3](rest) end
+    end
+    print("unknown command '" .. tostring(verb) .. "'")
+    explain()
+  end
+  return
+end
+
+local dispatcher = lib:New({
+  slash        = "/pm",
+  slashAliases = { "/panelmaster" },
+  commands     = NS.COMMANDS,
+
+  print   = function(line) print(line) end,
+  version = function() return Sl:Version() end,
+
+  -- The schema seam. This addon's write path is already the two-argument shape the library calls
+  -- with, so `set` needs no arity adapter — NS.Schema:Set(path, value) IS the single write seam that
+  -- validates, logs once and fires onChange, and routing the CLI through it is what keeps a slash
+  -- write and a panel write the same event.
+  get          = function(path) return NS.Schema:Get(path) end,
+  set          = function(path, v) NS.Schema:Set(path, v) end,
+  findRow      = function(path) return NS.Schema:FindRow(path) end,
+  allRows      = function() return NS.Schema.Schema end,
+  applyDefault = function(row) NS.Schema:Set(row.path, NS.Schema:Default(row.path)) end,
+
+  -- ADAPTER. The library groups `/pm list` by `row.page`; this addon's schema has always grouped by
+  -- `row.group`, which is also the section heading its settings panel draws. One name, two readers.
+  groupKey = function(row) return row.group or "?" end,
+
+  -- ADAPTER, and a deliberate divergence from the library's own parser rather than a translation of
+  -- it. `lib.ParseValue` matches an enum case-sensitively, which is right for a texture name but
+  -- wrong for this addon's one enum: strata tokens are stored upper-case and `/pm set
+  -- settings.defaultStrata low` has always worked. Up-casing only for a row that actually declares
+  -- an enum, then delegating, keeps every other type on the library's parser — including the number
+  -- clamping and the color rescaling this addon never had.
+  parse = function(row, text)
+    if row and row.type == "string" and row.values then
+      text = tostring(text or ""):upper()
+    end
+    return lib.ParseValue(row, text)
+  end,
+
+  -- A PLAIN table of the one string this addon actually overrides — never NS.L, whose metatable
+  -- answers every key with the key itself (the `L` trap). The library's own RESET_ALL is "All
+  -- settings reset to defaults"; this addon's says what it deliberately does NOT touch, and that
+  -- reassurance is the whole reason the message is worded the way it is. Deleting panels is the
+  -- confirm-gated `/pm panel deleteall`, which is a different request.
+  L = { RESET_ALL = "all settings reset to defaults (your panels are untouched)" },
+})
+
+-- Republished under the method names this addon's own callers already use, as forwarders, so
+-- settings/Panel.lua, the command handlers above and every test reach one implementation.
+function Sl:OnSlash(input)       return dispatcher:OnSlash(input)   end
+function Sl:PrintHelp()          return dispatcher:PrintHelp()      end
+function Sl:HelpRows()           return dispatcher:HelpRows()       end
+function Sl:LandingRows()        return dispatcher:LandingRows()    end
+function Sl:BuildListLines()     return dispatcher:BuildListLines() end
+function Sl:CliList()            return dispatcher:CliList()        end
+function Sl:CliGet(a)            return dispatcher:CliGet(a)        end
+function Sl:CliSet(a)            return dispatcher:CliSet(a)        end
+function Sl:CliReset(a)          return dispatcher:CliReset(a)      end
+function Sl:CliResetAll()        return dispatcher:CliResetAll()    end
+function Sl:CliVersion()         return dispatcher:CliVersion()     end
+function Sl:Text(key)            return dispatcher:Text(key)        end
+
+-- The one `key = value` formatter, now the library's, so a panel field printed by BuildPanelLines
+-- and a setting printed by CliGet render identically. This is a byte-level change: the library's
+-- color escapes are UPPERCASE (|cFFFFFF00) where this addon's were lowercase. WoW is
+-- case-insensitive about them, so the pixels are the same and only the source bytes move.
+Sl.FormatKV = lib.FormatKV

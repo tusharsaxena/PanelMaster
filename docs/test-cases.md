@@ -1,10 +1,10 @@
 # Test Cases
 
-The full inventory of every headless test case, grouped by suite. This file is the
-**authoritative pass count** for the addon.
+The full inventory of every headless test case in this repo, grouped by the suite file it
+lives in. The `## Totals` table below is the **authoritative pass count** — the README test
+badge and any count quoted in the docs must agree with it.
 
-**Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`
-whenever the suite changes (see [testing.md](testing.md)).
+**Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
 ### test_util.lua (27)
 
@@ -501,10 +501,10 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Slash.BuildListLines: the header, then group headers, then rows
 - Slash.BuildListLines: indentation is two spaces for groups, four for rows
 - Slash.BuildListLines: lists every schema row exactly once
-- Slash.LIST_GROUP_ORDER: every declared group actually exists
-- Slash.LIST_GROUP_ORDER: covers every group in the schema
-- Slash.FormatSchemaValue: applies a row's fmt to numbers
-- Slash.FormatSchemaValue: booleans render true/false
+- Slash.BuildListLines: groups appear in schema DECLARATION order
+- Slash.BuildListLines: every group in the schema reaches the listing
+- Slash value rendering: a row's fmt still reaches the number
+- Slash value rendering: booleans render true/false
 - Slash.FormatKV: gold key, white value, no trailing colon
 - Slash.CliGet: prints the key = value line
 - Slash.CliGet: an unknown path is reported
@@ -514,7 +514,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)
 - Slash.CliSet: accepts a lower-case dropdown token
 - Slash.CliSet: a non-number for a number row is refused
-- Slash.CliSet: a rejected validate is reported as an error
+- Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)
 - Slash.CliReset: restores one setting's default
 - Slash.CliResetAll: restores every setting and leaves panels alone
 - Slash.CliVersion: prints v<version>
@@ -540,7 +540,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Slash.CliRecover: reports how many it moved
 - Slash: every printed line carries the shared cyan tag
 - COMMANDS: the table is defined beside its dispatcher
-- COMMANDS: every entry has a name, description and function
+- COMMANDS: every entry is a { name, description, handler } triple
 - COMMANDS: names are unique and lower-case
 - COMMANDS: the standard's required verbs are present (slash-commands-§3)
 - COMMANDS: the descs name the sub-verbs their handlers accept (F-011)
@@ -561,7 +561,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Panel: the body is built lazily — each page has an OnShow
 - Panel: the Defaults button is NOT created at registration (anti-pattern #42)
 - Panel: the pages that want a Defaults button declare the intent and park a callback
-- Panel: the header Defaults action and Blizzard's OnDefault are the same function
+- Panel: the header Defaults action and Blizzard's OnDefault reach ONE implementation
 - Panel: the landing page is the parent category, not a subcategory
 - Panel.Open: refuses during combat and does NOT open (options-ui-§2)
 - Panel.Open: the combat refusal is gray
@@ -613,6 +613,53 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 
+### test_libka0s.lua (36)
+
+- LibKa0s: the vendored library registered for real
+- LibKa0s: NS.Core is the live Core library, not a stub
+- Core seam: NS.Print is the library's printer, not the fallback
+- Core seam: NS.Print survived the AceConsole embed and both keys are one object
+- Core seam: the rendered line is byte-identical to the printer this replaced
+- Core seam: the secret guard survived the swap
+- DebugLog seam: the console is the library's instance, not a host re-implementation
+- DebugLog seam: the survivors kept their names and their shapes
+- DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
+- DebugLog seam: the console wears the LIBRARY's close button, not this addon's
+- L trap (DebugLog): every rendered console string resolves to prose, not to its own key
+- Slash seam: the dispatcher is the library's, not a host re-implementation
+- Convergence #2: the landing page and the chat help render the SAME rows
+- Convergence #2: settings/Panel.lua no longer carries a second row formatter
+- Convergence #1: /pm reset takes a PATH and /pm resetall is the global form
+- L trap (Slash): the ONE overridden string lands, and nothing renders as its own key
+- Options seam: NS.Helpers IS the library instance, not a wrapper around one
+- Options seam: all four pages built, and each is registered with Blizzard
+- Options: the General page renders one widget per schema row, by type
+- Options: a widget's OnValueChanged reaches the addon's single write seam
+- Options: a slider commits on release and snaps to the row's step
+- Options: the enum row's dropdown is populated from the schema's `values`
+- Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry
+- Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
+- L trap (Options tripwire): Options reads no descriptor L
+- Degraded install: the addon loads with no LibKa0s at all
+- Degraded install: the shared cause clause is set on BOTH paths
+- Degraded install: the notice is announced exactly ONCE, before the first line
+- Degraded install: the console explains itself once and every member still answers
+- Degraded install: /pm debug on|off still flips the flag and acknowledges
+- Degraded install: /pm debug dump still answers
+- Degraded install: the fallback printer renders the same bytes as the library's
+- L trap (Core tripwire): Core cannot express the trap
+- L trap (matcher): the guard catches every offending spelling, not one
+- L trap: no seam file hands a descriptor this addon's locale table
+- L trap: the seam-file list covers every file that calls lib:New
+
+### test_harness.lua (5)
+
+- Harness: every suite the runner lists exists on disk
+- Harness: every suite on disk is listed by the runner
+- Harness: the shared kit is present and is reached through tests/_kit
+- Harness: wow_mock extends the kit's mock_base rather than replacing it
+- Harness: the runner derives the addon's load list from the TOC
+
 ### test_spelling.lua (2)
 
 - Spelling: the TOC and run.lua between them name every authored source
@@ -637,5 +684,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_slash.lua | 55 |
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
+| test_libka0s.lua | 36 |
+| test_harness.lua | 5 |
 | test_spelling.lua | 2 |
-| **Total** | **564** |
+| **Total** | **605** |

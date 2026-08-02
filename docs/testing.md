@@ -13,6 +13,38 @@ lua tests/run.lua     # all suites green; exits non-zero on any failure
 luacheck .            # 0 errors, 0 warnings
 ```
 
+**`luacheck`'s figure is SCOPED, not repo-wide**, and reading it as repo-wide is how a clean run
+gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` (vendored code is not this
+addon's to lint), `tests/`, `_dev/` and the frozen bundles under `docs/`. Before quoting 0/0,
+confirm what was actually opened:
+
+```sh
+luacheck . 2>&1 | tail -1        # and read the FILE COUNT it reports
+```
+
+## The vendor gate
+
+Neither gate above can see a stale vendored copy. `libs/LibKa0s/` and `tests/_kit/` are copied
+whole-folder from the sibling `../LibKa0s` repo and are **never edited here** — but the library's
+own suite passes against the library, and this addon's suite passes against a stale copy that still
+works. Nothing goes red. Run these four whenever `../LibKa0s` has moved, and read them in pairs:
+
+```sh
+diff -r --strip-trailing-cr ../LibKa0s/LibKa0s libs/LibKa0s    # content — MUST be empty
+diff -r ../LibKa0s/LibKa0s libs/LibKa0s                        # bytes   — SHOULD be empty
+diff -r --strip-trailing-cr ../LibKa0s/testkit tests/_kit      # content — MUST be empty
+diff -r ../LibKa0s/testkit tests/_kit                          # bytes   — SHOULD be empty
+```
+
+| Result | What it means | What to do |
+|---|---|---|
+| Both empty | The vendored copies are exactly what the library ships. | Nothing. |
+| Content empty, bytes differ | A **line-ending** divergence, not a code one. `../LibKa0s` pins `* text=auto eol=crlf`; this repo has no `.gitattributes` at all and its working tree is LF (see `LIBKA0S-09` in [`pending/LEDGER.md`](pending/LEDGER.md)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
+| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Four of the five majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
+
+A fifth check answers "which LibKa0s is this?" without grepping minors out of source: `README.md`'s
+`Bundles [LibKa0s] vX.Y.Z (MIT).` line, which moves with every re-vendor.
+
 ## Local toolchain
 
 WoW runs Lua 5.1, so the harness targets 5.1.

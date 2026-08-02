@@ -4,6 +4,11 @@ local P = NS.Panel
 local C = NS.Constants
 local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-frames-taint-§8)
 
+-- The LibKa0s-Options-1.0 instance, built in settings/OptionsSetup.lua, which the TOC loads
+-- immediately before this file. It IS the helpers table rather than a wrapper around one, so a page
+-- builder here and a widget maker inside the library see the same object (options-ui-§1).
+local O = NS.Helpers
+
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 
 -- The Ka0s settings-panel pattern (options-ui):
@@ -22,7 +27,9 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- settings/PanelEditor.lua, a sibling peeled out of here once this file outgrew a single screenful
 -- of responsibilities (layout-§1).
 
-local ADDON_TITLE   = "Ka0s Panel Master"
+-- The brand ("Ka0s Panel Master") is no longer restated here: it is the LibKa0s-Options-1.0
+-- descriptor's `parentTitle` in settings/OptionsSetup.lua, which the library uses for the main
+-- page and for every sub-page breadcrumb. One definition rather than two that can disagree.
 -- The canonical one-line description of the addon: this is the sentence a player reads on the
 -- landing page, so it is the one the other two copies quote. The TOC's `## Notes` carries a
 -- shortened form of it (the client's addon list has room for one short line) and the README's
@@ -31,20 +38,19 @@ local ADDON_TAGLINE =
   "Draws plain backdrop panels behind your UI, so a screen full of separate frames reads as a few "
   .. "deliberate groups."
 
--- Layout constants — the exact Ka0s values (options-ui-§8). Named, never inlined.
-local PADDING_X     = 16    -- left/right edge inset for the header, divider and body
-local HEADER_TOP    = 20    -- title + Defaults button inset from the panel top
-local HEADER_HEIGHT = 54    -- panel top → divider; the body starts at HEADER_HEIGHT + 8
-local DEFAULTS_W    = 110   -- Defaults button width
-local LOGO_SIZE     = 300   -- landing-page logo display size
-local ROW_VSPACER   = 8     -- gap between two-column rows
-local SECTION_TOP_SPACER, SECTION_BOTTOM_SPACER, SECTION_HEADING_H = 10, 6, 26
--- A cell-filling paired ACTION button insets to this (not a flush 0.5) so its right border clears
--- the ScrollFrame's clip (options-ui-§6/§8). Label-inset controls (checkbox/dropdown/slider) reserve
--- that gutter already and stay at 0.5 — they are immune (options-ui-§10).
-local BUTTON_PAIR_REL = 0.492
+-- Layout constants. The Ka0s values (options-ui-§8) now live in ONE place — LibKa0s-Options-1.0's
+-- lib.LAYOUT, re-exported on the instance — rather than being restated here, so this page's spacing
+-- and the flow engine's cannot drift apart. PADDING_X, HEADER_TOP, HEADER_HEIGHT and DEFAULTS_W are
+-- entirely the library's now; the three below are read by this file or by settings/PanelEditor.lua.
+local ROW_VSPACER       = O.ROW_VSPACER
+local SECTION_HEADING_H = O.SECTION_HEADING_H
+local BUTTON_PAIR_REL   = O.BUTTON_PAIR_REL
+local PADDING_X         = 16   -- still needed for the Profiles page's hand-anchored container
+local LOGO_SIZE         = 300  -- landing-page logo display size, this page's own
 
-local mainCategoryID   -- the parent category, the target of /pm config
+-- `mainCategoryID` is gone: the library owns the category handle and `O.OpenOptionsPanel` is the
+-- only thing that needs it. `registered` stays, because P:Open explains an absent Settings API in
+-- this addon's own words and the library simply returns.
 local registered
 
 -- ── Open-dropdown tracking ──────────────────────────────────────────────────────
@@ -118,332 +124,90 @@ function P.__closeOpenDropdowns(ctx)
 end
 local closeOpenDropdowns = P.__closeOpenDropdowns
 
--- ── Tooltip helper (an AceGUI widget via SetCallback, a plain frame via HookScript) ──
-local function attachTooltip(widget, label, tooltip)
-  if not widget or not tooltip then return end
-  local anchor = widget.frame or widget
-  if not anchor then return end
-  local function show()
-    if not GameTooltip then return end
-    GameTooltip:SetOwner(anchor, "ANCHOR_RIGHT")
-    if label and label ~= "" then GameTooltip:SetText(label, 1, 1, 1) end
-    GameTooltip:AddLine(tooltip, nil, nil, nil, true)
-    GameTooltip:Show()
-  end
-  local function hide() if GameTooltip then GameTooltip:Hide() end end
-  if widget.SetCallback then
-    widget:SetCallback("OnEnter", show); widget:SetCallback("OnLeave", hide)
-  elseif widget.HookScript then
-    widget:HookScript("OnEnter", show); widget:HookScript("OnLeave", hide)
-  end
-end
-
--- ── Header: "Ka0s Panel Master ▸ <title>" + Defaults button + gold divider ────────
-local function buildHeader(panel, title, opts)
-  local displayTitle = title
-  if not opts.isMain then
-    displayTitle = ADDON_TITLE .. " |A:common-icon-forwardarrow:16:16|a " .. title
-  end
-
-  local titleFS = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-  titleFS:SetPoint("TOPLEFT", panel, "TOPLEFT", PADDING_X, -HEADER_TOP)
-  titleFS:SetText(displayTitle)
-
-  local divider = panel:CreateTexture(nil, "ARTWORK")
-  divider:SetAtlas("Options_HorizontalDivider", true)
-  divider:SetPoint("TOPLEFT",  panel, "TOPLEFT",   PADDING_X, -HEADER_HEIGHT)
-  divider:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PADDING_X, -HEADER_HEIGHT)
-  divider:SetVertexColor(titleFS:GetTextColor())   -- track the title's gold
-
-  -- The button itself is built LAZILY (ensureDefaultsButton, below) — not here. buildHeader runs
-  -- during OnInitialize, which is too early: see the note on that function.
-  panel.wantsDefaultsButton = opts.defaultsButton and true or false
-  return titleFS, divider
-end
-
--- Build the header's Defaults button, once, on the panel's FIRST OnShow.
+-- ── What this file still owns, and what the library now draws ─────────────────
 --
--- It MUST be an AceGUI Button, not a raw UIPanelButtonTemplate parented onto the canvas
--- (options-ui-§5) — but *when* it is created matters just as much as *what* creates it. AceGUI is a
--- shared library: UI-skinning addons restyle its widgets by hooking `RegisterAsWidget`, so a widget
--- created before that hook is installed keeps Blizzard's stock `UI-Panel-Button-Up` art (the red
--- stone button) forever, while every widget created afterwards comes out in the skin.
+-- Deleted from here and taken from LibKa0s-Options-1.0 outright, because every one of them was a
+-- hand-transcribed copy of the same thing every Ka0s addon has:
 --
--- `P:Register()` runs in OnInitialize (ADDON_LOADED), so building the button there is a race against
--- the load order of every other addon — one this addon loses whenever it loads before the skinner,
--- and wins whenever it doesn't. Deferring to first OnShow removes the race: by then every addon has
--- loaded. It is the same rule options-ui-§1 already applies to the panel BODY (anti-pattern #42).
-local function ensureDefaultsButton(panel)
-  if panel.defaultsBtn or not panel.wantsDefaultsButton or not AceGUI then return end
-  local btn = AceGUI:Create("Button")
-  if not (btn and btn.frame) then return end
-  btn:SetText("Defaults")
-  btn:SetWidth(DEFAULTS_W)
-  btn.frame:SetParent(panel)
-  btn.frame:ClearAllPoints()
-  btn.frame:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PADDING_X, -HEADER_TOP)
-  btn.frame:Show()
-  panel.defaultsBtn = btn
-  -- The click handler is registered before the button exists (P:Register), so it is parked on the
-  -- panel and wired here.
-  if panel.defaultsOnClick then btn:SetCallback("OnClick", panel.defaultsOnClick) end
-end
-
--- One defaults action per page, reachable from both routes: the header Defaults button (via the
--- parked `defaultsOnClick` closure) and Blizzard's own Settings-window defaults control (via
--- `OnDefault`, options-ui-§1). Setting them together here is what keeps the two from drifting.
-local function setDefaultsAction(panel, fn)
-  panel.defaultsOnClick = fn
-  panel.OnDefault       = fn
-end
-
--- ── createPanel — a Frame for RegisterCanvasLayout(Sub)category, plus its render context ──
-local function createPanel(title, opts)
-  opts = opts or {}
-  local panel = CreateFrame("Frame", nil)
-  panel.name = title
-  panel:Hide()
-
-  -- options-ui-§1: every frame handed to RegisterCanvasLayout(Sub)category carries all three
-  -- framework entry points, so Blizzard's Settings window never calls into a missing method.
-  -- `OnCommit` and `OnRefresh` are deliberately inert: every write already lands immediately via
-  -- NS.Schema:Set / NS.Registry (nothing is staged to apply), and the panel's own OnShow handler is
-  -- the single refresh path — a second, differently-ordered one would double the work and race the
-  -- rebuilders. `OnDefault` starts inert and is pointed at the page's real defaults action by
-  -- setDefaultsAction.
-  panel.OnCommit  = function() end
-  panel.OnRefresh = function() end
-  panel.OnDefault = function() end
-
-  buildHeader(panel, title, opts)
-
-  local body = CreateFrame("Frame", nil, panel)
-  body:SetPoint("TOPLEFT",     panel, "TOPLEFT",     0, -(HEADER_HEIGHT + 8))
-  body:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
-
-  -- `refreshers` re-sync scalar widget VALUES in place (cheap; run on every OnShow). `rebuilders`
-  -- tear down and recreate list rows (structural, expensive). Per options-ui-§11 a structural
-  -- rebuild runs only on first paint, on an on-screen edit, or when `dirty` marks an off-screen
-  -- change — never on every OnShow.
-  -- `dropdowns` is this page's own open-dropdown registry — see the note at the top of the file.
-  return { panel = panel, body = body, scroll = nil, dropdowns = {},
-           refreshers = {}, rebuilders = {}, dirty = false, lastGroup = nil }
-end
-
--- Keep the settings-panel scrollbar ALWAYS visible — and inert when the page fits — so the reserved
--- right gutter, and therefore the body width, is identical across short and long subcategories
--- (options-ui-§10). AceGUI's stock FixScroll hides the bar and reclaims the 20px gutter when content
--- fits, which shifts the body width between pages and makes the panel jitter as you tab around.
--- Mirrors the stock FixScroll maths — note AceGUI's swapped names: `height` is the visible frame
--- height, `viewheight` the content height.
-local function installAlwaysShownScrollbar(ctx, scroll)
-  local bar = scroll.scrollbar
-  if not (bar and scroll.scrollframe and scroll.content) then return end
-
-  local function setInert(inert)
-    if inert then
-      if bar.Disable then bar:Disable() end
-    else
-      if bar.Enable then bar:Enable() end
+--   attachTooltip            -> O.AttachTooltip
+--   addSpacer                -> O.AddSpacer
+--   section                  -> O.Section
+--   installAlwaysShownScrollbar -> O.PatchAlwaysShowScrollbar, called from O.EnsureScroll
+--   ensureScroll             -> O.EnsureScroll (wrapped below, for the dropdown-close hooks)
+--   createPanel / buildHeader / setDefaultsAction -> O.CreatePanel, which also stamps the Blizzard
+--                               canvas contract (OnCommit / OnRefresh inert, OnDefault FORWARDING
+--                               to the page's defaultsOnClick so the Settings window's footer
+--                               control and the header Defaults button stay one implementation)
+--   ensureDefaultsButton     -> O.EnsureDefaultsButton
+--   makeCheckbox / makeDropdown / makeSlider -> O.RenderField, dispatching on row.type
+--   renderSchema(ctx, companions) -> O.RenderRows(ctx, rows, afterGroup, pairWith)
+--
+-- ADAPTER 1 — the open-dropdown registry. The library's widget makers know nothing about it, and
+-- they should not: it is this addon's own invention, born of a real bug, and no other host has one.
+-- O.RenderField is resolved from the instance TABLE at call time by both RenderRows and RenderGrid,
+-- so wrapping it here reaches every dropdown the library builds without the library changing.
+local baseRenderField = O.RenderField
+if baseRenderField then
+  function O.RenderField(ctx, row, parent, relWidth)
+    local widget = baseRenderField(ctx, row, parent, relWidth)
+    -- Only a dropdown needs tracking, and only on a ctx that has a registry — the library's own
+    -- suites build ctxs that do not.
+    if widget and ctx.dropdowns and (widget.type == "Dropdown" or IS_LSM_WIDGET[widget.type]) then
+      trackDropdown(ctx, widget)
     end
-    local up, down = bar.ScrollUpButton, bar.ScrollDownButton
-    if up and up.SetEnabled then up:SetEnabled(not inert) end
-    if down and down.SetEnabled then down:SetEnabled(not inert) end
+    return widget
   end
+end
 
-  -- Wheel-scroll must be inert when the page fits. AceGUI's stock MoveScroll gates only on
-  -- `scrollBarShown`, which this override keeps permanently true (to reserve the gutter) — so
-  -- without this guard the wheel would still drift the parked thumb on a short page.
-  local stockMoveScroll = scroll.MoveScroll
+-- ADAPTER 2 — the scroll frame. The library's patch owns the always-shown scrollbar and the
+-- inert-when-it-fits behavior; what it has no notion of is closing an open dropdown when the user
+-- scrolls. Layered ON TOP of the library's MoveScroll rather than replacing it, so the gating stays
+-- the library's and only the extra gesture is ours.
+--
+-- Wrapped ON THE INSTANCE, exactly like RenderField above, and for the same reason: O.RenderRows
+-- calls O.EnsureScroll itself, so a plain host-side helper beside it would be bypassed by every page
+-- the flow engine draws. A test caught precisely that — the hooks were installed on the landing page
+-- and on the panel editor, and missing from the one page with a dropdown on it.
+local baseEnsureScroll = O.EnsureScroll
+function O.EnsureScroll(ctx)
+  local scroll = baseEnsureScroll(ctx)
+  if not scroll or scroll.__pmDropdownHooks then return scroll end
+  scroll.__pmDropdownHooks = true
+
+  -- The wheel path. MoveScroll is only ever called from the wheel handler, so this is a genuine
+  -- user gesture and closing a dropdown here can never fight a programmatic scroll.
+  local libMoveScroll = scroll.MoveScroll
   scroll.MoveScroll = function(self, value)
-    local height, viewheight = self.scrollframe:GetHeight(), self.content:GetHeight()
-    if viewheight < height + 2 then return end
-    -- The wheel path. MoveScroll is only ever called from the wheel handler, so this is a genuine
-    -- user gesture and closing an open dropdown here can never fight a programmatic scroll.
     closeOpenDropdowns(ctx)
-    return stockMoveScroll(self, value)
+    if libMoveScroll then return libMoveScroll(self, value) end
   end
 
   -- The drag path. Hooked on OnMouseDown rather than the slider's OnValueChanged, because
   -- OnValueChanged also fires from FixScroll's own SetValue during layout — closing there would
   -- shut a dropdown the instant it opened, since opening one triggers a relayout.
-  if bar.HookScript then
+  local bar = scroll.scrollbar
+  if bar and bar.HookScript then
     bar:HookScript("OnMouseDown", function() closeOpenDropdowns(ctx) end)
   end
-
-  scroll.FixScroll = function(self)
-    if self.updateLock then return end
-    self.updateLock = true
-    local status = self.status or self.localstatus
-    local height, viewheight = self.scrollframe:GetHeight(), self.content:GetHeight()
-    local offset = status.offset or 0
-    -- Reserve the gutter and show the bar once (the stock "show" branch minus the auto-hide path).
-    -- Once shown it stays shown, so the body never reflows between pages.
-    if not self.scrollBarShown then
-      self.scrollBarShown = true
-      self.scrollbar:Show()
-      self.scrollframe:SetPoint("BOTTOMRIGHT", -20, 0)
-      if self.content.original_width then
-        self.content.width = self.content.original_width - 20
-      end
-      self:DoLayout()
-    end
-    if viewheight < height + 2 then
-      self.scrollbar:SetValue(0)   -- content fits: park the thumb and gray the bar out
-      setInert(true)
-    else
-      setInert(false)
-      local value = (offset / (viewheight - height) * 1000)
-      if value > 1000 then value = 1000 end
-      self.scrollbar:SetValue(value)
-      self:SetScroll(value)
-      if value < 1000 then
-        self.content:ClearAllPoints()
-        self.content:SetPoint("TOPLEFT", 0, offset)
-        self.content:SetPoint("TOPRIGHT", 0, offset)
-        status.offset = offset
-      end
-    end
-    self.updateLock = nil
-  end
-end
-
-local function ensureScroll(ctx)
-  if ctx.scroll then return ctx.scroll end
-  local scroll = AceGUI:Create("ScrollFrame")
-  scroll:SetLayout("List")
-  scroll.frame:SetParent(ctx.body)
-  scroll.frame:ClearAllPoints()
-  scroll.frame:SetPoint("TOPLEFT",     ctx.body, "TOPLEFT",      PADDING_X - 4, -8)
-  scroll.frame:SetPoint("BOTTOMRIGHT", ctx.body, "BOTTOMRIGHT", -(PADDING_X + 12), 8)
-  scroll.frame:Show()
-  installAlwaysShownScrollbar(ctx, scroll)
-  ctx.scroll = scroll
   return scroll
 end
+local ensureScroll = O.EnsureScroll
 
-local function addSpacer(scroll, height)
-  local sp = AceGUI:Create("SimpleGroup")
-  sp:SetLayout(nil); sp:SetFullWidth(true); sp:SetHeight(height)
-  scroll:AddChild(sp)
-end
+-- ── Widget makers this file still owns ──────────────────────────────────────────
 
--- A section heading: a centered gold label flanked by dividers (options-ui-§7). The same widget the
--- landing page uses for "Slash Commands", so headings read identically everywhere.
-local function section(ctx, label)
-  local scroll = ensureScroll(ctx)
-  if ctx.lastGroup ~= nil then addSpacer(scroll, SECTION_TOP_SPACER) end
-  local h = AceGUI:Create("Heading")
-  h:SetText(label); h:SetFullWidth(true); h:SetHeight(SECTION_HEADING_H)
-  if h.label and h.label.SetFontObject and _G.GameFontNormalLarge then
-    h.label:SetFontObject(_G.GameFontNormalLarge)
-  end
-  scroll:AddChild(h)
-  addSpacer(scroll, SECTION_BOTTOM_SPACER)
-  ctx.lastGroup = label
-end
-
--- ── Widget makers ───────────────────────────────────────────────────────────────
-local function applyWidth(w, rel)
-  if rel then w:SetRelativeWidth(rel) else w:SetFullWidth(true) end
-end
-
--- The single seam for a paired action button's width — insets to BUTTON_PAIR_REL so the right border
--- isn't shaved by the ScrollFrame clip. Never hand-set 0.5 on a paired button.
+-- The single seam for a paired action button's width — insets to BUTTON_PAIR_REL so the right
+-- border isn't shaved by the ScrollFrame clip. Never hand-set 0.5 on a paired button.
+--
+-- NOT O.InlineButtonPair, which builds its own Flow row and adds it to the scroll: this addon's
+-- paired buttons are added into a row somebody ELSE is building — the companion beside Grid size,
+-- and the Reset/Delete pair inside the panel editor's own row — so a maker that owned the row would
+-- have nowhere to put them.
 local function makePairButton(text, onClick)
-  local btn = AceGUI:Create("Button")
+  local btn = O.AceGUI:Create("Button")
   btn:SetText(text)
   btn:SetRelativeWidth(BUTTON_PAIR_REL)
   if onClick then btn:SetCallback("OnClick", onClick) end
   return btn
-end
-
-local function makeCheckbox(ctx, row, parent, rel)
-  local cb = AceGUI:Create("CheckBox")
-  cb:SetLabel(row.label); applyWidth(cb, rel)
-  cb:SetCallback("OnValueChanged", function(_, _, v) NS.Schema:Set(row.path, v and true or false) end)
-  attachTooltip(cb, row.label, row.tooltip)
-  parent:AddChild(cb)
-  ctx.refreshers[#ctx.refreshers + 1] =
-    function() cb:SetValue(NS.Schema:Get(row.path) and true or false) end
-  cb:SetValue(NS.Schema:Get(row.path) and true or false)
-  return cb
-end
-
-local function makeDropdown(ctx, row, parent, rel)
-  local dd = AceGUI:Create("Dropdown")
-  trackDropdown(ctx, dd)
-  dd:SetLabel(row.label); applyWidth(dd, rel)
-  local list, order = {}, {}
-  for i, opt in ipairs(row.options) do list[opt.value] = opt.label; order[i] = opt.value end
-  dd:SetList(list, order)
-  dd:SetCallback("OnValueChanged", function(_, _, key) NS.Schema:Set(row.path, key) end)
-  attachTooltip(dd, row.label, row.tooltip)
-  parent:AddChild(dd)
-  ctx.refreshers[#ctx.refreshers + 1] = function() dd:SetValue(NS.Schema:Get(row.path)) end
-  dd:SetValue(NS.Schema:Get(row.path))
-  return dd
-end
-
-local function makeSlider(ctx, row, parent, rel)
-  local s = AceGUI:Create("Slider")
-  s:SetLabel(row.label)
-  s:SetSliderValues(row.min or 0, row.max or 1, row.step or 0.05)
-  applyWidth(s, rel)
-  s:SetCallback("OnMouseUp", function(_, _, v) NS.Schema:Set(row.path, v) end)
-  attachTooltip(s, row.label, row.tooltip)
-  parent:AddChild(s)
-  ctx.refreshers[#ctx.refreshers + 1] =
-    function() s:SetValue(NS.Schema:Get(row.path) or row.default) end
-  s:SetValue(NS.Schema:Get(row.path) or row.default)
-  return s
-end
-
--- ── Two-column schema render (options-ui-§6) ────────────────────────────────────
--- Rows pair into 50%/50% Flow lines. A `wide = true` row breaks onto its own full-width line; a
--- group change emits a section heading. `companions` optionally maps a row's path →
--- function(parentRow) that adds a widget into the SAME row, right of the field.
-local function renderSchema(ctx, companions)
-  local scroll = ensureScroll(ctx)
-  local pendingRow
-
-  local function flushRow()
-    if pendingRow then
-      scroll:AddChild(pendingRow); addSpacer(scroll, ROW_VSPACER); pendingRow = nil
-    end
-  end
-  local function startRow()
-    local r = AceGUI:Create("SimpleGroup"); r:SetLayout("Flow"); r:SetFullWidth(true); return r
-  end
-
-  for _, row in ipairs(NS.Schema.Schema) do
-    if row.group ~= ctx.lastGroup then
-      flushRow()
-      section(ctx, row.group)
-    end
-
-    local companion = companions and companions[row.path]
-    if row.wide then
-      flushRow()
-      local full = startRow()
-      if row.widget == "Slider" then makeSlider(ctx, row, full, nil)
-      elseif row.widget == "Dropdown" then makeDropdown(ctx, row, full, nil)
-      else makeCheckbox(ctx, row, full, nil) end
-      scroll:AddChild(full); addSpacer(scroll, ROW_VSPACER)
-    else
-      if not pendingRow then pendingRow = startRow() end
-      if row.widget == "Slider" then makeSlider(ctx, row, pendingRow, 0.5)
-      elseif row.widget == "Dropdown" then makeDropdown(ctx, row, pendingRow, 0.5)
-      else makeCheckbox(ctx, row, pendingRow, 0.5) end
-      if companion then
-        companion(pendingRow)
-        flushRow()
-      elseif pendingRow.children and #pendingRow.children >= 2 then
-        flushRow()
-      end
-    end
-  end
-  flushRow()
 end
 
 -- Run one page closure, and let a broken one break only itself. A refresher or rebuilder that
@@ -462,17 +226,23 @@ end
 -- than duplicated there, so the two halves cannot drift into two different looks.
 --
 -- Internal (`__`), not API: nothing outside settings/ may reach for these.
+-- Six of the ten are now LibKa0s-Options-1.0's; the table keeps its shape and its names so
+-- settings/PanelEditor.lua is untouched by the adoption. It binds these LAZILY inside its own
+-- rebuild, so nothing here pins the TOC order.
 P.__ui = {
-  attachTooltip   = attachTooltip,
-  addSpacer       = addSpacer,
-  section         = section,
-  ensureScroll    = ensureScroll,
-  makePairButton  = makePairButton,
-  trackDropdown   = trackDropdown,
-  forgetDropdowns = forgetDropdowns,
-  safeRun         = safeRun,
-  LSM_WIDGET      = LSM_WIDGET,
-  ROW_VSPACER     = ROW_VSPACER,
+  attachTooltip   = O.AttachTooltip,   -- library
+  addSpacer       = O.AddSpacer,       -- library
+  section         = O.Section,         -- library
+  ROW_VSPACER     = ROW_VSPACER,       -- library (lib.LAYOUT)
+  ensureScroll    = ensureScroll,      -- library, plus this file's dropdown-close layer
+  makePairButton  = makePairButton,    -- host: adds INTO a caller's row, which O.InlineButtonPair
+                                       --       cannot do — it builds and owns the row itself
+  trackDropdown   = trackDropdown,     -- host: the open-dropdown registry is this addon's own
+  forgetDropdowns = forgetDropdowns,   -- host: same
+  safeRun         = safeRun,           -- host: the library pcalls its own closures, not the
+                                       --       editor's rebuilders
+  LSM_WIDGET      = LSM_WIDGET,        -- host: the per-panel media pickers are PanelEditor's, drawn
+                                       --       from NS.Registry rather than from a schema row
 }
 
 -- ── Landing page: logo + tagline + slash-command list (options-ui-§5) ───────────
@@ -486,7 +256,7 @@ local function buildMainContent(ctx)
   tex:SetSize(LOGO_SIZE, LOGO_SIZE)
   tex:SetPoint("TOPLEFT", logoGroup.frame, "TOPLEFT", 0, 0)
   scroll:AddChild(logoGroup)
-  addSpacer(scroll, 8)
+  O.AddSpacer(scroll, 8)
 
   local desc = AceGUI:Create("Label")
   desc:SetFullWidth(true); desc:SetText(ADDON_TAGLINE)
@@ -494,7 +264,7 @@ local function buildMainContent(ctx)
     desc.label:SetFontObject(_G.GameFontHighlight)
   end
   scroll:AddChild(desc)
-  addSpacer(scroll, 12)
+  O.AddSpacer(scroll, 12)
 
   local heading = AceGUI:Create("Heading")
   heading:SetFullWidth(true); heading:SetHeight(SECTION_HEADING_H); heading:SetText("Slash Commands")
@@ -502,13 +272,20 @@ local function buildMainContent(ctx)
     heading.label:SetFontObject(_G.GameFontNormalLarge)
   end
   scroll:AddChild(heading)
-  addSpacer(scroll, 6)
+  O.AddSpacer(scroll, 6)
 
-  -- Generated from NS.COMMANDS, so this list stays in lockstep with `/pm help` (options-ui-§5).
-  for _, cmd in ipairs(NS.COMMANDS or {}) do
+  -- Rendered through the ONE command-row formatter, LibKa0s-Slash-1.0's, rather than this file's own
+  -- (options-ui-§5). This page used to carry a SECOND formatter for the same NS.COMMANDS data — a
+  -- chat one in settings/Slash.lua and this one here — which had already drifted apart: this one put
+  -- double spaces either side of the em dash, wrapped the dash itself in white and left the
+  -- description bare. `Sl:LandingRows()` returns exactly the rows `Sl:HelpRows()` does, minus the
+  -- two-space chat indent, so the two surfaces can no longer disagree. The collapse to single
+  -- spaces, the dash losing its color span and the description gaining one are the accepted cost.
+  local rows = (NS.Slash and NS.Slash.LandingRows) and NS.Slash:LandingRows() or {}
+  for _, row in ipairs(rows) do
     local labelRow = AceGUI:Create("Label")
     labelRow:SetFullWidth(true)
-    labelRow:SetText(("|cffffff00/pm %s|r  |cffffffff\226\128\148|r  %s"):format(cmd.name, cmd.desc))
+    labelRow:SetText(row)
     scroll:AddChild(labelRow)
   end
 end
@@ -523,6 +300,13 @@ function P:Refresh()
   if not (ctx and ctx.refreshers and ctx.panel and ctx.panel:IsShown()) then return end
   for i, fn in ipairs(ctx.refreshers) do safeRun(fn, "General refresher " .. i) end
 end
+
+-- NOT O.RefreshScalars, and the difference is the reason both survive. The library's version sweeps
+-- EVERY registered ctx, which is right for a write that could be showing anywhere; these two are
+-- called by name from one page's own code — the console checkbox mirroring the debug window, and
+-- the editor re-syncing one panel's controls — and sweeping every page for those would refresh
+-- three pages to repaint one. Each library widget maker already calls O.RefreshScalars from its own
+-- set(), so the fan-out IS wired; these are the targeted path beside it.
 
 -- The same contract for the Panels page's editor: run each control's updater against the live
 -- record, and never rebuild. A hidden page is skipped — its `dirty` flag already has it queued for a
@@ -539,105 +323,136 @@ function P:RestoreDefaults()
 end
 
 -- ── Registration ───────────────────────────────────────────────────────────────
+--
+-- Four canvas pages, registered through LibKa0s-Options-1.0's page registry rather than by calling
+-- Settings.RegisterCanvasLayoutSubcategory four times here. The library owns the queue, runs each
+-- builder ONCE and pcalls each one SEPARATELY — so a page that raises costs only itself and is
+-- reported by key, where previously one bad builder killed every page after it in the list and the
+-- user saw a half-registered options tree with nothing naming the culprit.
+--
+-- Each body is still built LAZILY on its first OnShow, but through O.SetRenderer rather than a
+-- hand-rolled `rendered` flag per page. That is not a simplification: SetRenderer also gives every
+-- page the combat guard (the Blizzard AddOns sidebar reaches a panel without going through
+-- /pm config, so its guard is bypassed on exactly the path a user is most likely to take mid-fight)
+-- and the dirty-re-render, which the Panels page used to hand-roll and the other three did without.
 function P:Register()
   if registered then return end
   if not (AceGUI and Settings and Settings.RegisterCanvasLayoutCategory
           and Settings.RegisterCanvasLayoutSubcategory) then return end
   registered = true
 
-  -- Parent category = the landing page.
-  local mainCtx = createPanel(ADDON_TITLE, { isMain = true })
-  local mainRendered = false
-  mainCtx.panel:SetScript("OnShow", function()
-    if mainRendered then return end
-    mainRendered = true
-    buildMainContent(mainCtx)
-    if mainCtx.scroll and mainCtx.scroll.DoLayout then mainCtx.scroll:DoLayout() end
-  end)
-  local mainCategory = Settings.RegisterCanvasLayoutCategory(mainCtx.panel, ADDON_TITLE)
-  Settings.RegisterAddOnCategory(mainCategory)
-  mainCategoryID = mainCategory and mainCategory.GetID and mainCategory:GetID()
+  -- The landing page's body lives in this file; the descriptor in settings/OptionsSetup.lua closes
+  -- over a forward declaration, which this fills in.
+  NS.SetBuildMain(buildMainContent)
 
-  -- General subcategory = the addon's own settings.
-  local ctx = createPanel("General", { defaultsButton = true })
-  P.general = ctx
-  -- Non-destructive: this resets settings only and never touches the user's panels, so it is safe
-  -- behind Blizzard's un-gated footer control. Deleting panels stays behind the confirm-gated
-  -- KA0S_PANELMASTER_DELETEALL popup.
-  setDefaultsAction(ctx.panel, function() P:RestoreDefaults() end)
-  local rendered = false
-  ctx.panel:SetScript("OnShow", function()
-    ensureDefaultsButton(ctx.panel)
-    if not rendered then
-      rendered = true
-      renderSchema(ctx, {
+  -- General = the addon's own settings.
+  O.RegisterOptionsPage("general", "General", function(mainCategory)
+    local ctx = O.CreatePanel(nil, "General", {
+      pageKey = "general",
+      defaultsButton = true,
+      defaultsTooltip = "Reset every setting on this page to its default. Your panels are untouched.",
+    })
+    -- This addon's own per-page state, added onto the ctx the library hands back: the open-dropdown
+    -- registry (see the top of this file), and the two flags the Panels page's editor drives.
+    ctx.dropdowns, ctx.rebuilders, ctx.dirty = {}, {}, false
+    P.general = ctx
+
+    -- Non-destructive: this resets settings only and never touches the user's panels, so it is safe
+    -- behind Blizzard's un-gated footer control. O.CreatePanel's OnDefault FORWARDS to this, so the
+    -- footer control and the header Defaults button are one implementation rather than two.
+    -- Deleting panels stays behind the confirm-gated KA0S_PANELMASTER_DELETEALL popup.
+    ctx.panel.defaultsOnClick = function() P:RestoreDefaults() end
+
+    O.SetRenderer(ctx, function(c)
+      O.ClearScroll(c)
+      forgetDropdowns(c)
+      -- RenderSchema, not RenderRows with an explicit list: the per-page wrapper routes through the
+      -- descriptor's `rowsForPage`, which is what makes that field load-bearing rather than
+      -- decorative. Handing the flow engine NS.Schema.Schema directly worked identically and left
+      -- `rowsForPage` dead — a mutation that emptied it changed nothing and failed no case.
+      O.RenderSchema(c, "general", nil, {
         -- "Recover panels" sits to the right of Grid size: it is the other thing you reach for when
-        -- a layout has gone wrong.
-        ["settings.gridSize"] = function(parentRow)
+        -- a layout has gone wrong. `pairWith` is the library's name for what this file called
+        -- `companions` — a non-schema widget attached as the RIGHT half of a named path's row.
+        ["settings.gridSize"] = function(_, parentRow)
           parentRow:AddChild(makePairButton("Recover panels", function()
             if NS.Slash then NS.Slash:CliRecover() end
           end))
         end,
       })
-      if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
-    end
-    P:Refresh()
+    end)
+    return Settings.RegisterCanvasLayoutSubcategory(mainCategory, ctx.panel, "General")
   end)
-  Settings.RegisterCanvasLayoutSubcategory(mainCategory, ctx.panel, "General")
 
-  -- Panels subcategory = create, edit and delete the panels themselves. The page is registered and
-  -- laid out here; its BODY is settings/PanelEditor.lua's, which this file only ever drives through
-  -- the three calls below.
-  local pctx = createPanel("Panels", { defaultsButton = true })
-  P.panels = pctx
-  NS.PanelEditor:WireBus(pctx)
-  -- Defaults here = delete every panel, which IS the stock state of this page (a fresh install has
-  -- none). Destructive, so it is confirm-gated.
-  setDefaultsAction(pctx.panel, function()
-    if type(StaticPopup_Show) == "function" then
-      StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
-    else
-      NS.Registry:DeleteAll()
-    end
-  end)
-  local pRendered = false
-  pctx.panel:SetScript("OnShow", function()
-    ensureDefaultsButton(pctx.panel)
-    if not pRendered then
-      pRendered = true
-      NS.PanelEditor:BuildPage(pctx)
-      NS.PanelEditor:Rebuild(pctx)   -- first paint of the editor list
-    elseif pctx.dirty then
-      NS.PanelEditor:Rebuild(pctx)   -- panels changed while hidden → repaint once (options-ui-§11)
-    end
-  end)
-  Settings.RegisterCanvasLayoutSubcategory(mainCategory, pctx.panel, "Panels")
+  -- Panels = create, edit and delete the panels themselves. The page is registered and laid out
+  -- here; its BODY is settings/PanelEditor.lua's, which this file only ever drives through the
+  -- three calls below.
+  O.RegisterOptionsPage("panels", "Panels", function(mainCategory)
+    local pctx = O.CreatePanel(nil, "Panels", {
+      pageKey = "panels",
+      defaultsButton = true,
+      defaultsTooltip = "Delete every panel. This cannot be undone.",
+    })
+    pctx.dropdowns, pctx.rebuilders, pctx.dirty = {}, {}, false
+    P.panels = pctx
+    NS.PanelEditor:WireBus(pctx)
 
-  -- Profiles subcategory = AceDB's own profile management, rendered into our canvas.
+    -- Defaults here = delete every panel, which IS the stock state of this page (a fresh install
+    -- has none). Destructive, so it is confirm-gated — on BOTH entry points, since O.CreatePanel's
+    -- OnDefault forwards the Settings window's footer control to this same closure.
+    pctx.panel.defaultsOnClick = function()
+      if type(StaticPopup_Show) == "function" then
+        StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
+      else
+        NS.Registry:DeleteAll()
+      end
+    end
+
+    -- The editor's own two-phase build: BuildPage lays down the chrome that never changes, Rebuild
+    -- repaints the list. SetRenderer re-runs this whole closure when the page is marked dirty while
+    -- hidden, which is what the hand-rolled `pctx.dirty` check used to do — the flag itself stays,
+    -- because settings/PanelEditor.lua sets it.
+    local built = false
+    O.SetRenderer(pctx, function(c)
+      if not built then
+        built = true
+        NS.PanelEditor:BuildPage(c)
+      end
+      NS.PanelEditor:Rebuild(c)
+    end)
+    return Settings.RegisterCanvasLayoutSubcategory(mainCategory, pctx.panel, "Panels")
+  end)
+
+  -- Profiles = AceDB's own profile management, rendered into our canvas.
   --
   -- This is the ONE place AceConfigDialog is permitted (anti-patterns forbids it for content, and
   -- explicitly carves out Profiles). AceDBOptions hands back a complete, correct options table for
   -- create / switch / copy / reset / delete plus the per-character/class/realm/faction scopes —
-  -- reimplementing that by hand in AceGUI would be a large pile of code whose only distinction would
-  -- be its own bugs.
+  -- reimplementing that by hand in AceGUI would be a large pile of code whose only distinction
+  -- would be its own bugs.
   --
   -- Guarded rather than assumed: both libs are OptionalDeps, and their absence means no Profiles
-  -- page rather than a broken one (library-stack-§6).
-  local AceDBOptions    = LibStub and LibStub("AceDBOptions-3.0", true)
-  local AceConfig       = LibStub and LibStub("AceConfig-3.0", true)
-  local AceConfigDialog = LibStub and LibStub("AceConfigDialog-3.0", true)
-  if AceDBOptions and AceConfig and AceConfigDialog and NS.db then
+  -- page rather than a broken one (library-stack-§6). Returning nil from the builder is how the
+  -- library is told a page opted out.
+  O.RegisterOptionsPage("profiles", "Profiles", function(mainCategory)
+    local AceDBOptions    = LibStub and LibStub("AceDBOptions-3.0", true)
+    local AceConfig       = LibStub and LibStub("AceConfig-3.0", true)
+    local AceConfigDialog = LibStub and LibStub("AceConfigDialog-3.0", true)
+    if not (AceDBOptions and AceConfig and AceConfigDialog and NS.db) then return nil end
+
     AceConfig:RegisterOptionsTable("PanelMaster-Profiles", AceDBOptions:GetOptionsTable(NS.db))
 
     -- No Defaults button: profile management carries its own destructive controls, and a second
     -- "reset" meaning something different from the page's own Reset Profile would be a trap.
-    local prctx = createPanel("Profiles", {})
+    local prctx = O.CreatePanel(nil, "Profiles", { pageKey = "profiles" })
+    prctx.dropdowns, prctx.rebuilders, prctx.dirty = {}, {}, false
+    P.profiles = prctx
 
     -- AceConfigDialog renders into any AceGUI container, so it is pointed at a group parented to
-    -- our body — the widgets land inside the canvas rather than opening their own window.
-    -- Guarded like every other AceGUI create on this page: a container that failed to build must
-    -- leave the page inert, not raise during OnInitialize and take the whole addon's load with it.
-    local container = AceGUI:Create("SimpleGroup")
+    -- our body — the widgets land inside the canvas rather than opening their own window. Guarded
+    -- like every other AceGUI create on this page: a container that failed to build must leave the
+    -- page inert, not raise during registration and take the whole addon's load with it.
+    local container = O.AceGUI:Create("SimpleGroup")
     if container and container.frame then
       container:SetLayout("Fill")
       container.frame:SetParent(prctx.body)
@@ -646,39 +461,43 @@ function P:Register()
       container.frame:SetPoint("BOTTOMRIGHT", prctx.body, "BOTTOMRIGHT", -PADDING_X, 8)
     end
 
-    -- The OnShow is installed unconditionally, so this page keeps the same lazy-build contract as
-    -- every other one (options-ui-§1) even if the container failed to build. Re-opened on every
-    -- show, not just the first: after a profile switch the whole options tree is stale, and
-    -- AceConfigDialog reuses its existing widget tree, so this is cheap.
-    prctx.panel:SetScript("OnShow", function()
+    -- Re-opened on every show, not just the first: after a profile switch the whole options tree is
+    -- stale, and AceConfigDialog reuses its existing widget tree, so this is cheap. SetRenderer only
+    -- re-runs on first show and on a dirty re-render, so the page marks ITSELF dirty each time —
+    -- which is the honest way to say "this page has no cached state worth keeping".
+    O.SetRenderer(prctx, function(c)
+      c._dirty = true
       if not (container and container.frame) then return end
       AceConfigDialog:Open("PanelMaster-Profiles", container)
     end)
-    Settings.RegisterCanvasLayoutSubcategory(mainCategory, prctx.panel, "Profiles")
-    P.profiles = prctx
-  end
+    return Settings.RegisterCanvasLayoutSubcategory(mainCategory, prctx.panel, "Profiles")
+  end)
+
+  -- Resolves AceGUI, hands it to the descriptor's onAceGUI, runs the schema validation, registers
+  -- the main canvas, then drains the queue above.
+  O.CreateOptionsPanel()
 end
 
 function P:Open()
-  -- options-ui-§2: REFUSE in combat — Blizzard's category-switch is protected, and calling it under
-  -- lockdown taints the panel for the rest of the session. A gray notice and an early return; never
-  -- defer-and-replay on PLAYER_REGEN_ENABLED (a panel that pops itself open the instant combat drops
-  -- steals focus during post-pull recovery). \226\128\148 = em-dash.
-  if InCombatLockdown and InCombatLockdown() then
-    print("|cff808080cannot open settings during combat \226\128\148 "
-      .. "Blizzard's category-switch is protected|r")
-    return
-  end
-  -- No category means BOTH eager registration attempts found no Settings API — OnInitialize's and
-  -- the PLAYER_LOGIN retry's (core/PanelMaster.lua). Say so: a command that returns silently reads
-  -- as broken, where a named prerequisite reads as a missing one.
-  if not (Settings and Settings.OpenToCategory and mainCategoryID) then
+  -- The combat refusal (options-ui-§2) and the open itself are the library's: it REFUSES under
+  -- lockdown and never defers-and-replays, because Blizzard's category switch is protected and
+  -- calling it under lockdown taints the panel for the rest of the session, while a panel that pops
+  -- itself open the instant combat drops steals focus during post-pull recovery.
+  if InCombatLockdown and InCombatLockdown() then return O.OpenOptionsPanel() end
+
+  -- What the library does NOT do is explain an ABSENT category — it simply returns. Both eager
+  -- registration attempts (OnInitialize's and the PLAYER_LOGIN retry's, core/PanelMaster.lua) can
+  -- find no Settings API on an old client, and a command that returns silently reads as broken
+  -- where a named prerequisite reads as a missing one.
+  if not (Settings and Settings.OpenToCategory and registered) then
     print("settings are not available on this client, so there is no page to open")
     return
   end
-  Settings.OpenToCategory(mainCategoryID)
+  O.OpenOptionsPanel()
 end
 
--- Test seam. mainCategoryID is a file-local written only by Register, so the branch above is
+-- Test seam. `registered` is a file-local written only by Register, so the branch above is
 -- unreachable in a suite where registration succeeded — this drives it directly.
-function P.__setCategoryIDForTest(id) mainCategoryID = id end
+function P.__setCategoryIDForTest(id)
+  registered = id ~= nil
+end

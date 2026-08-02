@@ -24,6 +24,9 @@ libs\AceConfig-3.0\AceConfig-3.0.xml
 libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
 libs\LibSharedMedia-3.0\lib.xml
 libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
+# LibKa0s AFTER LibStub and after Ace3: Core resolves LibStub, and DebugLog/Slash/Options each
+# resolve LibKa0s-Core-1.0 before calling NewLibrary. Vendored whole-folder from ../LibKa0s.
+libs\LibKa0s\LibKa0s.xml
 
 # Locales
 locales\enUS.lua
@@ -36,6 +39,13 @@ core\Constants.lua
 core\Namespace.lua
 core\State.lua
 core\Util.lua
+# CoreSetup AFTER Namespace (NS.PREFIX) and Util (NS.Util), and BEFORE PanelMaster.lua, whose
+# AceConsole embed reclaims NS.Print from NS.Util.print. See the header of the file.
+core\CoreSetup.lua
+# The LibKa0s-DebugLog seam. After Constants (C.FONT_MONO) and after CoreSetup
+# (NS.LIBKA0S_MISSING). Everything else it touches is reached through a closure, so the console no
+# longer has to sit down in modules/ the way modules/DebugLog.lua did.
+core\DebugLogSetup.lua
 core\PanelMaster.lua
 core\Database.lua
 
@@ -49,10 +59,13 @@ modules\Registry.lua
 modules\Artwork.lua
 modules\Canvas.lua
 modules\Unlock.lua
-modules\DebugLog.lua
 
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
 settings\Slash.lua
 settings\PanelEditor.lua
+# The LibKa0s-Options seam. After Schema.lua (the descriptor reads it) and Slash.lua (the landing
+# page renders through Sl:LandingRows), and BEFORE Panel.lua, which captures the instance at file
+# scope. PanelEditor.lua binds its helpers lazily inside its own rebuild, so it pins nothing here.
+settings\OptionsSetup.lua
 settings\Panel.lua

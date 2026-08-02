@@ -28,7 +28,9 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `core/Constants.lua` | `NS.Constants` | Strata, anchor-point, edge and artwork enums (with their derived membership sets and option lists), geometry and scale bounds, the frame ladder, the panel record template, the field type/order/media/enum/color maps, preview specs, media paths. |
 | `core/Namespace.lua` | `NS.name/version/PREFIX/SCHEMA_VERSION` | Metadata bootstrap. The cyan `[PM]` chat tag lives here. |
 | `core/State.lua` | `NS.State` | Session-only runtime state: `debug`, `unlocked`, `unlockedPanels`, `preview`, `previewIDs`. Never persisted. |
-| `core/Util.lua` | `NS.Util`, `NS.Print` | Path splitting, clamping, rounding, snapping, boolean and color parse/format, name cleaning, deep copy, and the secret-safe shared chat printer. |
+| `core/Util.lua` | `NS.Util` | Path splitting, clamping, rounding, snapping, boolean and color parse/format, name cleaning, deep copy. The secret-safe shared chat printer left this file for `core/CoreSetup.lua`. |
+| `core/CoreSetup.lua` | `NS.Core`, `NS.Print`, `NS.Util.print`, `NS.SafeToString`, `NS.IsConcatSafe`, **`NS.LIBKA0S_MISSING`** | The `LibKa0s-Core-1.0` seam: the secret-safe stringifier and the prefixed chat printer, republished under the names this addon has always used. Also publishes **`NS.LIBKA0S_MISSING`**, the one cause clause every other LibKa0s seam appends its own consequence to — a cross-file contract three other files depend on, not an implementation detail of this one, and set OUTSIDE the missing-library branch because they read it on both paths. Core's window-chrome half is declined: the only standalone window here is the debug console, which the DebugLog major draws. |
+| `core/DebugLogSetup.lua` | `NS.DebugLog`, `NS.Debug`, `NS.DebugBuild` | The `LibKa0s-DebugLog-1.0` seam, replacing the 429-line `modules/DebugLog.lua`. The console window, both formatters, the buffer and the enable seam are the library's; what stays this addon's is `NS.DebugBuild` (the same gated sink for a site whose arguments cost something to produce — its builder must be a plain function reference with its arguments passed unbound, since a closure would be allocated at the call site, before the gate, which is the cost being avoided) and `D:Diagnose()` (the structured dump verb, which reports what *this* addon believes is on screen). `NS.Debug` carries the addon's **only** debug gate (`debug-logging-§4`). |
 | `core/PanelMaster.lua` | `NS.addon`, `NS.bus` | AceAddon registration, the printer reclaim, the bus-target factory, `OnInitialize` / `OnEnable`. |
 | `core/Database.lua` | `NS:InitDB`, `NS:RunMigrations`, `NS:SweepPreviewPanels` | AceDB open on the shared "Default" profile, the migration seam, the preview-orphan sweep, the profile-change callbacks, the `[Init]` summary. |
 | `defaults/Profile.lua` | `NS.defaults.profile` | Per-character defaults: the (empty) panel registry, `nextID`, and the settings block. |
@@ -39,11 +41,57 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `modules/Artwork.lua` | `NS.Artwork` | The bundled-art catalog and the pure `BuildArtSpec` geometry — fill math, UV crop/flip/rotation composition, tint resolution. Touches no frames and calls no WoW API. Loads **before** `Canvas`, which reads it. |
 | `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the background, border, accent and artwork child frames (the last clipping and re-leveled per render), the four accent bars and their lazy borders, the shared mouseover ticker, targeted and full repaints. |
 | `modules/Unlock.lua` | `NS.Unlock` | Unlock mode (outline, label, drag, snap), global and per-panel, and preview mode. |
-| `modules/DebugLog.lua` | `NS.DebugLog`, `NS.Debug`, `NS.DebugBuild` | The on-screen debug console and the gated logging sink. `NS.Debug` carries the addon's **only** debug gate (`debug-logging-§4`); `NS.DebugBuild` is the same sink for a site whose arguments cost something to produce, deferring that work past the same gate rather than growing a second one. Its builder must be a plain function reference with its arguments passed unbound — a closure would be allocated at the call site, before the gate, which is the cost being avoided. |
 | `settings/Schema.lua` | `NS.Schema` | The settings schema (one row per setting). Sole sender of `SettingsChanged`. |
-| `settings/Slash.lua` | `NS.Slash`, `NS.COMMANDS` | `/pm` dispatch, the generated help index, every CLI verb, and the command table they all read (at the bottom of the file, below the verbs it calls). |
+| `settings/Slash.lua` | `NS.Slash`, `NS.COMMANDS` | The `LibKa0s-Slash-1.0` seam plus everything the library does not own. The dispatcher, the generated help index, the landing-page row formatter, the schema CLI (`list`/`get`/`set`/`reset`/`resetall`/`version`) and the type-aware value parser are the library's. **`NS.COMMANDS` stays this addon's** — positional `{ name, description, handler }` triples, passed in rather than owned, because the settings landing page renders the same rows and a library that owned the table would force the options major to resolve the slash major to read it. Every PANEL verb stays too: they act on registry records, not schema rows. Two descriptor adapters: `groupKey` (this schema groups by `row.group`, the library defaults to `row.page`) and `parse` (the library matches an enum case-sensitively; `/pm set settings.defaultStrata low` has always worked here). |
 | `settings/PanelEditor.lua` | `NS.PanelEditor` | The Panels page's body: the create box, the panel selector, one panel's editor, the page's mutation actions and its two bus triggers. Peeled out of `settings/Panel.lua` (`layout-§1`) and drawn with that file's helpers, which it reads from `NS.Panel.__ui`. |
-| `settings/Panel.lua` | `NS.Panel` | The Blizzard Settings canvas: header, scroll frame, tooltips, the schema renderer, landing page, General, and registration of all four categories. Owns the open-dropdown tracking that closes a list on scroll, and drives the editor through `E:WireBus` / `E:BuildPage` / `E:Rebuild`. |
+| `settings/OptionsSetup.lua` | `NS.Helpers`, `NS.SetBuildMain` | The `LibKa0s-Options-1.0` seam. `NS.Helpers` **is** the library instance rather than a wrapper (options-ui-§1), which is what lets `settings/Panel.lua` decorate it in place. Holds the descriptor: the write seam (`NS.Schema:Set`, already the two-argument shape the library calls with), `rowsForPage`, the boot validation, the AceGUI stash and the drag throttle. `buildMain` reaches the landing page through a forward declaration `settings/Panel.lua` fills in, because that file loads after this one. |
+| `settings/Panel.lua` | `NS.Panel` | What LibKa0s-Options-1.0 does **not** own: the open-dropdown registry that closes a list on scroll, the paired-button width, the landing page's body, the Profiles page, and the four page builders. The canvas factory, the header and breadcrumb, the lazy Defaults button, the scroll frame, the scrollbar patch, section headings, spacers, tooltips, the five widget makers and the two-column flow engine are all the library's now. Two library members are wrapped **on the instance** — `RenderField` and `EnsureScroll` — because the flow engine resolves both from the instance table at call time, so a host-side helper beside them is bypassed by every page it draws. Drives the editor through `E:WireBus` / `E:BuildPage` / `E:Rebuild`. |
+
+## The LibKa0s seams, and the load order they pin
+
+Four of the five `LibKa0s` majors are adopted (`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is
+declined on structural grounds — see `LIBKA0S-31` in [`pending/LEDGER.md`](pending/LEDGER.md). The
+library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here**: a library
+problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a
+local edit and the revert reads as a regression with no cause anywhere in this repo's history.
+
+**`NS.LIBKA0S_MISSING` is a cross-file contract, not an implementation detail.** `core/CoreSetup.lua`
+publishes it — *outside* its own missing-library branch, because the later seams read it on **both**
+paths — and each of the other three appends its own consequence and its own terminal punctuation:
+
+| Seam | Appends |
+|---|---|
+| `core/CoreSetup.lua` | `"; running on reduced built-in fallbacks."` — announced once, on the first line the addon prints |
+| `core/DebugLogSetup.lua` | `", so the debug console window is unavailable."` |
+| `settings/Slash.lua` | `", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."` |
+| `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` |
+
+A degraded install therefore says the same thing about **why** at every site and a different thing
+about **what** at each one. The wording is the whole Ka0s collection's and is not this addon's to
+reword — `tests/test_libka0s.lua` pins the clause on both paths.
+
+The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
+
+- `libs\LibKa0s\LibKa0s.xml` sits **after** LibStub and Ace3. `Core` resolves LibStub; the other
+  four resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
+  too old, so the major is simply never registered.
+- `core/CoreSetup.lua` after `core/Namespace.lua` (which defines `NS.PREFIX`, passed to the printer
+  descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**
+  `core/PanelMaster.lua`, whose AceConsole embed clobbers `NS.Print` and reclaims it from
+  `NS.Util.print`. Publishing on both keys is what keeps that reclaim load-bearing and correct.
+  It must also precede the six files taking the printer as a `local print = NS.Print` **file-scope
+  upvalue** — `modules/Unlock.lua`, `settings/Schema.lua`, `settings/Slash.lua`,
+  `settings/PanelEditor.lua`, `settings/Panel.lua` — or the swap silently no-ops while appearing to
+  work.
+- `core/DebugLogSetup.lua` after `core/Constants.lua` (`C.FONT_MONO`) and `core/CoreSetup.lua`.
+  Everything else its descriptor touches is reached through a **closure**, which is what let the
+  console move out of `modules/` into `core/` without inverting a dependency.
+- `settings/OptionsSetup.lua` after `settings/Schema.lua` and `settings/Slash.lua`, and **before**
+  `settings/Panel.lua`, which captures the instance at file scope. `settings/PanelEditor.lua` binds
+  its helpers lazily inside its own rebuild, so it pins nothing.
+
+`tests/test_harness.lua` derives the suite's load list from the TOC rather than keeping a second
+copy, so a file added to one and not the other cannot go untested.
 
 ## Data model
 

@@ -212,46 +212,12 @@ function Util.ResolveColor(rec, field)
 end
 
 -- ── Secret-safe chat printer (events-frames-taint-§8) ────────────────────────────
--- In combat, retail protects combat-sensitive returns as "secret" values. A secret survives
--- tostring() AND the `..` operator (which silently propagates secretness), but RAISES the instant it
--- reaches table.concat. Because every chat line ends in a table.concat, an unguarded secret both
--- spams a Lua error and — inside a repeating ticker — can freeze the feature until /reload.
--- Detection MUST probe the operation that actually rejects a secret (table.concat), NOT `..`: a
--- `..`-based probe reports a secret as safe.
---
--- This addon reads no combat values today. The guard is still mandatory (events-frames-taint-§8 is a
--- MUST on the shared printer regardless of current call sites), and it is what makes it safe to log
--- an arbitrary value later without revisiting every call site.
-local function probeConcat(v) return table.concat({ v }) end
-function NS.IsConcatSafe(v)
-  return (pcall(probeConcat, v))
-end
-
--- Concat-safe stringifier used by every line the addon emits. Ordinary values → tostring(v); an
--- un-concatenable (secret) value → the sentinel "<secret>", so the surrounding table.concat can
--- never raise. nil and booleans are handled up front (table.concat rejects a boolean element too,
--- but booleans are never secret, so they must not be masked).
-function NS.SafeToString(v)
-  if v == nil then return "nil" end
-  if type(v) == "boolean" then return tostring(v) end
-  if NS.IsConcatSafe(v) then return tostring(v) end
-  return "<secret>"
-end
-
--- The single shared chat printer. Prepends the cyan NS.PREFIX tag (slash-commands-§4) and
--- space-joins each SafeToString'd arg, mirroring print(). Every file that emits chat does
--- `local print = NS.Print` so call sites stay `print("message")` — never the global print(), never a
--- hand-written tag, never raw `..`/tostring on an arg. The real name is NS.Util.print; NS.Print is
--- reclaimed from it after the AceConsole embed (core/PanelMaster.lua, architecture-§2).
-function NS.Print(...)
-  local n = select("#", ...)
-  local parts = { NS.PREFIX }
-  for i = 1, n do parts[i + 1] = NS.SafeToString((select(i, ...))) end
-  if DEFAULT_CHAT_FRAME then
-    DEFAULT_CHAT_FRAME:AddMessage(table.concat(parts, " "))
-  end
-end
-Util.print = NS.Print
+-- MOVED to core/CoreSetup.lua, which builds it from LibKa0s-Core-1.0 (library-stack). NS.Print,
+-- NS.Util.print, NS.SafeToString and NS.IsConcatSafe all still answer under those exact names — the
+-- six files doing `local print = NS.Print` at file scope are unchanged — and the secret-value guard
+-- is the library's identical table.concat probe rather than a seventh hand-written copy of it.
+-- CoreSetup.lua loads immediately after this file and before core/PanelMaster.lua's AceConsole
+-- reclaim; see the ordering note at the top of that file.
 
 -- Deep copy, used wherever a template or a schema default must not be aliased into the DB. A stored
 -- panel that aliased C.PANEL_TEMPLATE would let one panel's edit rewrite the shipped default for

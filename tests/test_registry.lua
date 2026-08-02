@@ -371,7 +371,7 @@ test("Registry: the panel messages have exactly one sender", function()
   -- disagree about what a message means.
   local files = {
     "core/PanelMaster.lua", "core/Database.lua", "modules/Canvas.lua", "modules/Unlock.lua",
-    "modules/DebugLog.lua", "settings/Schema.lua", "settings/Slash.lua", "settings/Panel.lua",
+    "core/DebugLogSetup.lua", "settings/Schema.lua", "settings/Slash.lua", "settings/Panel.lua",
   }
   for _, path in ipairs(files) do
     local f = io.open(path, "r")

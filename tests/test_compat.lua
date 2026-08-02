@@ -101,7 +101,7 @@ test("Compat owns the deprecated-API surface: no flavor branching in the addon",
   local sources = {
     "core/Compat.lua", "core/Constants.lua", "core/Util.lua", "core/Database.lua",
     "core/PanelMaster.lua", "modules/Registry.lua", "modules/Canvas.lua", "modules/Unlock.lua",
-    "modules/DebugLog.lua", "settings/Schema.lua", "settings/Slash.lua", "settings/Panel.lua",
+    "core/DebugLogSetup.lua", "settings/Schema.lua", "settings/Slash.lua", "settings/Panel.lua",
   }
   for _, path in ipairs(sources) do
     local f = io.open(path, "r")

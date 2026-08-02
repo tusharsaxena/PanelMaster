@@ -475,3 +475,115 @@ The addon's public contract, and the one thing no unit test can prove works in a
    identically — no suite, no other addon, is a dependency.
 2. Re-enable a UI skin (ElvUI or similar) and reopen `/pm config` → **Expect:** the Defaults button is
    skinned like the rest of the AceGUI widgets, not left on stock red art.
+
+---
+
+## 14. LibKa0s — the degraded install
+
+The one thing no headless case can reach: what a player sees when `libs/LibKa0s` is genuinely not
+on disk. The suite loads the addon without it and asserts the wording; only the client can say the
+addon still *works*.
+
+1. Quit the client. Rename `Interface/AddOns/PanelMaster/libs/LibKa0s` to `libs/_LibKa0s`.
+2. Launch, log in.
+3. **Zero Lua errors.** Turn on `/console scriptErrors 1` first if it is off.
+4. Your panels are **still drawn**, exactly as before. The addon's own function has nothing to do
+   with a shared library, and an install missing `libs/` must still draw panels.
+5. `/pm panels` → a **complete** listing, every panel, every field.
+6. `/pm new SmokeTest`, `/pm unlock`, drag it, `/pm lock`, `/pm delete SmokeTest` — all work.
+7. The **first** line the addon prints carries the notice, once:
+   `[PM] The LibKa0s library is missing from this installation of Ka0s Panel Master (expected in
+   libs/LibKa0s); running on reduced built-in fallbacks.`
+   Every later line is untagged by it — the notice is once per session, not once per line.
+8. `/pm debug` → `[PM] …(expected in libs/LibKa0s), so the debug console window is unavailable.`
+   Said **once**; a second `/pm debug` repeats nothing.
+9. `/pm debug on` → still acknowledges `debug logging ON` in green, because logging is a session
+   flag this addon owns and only the *window* went away.
+10. `/pm debug dump` → still answers with the state dump.
+11. `/pm list` → `…, so the slash help index and the settings CLI (list/get/set/reset) are
+    unavailable.`
+12. `/pm resetall` → **still works**: it is the one schema verb with no library dependency.
+13. `/pm config` → `…, so the settings panel is unavailable.`
+14. **The cause clause is word-for-word the same in every one of those four**, differing only after
+    the comma. Compare against any other adopted Ka0s addon on the same install; a user with a
+    broken install must not get a different sentence depending on which addon they open.
+15. **Rename the folder back**, `/reload`, and confirm normal operation returns.
+
+## 15. LibKa0s — the `L` trap
+
+Three of the five majors take a locale override, and a descriptor handed this addon's `NS.L` would
+render every user-visible string as its own key. The source guard and the rendered assertions in
+`tests/test_libka0s.lua` are both blind to what the client actually draws.
+
+Walk **every** surface and confirm not one `SCREAMING_SNAKE_CASE` string is on screen:
+
+1. `/pm config` → the landing page, then **General**, **Panels** and **Profiles**. Every label,
+   every tooltip, every section heading, the breadcrumb, and the **Defaults** button.
+2. `/pm debug` → the console. Title bar (`Panel Master — Debug`), the `Debug: OFF` toggle, `Copy`,
+   `Clear`, and the `N / 500 lines` counter. Click **Copy** and read that window's title too
+   (`Copy log — Ctrl+C, then Esc`).
+3. `/pm help`, `/pm list`, `/pm version` in chat.
+
+Anything reading `DEBUG_ON`, `COPY_TITLE`, `LINES`, `LIST_HEADER`, `DEFAULTS_LABEL` or similar is
+the trap, and it fails for every key at once rather than one at a time.
+
+## 16. LibKa0s — the rendered changes, and the parity check
+
+Everything below **changed deliberately** in the adoption. Confirm each looks right; anything else
+that looks different is the finding.
+
+**Changed on purpose:**
+
+1. **The debug console wears the Ka0s window edge.** `/pm debug`. A flat 1px black outer border with
+   a 1px light-gray highlight just inside it, a **gold** title, a gray divider under the title bar.
+   It used to be a plain dark background with no edge at all. Side by side with another adopted Ka0s
+   addon's console, the two must read as one suite.
+2. **Its close control is the library's ×**, 18×18, gray, turning **red** on hover — not the old
+   flat `X` that turned gold. `Copy` and `Clear` sit to its left with a 6px gap, unmoved.
+3. **`/pm help` rows are indented two spaces** under the header, and the header now carries an em
+   dash: `v0.1.0 — slash commands (/panelmaster is an alias for /pm)`.
+4. **The settings landing page's command list** lost its double spacing: `/pm config — Open
+   settings`, one space either side of the dash, the dash gold-to-white rather than white-wrapped.
+   It should now look **identical** to `/pm help`'s rows minus their indent — compare them directly.
+5. **`/pm set settings.gridSize 99999` clamps** to `64 px` and echoes the clamped value, where it
+   used to refuse with `error: invalid value`.
+6. **A bad value gives two lines**: `Invalid value for settings.snapToGrid`, then the reason
+   indented beneath it.
+7. **The combat refusal is a lighter gray.** Pull a mob, `/pm config` → the refusal is still
+   `cannot open settings during combat — Blizzard's category-switch is protected`, word for word,
+   just lighter.
+8. **The Defaults button now has a tooltip** on General and on Panels. Hover both.
+9. **Esc-closing the debug console now updates the settings checkbox.** Open `/pm config` →
+   General, tick **Debug console**, press **Esc** to close the console, return to General: the
+   checkbox is **unticked**. It used to stay ticked — the console synced only through its own
+   Hide, which Esc bypasses.
+
+**Parity — "nothing moved". Anything that looks different here is a defect:**
+
+10. Open `/pm config` → **General**. The two-column grid, the section headings
+    (`Master Controls`, `Editing`, `New Panel Defaults`), the row spacing, the header, the gold
+    divider and the breadcrumb `Ka0s Panel Master ▸ General` are all **unchanged**.
+11. **Recover panels** still sits to the immediate right of **Grid size**, on the same line.
+12. The **Panels** page — create box, selector, the whole editor — is untouched.
+13. The scrollbar is **always visible** on every page and grays out when the page fits, so the body
+    width does not jump as you tab between pages.
+14. Open the **Default frame strata** dropdown, then **scroll the page**: the list closes. Do it
+    again with the scrollbar **drag** rather than the wheel. This is the one behavior the library's
+    widget makers know nothing about, and it is re-attached by hand.
+15. `/pm list` — the green header, the azure `[group]` headings in schema order, four-space indented
+    rows, `4 px` on grid size. Only the gold/white escapes changed case, which is invisible.
+
+## 17. LibKa0s — the destructive path still has its guard
+
+The one destructive verb this addon has is not a schema reset, so no convergence touched it — but
+it reaches its confirmation from **two** entry points and a check that only clicks the button
+proves nothing about the verb.
+
+1. `/pm new GuardA`, `/pm new GuardB`.
+2. `/pm panel deleteall` → the **confirm popup** appears. Choose **No**. Both panels survive.
+3. `/pm config` → **Panels** → **Defaults** → the **same** popup appears. Choose **No**. Both
+   panels survive.
+4. Now choose **Yes** from either. Both panels are gone, and chat says `deleted 2 panels.`
+5. `/pm resetall` → `all settings reset to defaults (your panels are untouched)` — this wording is
+   preserved through the library's locale override and is the reassurance the message exists for.
+   Confirm it is **not** the library's own `All settings reset to defaults`.
