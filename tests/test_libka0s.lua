@@ -1,6 +1,11 @@
 local T = _G.PM_TEST
 local NS, mocks = T.NS, T.mocks
 local test, assertEqual, assertTrue, assertFalse = T.test, T.assertEqual, T.assertTrue, T.assertFalse
+local P = NS.Panel
+
+-- Resolved at CALL time, not captured: P.general is assigned inside the page builder the library
+-- runs, so a file-scope capture here would be nil.
+local function P_general() return P.general end
 
 -- The LibKa0s adoption's own suite: the seams, the degradation, and the `L` trap.
 --
@@ -304,6 +309,172 @@ test("L trap (Slash): the ONE overridden string lands, and nothing renders as it
     end
   end)
 
+-- ── Options: the settings canvas ───────────────────────────────────────────────
+
+--- Fire a page's first OnShow, which is where LibKa0s-Options-1.0 builds the body.
+---
+--- The whole point of the deferral is that AceGUI lays children out against the panel's CURRENT
+--- width, which is zero at enable time — so nothing is drawn until this fires. Before the shared
+--- test kit arrived this addon's AceGUI mock returned nil from Create(), so this entire path was
+--- unreachable and untested.
+local function showPage(ctx)
+  local onShow = ctx.panel:GetScript("OnShow")
+  assertTrue(onShow ~= nil, "the page has no OnShow — SetRenderer never ran")
+  onShow(ctx.panel)
+end
+
+local function widgetsOfType(ctx, wtype)
+  local out = {}
+  for _, w in ipairs(mocks.LibStub("AceGUI-3.0", true).__created) do
+    if w.type == wtype then out[#out + 1] = w end
+  end
+  return out
+end
+
+test("Options seam: NS.Helpers IS the library instance, not a wrapper around one", function()
+  local o = mocks.LibStub("LibKa0s-Options-1.0", true)
+  assertTrue(o ~= nil, "LibKa0s-Options-1.0 did not register")
+  assertEqual(o.MODULES.Options, o.MINOR)
+  -- Three files, one major: the shell, the widget makers and the scrollbar patch each carry their
+  -- own minor and each must have attached.
+  assertTrue(o.MODULES.OptionsWidgets ~= nil, "OptionsWidgets.lua did not attach")
+  assertTrue(o.MODULES.OptionsScroll ~= nil, "OptionsScroll.lua did not attach")
+  assertFalse(NS.Helpers.__degraded == true, "the Options seam fell back to its degradation stub")
+  for _, member in ipairs({ "CreatePanel", "EnsureScroll", "RenderRows", "RenderField", "Section",
+                            "AttachTooltip", "SetRenderer", "RefreshScalars",
+                            "PatchAlwaysShowScrollbar", "RegisterOptionsPage" }) do
+    assertTrue(type(NS.Helpers[member]) == "function", "NS.Helpers has no " .. member)
+  end
+  -- The layout constants are the library's one copy, not a second set of numbers here.
+  assertEqual(NS.Helpers.ROW_VSPACER, 8)
+  assertEqual(NS.Helpers.SECTION_HEADING_H, 26)
+  assertEqual(NS.Helpers.BUTTON_PAIR_REL, 0.492)
+end)
+
+test("Options seam: all four pages built, and each is registered with Blizzard", function()
+  local built = {}
+  for _, page in ipairs(NS.Helpers.__pages()) do built[page.key] = true end
+  for _, key in ipairs({ "general", "panels", "profiles" }) do
+    assertTrue(built[key], "the '" .. key .. "' page never built")
+  end
+  -- The library pcalls each builder SEPARATELY, so a raising one costs only itself — previously one
+  -- bad builder killed every page after it with nothing naming the culprit.
+  for _, name in ipairs({ "Ka0s Panel Master", "General", "Panels", "Profiles" }) do
+    assertTrue(mocks.__settingsPanels[name] ~= nil, "no canvas registered as " .. name)
+  end
+end)
+
+test("Options: the General page renders one widget per schema row, by type", function()
+  -- The schema -> widget translation, driven for real. This is the path the old AceGUI mock made
+  -- unreachable: Create() answered nil, so every maker returned early and nothing was ever built.
+  local before = #mocks.LibStub("AceGUI-3.0", true).__created
+  showPage(P_general())
+  assertTrue(#mocks.LibStub("AceGUI-3.0", true).__created > before, "the page built no widgets")
+
+  local wanted = { bool = 0, number = 0, string = 0 }
+  for _, row in ipairs(NS.Schema.Schema) do wanted[row.type] = (wanted[row.type] or 0) + 1 end
+  -- `bool` -> CheckBox, a `number` with min/max -> Slider, a `string` with `values` -> Dropdown.
+  -- If the schema vocabulary ever drifts back to "boolean", RenderField returns nil for the type it
+  -- does not know and the row VANISHES from the page — silently, and only in game.
+  assertEqual(#widgetsOfType(P_general(), "CheckBox"), wanted.bool,
+    "a bool row did not render as a checkbox — check settings/Schema.lua's `type`")
+  assertEqual(#widgetsOfType(P_general(), "Slider"), wanted.number)
+  assertEqual(#widgetsOfType(P_general(), "Dropdown"), wanted.string)
+end)
+
+test("Options: a widget's OnValueChanged reaches the addon's single write seam", function()
+  showPage(P_general())
+  local ctx = P_general()
+  -- Find the checkbox the library built for a known row, by the label it was given.
+  local row = NS.Schema:FindRow("settings.showLabels")
+  local target
+  for _, w in ipairs(widgetsOfType(ctx, "CheckBox")) do
+    if w.labelText == row.label then target = w end
+  end
+  assertTrue(target ~= nil, "no checkbox carries the row's label")
+
+  local before = NS.Schema:Get("settings.showLabels")
+  -- Fired the way AceGUI fires it: fn(widget, eventName, value).
+  target:__fire("OnValueChanged", not before)
+  assertEqual(NS.Schema:Get("settings.showLabels"), not before,
+    "the widget's write never reached NS.Schema:Set")
+  target:__fire("OnValueChanged", before)
+  assertEqual(NS.Schema:Get("settings.showLabels"), before)
+end)
+
+test("Options: a slider commits on release and snaps to the row's step", function()
+  showPage(P_general())
+  local row = NS.Schema:FindRow("settings.gridSize")
+  local target
+  for _, w in ipairs(widgetsOfType(P_general(), "Slider")) do
+    if w.labelText == row.label then target = w end
+  end
+  assertTrue(target ~= nil, "no slider carries the grid-size label")
+  assertEqual(target.min, row.min)
+  assertEqual(target.max, row.max)
+  target:__fire("OnMouseUp", 12)
+  assertEqual(NS.Schema:Get("settings.gridSize"), 12)
+  NS.Slash:CliReset("settings.gridSize")
+end)
+
+test("Options: the enum row's dropdown is populated from the schema's `values`", function()
+  showPage(P_general())
+  local row = NS.Schema:FindRow("settings.defaultStrata")
+  local dd = widgetsOfType(P_general(), "Dropdown")[1]
+  assertTrue(dd ~= nil, "the enum row rendered no dropdown")
+  assertEqual(#dd.order, #row.values, "the dropdown lost an option")
+  -- Ordered-array position IS the order, which is why the strata list reads BACKGROUND..TOOLTIP
+  -- rather than alphabetically.
+  assertEqual(dd.order[1], row.values[1].value)
+  assertEqual(dd.list[row.values[1].value], row.values[1].text)
+end)
+
+test("Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry",
+  function()
+    -- The library's makers know nothing about the registry, and should not: it is this addon's own
+    -- invention, born of a real bug, and no other host has one. settings/Panel.lua wraps
+    -- O.RenderField on the instance to catch every dropdown the library builds. Without the wrap
+    -- the strata dropdown stays open and floating when the page is scrolled.
+    local ctx = P_general()
+    showPage(ctx)
+    assertTrue(P.__openDropdownCount(ctx) > 0,
+      "no dropdown was tracked — the RenderField wrapper in settings/Panel.lua is not reached")
+    local tracked = false
+    for _, w in ipairs(ctx.dropdowns) do if w.type == "Dropdown" then tracked = true end end
+    assertTrue(tracked, "the registry holds no stock Dropdown")
+  end)
+
+test("Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks", function()
+  local ctx = P_general()
+  showPage(ctx)
+  assertTrue(ctx.scroll ~= nil, "the page built no scroll frame")
+  assertTrue(ctx.scroll.__pmDropdownHooks == true,
+    "settings/Panel.lua's dropdown-close layer is not installed over the library's patch")
+  -- Layered OVER the library's MoveScroll, never replacing it: the always-shown-scrollbar patch
+  -- still owns the gating, and only the extra gesture is this addon's.
+  assertTrue(ctx.scroll._ka0sAlwaysScrollbar == true,
+    "the library's always-shown scrollbar patch was lost")
+end)
+
+test("L trap (Options tripwire): Options reads no descriptor L", function()
+  -- Options is the OTHER major that cannot express the trap, and its tripwire is deliberately NOT
+  -- Core's copied across: Options.lua ships its own lib.STRINGS table, so asserting
+  -- `rawget(lib, "STRINGS") == nil` would fail against a module behaving exactly as designed. The
+  -- source half alone is the tripwire, and it goes red the day Options grows an `L` — which is the
+  -- day the settings panel becomes the most visible place a raw SCREAMING_SNAKE key can appear.
+  local o = mocks.LibStub("LibKa0s-Options-1.0", true)
+  assertTrue(rawget(o, "STRINGS") ~= nil, "Options lost its STRINGS table")
+  assertTrue(rawget(o, "LAYOUT") ~= nil,
+    "Options lost lib.LAYOUT — `local L = lib.LAYOUT` inside that file is GEOMETRY, not a locale, " ..
+    "and a source sweep for `d.L` must not be confused by it")
+  for _, path in ipairs({ "libs/LibKa0s/Options.lua", "libs/LibKa0s/OptionsWidgets.lua",
+                          "libs/LibKa0s/OptionsScroll.lua" }) do
+    local src = readFile(path)
+    assertTrue(src:find("d.L", 1, true) == nil and src:find("d%.L") == nil,
+      path .. " reads a descriptor L — replace this tripwire with a real rendered assertion")
+  end
+end)
+
 -- ── degradation ────────────────────────────────────────────────────────────────
 
 test("Degraded install: the addon loads with no LibKa0s at all", function()
@@ -475,6 +646,7 @@ local SEAM_FILES = {
   "core/CoreSetup.lua",
   "core/DebugLogSetup.lua",
   "settings/Slash.lua",
+  "settings/OptionsSetup.lua",
 }
 
 test("L trap: no seam file hands a descriptor this addon's locale table", function()

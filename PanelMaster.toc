@@ -64,4 +64,8 @@ modules\Unlock.lua
 settings\Schema.lua
 settings\Slash.lua
 settings\PanelEditor.lua
+# The LibKa0s-Options seam. After Schema.lua (the descriptor reads it) and Slash.lua (the landing
+# page renders through Sl:LandingRows), and BEFORE Panel.lua, which captures the instance at file
+# scope. PanelEditor.lua binds its helpers lazily inside its own rebuild, so it pins nothing here.
+settings\OptionsSetup.lua
 settings\Panel.lua

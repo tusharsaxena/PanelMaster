@@ -561,7 +561,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the body is built lazily — each page has an OnShow
 - Panel: the Defaults button is NOT created at registration (anti-pattern #42)
 - Panel: the pages that want a Defaults button declare the intent and park a callback
-- Panel: the header Defaults action and Blizzard's OnDefault are the same function
+- Panel: the header Defaults action and Blizzard's OnDefault reach ONE implementation
 - Panel: the landing page is the parent category, not a subcategory
 - Panel.Open: refuses during combat and does NOT open (options-ui-§2)
 - Panel.Open: the combat refusal is gray
@@ -613,7 +613,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 
-### test_libka0s.lua (27)
+### test_libka0s.lua (36)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -631,6 +631,15 @@ badge and any count quoted in the docs must agree with it.
 - Convergence #2: settings/Panel.lua no longer carries a second row formatter
 - Convergence #1: /pm reset takes a PATH and /pm resetall is the global form
 - L trap (Slash): the ONE overridden string lands, and nothing renders as its own key
+- Options seam: NS.Helpers IS the library instance, not a wrapper around one
+- Options seam: all four pages built, and each is registered with Blizzard
+- Options: the General page renders one widget per schema row, by type
+- Options: a widget's OnValueChanged reaches the addon's single write seam
+- Options: a slider commits on release and snaps to the row's step
+- Options: the enum row's dropdown is populated from the schema's `values`
+- Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry
+- Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
+- L trap (Options tripwire): Options reads no descriptor L
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
 - Degraded install: the notice is announced exactly ONCE, before the first line
@@ -675,7 +684,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 55 |
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
-| test_libka0s.lua | 27 |
+| test_libka0s.lua | 36 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
-| **Total** | **596** |
+| **Total** | **605** |
