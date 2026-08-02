@@ -82,13 +82,13 @@ image.
 
 | Property | Value |
 |---|---|
-| Path | `media/artwork/<category>/<subject>.tga` |
+| Path | `media/artwork/<source-dir>/<subject>.tga` — mirrors the source tree |
 | Directories | `general`, `races`, `classes`, `expansions`, `factions` — lowercase |
 | Catalog `category` | `General`, `Races`, `Classes`, `Expansions`, `Factions` — the exact capitalized values in `C.ARTWORK_CATEGORIES`, which `C.ARTWORK_CATEGORY_SET` validates against |
 | Dimensions | 1024 × 1024, letterboxed, aspect preserved, ≥ 4 px transparent margin |
 | Encoding | 32-bit RLE TGA |
 | `tintable` | `false` for all 104 |
-| Sources | `media/artwork/raw/<category>/<subject>.<ext>` |
+| Sources | `media/artwork/raw/<source-dir>/<subject>.<ext>` |
 | Pack size | ~179 MB shipped, ~66 MB of raw sources (git only) |
 
 `raw` is reserved and cannot be a category name — `media/artwork/raw/` already exists and is
@@ -149,7 +149,7 @@ are reviewed as data before any file is written.
    after every resize and paste, since LANCZOS premultiplies and a paste carries its canvas color
    in — normalizing earlier just gets undone.
 
-8. **Emit** — RLE TGA to `media/artwork/<category>/<subject>.tga`.
+8. **Emit** — RLE TGA to `media/artwork/<source-dir>/<subject>.tga`.
 
 9. **Generate catalog** — emit 104 Lua rows for `modules/Artwork.lua`.
 
@@ -241,7 +241,7 @@ All three were raised before the decision and confirmed. Recorded in `docs/pendi
    to 32 bpp — RLE saves disk, not video memory.
 
 3. **Naming.** The mandatory `-bw`/`-color` suffix is dropped in favour of
-   `<category>/<subject>.tga`. Tint behavior is no longer visible in a file listing; the catalog
+   a source-mirroring layout. Tint behavior is no longer visible in a file listing; the catalog
    row's `tintable` field is the sole source of truth. `docs/artwork-spec.md` is rewritten to
    match.
 

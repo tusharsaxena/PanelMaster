@@ -99,7 +99,7 @@ RESERVED_DIRS = {"raw"}
 
 MANIFEST_FIELDS = ["source", "category", "subject", "label", "credit", "erase"]
 
-# A subject becomes both a filename under media/artwork/<category>/ and a Lua string literal in the
+# A subject becomes both a filename under media/artwork/ and a Lua string literal in the
 # catalog. Restricting it to lowercase kebab-case keeps it safe in both, and matches the naming rule
 # docs/artwork-spec.md already states.
 _SUBJECT_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -607,6 +607,22 @@ def _carry_over_edits(rows, path=MANIFEST):
     return rows, orphans
 
 
+def output_stem(row):
+    """The path under media/artwork/, without the extension.
+
+    Mirrors the SOURCE tree's own directory layout rather than grouping by catalog category, so
+    `media/artwork/` and the download folder can be compared side by side and read as the same
+    thing. The two disagreed otherwise — the source files a piece of art in `faction/expansion/
+    12-midnight/` while the catalog calls it Factions, and neither name is wrong, they are just
+    answering different questions.
+
+    `category` therefore no longer has anything to do with where a file lives. It stays what it
+    always was: which group the dropdown shows the row under, validated against
+    C.ARTWORK_CATEGORY_SET.
+    """
+    return os.path.join(os.path.dirname(row["source"]), row["subject"]).replace("\\", "/")
+
+
 def read_stamps(path=STAMPS):
     """dst path -> the fingerprint it was built from. Missing file means nothing is up to date."""
     if not os.path.exists(path):
@@ -730,9 +746,14 @@ def write_manifest(rows, path=MANIFEST):
 def emit_catalog(rows, size=SIZE):
     """The Lua catalog rows, ready to paste into modules/Artwork.lua.
 
-    `file` carries a backslash so the stem joins C.ARTWORK_PATH_PREFIX into a path with one
+    `file` carries backslashes so the stem joins C.ARTWORK_PATH_PREFIX into a path with one
     separator convention throughout. modules/Artwork.lua concatenates it verbatim, so no resolver
-    change is needed for the art to live in per-category subdirectories.
+    change is needed for the art to live in nested subdirectories.
+
+    Note that `file` and `category` are deliberately unrelated. `file` mirrors the source tree
+    (`faction/expansion/12-midnight/harati`); `category` is the dropdown group (`Factions`). The id
+    keeps the category prefix because it has to be unique and stable across the whole catalog, and
+    two different source folders can hold the same subject.
     """
     out = []
     for r in sorted(rows, key=lambda r: (r["category"], r["subject"])):
@@ -740,12 +761,12 @@ def emit_catalog(rows, size=SIZE):
             '  { id       = "%s-%s",\n'
             '    category = "%s",\n'
             '    label    = "%s",\n'
-            '    file     = "%s\\\\%s",\n'
+            '    file     = "%s",\n'
             '    w        = %d, h = %d,\n'
             '    tintable = false,\n'
             '    credit   = "%s" },'
             % (r["category"], r["subject"], CATEGORY_LABEL[r["category"]], r["label"],
-               r["category"], r["subject"], size, size, r["credit"])
+               output_stem(r).replace("/", "\\\\"), size, size, r["credit"])
         )
     return "\n".join(out)
 
@@ -763,7 +784,7 @@ def main(argv=None):
     ap.add_argument("--source-root", metavar="DIR",
                     help="where the manifest's source paths are rooted (default: the scaffolded root)")
     ap.add_argument("--only", metavar="GLOB", action="append", default=[],
-                    help="convert only rows whose <category>/<subject> matches; repeatable")
+                    help="convert only rows matching this glob — <category>/<subject>, the on-disk stem, or a bare subject; repeatable")
     ap.add_argument("--out", metavar="DIR", default=OUT_DIR,
                     help="output root (default media/artwork/)")
     ap.add_argument("--size", type=int, default=SIZE, help="output edge length, power of two")
@@ -836,6 +857,8 @@ def main(argv=None):
     if args.only:
         rows = [r for r in rows
                 if any(fnmatch.fnmatch("%s/%s" % (r["category"], r["subject"]), g)
+                       or fnmatch.fnmatch(output_stem(r), g)
+                       or fnmatch.fnmatch(r["subject"], g)
                        for g in args.only)]
         if not rows:
             sys.exit("--only matched no manifest rows")
@@ -844,7 +867,7 @@ def main(argv=None):
     stamps = {} if args.force else read_stamps()
     for r in rows:
         src = os.path.join(root, r["source"])
-        dst = os.path.join(args.out, r["category"], r["subject"] + ".tga")
+        dst = os.path.join(args.out, output_stem(r) + ".tga")
         if not os.path.exists(src):
             failures.append((r["source"], "source missing"))
             continue
@@ -887,8 +910,8 @@ def main(argv=None):
         save_tga(out, dst)
         stamps[dst] = want
         if args.copy_raw:
-            raw_dst = os.path.join(RAW_DIR, r["category"],
-                                   r["subject"] + os.path.splitext(src)[1].lower())
+            raw_dst = os.path.join(RAW_DIR,
+                                   output_stem(r) + os.path.splitext(src)[1].lower())
             os.makedirs(os.path.dirname(raw_dst), exist_ok=True)
             shutil.copy2(src, raw_dst)
         if args.contact_sheet:

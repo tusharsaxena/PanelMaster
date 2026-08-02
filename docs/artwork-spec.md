@@ -277,19 +277,25 @@ im.save('media/artwork/OUT.tga')
 
 ## Naming and registration
 
-Art lives in a per-category directory, named for the catalog subject:
+Art mirrors the layout of the source tree it was imported from, named for the catalog subject:
 
 ```
-media/artwork/factions/alliance-crest.tga       shipped
-media/artwork/classes/warrior.tga               shipped
-media/artwork/raw/factions/alliance-crest.png   the source, kept in git, excluded from the zip
+media/artwork/class/warrior.tga                          shipped
+media/artwork/faction/expansion/12-midnight/harati.tga   shipped
+media/artwork/raw/class/warrior.png                      the source, excluded from the zip
 ```
 
-Five category directories, lowercase: `general`, `races`, `classes`, `expansions`, `factions`.
-`raw` is reserved and can never be a category — `media/artwork/raw/` holds unshipped sources and is
-excluded from packaging by `.pkgmeta`, so a bad asset can be re-derived without re-downloading.
-Subject stems are lowercase kebab-case, apostrophes dropped rather than hyphenated (`Mag'har` ->
-`maghar`).
+**Directory and category are deliberately unrelated.** The directory answers "where did this come
+from", and mirrors the download folder so `media/artwork/` and the source can be diffed and read as
+the same thing. The catalog row's `category` answers "which dropdown group does this appear under",
+and is one of the five in `C.ARTWORK_CATEGORY_SET`. A piece filed at
+`faction/expansion/12-midnight/` is a `Factions` row; neither name is wrong, they answer different
+questions. Nothing derives one from the other.
+
+`raw` is reserved and can never be a top-level source folder — `media/artwork/raw/` holds unshipped
+sources and is excluded from packaging by `.pkgmeta`, so a bad asset can be re-derived without
+re-downloading. Subject stems are lowercase kebab-case, apostrophes dropped rather than hyphenated
+(`Mag'har` -> `maghar`).
 
 **There is no `-bw`/`-color` suffix.** It used to be mandatory; it is gone, which is a recorded
 accepted deviation (`docs/pending/LEDGER.md`). The suffix bought one thing — being able to tell
@@ -308,13 +314,13 @@ answers, and one row cannot carry two files and two truths. Distinguish them in 
 { id       = "factions-alliance-crest",  -- stored value; never rename it once shipped
   category = "Factions",                 -- General | Races | Classes | Expansions | Factions
   label    = "Alliance Crest",
-  file     = "factions\\alliance-crest", -- <category>\<subject>, no extension
+  file     = "faction\\major\\alliance-crest", -- mirrors the source tree, no extension
   w        = 1024, h = 1024,              -- authored pixel size, declared not measured
   tintable = false,
   credit   = "Your Name (CC0)" },         -- required; see Licensing
 ```
 
-`file` carries a **backslash**. `modules/Artwork.lua` builds the texture path by bare
+`file` carries **backslashes**. `modules/Artwork.lua` builds the texture path by bare
 concatenation — `C.ARTWORK_PATH_PREFIX .. row.file .. ".tga"` — so a backslash keeps one separator
 convention across the whole assembled path, and the directory move needs no resolver change at all.
 `tests/test_artwork.lua` normalizes separators and asserts the derived path exists on disk, so a

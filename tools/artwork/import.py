@@ -217,7 +217,7 @@ def main(argv=None):
 
     # dirname() rather than OUT_DIR, so a name carrying a category — `factions/alliance-crest` —
     # creates the directory it needs instead of failing on a path that does not exist yet. Art now
-    # lives under media/artwork/<category>/, so that is the ordinary case rather than an exotic one.
+    # lives in nested folders under media/artwork/, so that is the ordinary case, not an exotic one.
     path = os.path.join(OUT_DIR, args.name + ".tga")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     out.save(path)   # Pillow writes 32-bit uncompressed TGA for RGBA, which is what WoW wants
