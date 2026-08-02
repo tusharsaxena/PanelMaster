@@ -25,60 +25,24 @@ import sys
 
 from PIL import Image
 
+# Shared with wiki_import.py. What a transparent pixel's RGB must be, how art is letterboxed onto
+# a power-of-two square, and what counts as content when measuring the margin are answers both
+# importers need and neither should re-derive. See plate.py.
+from plate import (
+    BLACK_FLOOR,
+    MIN_MARGIN,
+    TRANSPARENT,
+    content_bbox,
+    fit_square,
+    luma as _luma,
+    normalize_transparent,
+    pad_within,
+)
+
 SIZE = 512
-
-# Below this 0-255 luminance a pixel is treated as background. Image models rarely return a
-# mathematically pure black — a 2/255 haze across the whole frame is normal, invisible on its
-# own, and would otherwise show up as a faint full-frame box under the TILE fill type.
-BLACK_FLOOR = 6
-
-# What counts as actual artwork when measuring the transparent margin, as opposed to the
-# speckle that survives BLACK_FLOOR. Well below the eye's threshold on a dark panel, well above
-# the noise.
-CONTENT_FLOOR = 24
-
-# The transparent margin docs/artwork-spec.md asks for, in output pixels. Below this the FILL
-# crop and the TILE wrap start shaving the motif's outermost detail.
-MIN_MARGIN = 4
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT_DIR = os.path.join(REPO, "media", "artwork")
-
-
-# What a fully-transparent pixel's RGB is set to. Invisible under normal blending, and therefore
-# easy to assume does not matter — but three of the blend modes read it:
-#
-#   Additive  adds the RGB to whatever is behind. Black adds nothing, which is what "transparent"
-#             has to mean. White would wash the entire panel out.
-#   Alpha key thresholds alpha and draws what survives fully opaque.
-#   Opaque    ignores alpha completely and draws the RGB across the whole square.
-#
-# Black is the only value that is correct for Additive, which is the mode people actually reach for,
-# so it is the one this normalizes to.
-TRANSPARENT = (0, 0, 0, 0)
-
-
-def normalize_transparent(im):
-    """Force every fully-transparent pixel to one defined RGB.
-
-    Necessary because the value otherwise depends on which code path a plate happened to take.
-    PIL's LANCZOS resize premultiplies internally, so it ZEROES the RGB of transparent pixels —
-    meaning to_tintable's white survived on a plate that needed no resize and was silently wiped
-    on one that did. fit_square's padding added a third answer. alliance-crest-color ended up
-    carrying white letterbox bars and a black keyed interior in the same file, which under Opaque
-    drew as a black box inside a white one.
-    """
-    im = im.copy()
-    px = im.load()
-    for y in range(im.height):
-        for x in range(im.width):
-            if px[x, y][3] == 0:
-                px[x, y] = TRANSPARENT
-    return im
-
-
-def _luma(r, g, b):
-    return (r * 299 + g * 587 + b * 114) // 1000
 
 
 def to_tintable(im):
@@ -195,29 +159,6 @@ def erase(im, box, fill):
     return im
 
 
-def fit_square(im, size):
-    """Scale onto a transparent size x size canvas, preserving aspect.
-
-    Image models do not reliably return the square they were asked for — a 912x1149 portrait
-    plate is a perfectly ordinary response. Resizing that straight to 512x512 would squash the
-    art 1.26:1, and nothing downstream could tell: the catalog row declares w = h = 512, so the
-    fill math would faithfully preserve an aspect that was already wrong.
-
-    Letterboxing instead keeps the motif's proportions and lands it in the square the catalog
-    declares. The padding is transparent, so it also supplies the margin the FILL crop and the
-    TILE wrap want.
-    """
-    if im.size == (size, size):
-        return im
-    scale = min(size / im.width, size / im.height)
-    w, h = max(1, int(round(im.width * scale))), max(1, int(round(im.height * scale)))
-    canvas = Image.new("RGBA", (size, size), TRANSPARENT)
-    canvas.paste(im.resize((w, h), Image.LANCZOS), ((size - w) // 2, (size - h) // 2))
-    return canvas
-
-
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("source", help="input image (PNG, JPG, anything Pillow reads)")
@@ -264,28 +205,26 @@ def main(argv=None):
     # matters: these emblems are drawn symmetrically about the frame's center, and re-centering
     # on a bbox that is a few pixels lopsided would visibly tilt them off-axis.
     if args.pad > 0:
-        inner = args.size - args.pad * 2
-        if inner < 1:
-            sys.exit("--pad %d leaves no room in a %dpx image" % (args.pad, args.size))
-        padded = Image.new("RGBA", (args.size, args.size), TRANSPARENT)
-        padded.paste(out.resize((inner, inner), Image.LANCZOS), (args.pad, args.pad))
-        out = padded
+        try:
+            out = pad_within(out, args.size, args.pad)
+        except ValueError as exc:
+            sys.exit(str(exc))
 
     # LAST, after every resize and paste. Each of those can reintroduce a stray RGB under a zero
     # alpha — LANCZOS by premultiplying, a paste by carrying its canvas color in — so normalizing
     # any earlier just gets undone by the next step.
     out = normalize_transparent(out)
 
-    os.makedirs(OUT_DIR, exist_ok=True)
+    # dirname() rather than OUT_DIR, so a name carrying a category — `factions/alliance-crest` —
+    # creates the directory it needs instead of failing on a path that does not exist yet. Art now
+    # lives under media/artwork/<category>/, so that is the ordinary case rather than an exotic one.
     path = os.path.join(OUT_DIR, args.name + ".tga")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     out.save(path)   # Pillow writes 32-bit uncompressed TGA for RGBA, which is what WoW wants
 
     alpha = out.getchannel("A")
     lo, hi = alpha.getextrema()
-    # Measured at CONTENT_FLOOR rather than at any non-zero alpha: a converted plate carries a
-    # scatter of near-invisible speckle from the source's imperfect black, and a bbox taken at
-    # alpha > 0 reports the whole frame every time, which makes the margin warning useless.
-    bbox = alpha.point(lambda v: 255 if v >= CONTENT_FLOOR else 0).getbbox()
+    bbox = content_bbox(out)
     print("wrote %s (%dx%d, alpha %d-%d, content bbox %s)"
           % (path, out.width, out.height, lo, hi, bbox))
     if hi < 200:
