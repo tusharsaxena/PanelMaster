@@ -51,8 +51,12 @@ For a tintable asset, don't ask. White-on-pure-black converts to alpha exactly: 
 becomes opacity, and antialiased edges become partial alpha for free. It is not a workaround,
 it is the ideal input, and it works with every model.
 
+> Generate a new image from scratch; don't edit any pre-existing image.
+>
 > A single centered emblem for a fantasy game UI panel, in the visual language of World of
 > Warcraft's interface art: **[SUBJECT]**.
+>
+> Use the attached image as a reference (DO NOT COPY).
 >
 > Style: clean ornamental line art with engraved metalwork detail. Strictly symmetrical. Bold,
 > readable silhouette that still reads clearly when scaled down to 120 pixels. Decorative
@@ -89,6 +93,8 @@ near `#FF00FF`, so nothing keys out by accident, and a near-black navy stays ful
 
 Generate the **same subject** you used for the B&W plate, so the pair reads as one motif:
 
+> Generate a new image from scratch; don't edit any pre-existing image.
+>
 > A single centered emblem for a fantasy game UI panel, in the visual language of World of
 > Warcraft's interface art: **[SUBJECT]**.
 >
@@ -124,8 +130,9 @@ model shaded the background or added a glow, the key leaves a halo; regenerate t
 Only worth it on a service that genuinely supports an alpha channel. Substituting the subject:
 
 > A single centered emblem for a fantasy game UI panel, in the visual language of World of
-> Warcraft's interface art: **[SUBJECT — e.g. "an Alliance lion crest", "a Night Elf crescent
-> and antler motif", "a Wrath of the Lich King runeblade and frost sigil"]**.
+> Warcraft's interface art: **[SUBJECT]**.
+>
+> Use the attached image as a reference (DO NOT COPY).
 >
 > Style: clean ornamental line art with engraved metalwork detail. Symmetrical. Bold, readable
 > silhouette that survives being scaled down to 120 pixels. Decorative filigree, not
