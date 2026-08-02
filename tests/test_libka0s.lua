@@ -206,6 +206,104 @@ test("L trap (DebugLog): every rendered console string resolves to prose, not to
     end
   end)
 
+-- ── Slash: the dispatcher, the help renderer and the schema CLI ────────────────
+
+local function capture(fn)
+  local before = #mocks.__chat
+  fn()
+  local out = {}
+  for i = before + 1, #mocks.__chat do out[#out + 1] = mocks.__chat[i] end
+  return out
+end
+
+test("Slash seam: the dispatcher is the library's, not a host re-implementation", function()
+  local sl = mocks.LibStub("LibKa0s-Slash-1.0", true)
+  assertTrue(sl ~= nil, "LibKa0s-Slash-1.0 did not register")
+  assertEqual(sl.MODULES.Slash, sl.MINOR)
+  -- Surfaces the old settings/Slash.lua never had. LandingRows in particular is the convergence:
+  -- this addon carried two divergent formatters for NS.COMMANDS and now has one.
+  for _, member in ipairs({ "LandingRows", "HelpRows", "Text" }) do
+    assertTrue(type(NS.Slash[member]) == "function",
+      "NS.Slash has no " .. member .. " — this is not the library dispatcher")
+  end
+  -- And the ones it DID have are gone rather than shadowing the library's.
+  assertEqual(NS.Slash.FormatSchemaValue, nil,
+    "the host's own value formatter survived — two formatters will drift")
+  assertEqual(NS.Slash.LIST_GROUP_ORDER, nil,
+    "the hand-maintained group-order constant survived; the library groups in declaration order")
+  assertEqual(NS.Slash.FormatKV, sl.FormatKV, "FormatKV must be the library's one implementation")
+end)
+
+test("Convergence #2: the landing page and the chat help render the SAME rows", function()
+  -- ADOPTED. settings/Panel.lua's landing page used to carry its own formatter for NS.COMMANDS —
+  -- double spaces around the em dash, the dash white-wrapped, the description bare — beside the
+  -- chat one in settings/Slash.lua. Both now come from lib.FormatRow.
+  local landing = NS.Slash:LandingRows()
+  local help    = NS.Slash:HelpRows()
+  assertEqual(#landing, #NS.COMMANDS, "the landing page dropped or gained a row")
+  assertEqual(#help, #NS.COMMANDS)
+  for i = 1, #landing do
+    -- Same bytes, except the chat form's two-space indent: a chat row sits under a header, a
+    -- settings-panel label does not.
+    assertEqual(help[i], "  " .. landing[i], "row " .. i .. " differs beyond the indent")
+  end
+  -- The rendered shape, pinned to bytes, because this is the user-visible half of the convergence.
+  assertEqual(landing[1], "|cFFFFFF00/pm config|r \226\128\148 |cFFFFFFFFOpen settings|r",
+    "the command row is no longer lib.FormatRow's shape: " .. landing[1])
+  assertTrue(landing[1]:find("  ", 1, true) == nil,
+    "the landing row still carries the old double spacing")
+end)
+
+test("Convergence #2: settings/Panel.lua no longer carries a second row formatter", function()
+  -- A grep would answer about the NAME; this reads the render path. The landing page must reach
+  -- NS.COMMANDS only through the library, so the file must not format a command row itself.
+  local src = readFile("settings/Panel.lua")
+  assertTrue(src:find("NS.Slash:LandingRows()", 1, true) ~= nil,
+    "the landing page does not render through Sl:LandingRows()")
+  assertEqual(src:find("/pm %%s|r"), nil,
+    "settings/Panel.lua still formats a command row of its own")
+end)
+
+test("Convergence #1: /pm reset takes a PATH and /pm resetall is the global form", function()
+  -- ADOPTED, and it was already converged before the adoption — which is not the same as "not
+  -- applicable". Both verbs now delegate to the library.
+  local verbs = {}
+  for _, cmd in ipairs(NS.COMMANDS) do verbs[cmd[1]] = cmd[2] end
+  assertTrue(verbs.reset ~= nil and verbs.resetall ~= nil, "a reset verb went missing")
+  NS.Slash:CliSet("settings.gridSize 16")
+  NS.Slash:CliReset("settings.gridSize")
+  assertEqual(NS.Schema:Get("settings.gridSize"), 4, "path-scoped reset did not restore the default")
+  -- There is deliberately no page-shaped form: a page is a property of a settings panel, not of the
+  -- data, and the panel's own Defaults button is where page-scoped reset lives.
+  local lines = capture(function() NS.Slash:CliReset("Editing") end)
+  assertTrue(lines[1]:find("Setting not found", 1, true) ~= nil,
+    "`/pm reset <page>` resolved something — the page-shaped form is supposed to be gone")
+end)
+
+test("L trap (Slash): the ONE overridden string lands, and nothing renders as its own key",
+  function()
+    local SCREAMING = "^[A-Z][A-Z0-9_]+$"
+    -- This addon passes a PLAIN table holding exactly one key. The override must actually win —
+    -- a descriptor L that silently did nothing is the other half of the trap.
+    local lines = capture(function() NS.Slash:CliResetAll() end)
+    assertEqual(lines[#lines], NS.PREFIX .. " all settings reset to defaults (your panels are " ..
+      "untouched)", "the RESET_ALL override did not reach the rendered line")
+    assertEqual(NS.Slash:Text("RESET_ALL"),
+      "all settings reset to defaults (your panels are untouched)")
+    -- And the library's own strings still resolve for every key this addon does NOT override.
+    for _, key in ipairs({ "HELP_HEADER", "LIST_HEADER", "LIST_EMPTY", "NOT_FOUND", "INVALID",
+                           "ERR_BOOL", "ERR_NUMBER", "ERR_COLOR", "NONE", "USAGE_GET" }) do
+      local rendered = NS.Slash:Text(key)
+      assertTrue(type(rendered) == "string" and rendered ~= "", key .. " resolved to nothing")
+      assertFalse(rendered:match(SCREAMING) ~= nil, key .. " rendered as its own key: " .. rendered)
+    end
+    -- Reached through the real render path too, not only through Text().
+    for _, line in ipairs(NS.Slash:BuildListLines()) do
+      assertFalse(line:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):match(SCREAMING) ~= nil,
+        "a /pm list line rendered as a raw key: " .. line)
+    end
+  end)
+
 -- ── degradation ────────────────────────────────────────────────────────────────
 
 test("Degraded install: the addon loads with no LibKa0s at all", function()
@@ -376,6 +474,7 @@ end)
 local SEAM_FILES = {
   "core/CoreSetup.lua",
   "core/DebugLogSetup.lua",
+  "settings/Slash.lua",
 }
 
 test("L trap: no seam file hands a descriptor this addon's locale table", function()

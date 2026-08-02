@@ -48,7 +48,7 @@ end)
 
 test("Slash.OnSlash: dispatches from the COMMANDS table", function()
   local ran = false
-  NS.COMMANDS[#NS.COMMANDS + 1] = { name = "__probe", desc = "test", fn = function() ran = true end }
+  NS.COMMANDS[#NS.COMMANDS + 1] = { "__probe", "test", function() ran = true end }
   Sl:OnSlash("__probe")
   NS.COMMANDS[#NS.COMMANDS] = nil
   assertTrue(ran)
@@ -56,7 +56,7 @@ end)
 
 test("Slash.OnSlash: the verb is case-insensitive", function()
   local got
-  NS.COMMANDS[#NS.COMMANDS + 1] = { name = "__probe", desc = "test", fn = function(a) got = a end }
+  NS.COMMANDS[#NS.COMMANDS + 1] = { "__probe", "test", function(a) got = a end }
   Sl:OnSlash("__PROBE  Keep My Case")
   NS.COMMANDS[#NS.COMMANDS] = nil
   -- Only the verb is lower-cased; the rest keeps its case, or panel names and schema paths would be
@@ -74,14 +74,14 @@ test("Slash.BuildListLines: the header, then group headers, then rows", function
   local lines = Sl:BuildListLines()
   assertTrue(lines[1]:find("|cff33ff99Available settings|r", 1, true) ~= nil)
   assertTrue(lines[2]:find("|cff3399ff[", 1, true) ~= nil, "no azure group header")
-  assertTrue(lines[3]:find("|cffffff00", 1, true) ~= nil, "no gold key")
+  assertTrue(lines[3]:find("|cFFFFFF00", 1, true) ~= nil, "no gold key")
 end)
 
 test("Slash.BuildListLines: indentation is two spaces for groups, four for rows", function()
   for _, line in ipairs(Sl:BuildListLines()) do
     if line:find("|cff3399ff", 1, true) then
       assertTrue(line:sub(1, 2) == "  " and line:sub(3, 3) ~= " ", "bad group indent: " .. line)
-    elseif line:find("|cffffff00", 1, true) then
+    elseif line:find("|cFFFFFF00", 1, true) then
       assertTrue(line:sub(1, 4) == "    ", "bad row indent: " .. line)
     end
   end
@@ -95,38 +95,66 @@ test("Slash.BuildListLines: lists every schema row exactly once", function()
   assertEqual(rows, #NS.Schema.Schema)
 end)
 
-test("Slash.LIST_GROUP_ORDER: every declared group actually exists", function()
-  -- A name that matches nothing fails invisibly: the listing silently falls through to first-seen
-  -- order and nobody notices until the pages come out shuffled.
-  local groups = {}
-  for _, row in ipairs(NS.Schema.Schema) do groups[row.group] = true end
-  for _, name in ipairs(Sl.LIST_GROUP_ORDER) do
-    assertTrue(groups[name], "LIST_GROUP_ORDER names a group that does not exist: " .. name)
-  end
-end)
-
-test("Slash.LIST_GROUP_ORDER: covers every group in the schema", function()
-  local declared = {}
-  for _, name in ipairs(Sl.LIST_GROUP_ORDER) do declared[name] = true end
+test("Slash.BuildListLines: groups appear in schema DECLARATION order", function()
+  -- This replaces the hand-maintained Sl.LIST_GROUP_ORDER constant, which named the three schema
+  -- groups in the order they are already declared in — pure duplication, and a name that matched
+  -- nothing would have failed invisibly. LibKa0s-Slash-1.0 groups in declaration order outright, on
+  -- the reasoning that a schema's own order is the order its panel shows and a listing that
+  -- disagreed with the panel would be its own puzzle. The property is now asserted directly.
+  local declared, seen = {}, {}
   for _, row in ipairs(NS.Schema.Schema) do
-    assertTrue(declared[row.group], "group '" .. row.group .. "' is not in LIST_GROUP_ORDER")
+    local g = row.group or "?"
+    if not seen[g] then seen[g] = true; declared[#declared + 1] = g end
+  end
+  local rendered = {}
+  for _, line in ipairs(Sl:BuildListLines()) do
+    local g = line:match("^  |cff3399ff%[(.-)%]|r$")
+    if g then rendered[#rendered + 1] = g end
+  end
+  assertEqual(#rendered, #declared, "the listing and the schema disagree about how many groups exist")
+  for i, g in ipairs(declared) do
+    assertEqual(rendered[i], g, "group " .. i .. " is out of declaration order")
   end
 end)
 
-test("Slash.FormatSchemaValue: applies a row's fmt to numbers", function()
-  local row = NS.Schema:FindRow("settings.gridSize")
-  assertEqual(Sl.FormatSchemaValue(row, 4), "4 px")
+test("Slash.BuildListLines: every group in the schema reaches the listing", function()
+  local rendered = {}
+  for _, line in ipairs(Sl:BuildListLines()) do
+    local g = line:match("^  |cff3399ff%[(.-)%]|r$")
+    if g then rendered[g] = true end
+  end
+  for _, row in ipairs(NS.Schema.Schema) do
+    assertTrue(rendered[row.group], "group '" .. tostring(row.group) .. "' never reaches /pm list")
+  end
 end)
 
-test("Slash.FormatSchemaValue: booleans render true/false", function()
-  local row = NS.Schema:FindRow("settings.snapToGrid")
-  assertEqual(Sl.FormatSchemaValue(row, true), "true")
-  assertEqual(Sl.FormatSchemaValue(row, false), "false")
+test("Slash value rendering: a row's fmt still reaches the number", function()
+  -- Sl.FormatSchemaValue is gone; LibKa0s-Slash-1.0's lib.FormatValue renders every list/get/set
+  -- echo now. It reads the same `fmt` field, so "4 px" survives — asserted through the rendered
+  -- line rather than by calling the formatter, because the rendered line is what a user sees.
+  Sl:CliReset("settings.gridSize")
+  local lines = capture(function() Sl:CliGet("settings.gridSize") end)
+  assertEqual(#lines, 1)
+  assertTrue(lines[1]:find("4 px", 1, true) ~= nil, "the row's fmt was dropped: " .. lines[1])
+end)
+
+test("Slash value rendering: booleans render true/false", function()
+  Sl:CliSet("settings.snapToGrid on")
+  local on = capture(function() Sl:CliGet("settings.snapToGrid") end)
+  assertTrue(on[1]:find("= |cFFFFFFFFtrue|r", 1, true) ~= nil, "not rendered as true: " .. on[1])
+  Sl:CliSet("settings.snapToGrid off")
+  local off = capture(function() Sl:CliGet("settings.snapToGrid") end)
+  assertTrue(off[1]:find("= |cFFFFFFFFfalse|r", 1, true) ~= nil, "not rendered as false: " .. off[1])
+  Sl:CliSet("settings.snapToGrid on")
 end)
 
 test("Slash.FormatKV: gold key, white value, no trailing colon", function()
+  -- This formatter is now LibKa0s-Slash-1.0's, so the color escapes are UPPERCASE where this
+  -- addon's own were lowercase. WoW's escape parser is case-insensitive, so the rendered pixels are
+  -- identical and only the source bytes moved — but the bytes are what a test can see, so they are
+  -- what it asserts.
   local line = Sl.FormatKV("a.b", "7")
-  assertEqual(line, "|cffffff00a.b|r = |cffffffff7|r")
+  assertEqual(line, "|cFFFFFF00a.b|r = |cFFFFFFFF7|r")
   assertFalse(line:match(":%s*$") ~= nil)
 end)
 
@@ -163,29 +191,51 @@ end)
 test("Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)", function()
   Sl:CliSet("settings.snapToGrid on")
   local lines = capture(function() Sl:CliSet("settings.snapToGrid ture") end)
-  assertTrue(lines[1]:find("expected true/false", 1, true) ~= nil,
-    "the refusal does not list the accepted tokens")
+  -- Two lines now, not one: LibKa0s-Slash-1.0 emits "Invalid value for <path>" and then the reason,
+  -- indented, on its own line. The reason still lists every accepted token.
+  assertTrue(lines[1]:find("Invalid value for settings.snapToGrid", 1, true) ~= nil,
+    "the refusal does not name the setting: " .. lines[1])
+  assertTrue(lines[2]:find("expected true/false", 1, true) ~= nil,
+    "the refusal does not list the accepted tokens: " .. tostring(lines[2]))
   -- `/pm set settings.enabled ture` used to turn panels OFF and echo `= false`. Every other type in
   -- this dispatcher reports a parse failure; booleans do too now.
   assertTrue(NS.Schema:Get("settings.snapToGrid"), "a typo turned the setting off")
 end)
 
 test("Slash.CliSet: accepts a lower-case dropdown token", function()
+  -- Moved OFF the value under test first. This case used to set "low" against a row whose default
+  -- is already LOW, so it passed whether or not the up-casing happened at all — a mutation that
+  -- deleted the adapter outright left it green. `settings.defaultStrata` is the addon's one enum
+  -- row, and LibKa0s-Slash-1.0's parser matches an enum CASE-SENSITIVELY, so this affordance now
+  -- lives in a `parse` adapter on the descriptor and this is the only thing holding it.
+  Sl:CliSet("settings.defaultStrata HIGH")
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "HIGH", "the precondition did not take")
   Sl:CliSet("settings.defaultStrata low")
-  assertEqual(NS.Schema:Get("settings.defaultStrata"), "LOW")
-  Sl:CliSet("settings.defaultStrata background")
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "LOW",
+    "a lower-case enum token was refused — the parse adapter is gone")
+  Sl:CliReset("settings.defaultStrata")
 end)
 
 test("Slash.CliSet: a non-number for a number row is refused", function()
   local before = NS.Schema:Get("settings.gridSize")
   local lines = capture(function() Sl:CliSet("settings.gridSize banana") end)
-  assertTrue(lines[1]:find("expected a number", 1, true) ~= nil)
+  assertTrue(lines[1]:find("Invalid value for settings.gridSize", 1, true) ~= nil)
+  assertTrue(lines[2]:find("expected a number", 1, true) ~= nil)
   assertEqual(NS.Schema:Get("settings.gridSize"), before)
 end)
 
-test("Slash.CliSet: a rejected validate is reported as an error", function()
+test("Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)", function()
+  -- A USER-VISIBLE CHANGE, and a deliberate one. This addon used to refuse an out-of-range number
+  -- and print "error: invalid value"; LibKa0s-Slash-1.0's parser clamps instead, on the reasoning
+  -- that a user typing a width larger than the panel allows means "as wide as it goes". The echo
+  -- re-READS the stored value, so what actually landed is what gets reported — which is the only
+  -- reason a clamp is honest rather than silent.
   local lines = capture(function() Sl:CliSet("settings.gridSize 99999") end)
-  assertTrue(lines[1]:find("error", 1, true) ~= nil)
+  local row = NS.Schema:FindRow("settings.gridSize")
+  assertEqual(NS.Schema:Get("settings.gridSize"), row.max)
+  assertTrue(lines[1]:find(tostring(row.max) .. " px", 1, true) ~= nil,
+    "the echo does not report the clamped value: " .. lines[1])
+  Sl:CliReset("settings.gridSize")
 end)
 
 test("Slash.CliReset: restores one setting's default", function()
@@ -408,26 +458,32 @@ test("COMMANDS: the table is defined beside its dispatcher", function()
     "settings/Schema.lua should no longer mention the command table")
 end)
 
-test("COMMANDS: every entry has a name, description and function", function()
-  for _, cmd in ipairs(NS.COMMANDS) do
-    assertTrue(type(cmd.name) == "string" and cmd.name ~= "")
-    assertTrue(type(cmd.desc) == "string" and cmd.desc ~= "")
-    assertTrue(type(cmd.fn) == "function", cmd.name .. " has no function")
+test("COMMANDS: every entry is a { name, description, handler } triple", function()
+  -- POSITIONAL since the LibKa0s adoption: LibKa0s-Slash-1.0 reads entry[1]/[2]/[3], and the table
+  -- is passed to it rather than owned by it. A keyed entry left behind would dispatch as an
+  -- unknown verb and render a help row reading "nil".
+  for i, cmd in ipairs(NS.COMMANDS) do
+    assertTrue(type(cmd[1]) == "string" and cmd[1] ~= "", "entry " .. i .. " has no name")
+    assertTrue(type(cmd[2]) == "string" and cmd[2] ~= "", "entry " .. i .. " has no description")
+    assertTrue(type(cmd[3]) == "function", tostring(cmd[1]) .. " has no handler")
+    assertEqual(cmd.name, nil, tostring(cmd[1]) .. " still carries a keyed `name`")
+    assertEqual(cmd.desc, nil, tostring(cmd[1]) .. " still carries a keyed `desc`")
+    assertEqual(cmd.fn, nil, tostring(cmd[1]) .. " still carries a keyed `fn`")
   end
 end)
 
 test("COMMANDS: names are unique and lower-case", function()
   local seen = {}
   for _, cmd in ipairs(NS.COMMANDS) do
-    assertEqual(seen[cmd.name], nil, "duplicate command " .. cmd.name)
-    assertEqual(cmd.name, cmd.name:lower(), cmd.name .. " is not lower-case")
-    seen[cmd.name] = true
+    assertEqual(seen[cmd[1]], nil, "duplicate command " .. cmd[1])
+    assertEqual(cmd[1], cmd[1]:lower(), cmd[1] .. " is not lower-case")
+    seen[cmd[1]] = true
   end
 end)
 
 test("COMMANDS: the standard's required verbs are present (slash-commands-§3)", function()
   local have = {}
-  for _, cmd in ipairs(NS.COMMANDS) do have[cmd.name] = true end
+  for _, cmd in ipairs(NS.COMMANDS) do have[cmd[1]] = true end
   for _, required in ipairs({ "config", "version", "get", "set", "list",
                               "reset", "resetall", "debug", "help" }) do
     assertTrue(have[required], "missing the required '" .. required .. "' verb")
@@ -440,7 +496,7 @@ test("COMMANDS: the descs name the sub-verbs their handlers accept (F-011)", fun
   -- generate from these descs (slash-commands-§3 forbids a hand-maintained help string, so the desc
   -- is the only place the text can go).
   local desc = {}
-  for _, cmd in ipairs(NS.COMMANDS) do desc[cmd.name] = cmd.desc end
+  for _, cmd in ipairs(NS.COMMANDS) do desc[cmd[1]] = cmd[2] end
   assertTrue(desc.debug:find("dump", 1, true) ~= nil,
     "the debug row never mentions 'dump', the verb a bug report asks for")
   assertTrue(desc.panel:find("deleteall", 1, true) ~= nil,

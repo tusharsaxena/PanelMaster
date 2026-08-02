@@ -501,10 +501,10 @@ badge and any count quoted in the docs must agree with it.
 - Slash.BuildListLines: the header, then group headers, then rows
 - Slash.BuildListLines: indentation is two spaces for groups, four for rows
 - Slash.BuildListLines: lists every schema row exactly once
-- Slash.LIST_GROUP_ORDER: every declared group actually exists
-- Slash.LIST_GROUP_ORDER: covers every group in the schema
-- Slash.FormatSchemaValue: applies a row's fmt to numbers
-- Slash.FormatSchemaValue: booleans render true/false
+- Slash.BuildListLines: groups appear in schema DECLARATION order
+- Slash.BuildListLines: every group in the schema reaches the listing
+- Slash value rendering: a row's fmt still reaches the number
+- Slash value rendering: booleans render true/false
 - Slash.FormatKV: gold key, white value, no trailing colon
 - Slash.CliGet: prints the key = value line
 - Slash.CliGet: an unknown path is reported
@@ -514,7 +514,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)
 - Slash.CliSet: accepts a lower-case dropdown token
 - Slash.CliSet: a non-number for a number row is refused
-- Slash.CliSet: a rejected validate is reported as an error
+- Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)
 - Slash.CliReset: restores one setting's default
 - Slash.CliResetAll: restores every setting and leaves panels alone
 - Slash.CliVersion: prints v<version>
@@ -540,7 +540,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliRecover: reports how many it moved
 - Slash: every printed line carries the shared cyan tag
 - COMMANDS: the table is defined beside its dispatcher
-- COMMANDS: every entry has a name, description and function
+- COMMANDS: every entry is a { name, description, handler } triple
 - COMMANDS: names are unique and lower-case
 - COMMANDS: the standard's required verbs are present (slash-commands-§3)
 - COMMANDS: the descs name the sub-verbs their handlers accept (F-011)
@@ -613,7 +613,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 
-### test_libka0s.lua (22)
+### test_libka0s.lua (27)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -626,6 +626,11 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
 - DebugLog seam: the console wears the LIBRARY's close button, not this addon's
 - L trap (DebugLog): every rendered console string resolves to prose, not to its own key
+- Slash seam: the dispatcher is the library's, not a host re-implementation
+- Convergence #2: the landing page and the chat help render the SAME rows
+- Convergence #2: settings/Panel.lua no longer carries a second row formatter
+- Convergence #1: /pm reset takes a PATH and /pm resetall is the global form
+- L trap (Slash): the ONE overridden string lands, and nothing renders as its own key
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
 - Degraded install: the notice is announced exactly ONCE, before the first line
@@ -670,7 +675,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 55 |
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
-| test_libka0s.lua | 22 |
+| test_libka0s.lua | 27 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
-| **Total** | **591** |
+| **Total** | **596** |

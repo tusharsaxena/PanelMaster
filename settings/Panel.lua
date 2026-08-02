@@ -504,11 +504,18 @@ local function buildMainContent(ctx)
   scroll:AddChild(heading)
   addSpacer(scroll, 6)
 
-  -- Generated from NS.COMMANDS, so this list stays in lockstep with `/pm help` (options-ui-§5).
-  for _, cmd in ipairs(NS.COMMANDS or {}) do
+  -- Rendered through the ONE command-row formatter, LibKa0s-Slash-1.0's, rather than this file's own
+  -- (options-ui-§5). This page used to carry a SECOND formatter for the same NS.COMMANDS data — a
+  -- chat one in settings/Slash.lua and this one here — which had already drifted apart: this one put
+  -- double spaces either side of the em dash, wrapped the dash itself in white and left the
+  -- description bare. `Sl:LandingRows()` returns exactly the rows `Sl:HelpRows()` does, minus the
+  -- two-space chat indent, so the two surfaces can no longer disagree. The collapse to single
+  -- spaces, the dash losing its color span and the description gaining one are the accepted cost.
+  local rows = (NS.Slash and NS.Slash.LandingRows) and NS.Slash:LandingRows() or {}
+  for _, row in ipairs(rows) do
     local labelRow = AceGUI:Create("Label")
     labelRow:SetFullWidth(true)
-    labelRow:SetText(("|cffffff00/pm %s|r  |cffffffff\226\128\148|r  %s"):format(cmd.name, cmd.desc))
+    labelRow:SetText(row)
     scroll:AddChild(labelRow)
   end
 end

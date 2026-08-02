@@ -26,21 +26,21 @@ end
 
 S.Schema = {
   -- ── Master Controls ──
-  { path = "settings.enabled", default = true, type = "boolean", widget = "CheckBox",
+  { path = "settings.enabled", default = true, type = "bool", widget = "CheckBox",
     group = "Master Controls", label = "Enable panels",
     tooltip = "Master switch. Turning this off hides every panel without deleting any of them.",
     onChange = function() announce("enabled") end },
 
   -- A session-only row (never persisted): unlock is an editing state, not a preference. get/set
   -- route to NS.Unlock, and Schema:Set skips the db write for sessionOnly rows. Mirrors `/pm unlock`.
-  { path = "state.unlocked", sessionOnly = true, default = false, type = "boolean",
+  { path = "state.unlocked", sessionOnly = true, default = false, type = "bool",
     widget = "CheckBox", group = "Master Controls", label = "Unlock panels",
     tooltip = "Show every panel with a drag handle and a name label so it can be moved. "
       .. "Session-only \226\128\148 always locked again after a reload.",
     get = function() return NS.State.unlocked end,
     set = function(v) if NS.Unlock then NS.Unlock:SetUnlocked(v) end end },
 
-  { path = "state.preview", sessionOnly = true, default = false, type = "boolean",
+  { path = "state.preview", sessionOnly = true, default = false, type = "bool",
     widget = "CheckBox", group = "Master Controls", label = "Test mode",
     tooltip = "Put three sample panels on screen so you can see what a panel looks like. "
       .. "They are removed again when you turn this off.",
@@ -49,7 +49,7 @@ S.Schema = {
 
   -- Session-only: the value is the debug console WINDOW's visibility, not the NS.State.debug
   -- logging flag. Mirrors `/pm debug` with no argument.
-  { path = "state.debugConsole", sessionOnly = true, default = false, type = "boolean",
+  { path = "state.debugConsole", sessionOnly = true, default = false, type = "bool",
     widget = "CheckBox", group = "Master Controls", label = "Debug console",
     tooltip = "Show or hide the on-screen debug console. Session-only \226\128\148 resets on reload.",
     get = function() return NS.DebugLog ~= nil and NS.DebugLog:IsShown() end,
@@ -60,7 +60,7 @@ S.Schema = {
 
   -- ── Editing ──
   -- How dragging behaves while unlocked.
-  { path = "settings.showLabels", default = true, type = "boolean", widget = "CheckBox",
+  { path = "settings.showLabels", default = true, type = "bool", widget = "CheckBox",
     group = "Editing", label = "Show names while unlocked",
     tooltip = "Print each panel's name across the middle of it while panels are unlocked.",
     onChange = function() announce("showLabels") end },
@@ -69,7 +69,7 @@ S.Schema = {
   -- db.profile.settings live at drag-stop, so a new grid applies to the very next drag on its own —
   -- announcing would repaint every panel per mouse-up on the slider for nothing. `showLabels` above
   -- keeps its announce because U:Decorate reads it, and Decorate only ever runs from a render.
-  { path = "settings.snapToGrid", default = true, type = "boolean", widget = "CheckBox",
+  { path = "settings.snapToGrid", default = true, type = "bool", widget = "CheckBox",
     group = "Editing", label = "Snap to grid",
     tooltip = "Round a dragged panel's position to the grid size below." },
 
@@ -84,7 +84,7 @@ S.Schema = {
   -- Applied to panels created AFTER a change here; existing panels are never retroactively altered,
   -- which is why these are separate settings rather than a global override.
   { path = "settings.defaultStrata", default = "LOW", type = "string", widget = "Dropdown",
-    group = "New Panel Defaults", label = "Default frame strata", options = C.STRATA_OPTIONS,
+    group = "New Panel Defaults", label = "Default frame strata", values = C.STRATA_OPTIONS,
     tooltip = "The layer a newly created panel sits in. LOW keeps it under essentially all "
       .. "interface frames, which is what a backdrop usually wants. DIALOG and above cover normal UI.",
     validate = function(v) return NS.Util.IsStrata(v) end },

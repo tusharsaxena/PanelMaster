@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-591%2F591_passing-green)
+![Tests](https://img.shields.io/badge/Tests-596%2F596_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
