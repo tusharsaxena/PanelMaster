@@ -34,8 +34,12 @@ local function slurp(path)
 end
 
 -- The addon's own sources come from the TOC (libs\ excluded — vendored code is not ours to
--- respell) and the suites come from run.lua's SUITE_FILES, so adding a file to either list puts
+-- respell) and the suites come from run.lua's SUITES list, so adding a file to either list puts
 -- it under the scan for free. Only the docs need naming by hand.
+--
+-- tests/_kit/ is excluded for exactly the same reason as libs\: it is the shared LibKa0s test kit,
+-- vendored whole-folder and byte-identical to its source of truth. Respelling a word in it would
+-- fork the copy, which the vendoring gate then reports as drift.
 local function authoredFiles()
   local paths = {}
   for line in slurp("PanelMaster.toc"):gmatch("[^\r\n]+") do
@@ -44,11 +48,14 @@ local function authoredFiles()
   end
   paths[#paths + 1] = "PanelMaster.toc"
   paths[#paths + 1] = "tests/run.lua"
-  paths[#paths + 1] = "tests/loader.lua"
   paths[#paths + 1] = "tests/wow_mock.lua"
-  for suite in slurp("tests/run.lua"):match("local SUITE_FILES = {(.-)}"):gmatch('"([^"]+)"') do
+  -- BASENAMES since the kit's runner appends the extension itself. A suite listed in run.lua but
+  -- not yet written on disk is skipped by the runner, so it is skipped here too rather than
+  -- failing the scan on a file that does not exist.
+  for suite in slurp("tests/run.lua"):match("local SUITES = {(.-)}"):gmatch('"([^"]+)"') do
     -- This file is the one authored source that spells the British forms on purpose.
-    if suite ~= "test_spelling.lua" then paths[#paths + 1] = "tests/" .. suite end
+    local path = "tests/" .. suite .. ".lua"
+    if suite ~= "test_spelling" and io.open(path, "r") then paths[#paths + 1] = path end
   end
   -- .luacheckrc is authored English too. It is neither a .lua nor a .md file, which is exactly how
   -- a "Class colour" comment sat in it through the sweep that was meant to remove it.

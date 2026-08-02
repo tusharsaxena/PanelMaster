@@ -1,10 +1,10 @@
 # Test Cases
 
-The full inventory of every headless test case, grouped by suite. This file is the
-**authoritative pass count** for the addon.
+The full inventory of every headless test case in this repo, grouped by the suite file it
+lives in. The `## Totals` table below is the **authoritative pass count** — the README test
+badge and any count quoted in the docs must agree with it.
 
-**Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`
-whenever the suite changes (see [testing.md](testing.md)).
+**Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
 ### test_util.lua (27)
 
@@ -613,6 +613,31 @@ whenever the suite changes (see [testing.md](testing.md)).
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 
+### test_libka0s.lua (14)
+
+- LibKa0s: the vendored library registered for real
+- LibKa0s: NS.Core is the live Core library, not a stub
+- Core seam: NS.Print is the library's printer, not the fallback
+- Core seam: NS.Print survived the AceConsole embed and both keys are one object
+- Core seam: the rendered line is byte-identical to the printer this replaced
+- Core seam: the secret guard survived the swap
+- Degraded install: the addon loads with no LibKa0s at all
+- Degraded install: the shared cause clause is set on BOTH paths
+- Degraded install: the notice is announced exactly ONCE, before the first line
+- Degraded install: the fallback printer renders the same bytes as the library's
+- L trap (Core tripwire): Core cannot express the trap
+- L trap (matcher): the guard catches every offending spelling, not one
+- L trap: no seam file hands a descriptor this addon's locale table
+- L trap: the seam-file list covers every file that calls lib:New
+
+### test_harness.lua (5)
+
+- Harness: every suite the runner lists exists on disk
+- Harness: every suite on disk is listed by the runner
+- Harness: the shared kit is present and is reached through tests/_kit
+- Harness: wow_mock extends the kit's mock_base rather than replacing it
+- Harness: the runner derives the addon's load list from the TOC
+
 ### test_spelling.lua (2)
 
 - Spelling: the TOC and run.lua between them name every authored source
@@ -637,5 +662,7 @@ whenever the suite changes (see [testing.md](testing.md)).
 | test_slash.lua | 55 |
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
+| test_libka0s.lua | 14 |
+| test_harness.lua | 5 |
 | test_spelling.lua | 2 |
-| **Total** | **564** |
+| **Total** | **583** |

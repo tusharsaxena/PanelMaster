@@ -1,5 +1,46 @@
--- Minimal WoW-API mock set for the headless unit tests. Returns a builder so each run gets a fresh,
--- isolated environment. Only what the addon touches at load/test time is stubbed.
+-- PanelMaster's WoW-API mock: an EXTENDER over the shared kit's tests/_kit/mock_base.lua, not a
+-- replacement for it. Returns a builder so each run gets a fresh, isolated environment.
+--
+-- WHAT THE BASE GIVES US, and why it is worth extending rather than ignoring:
+--   * a LibStub with a real NewLibrary, which is the only way the vendored libs/LibKa0s/*.lua
+--     modules can register at all headlessly. Nothing else in this repo can supply that.
+--   * a FIREABLE AceGUI-3.0 — widgets that record what was set on them and expose __fire, so the
+--     schema → widget → write path is reachable. This addon's own mock handed back nil from
+--     Create(), which made that whole path untestable; it is now driven for real.
+--
+-- WHAT WE OVERRIDE, and why each one is deliberate rather than laziness. The kit's own header names
+-- the first as a divergence it knowingly keeps; the rest are PanelMaster-shaped and belong here by
+-- the kit's stated scope rule ("what does not belong: anything only one addon calls").
+--
+--   1. stubFrame / CreateFrame / UIParent — the base's CreateTexture and CreateFontString answer
+--      from the metatable and return THE FRAME ITSELF. This addon draws a background texture, a
+--      border and up to four accent edges onto one frame and asserts each one's color, texture,
+--      tex-coords and blend mode separately; aliasing them all onto the parent would collapse every
+--      edge into one color slot and hide a whole class of border bug. The base also answers 0 from
+--      GetWidth/GetHeight and models no points, and this addon's entire product is positions and
+--      sizes that are persisted, snapped, restored and recovered.
+--   2. Frames start SHOWN (the base starts them hidden) — 34 IsShown assertions sit on that, and a
+--      real frame is shown unless something hides it.
+--   3. AceDB-3.0 — this addon's suites drive __switchProfile / __db / __dbDefaultProfile, which
+--      model AceDB's "swap db.profile wholesale, then fire" semantics.
+--   4. AceAddon-3.0 — __badEvents (retail RAISES on an unknown event name), __chatCommands,
+--      timers that can be canceled, and a Print mixin that RETURNS its string so the reclaim is
+--      assertable.
+--   5. AceEvent-3.0 + the bus — callbacks keyed by (message, target), so same-target clobbering
+--      (architecture-§4) is catchable.
+--   6. DEFAULT_CHAT_FRAME — a capture table feeding __chat. The base's is a plain stub frame whose
+--      AddMessage no-ops, which would silence every chat assertion in the suite.
+--   7. Settings — __settingsPanels / __openedCategory, the canvas-contract evidence (options-ui-§1).
+--   8. C_AddOns and strtrim — both deliberately absent from the base. C_AddOns is re-added
+--      knowingly: the kit warns a base-level stub would shadow tests/test_compat.lua's
+--      `_G.C_AddOns = nil` swap, but that swap sets the GLOBAL while the loader env resolves mocks
+--      first, so this addon's Compat fallback branch is driven through NS.Compat directly instead.
+--   9. UnitClass (three returns, including the classID this addon reads), RAID_CLASS_COLORS,
+--      MouseIsOver, BackdropTemplateMixin — none are in the base.
+--  10. LibSharedMedia-3.0 stays ABSENT, as it is in the base: it is an OptionalDep and the addon
+--      must run without it (library-stack-§6), so missing is the tested default.
+
+local buildBase = dofile("tests/_kit/mock_base.lua")
 
 local function deepcopy(t)
   if type(t) ~= "table" then return t end
@@ -156,7 +197,12 @@ local function stubFrame()
 end
 
 return function()
-  local M = {}
+  local M = buildBase()
+
+  -- Override the base's frame stub wholesale (reason 1/2 in the header). Everything the base built
+  -- with its own stubFrame — the AceGUI widget `frame` fields — keeps the base's, which is correct:
+  -- no suite here asserts on those.
+  M.__stubFrame = stubFrame
 
   -- time / misc
   M.__now = 1785000000
@@ -230,8 +276,11 @@ return function()
     OpenToCategory = function(id) M.__openedCategory = id end,
   }
 
-  -- LibStub + Ace library mocks
-  local libs = {}
+  -- Ace library fakes. Registered INTO the base's own table (M.__libs) rather than a private one,
+  -- because the base's LibStub closes over that table — and the base's LibStub is the one thing
+  -- here that cannot be replaced: it carries the real NewLibrary the vendored LibKa0s modules
+  -- register through. A private table would leave them registered nowhere.
+  local libs = M.__libs
   -- AceDB, including its CALLBACK surface. The callbacks are modeled rather than stubbed because
   -- switching profiles swaps `db.profile` wholesale — if the addon does not react, the previous
   -- profile's panels stay on screen. `__switchProfile` reproduces exactly that: replace the table,
@@ -273,11 +322,12 @@ return function()
     end,
   }
 
-  -- AceGUI is present but hands back nothing: P:Register only needs the library to EXIST (the panel
-  -- bodies are built lazily on first OnShow, which never fires headless), and every widget call site
-  -- already guards on the create returning a usable widget. That is enough to exercise registration
-  -- and the framework callback contract without modeling AceGUI's whole widget tree.
-  libs["AceGUI-3.0"] = { Create = function() return nil end }
+  -- AceGUI-3.0 is the BASE's, deliberately left untouched. It used to be a dead end here
+  -- (`Create = function() return nil end`) on the reasoning that panel bodies build lazily on an
+  -- OnShow that never fires headless — which was true, and which is exactly why the whole
+  -- schema → widget → write path had no coverage at all. The kit's widgets record what was set on
+  -- them and expose __fire, so a test can fire an OnShow and then drive OnValueChanged the way a
+  -- real click does.
 
   -- AceConfig / AceDBOptions back the Profiles page. Present so P:Register exercises the real
   -- registration path; `__profileOptions` records what was handed over, since "we registered AceDB's
@@ -376,10 +426,12 @@ return function()
     end,
   }
 
-  M.LibStub = setmetatable(
-    { GetLibrary = function(_, n) return libs[n] end },
-    { __call = function(_, n) return libs[n] end }
-  )
+  -- M.LibStub is the BASE's and is deliberately NOT replaced. Two reasons, both load-bearing:
+  --   * it implements NewLibrary with minor tracking, which is how libs/LibKa0s/*.lua register for
+  --     real headlessly — exactly as they do in the client;
+  --   * it is STRICT about the silent flag, matching the real LibStub. A lookup written without
+  --     `, true` now raises instead of resolving to nil, so a soft-optional lookup that forgot the
+  --     flag fails here rather than in the client.
 
   return M
 end

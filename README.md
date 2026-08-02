@@ -3,12 +3,14 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-564%2F564_passing-green)
+![Tests](https://img.shields.io/badge/Tests-583%2F583_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
      addon actually loads in-game — WoW cannot read .png or .jpg at runtime. -->
 ![Logo](media/logos/panelmaster.logo.256.jpg)
+
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.3.1 (MIT).
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so a screen full of separate frames
 reads as a few deliberate groups.

@@ -24,6 +24,9 @@ libs\AceConfig-3.0\AceConfig-3.0.xml
 libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
 libs\LibSharedMedia-3.0\lib.xml
 libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
+# LibKa0s AFTER LibStub and after Ace3: Core resolves LibStub, and DebugLog/Slash/Options each
+# resolve LibKa0s-Core-1.0 before calling NewLibrary. Vendored whole-folder from ../LibKa0s.
+libs\LibKa0s\LibKa0s.xml
 
 # Locales
 locales\enUS.lua
@@ -36,6 +39,9 @@ core\Constants.lua
 core\Namespace.lua
 core\State.lua
 core\Util.lua
+# CoreSetup AFTER Namespace (NS.PREFIX) and Util (NS.Util), and BEFORE PanelMaster.lua, whose
+# AceConsole embed reclaims NS.Print from NS.Util.print. See the header of the file.
+core\CoreSetup.lua
 core\PanelMaster.lua
 core\Database.lua
 

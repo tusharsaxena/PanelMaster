@@ -1,58 +1,40 @@
 -- Headless test runner for Ka0s Panel Master.
 -- Run from the repo root:  lua tests/run.lua        (add --list to emit docs/test-cases.md)
+--
+-- The registry, the assertions, the `--list` renderer and the source loader are the SHARED test kit
+-- (tests/_kit/, vendored whole-folder from ../LibKa0s/testkit — never edited here). What stays this
+-- addon's is the environment: tests/wow_mock.lua, which extends the kit's mock_base, and the
+-- lifecycle call below.
 
-local Loader     = dofile("tests/loader.lua")
+local Kit    = dofile("tests/_kit/framework.lua")
+local Loader = dofile("tests/_kit/loader.lua")
 local buildMocks = dofile("tests/wow_mock.lua")
 
--- --- tiny test framework (exposed to test files via _G.PM_TEST) ---
-local tests = {}
-local currentSuite = nil
-local function test(name, fn) tests[#tests + 1] = { name = name, fn = fn, suite = currentSuite } end
-
-local function fail(msg, level) error(msg, (level or 1) + 1) end
-local function assertEqual(got, want, msg)
-  if got ~= want then
-    fail((msg or "assertEqual") ..
-      string.format(" (expected %s, got %s)", tostring(want), tostring(got)), 1)
-  end
-end
-local function assertTrue(c, msg) if not c then fail(msg or "assertTrue failed", 1) end end
-local function assertFalse(c, msg) if c then fail(msg or "assertFalse failed", 1) end end
--- Float comparison for the geometry and color maths, where an exact == would be a false failure.
-local function assertNear(got, want, tol, msg)
-  tol = tol or 1e-6
-  if type(got) ~= "number" or math.abs(got - want) > tol then
-    fail((msg or "assertNear") ..
-      string.format(" (expected ~%s, got %s)", tostring(want), tostring(got)), 1)
-  end
-end
+Loader.addonName = "PanelMaster"
 
 -- --- build the shared addon environment once (mirrors the in-game TOC load + OnInitialize) ---
 local mocks = buildMocks()
 local NS = {}
 
+-- The vendored library, loaded FIRST and by hand. Loader.tocFiles skips every `libs\` line — a
+-- vendored library is pulled in through its own XML, which the loader cannot read — so the one
+-- library this addon's own code resolves has to be listed here. Order matches LibKa0s.xml: Core
+-- first, because DebugLog, Slash and Options each resolve LibKa0s-Core-1.0 and return WITHOUT
+-- registering when it is absent.
 Loader.loadAll({
-  "locales/enUS.lua",
-  "locales/PostLoad.lua",
-  "core/Compat.lua",
-  "core/Constants.lua",
-  "core/Namespace.lua",
-  "core/State.lua",
-  "core/Util.lua",
-  "core/PanelMaster.lua",
-  "core/Database.lua",
-  "defaults/Profile.lua",
-  "defaults/Global.lua",
-  "modules/Registry.lua",
-  "modules/Artwork.lua",
-  "modules/Canvas.lua",
-  "modules/Unlock.lua",
-  "modules/DebugLog.lua",
-  "settings/Schema.lua",
-  "settings/Slash.lua",
-  "settings/PanelEditor.lua",
-  "settings/Panel.lua",
+  "libs/LibKa0s/Core.lua",
+  "libs/LibKa0s/DebugLog.lua",
+  "libs/LibKa0s/Slash.lua",
+  "libs/LibKa0s/Options.lua",
+  "libs/LibKa0s/OptionsWidgets.lua",
+  "libs/LibKa0s/OptionsScroll.lua",
 }, NS, mocks)
+
+-- The addon's own files, IN TOC ORDER, derived from the TOC rather than hand-listed. The list used
+-- to be a second copy maintained here, and a second copy of a load order is a second thing that can
+-- be wrong: a file added to the TOC but not to this list simply never loaded in the suite, and the
+-- suite stayed green while the addon was untested.
+Loader.loadAll(Loader.tocFiles("PanelMaster.toc"), NS, mocks)
 
 -- Run the addon's REAL lifecycle entry points, rather than hand-calling the pieces they are
 -- supposed to call.
@@ -69,69 +51,24 @@ Loader.loadAll({
 NS.addon:OnInitialize()
 NS.addon:OnEnable()
 
-_G.PM_TEST = {
-  NS = NS, mocks = mocks, test = test,
-  assertEqual = assertEqual, assertTrue = assertTrue, assertFalse = assertFalse,
-  assertNear = assertNear,
+-- The kit's registry and assertions are MERGED into this addon's existing global test table, under
+-- its existing name and beside its existing keys, so not one suite file's `local T = _G.PM_TEST`
+-- header changes. Kit.expose adds three assertions this repo did not have (fail, assertNil,
+-- assertError) and replaces the four it did with byte-compatible equivalents.
+_G.PM_TEST = Kit.expose({ NS = NS, mocks = mocks })
+
+-- --- the suites ---
+-- BASENAMES, not filenames: the kit appends `.lua` itself. A name with no file on disk is SKIPPED
+-- rather than fatal, which is a silently-green hole — tests/test_harness.lua closes it by asserting
+-- this list and `tests/test_*.lua` agree in both directions.
+local SUITES = {
+  "test_util", "test_compat", "test_constants",
+  "test_registry", "test_canvas", "test_unlock", "test_media",
+  "test_accent", "test_artwork",
+  "test_database", "test_debuglog",
+  "test_schema", "test_slash", "test_panel", "test_profiles",
+  "test_libka0s", "test_harness",
+  "test_spelling",
 }
 
--- --- load the test suites ---
-local SUITE_FILES = {
-  "test_util.lua", "test_compat.lua", "test_constants.lua",
-  "test_registry.lua", "test_canvas.lua", "test_unlock.lua", "test_media.lua",
-  "test_accent.lua", "test_artwork.lua",
-  "test_database.lua", "test_debuglog.lua",
-  "test_schema.lua", "test_slash.lua", "test_panel.lua", "test_profiles.lua",
-  "test_spelling.lua",
-}
-for _, s in ipairs(SUITE_FILES) do
-  currentSuite = s
-  dofile("tests/" .. s)
-end
-currentSuite = nil
-
--- --- inventory mode: emit docs/test-cases.md and exit without running (testing-§5) ---
-if arg and arg[1] == "--list" then
-  local order, byS = {}, {}
-  for _, t in ipairs(tests) do
-    if not byS[t.suite] then byS[t.suite] = {}; order[#order + 1] = t.suite end
-    local b = byS[t.suite]; b[#b + 1] = t.name
-  end
-  print("# Test Cases")
-  print("")
-  print("The full inventory of every headless test case, grouped by suite. This file is the")
-  print("**authoritative pass count** for the addon.")
-  print("")
-  print("**Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`")
-  print("whenever the suite changes (see [testing.md](testing.md)).")
-  print("")
-  for _, s in ipairs(order) do
-    local b = byS[s]
-    print(string.format("### %s (%d)", s, #b))
-    print("")
-    for _, n in ipairs(b) do print("- " .. n) end
-    print("")
-  end
-  print("## Totals")
-  print("")
-  print("| Suite | Cases |")
-  print("|-------|------:|")
-  for _, s in ipairs(order) do print(string.format("| %s | %d |", s, #byS[s])) end
-  print(string.format("| **Total** | **%d** |", #tests))
-  os.exit(0)
-end
-
--- --- run ---
-local passed, failed = 0, 0
-for _, t in ipairs(tests) do
-  local ok, err = pcall(t.fn)
-  if ok then
-    passed = passed + 1
-    print("  PASS  " .. t.name)
-  else
-    failed = failed + 1
-    print("  FAIL  " .. t.name .. "\n          " .. tostring(err))
-  end
-end
-print(string.format("\n%d passed, %d failed, %d total", passed, failed, passed + failed))
-os.exit(failed == 0 and 0 or 1)
+Kit.run({ dir = "tests/", suites = SUITES })
