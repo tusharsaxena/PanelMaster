@@ -4,7 +4,7 @@ How the addon is put together: the module map, the data model, the message bus, 
 the event wiring, and the decisions worth knowing before changing anything.
 
 Built to the [Ka0s WoW Addon Standard](https://github.com/tusharsaxena/WowAddonStandards). Read the
-root [CLAUDE.md](../CLAUDE.md) and [agent-context.md](agent-context.md) first.
+root [CLAUDE.md](../CLAUDE.md) first.
 
 ## What it is
 

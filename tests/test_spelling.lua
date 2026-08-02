@@ -65,7 +65,7 @@ local function authoredFiles()
   -- plate while the code calls the field something else is exactly the drift this scan exists to
   -- stop. Frozen bundles under docs/audits/ and docs/reviews/ are deliberately absent — they are
   -- dated records of what was true on a past day, not living text to respell.
-  for _, doc in ipairs({ "README.md", "CLAUDE.md", "docs/ARCHITECTURE.md", "docs/agent-context.md",
+  for _, doc in ipairs({ "README.md", "CLAUDE.md", "docs/ARCHITECTURE.md",
                          "docs/smoke-tests.md", "docs/test-cases.md", "docs/testing.md",
                          "docs/artwork-spec.md", ".luacheckrc" }) do
     paths[#paths + 1] = doc

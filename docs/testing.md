@@ -60,11 +60,27 @@ Syntax-check a single file with `luac -p path/to/file.lua`.
 
 ```
 tests/
-  run.lua            -- the runner + micro-framework; also the --list inventory mode
-  loader.lua         -- loads each source with loadfile + setfenv over the mock env
-  wow_mock.lua       -- the WoW API mock builder (a fresh env per run)
+  _kit/              -- the SHARED kit, vendored from ../LibKa0s/testkit; never edited here
+    framework.lua    -- the case registry, the assertions and the --list renderer
+    loader.lua       -- loads each source with loadfile + setfenv over the mock env
+    mock_base.lua    -- the base WoW/Ace mock every Ka0s addon starts from
+  run.lua            -- a thin consumer of the kit; also the --list inventory mode
+  wow_mock.lua       -- this addon's mock, EXTENDING _kit/mock_base.lua (a fresh env per run)
   test_<module>.lua  -- one suite per module
 ```
+
+The registry, the assertions, the `--list` renderer and the source loader are **not this addon's** —
+they are the shared kit under `tests/_kit/`, vendored whole-folder alongside `libs/LibKa0s/` and
+covered by the same vendor gate and the same never-edit-it rule. `run.lua` is a thin consumer
+(`Kit.expose` + `Kit.run`) that derives the load order from the TOC via `Loader.tocFiles` rather than
+keeping a second copy of it, and hand-lists only `libs/LibKa0s/*.lua`, which the loader skips because
+a vendored library loads through its own XML.
+
+`wow_mock.lua` **extends** `_kit/mock_base.lua` rather than replacing it. The base is the only source
+of a `LibStub` with a real `NewLibrary` — without which no vendored LibKa0s major registers headlessly
+— and of a fireable AceGUI, which is what makes the schema → widget → write path reachable at all.
+The host overrides only what is genuinely its own, and that file's header states the reason for each
+override one by one; the *Mock fidelity that is load-bearing* list below is the short form.
 
 - `run.lua` builds the addon environment once by loading every source **in TOC order**, then calls
   `NS.addon:OnInitialize()` and `NS.addon:OnEnable()` — the addon's **real** lifecycle entry points.
@@ -78,7 +94,7 @@ tests/
   reached the renderer, and only the two paths calling `Canvas:RenderAll()` directly (lock/unlock and
   test mode) repainted anything. Calling the real functions means a step dropped from either entry
   point fails the suite instead of hiding in it.
-- `loader.lua` reproduces the `local addonName, NS = ...` header by calling each chunk as
+- `_kit/loader.lua` reproduces the `local addonName, NS = ...` header by calling each chunk as
   `chunk("PanelMaster", NS)` under an environment where WoW globals resolve to the mock table first
   and fall back to real `_G`.
 - `wow_mock.lua` stubs time, combat, metadata and UI APIs plus a universal frame.
