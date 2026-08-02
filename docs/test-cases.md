@@ -613,7 +613,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 
-### test_libka0s.lua (14)
+### test_libka0s.lua (22)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -621,9 +621,17 @@ badge and any count quoted in the docs must agree with it.
 - Core seam: NS.Print survived the AceConsole embed and both keys are one object
 - Core seam: the rendered line is byte-identical to the printer this replaced
 - Core seam: the secret guard survived the swap
+- DebugLog seam: the console is the library's instance, not a host re-implementation
+- DebugLog seam: the survivors kept their names and their shapes
+- DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
+- DebugLog seam: the console wears the LIBRARY's close button, not this addon's
+- L trap (DebugLog): every rendered console string resolves to prose, not to its own key
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
 - Degraded install: the notice is announced exactly ONCE, before the first line
+- Degraded install: the console explains itself once and every member still answers
+- Degraded install: /pm debug on|off still flips the flag and acknowledges
+- Degraded install: /pm debug dump still answers
 - Degraded install: the fallback printer renders the same bytes as the library's
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
@@ -662,7 +670,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 55 |
 | test_panel.lua | 40 |
 | test_profiles.lua | 21 |
-| test_libka0s.lua | 14 |
+| test_libka0s.lua | 22 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
-| **Total** | **583** |
+| **Total** | **591** |

@@ -119,6 +119,93 @@ test("Core seam: the secret guard survived the swap", function()
   assertEqual(mocks.LibStub("LibKa0s-Core-1.0", true).SECRET, "<secret>")
 end)
 
+-- ── DebugLog: the console seam ─────────────────────────────────────────────────
+
+test("DebugLog seam: the console is the library's instance, not a host re-implementation", function()
+  local dl = mocks.LibStub("LibKa0s-DebugLog-1.0", true)
+  assertTrue(dl ~= nil, "LibKa0s-DebugLog-1.0 did not register")
+  assertEqual(dl.MODULES.DebugLog, dl.MINOR)
+  -- Members the OLD modules/DebugLog.lua never had. Their presence is what distinguishes the
+  -- library instance from the 429-line file it replaced and from the degradation stub.
+  for _, member in ipairs({ "Text", "CopyText", "FindLine", "BufferSize", "ConsoleCheckbox" }) do
+    assertTrue(type(NS.DebugLog[member]) == "function",
+      "NS.DebugLog has no " .. member .. " — this is not the library instance")
+  end
+  -- The formatters are the lib-level ones, shared rather than copied.
+  assertEqual(NS.DebugLog.FormatPlain, dl.FormatPlain)
+  assertEqual(NS.DebugLog.FormatColored, dl.FormatColored)
+  assertEqual(NS.DebugLog.buffer, NS.DebugLog.buffer, "the buffer must be the instance's own table")
+end)
+
+test("DebugLog seam: the survivors kept their names and their shapes", function()
+  -- NS.Debug is bound BARE off the instance: it is a plain function, not a method, because 35 call
+  -- sites do `NS.Debug("Tag", "fmt", v)` with no self.
+  assertEqual(NS.Debug, mocks.LibStub("LibKa0s-DebugLog-1.0", true) and NS.Debug)
+  assertTrue(type(NS.Debug) == "function")
+  assertTrue(type(NS.DebugBuild) == "function", "NS.DebugBuild has no library equivalent and must " ..
+    "survive the swap")
+  assertTrue(type(NS.DebugLog.Diagnose) == "function", "D:Diagnose has no library equivalent")
+end)
+
+test("DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped", function()
+  -- Derived by the library from the descriptor's `name`. If they ever stop matching, anything a
+  -- user anchored to them — /framestack, a macro, UISpecialFrames — silently breaks.
+  NS.DebugLog:Show()
+  local frame = NS.DebugLog._frameForTest
+  assertTrue(frame ~= nil, "the console frame was never built")
+  assertEqual(frame:GetName(), "PanelMasterDebugWindow")
+  NS.DebugLog:Hide()
+end)
+
+test("DebugLog seam: the console wears the LIBRARY's close button, not this addon's", function()
+  -- `makeCloseButton` is deliberately not passed (the Ka0s window edge and its close control are
+  -- the library's — standalone-windows). The title-bar offsets are DERIVED from the button's width,
+  -- so they are the one readable evidence that Core's 18-wide x is what got built: an anchor cannot
+  -- be read back through the frame API.
+  NS.DebugLog:Show()
+  local offsets = NS.DebugLog._frameForTest.titleBarOffsets
+  assertTrue(offsets ~= nil, "the library records no title-bar offsets")
+  assertEqual(offsets.close, -6)
+  assertEqual(offsets.clear, -30, "Clear is not at Core's 18-wide close-button offset")
+  assertEqual(offsets.copy, -78, "Copy is not at Core's 18-wide close-button offset")
+  NS.DebugLog:Hide()
+end)
+
+test("L trap (DebugLog): every rendered console string resolves to prose, not to its own key",
+  function()
+    -- DebugLog is one of the three majors that CAN express the trap, so this is a real rendered
+    -- assertion rather than a tripwire. A resolved string is prose; an unresolved one is the key,
+    -- and no English label is SCREAMING_SNAKE_CASE.
+    local SCREAMING = "^[A-Z][A-Z0-9_]+$"
+
+    -- Reached through real accessors, and each is coupled to a non-vacuous expectation so the case
+    -- cannot pass by the accessor simply not existing.
+    NS.DebugLog:Show()
+    local title = NS.DebugLog._frameForTest.titleText
+    assertTrue(type(title) == "string" and title ~= "", "the console has no composed title")
+    assertFalse(title:match(SCREAMING) ~= nil, "the console title rendered a raw key: " .. title)
+    assertEqual(title, "Panel Master \226\128\148 Debug",
+      "the composed title must be this addon's title plus the library's own suffix")
+    NS.DebugLog:Hide()
+
+    local cb = NS.DebugLog:ConsoleCheckbox()
+    assertTrue(type(cb.label) == "string" and cb.label ~= "", "the checkbox has no label")
+    assertFalse(cb.label:match(SCREAMING) ~= nil, "the checkbox label rendered a raw key: " .. cb.label)
+    assertTrue(type(cb.tooltip) == "string" and cb.tooltip ~= "", "the checkbox has no tooltip")
+    assertFalse(cb.tooltip:match(SCREAMING) ~= nil, "the checkbox tooltip rendered a raw key")
+    -- The tooltip is composed from the descriptor's `slash`, so a resolved one names the command.
+    assertTrue(cb.tooltip:find("/pm debug", 1, true) ~= nil,
+      "the checkbox tooltip did not resolve the slash reference")
+
+    for _, key in ipairs({ "DEBUG_ON", "DEBUG_OFF", "CLEAR", "COPY", "COPY_TITLE", "LINES",
+                           "CHECKBOX_LABEL", "TITLE_SUFFIX", "LOG_ENABLED", "LOG_DISABLED" }) do
+      local rendered = NS.DebugLog:Text(key)
+      assertTrue(type(rendered) == "string" and rendered ~= "", key .. " resolved to nothing")
+      assertFalse(rendered:match(SCREAMING) ~= nil,
+        key .. " rendered as its own key: " .. rendered)
+    end
+  end)
+
 -- ── degradation ────────────────────────────────────────────────────────────────
 
 test("Degraded install: the addon loads with no LibKa0s at all", function()
@@ -161,6 +248,55 @@ test("Degraded install: the notice is announced exactly ONCE, before the first l
   -- And it must not have eaten the line the user actually asked for.
   assertEqual(lines[2], ns.PREFIX .. " first")
   assertEqual(lines[#lines], ns.PREFIX .. " third")
+end)
+
+test("Degraded install: the console explains itself once and every member still answers", function()
+  local ns, m = loadDegraded()
+  local D = ns.DebugLog
+  assertTrue(D ~= nil, "NS.DebugLog is nil in a degraded install — settings/Schema.lua's console " ..
+    "row calls IsShown on every panel refresh")
+  -- Every member the addon actually calls, per `grep -n "NS.DebugLog" -r`.
+  for _, member in ipairs({ "IsShown", "Show", "Hide", "Toggle", "SetEnabled", "Add", "Diagnose" }) do
+    assertTrue(type(D[member]) == "function", "the degraded console cannot answer " .. member)
+  end
+  assertFalse(D:IsShown())
+  assertTrue(type(ns.Debug) == "function" and type(ns.DebugBuild) == "function")
+
+  ns.Print("warm up the Core notice")
+  local before = #m.__chat
+  D:Show(); D:Toggle(); D:ShowCopy()
+  local notices = 0
+  for i = before + 1, #m.__chat do
+    if m.__chat[i]:find("so the debug console window is unavailable.", 1, true) then
+      notices = notices + 1
+    end
+  end
+  assertEqual(notices, 1, "the console's absence must be explained once, not on every call")
+  -- The consequence is appended to the SHARED cause clause, so a degraded install says the same
+  -- thing about why at every site and a different thing about what at each one.
+  local found = false
+  for i = before + 1, #m.__chat do
+    if m.__chat[i]:find(ns.LIBKA0S_MISSING, 1, true) then found = true end
+  end
+  assertTrue(found, "the console's notice does not carry the shared cause clause")
+end)
+
+test("Degraded install: /pm debug on|off still flips the flag and acknowledges", function()
+  -- Logging is a session flag the ADDON owns; only the window went away. A stub that swallowed
+  -- SetEnabled would make the degraded install look like the flag was stuck off.
+  local ns = loadDegraded()
+  ns.DebugLog:SetEnabled(true)
+  assertTrue(ns.State.debug, "the degraded console did not set the logging flag")
+  ns.DebugLog:SetEnabled(false)
+  assertFalse(ns.State.debug)
+end)
+
+test("Degraded install: /pm debug dump still answers", function()
+  -- Diagnose reads the addon's own state and has nothing to do with whether a window exists, so it
+  -- is attached on both paths from one definition.
+  local ns = loadDegraded()
+  local lines = ns.DebugLog:Diagnose()
+  assertTrue(type(lines) == "table" and #lines > 0, "Diagnose returned nothing in a degraded install")
 end)
 
 test("Degraded install: the fallback printer renders the same bytes as the library's", function()
@@ -239,6 +375,7 @@ end)
 -- with no guard, so the list is asserted against the filesystem rather than trusted.
 local SEAM_FILES = {
   "core/CoreSetup.lua",
+  "core/DebugLogSetup.lua",
 }
 
 test("L trap: no seam file hands a descriptor this addon's locale table", function()

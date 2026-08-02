@@ -42,6 +42,10 @@ core\Util.lua
 # CoreSetup AFTER Namespace (NS.PREFIX) and Util (NS.Util), and BEFORE PanelMaster.lua, whose
 # AceConsole embed reclaims NS.Print from NS.Util.print. See the header of the file.
 core\CoreSetup.lua
+# The LibKa0s-DebugLog seam. After Constants (C.FONT_MONO) and after CoreSetup
+# (NS.LIBKA0S_MISSING). Everything else it touches is reached through a closure, so the console no
+# longer has to sit down in modules/ the way modules/DebugLog.lua did.
+core\DebugLogSetup.lua
 core\PanelMaster.lua
 core\Database.lua
 
@@ -55,7 +59,6 @@ modules\Registry.lua
 modules\Artwork.lua
 modules\Canvas.lua
 modules\Unlock.lua
-modules\DebugLog.lua
 
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
