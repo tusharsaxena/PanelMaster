@@ -2,3 +2,16 @@
 # contributed art is converted to the TGA the client loads); its compiled cache is not.
 __pycache__/
 *.pyc
+
+# Machine-local state from tools/artwork/wiki_import.py. The manifest itself IS committed — it is
+# the reviewed record of which source becomes which permanent catalog id — but these two are not:
+#
+#   .root    the absolute path of whoever's download directory the manifest was scaffolded from.
+#   .stamps  what each output was last built from, so an edited erase box or a changed --size
+#            reconverts instead of being skipped as up to date. Rebuildable, and meaningless on
+#            another machine.
+#
+# .tmp is the atomic-write staging file for both; it exists only mid-write.
+tools/artwork/manifest.tsv.root
+tools/artwork/.stamps.tsv
+tools/artwork/*.tmp
