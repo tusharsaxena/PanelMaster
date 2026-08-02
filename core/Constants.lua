@@ -150,15 +150,20 @@ C.ART_ROTATION = { 0, 90, 180, 270 }
 -- piece wants is not something the addon can guess.
 C.ART_LAYER = { "BELOW_BG", "ABOVE_BG", "ABOVE_ALL" }
 
--- The one blend mode artwork is ever drawn with. NOT a setting, and deliberately so.
+-- How the artwork's pixels combine with what is behind them. Two of WoW's five modes, and only two.
 --
--- All five WoW modes were offered at first and two of them cannot be right for this feature. DISABLE
--- means "ignore the alpha channel", so art defined ENTIRELY by its alpha can only ever come out as a
--- solid rectangle. MOD multiplies, which needs a transparent region to be WHITE to be a no-op, while
--- ADD needs it BLACK — one texture cannot satisfy both, so whichever is chosen makes the other mode
--- wrong. That left a five-item dropdown in which two entries could only ever produce a bug report,
--- so the setting was removed rather than documented around.
-C.ART_BLEND_MODE = "BLEND"
+-- The full set is DISABLE, BLEND, ALPHAKEY, ADD and MOD. Three of them cannot be right for art
+-- defined by its alpha channel. DISABLE ignores alpha outright and draws the whole square. MOD
+-- multiplies, which needs a transparent region to be WHITE to be a no-op. ALPHAKEY thresholds alpha
+-- to on/off, which both destroys the antialiased edge and defeats the opacity slider by drawing
+-- whatever survives fully opaque.
+--
+-- This was once a hard-coded constant, on the reasoning that MOD wants transparency white while ADD
+-- wants it black and one texture cannot satisfy both. That stalemate is over: every plate
+-- tools/artwork/artwork_cleaner.py produces has its transparent pixels normalized to (0,0,0,0), so
+-- black is the answer, ADD is correct BY CONSTRUCTION, and MOD is permanently wrong. Blizzard's own
+-- UI has used only BLEND and ADD since 2.2.0, and WeakAuras ships exactly these two.
+C.ART_BLEND = { "BLEND", "ADD" }
 
 -- All four artwork enums need the same three shapes: the ordered array (dropdown order and the
 -- "expected one of: ..." error text), a membership set for validation, and a {value=, label=}
@@ -185,6 +190,13 @@ C.ART_ROTATION_SET, C.ART_ROTATION_OPTIONS = enumTables(C.ART_ROTATION, {
 
 C.ART_LAYER_SET, C.ART_LAYER_OPTIONS = enumTables(C.ART_LAYER, {
   "Behind background", "Above background", "Above border and accent",
+})
+
+-- Labeled for what they LOOK like rather than what the API calls them. "Glow" is the name
+-- WeakAuras uses for ADD, so anyone arriving from there recognizes it immediately; "Opaque" is its
+-- name for BLEND and is avoided here because standard alpha blending is not opaque at all.
+C.ART_BLEND_SET, C.ART_BLEND_OPTIONS = enumTables(C.ART_BLEND, {
+  "Normal", "Glow",
 })
 
 -- Artwork scale bounds. The floor is not 0: a zero-scale image is invisible, which is what
@@ -307,9 +319,10 @@ C.PANEL_TEMPLATE = {
   -- separate floating strip; push the offset positive for the detached look instead.
   accentOffset    = 0,
   -- Class color is ON by default, so the bar picks up the wearer's color with no configuration.
-  -- The stored color underneath is the green the BenikUI look is known for, which is what shows the
-  -- moment class color is switched off.
-  accentColor      = { 0.15, 0.85, 0.40, 1.00 },
+  -- The stored color underneath is pure white, which is what shows the moment class color is
+  -- switched off: neutral against any panel, and the honest "no color chosen yet" answer. It was
+  -- the BenikUI green, which looked deliberate without anyone having chosen it.
+  accentColor      = { 1.00, 1.00, 1.00, 1.00 },
   accentClassColor = true,
 
   -- The accent bar's OWN border, mirroring the panel's. Size 0 by default: the bar is already a
@@ -343,10 +356,17 @@ C.PANEL_TEMPLATE = {
   -- Only consulted when artTexture == "Custom". Kept as its own field rather than overloading
   -- artTexture so that switching to a catalog piece and back does not lose what the user typed.
   artCustomPath  = "",
-  -- White, i.e. "show the art as authored". Catalog pieces authored grayscale-on-transparent use
-  -- this tint to take their color; pieces that declare tintable = false ignore it entirely.
+  -- White, i.e. "show the art as authored" — multiplying by white is a no-op, so the tint does
+  -- nothing until the user picks a color. It applies to EVERY piece now, full-color included;
+  -- Desaturate is what makes that produce a clean tint rather than mud.
   artColor       = { 1, 1, 1, 1 },
   artClassColor  = false,
+  -- Collapses the art to grayscale before the tint multiplies against it. Off by default: it
+  -- changes how existing art looks, and no upgrade should restyle a panel the user already had.
+  artDesaturate  = false,
+  -- Normal alpha compositing. ADD ("Glow") adds the art's color to whatever is behind, which reads
+  -- as a lit emblem over a dark panel and cannot darken anything.
+  artBlend       = "BLEND",
   -- Art opacity, multiplied on top of the panel's own alpha rather than replacing it, so fading the
   -- panel fades its artwork with it.
   artAlpha       = 1.0,
@@ -412,7 +432,7 @@ C.PANEL_FIELD_TYPE = {
   artFill = "enum", artPoint = "point", artX = "number", artY = "number",
   artScale = "number", artRotation = "enum",
   artFlipH = "boolean", artFlipV = "boolean",
-  artLayer = "enum",
+  artLayer = "enum", artDesaturate = "boolean", artBlend = "enum",
 }
 
 -- Enum field → its ordered list of legal values. One generic "enum" kind driven by this table,
@@ -422,6 +442,7 @@ C.PANEL_FIELD_ENUM = {
   artFill     = C.ART_FILL,
   artRotation = C.ART_ROTATION,
   artLayer    = C.ART_LAYER,
+  artBlend    = C.ART_BLEND,
 }
 
 -- Media field → the LibSharedMedia media type it selects from. Drives both the CLI's validation and
@@ -446,6 +467,7 @@ C.PANEL_FIELD_ORDER = {
   "accentBorderTexture", "accentBorderSize", "accentBorderOffset",
   "accentBorderColor", "accentBorderClassColor",
   "artTexture", "artCustomPath", "artColor", "artClassColor", "artAlpha",
+  "artDesaturate", "artBlend",
   "artFill", "artPoint", "artX", "artY", "artScale",
   "artRotation", "artFlipH", "artFlipV", "artLayer",
 }

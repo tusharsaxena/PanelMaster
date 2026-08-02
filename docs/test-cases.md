@@ -329,7 +329,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: a horizontal bar draws its texture as authored
 - Canvas: the orientation is re-applied on every repaint, not just the first
 
-### test_artwork.lua (83)
+### test_artwork.lua (84)
 
 - Artwork: every catalog id is unique
 - Artwork: no catalog row claims one of the two reserved ids
@@ -380,9 +380,10 @@ badge and any count quoted in the docs must agree with it.
 - Artwork: artAlpha multiplies the tint's own alpha rather than replacing it
 - Artwork: artClassColor overrides the RGB and keeps the computed alpha
 - Artwork: the class-color row is wired up in C.COLOR_FIELDS
-- Artwork: full-color art is forced white, and keeps the computed alpha
-- Artwork: full-color art ignores class color too
-- Artwork: a custom path counts as tintable
+- Artwork: the tint reaches every piece, full-color included
+- Artwork: class color reaches full-color art too
+- Artwork: desaturate and blend mode are resolved into the spec
+- Artwork: a custom path takes the tint like anything else
 - Artwork.BuildArtSpec: no artwork selected is nil, the cheapest possible answer
 - Artwork.BuildArtSpec: an id that no longer exists draws nothing, not an error
 - Artwork.BuildArtSpec: Custom with nothing typed yet draws nothing
@@ -409,7 +410,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: the art frame clips its children, so offset art stays inside the panel
 - Canvas: the art texture takes the spec's size, anchor and texture coordinates
 - Canvas: tiled artwork asks SetTexture to wrap; nothing else does
-- Canvas: the artwork tint reaches the texture, and the blend mode is always Normal
+- Canvas: the artwork tint and blend mode reach the texture
 - Canvas: turning artwork off clears the texture as well as hiding the frame
 - Canvas: a released frame keeps no artwork for the next panel to inherit
 - Canvas: a reused frame draws the new panel's artwork, not the old panel's
@@ -546,7 +547,7 @@ badge and any count quoted in the docs must agree with it.
 - COMMANDS: the descs name the sub-verbs their handlers accept (F-011)
 - PrintHelp: the generated rows carry the sub-verbs too
 
-### test_panel.lua (40)
+### test_panel.lua (41)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -588,6 +589,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: a rebuild drops the old refreshers before it releases their widgets
 - Panel: the Panels page's Defaults action is confirm-gated
 - Tagline: the landing page, the TOC Notes and the README say one thing (F-019)
+- PanelEditor: the panel dropdowns are ordered by name, not by creation
 
 ### test_profiles.lua (21)
 
@@ -682,15 +684,15 @@ badge and any count quoted in the docs must agree with it.
 | test_unlock.lua | 30 |
 | test_media.lua | 79 |
 | test_accent.lua | 63 |
-| test_artwork.lua | 83 |
+| test_artwork.lua | 84 |
 | test_database.lua | 18 |
 | test_debuglog.lua | 25 |
 | test_schema.lua | 21 |
 | test_slash.lua | 55 |
-| test_panel.lua | 40 |
+| test_panel.lua | 41 |
 | test_profiles.lua | 21 |
 | test_libka0s.lua | 36 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **607** |
+| **Total** | **609** |

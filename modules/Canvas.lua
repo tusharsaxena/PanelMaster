@@ -387,12 +387,23 @@ local function applyArtwork(f, spec)
   -- document, and the reason the crop/flip/rotation is reapplied on every repaint rather than once.
   local uv = art.uv
   tex:SetTexCoord(uv[1], uv[2], uv[3], uv[4], uv[5], uv[6], uv[7], uv[8])
+  -- Desaturate BEFORE the tint, because the two compose: grayscale art multiplied by a color comes
+  -- back as a clean, saturated version of that color, where full-color art multiplied by the same
+  -- one comes back as a darkened average of whatever hues it already had.
+  --
+  -- Guarded because SetDesaturated is not universally present on every texture object across
+  -- flavors, and a missing method here would take down the whole repaint rather than lose one
+  -- effect. Compat owns the deprecated-API surface, but this is an absence rather than a rename.
+  if tex.SetDesaturated then
+    tex:SetDesaturated(art.desaturate)
+  end
+
   tex:SetVertexColor(art.color[1], art.color[2], art.color[3], art.color[4])
-  -- Set explicitly rather than left to the texture's default, because this texture is POOLED: it
-  -- is the same object a previous panel drew with, and anything that ever changed the mode would
-  -- otherwise leak into the next panel. C.ART_BLEND_MODE is a constant, not a setting — see there
-  -- for why the other four modes are not offered.
-  tex:SetBlendMode(C.ART_BLEND_MODE)
+
+  -- Both of these are set explicitly rather than left to the texture's default, because this
+  -- texture is POOLED: it is the same object a previous panel drew with, so any value one panel
+  -- changed would otherwise leak into the next.
+  tex:SetBlendMode(art.blend)
 end
 
 -- Apply a spec to a frame. Idempotent — running it twice with the same spec is a no-op — so the

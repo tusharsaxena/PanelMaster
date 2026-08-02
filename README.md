@@ -273,10 +273,10 @@ becomes the id `faction-expansion-12-midnight-harati`, the category
 the file; to regroup it, move it. Categories nest as deep as your folders do and sort
 alphabetically, which is why numeric prefixes like `12-midnight` are useful.
 
-`w`, `h` and `tintable` are **measured**, not declared. Art whose opaque pixels are unsaturated and
-near-white is authored white-on-transparent, so the panel's color drives it and the color control
-stays visible; anything else is finished full-color art, and the tint is forced to white so it
-cannot be spoiled.
+`w` and `h` are **measured** from the file, not declared. There is no per-asset tint opt-out:
+every piece takes the per-panel **Artwork color**, whose default is white and therefore a no-op.
+Tinting full-color art directly only muddies it, which is what **Desaturate** is for — it drains
+the art to grayscale first, so the tint comes back clean.
 
 The `id` is what gets written into a player's saved variables. **Renaming or moving a shipped file
 silently breaks every panel using it** — those panels fall back to drawing no artwork on the next

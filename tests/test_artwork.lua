@@ -162,7 +162,6 @@ test("Artwork: every catalog row declares the fields the fill math needs", funct
     assertEqual(type(row.label), "string", "label" .. at)
     assertTrue(type(row.w) == "number" and row.w > 0, "w" .. at)
     assertTrue(type(row.h) == "number" and row.h > 0, "h" .. at)
-    assertEqual(type(row.tintable), "boolean", "tintable" .. at)
   end
 end)
 
@@ -688,35 +687,60 @@ test("Artwork: the class-color row is wired up in C.COLOR_FIELDS", function()
   assertEqual(C.COLOR_FIELDS.artColor, "artClassColor")
 end)
 
-test("Artwork: full-color art is forced white, and keeps the computed alpha", function()
-  -- Tinting finished full-color art can only drag it toward the tint, never improve it, and a user
-  -- who has picked a color would see a muddy result with no indication why. "Make it fainter" is
-  -- still a sensible thing to ask of it, so the alpha survives.
+test("Artwork: the tint reaches every piece, full-color included", function()
+  -- This REPLACES a pair of cases asserting the opposite. Full-color art used to have its RGB
+  -- forced to white, on the reasoning that multiplying finished art by a color can only muddy it.
+  -- That is still true, which is why Desaturate exists — but the answer is now to let the user
+  -- desaturate and tint rather than to refuse the tint. The default tint is white, a no-op, so
+  -- nothing changes for anyone who has not asked for a color.
   withArt(128, 128, false, function()
     local spec = Art.BuildArtSpec(record({
       artTexture = TEST_ART_ID, artColor = { 1, 0, 0, 0.8 }, artAlpha = 0.5,
     }), 200, 200)
     assertNear(spec.color[1], 1)
-    assertNear(spec.color[2], 1)
-    assertNear(spec.color[3], 1)
+    assertNear(spec.color[2], 0)
+    assertNear(spec.color[3], 0)
+    -- The two opacities still compose rather than one winning.
     assertNear(spec.color[4], 0.4)
   end)
 end)
 
-test("Artwork: full-color art ignores class color too", function()
+test("Artwork: class color reaches full-color art too", function()
   withArt(128, 128, false, function()
     local spec = Art.BuildArtSpec(record({
       artTexture = TEST_ART_ID, artColor = { 0, 0, 0, 1 }, artClassColor = true,
     }), 200, 200)
-    assertNear(spec.color[1], 1)
-    assertNear(spec.color[2], 1)
-    assertNear(spec.color[3], 1)
+    -- Whatever the mock's class color is, it is not the stored black it replaced.
+    assertTrue(spec.color[1] + spec.color[2] + spec.color[3] > 0,
+      "class color did not reach full-color art")
   end)
 end)
 
-test("Artwork: a custom path counts as tintable", function()
-  -- It has no catalog row to declare otherwise, and tinting your own art white is a no-op, so the
-  -- permissive default costs nothing.
+test("Artwork: desaturate and blend mode are resolved into the spec", function()
+  -- Resolved by BuildArtSpec rather than read off the record by the renderer, so "what does this
+  -- panel draw" stays one pure answer the headless suite can assert on.
+  withArt(128, 128, false, function()
+    local spec = Art.BuildArtSpec(record({ artTexture = TEST_ART_ID }), 200, 200)
+    assertEqual(spec.desaturate, false, "default is not desaturated")
+    assertEqual(spec.blend, "BLEND", "default blend is not Normal")
+
+    local glow = Art.BuildArtSpec(record({
+      artTexture = TEST_ART_ID, artDesaturate = true, artBlend = "ADD",
+    }), 200, 200)
+    assertEqual(glow.desaturate, true)
+    assertEqual(glow.blend, "ADD")
+
+    -- A junk blend falls back rather than reaching SetBlendMode, which errors on an unknown mode.
+    local junk = Art.BuildArtSpec(record({
+      artTexture = TEST_ART_ID, artBlend = "NONSENSE",
+    }), 200, 200)
+    assertEqual(junk.blend, "BLEND", "an invalid blend mode was not defaulted")
+  end)
+end)
+
+test("Artwork: a custom path takes the tint like anything else", function()
+  -- Once the only distinction the catalog drew here is gone, a user's own file is not a special
+  -- case at all; it takes the tint on exactly the same terms as a bundled piece.
   local spec = specFor({
     artTexture = C.ARTWORK_CUSTOM, artCustomPath = "Interface\\Icons\\INV_Misc_QuestionMark",
     artColor = { 1, 0, 0, 1 },
@@ -1031,7 +1055,7 @@ test("Canvas: tiled artwork asks SetTexture to wrap; nothing else does", functio
   assertEqual(tex.__wrapV, nil)
 end)
 
-test("Canvas: the artwork tint reaches the texture, and the blend mode is always Normal", function()
+test("Canvas: the artwork tint and blend mode reach the texture", function()
   -- The blend mode is a CONSTANT, not a setting. Two of WoW's five modes cannot be correct for art
   -- defined by its alpha channel, so rather than ship a dropdown with two traps in it the whole
   -- setting was dropped. Asserted here because the texture is POOLED: it is set explicitly on every
@@ -1043,9 +1067,8 @@ test("Canvas: the artwork tint reaches the texture, and the blend mode is always
     local tex = Canvas:FrameFor(rec.id).art
     assertNear(tex.__color[1], 0.25)
     assertNear(tex.__color[4], 0.5)
-    assertEqual(tex.__blend, C.ART_BLEND_MODE)
+    assertEqual(tex.__blend, "BLEND")
   end)
-  assertEqual(C.ART_BLEND_MODE, "BLEND")
 end)
 
 test("Canvas: turning artwork off clears the texture as well as hiding the frame", function()

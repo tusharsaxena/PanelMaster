@@ -65,7 +65,6 @@ Everything. Given `media/artwork/faction/expansion/12-midnight/harati.tga`:
 | `category` | `Faction -> Expansion -> 12 Midnight` | the folders, title-cased |
 | `label` | `Harati` | the file name, title-cased |
 | `w`, `h` | `1024`, `1024` | measured from the file |
-| `tintable` | `false` | measured from the pixels |
 
 So:
 
@@ -152,27 +151,33 @@ texture ends up transparent — correct, but wasteful.
 
 ---
 
-## `tintable`, and why it is measured
+## Tinting, and why Desaturate exists
 
-Each row declares whether the panel's **Color** setting may touch the art.
+Every piece takes the per-panel **Artwork color**, whose default is white — and multiplying by
+white is a no-op, so nothing is tinted until you choose a color. There is no per-asset opt-out;
+the catalog carries no `tintable` field.
 
-**`tintable = true`** — the art is white-on-transparent. Every visible pixel is RGB `(255,255,255)`
-and the *entire shape* lives in the alpha channel; a pixel at half strength is white at alpha 128,
-not gray at alpha 255. The panel's Color multiplies cleanly, so one file serves every color scheme
-and gets class-color support for free. The editor **shows** the Color control.
+That is worth stating because tinting full-color art naively does not work. The tint is a
+multiply, so a blue tint on a gold-and-crimson crest drags every hue toward blue and returns muddy
+brown — not blue.
 
-**`tintable = false`** — finished full-color art with its own palette. The tint is forced to white
-so a panel color cannot muddy it, and the editor **hides** the Color control.
+**Desaturate** is the answer. It drains the art to grayscale in hardware *before* the tint applies,
+so the tint multiplies against neutral gray and comes back as a clean, saturated version of the
+color you picked. Desaturate + Artwork color turns any of the bundled full-color pieces into a
+tintable plate at runtime, per panel, with no re-authoring.
 
-`update_catalog.py` decides by measuring rather than asking: art whose opaque pixels are both
-near-unsaturated **and** near-white is tintable, anything else is not. Both conditions are needed —
-mid-gray line art is unsaturated but *not* tintable, because gray multiplied by a tint returns a
-dark, desaturated version of that tint instead of the tint itself.
+Art authored **white-on-transparent** — every visible pixel RGB `(255,255,255)` with the whole
+shape carried by the alpha channel — takes a tint cleanly without Desaturate, because it is already
+neutral. That is still the best way to author art meant primarily to be tinted. Put the shading in
+the alpha channel, never in the brightness: a pixel at half strength is white at alpha 128, not
+gray at alpha 255, because gray multiplied by a tint returns a dark, desaturated tint.
 
-If you want tintable art, author it white-on-transparent with the shading carried by the alpha
-channel. It is detected automatically.
-
----
+**Blend mode** is separate from all of this. *Normal* paints over the panel obeying transparency;
+*Glow* (the API's `ADD`) adds the artwork's light to what is behind, so it can only brighten. Glow
+is correct by construction here because the cleaner normalizes every transparent pixel to
+`(0,0,0,0)` — black adds nothing. The other three WoW blend modes are not offered: `MOD` needs
+transparency to be white, `DISABLE` ignores the alpha channel entirely, and `ALPHAKEY` hard-edges
+the art and defeats the opacity slider.
 
 ## Reference
 

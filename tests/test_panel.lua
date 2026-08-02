@@ -571,3 +571,26 @@ test("Tagline: the landing page, the TOC Notes and the README say one thing (F-0
   assertTrue(readme:find(sentence:sub(1, 1):lower() .. sentence:sub(2), 1, true) ~= nil,
     "the README's opening line no longer quotes the tagline")
 end)
+
+test("PanelEditor: the panel dropdowns are ordered by name, not by creation", function()
+  -- Reported from the game: the Edit picker listed "Lower Bar, Action Bar Center, Artwork #1,
+  -- Hiding Bar, Artwork #2" — creation order, which is effectively arbitrary once there are more
+  -- than a few panels and is the wrong order for a list you have to find a name in.
+  local E = NS.PanelEditor
+  NS.Registry:DeleteAll()
+  for _, name in ipairs({ "Lower Bar", "Action Bar Center", "Artwork #1", "Hiding Bar", "Artwork #2" }) do
+    NS.Registry:New(name)
+  end
+
+  local got = {}
+  for i, rec in ipairs(E.__panelsByName()) do got[i] = rec.name end
+  local want = { "Action Bar Center", "Artwork #1", "Artwork #2", "Hiding Bar", "Lower Bar" }
+  for i = 1, #want do
+    assertEqual(got[i], want[i], ("position %d"):format(i))
+  end
+
+  -- The STORED order is untouched. All() hands back the live saved-variables array, so sorting it
+  -- in place would silently reorder the user's file and shift the index Registry:FindByName returns.
+  local stored = NS.Registry:All()
+  assertEqual(stored[1].name, "Lower Bar", "creation order was mutated")
+end)

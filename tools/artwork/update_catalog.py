@@ -12,7 +12,6 @@ What each field is derived from:
     category  the folder path, title-cased and joined -- "Faction -> Expansion -> 12 Midnight"
     label     the file name, title-cased -- "Harati"
     w, h      measured from the file
-    tintable  measured from the pixels; see is_tintable()
 
 Usage:
     python3 tools/artwork/update_catalog.py            # rewrite modules/Artwork.lua
@@ -27,7 +26,6 @@ import os
 import re
 import sys
 
-import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -47,38 +45,6 @@ CATEGORY_SEP = " -> "
 # everything outside is left exactly as written, so the module's prose and logic are hand-owned.
 BEGIN = "-- BEGIN GENERATED CATALOG (tools/artwork/update_catalog.py) -- do not edit by hand"
 END = "-- END GENERATED CATALOG"
-
-# Above this mean saturation, art is treated as full color. Measured over opaque pixels only:
-# a transparent margin has no hue to speak of and would drag every average toward zero.
-SATURATION_FLOOR = 0.12
-
-# A tintable plate is white-on-transparent, so its opaque pixels should be near 255. This guards
-# the case saturation alone cannot see: mid-gray line art is unsaturated but NOT tintable, because
-# gray multiplied by a tint color comes back muddy instead of colored.
-BRIGHTNESS_FLOOR = 200
-
-
-def is_tintable(im):
-    """Decide whether the panel's Color setting may drive this art.
-
-    A tintable plate carries its shape entirely in the alpha channel and is uniformly white in RGB,
-    so multiplying by any tint gives that tint at the right opacity. Full-color art has its own
-    palette, and multiplying it can only drag every hue toward one color and muddy it.
-
-    Both conditions are required. Saturation alone would call a mid-gray plate tintable, but gray
-    times a tint is a dark, desaturated version of that tint rather than the tint itself — which is
-    exactly the "authored the shading into the RGB instead of the alpha" mistake.
-    """
-    a = np.asarray(im.convert("RGBA"), dtype=np.float32)
-    opaque = a[..., 3] > 128
-    if not opaque.any():
-        return False
-    rgb = a[..., :3][opaque]
-    mx = rgb.max(axis=1)
-    mn = rgb.min(axis=1)
-    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0.0).mean()
-    return bool(sat < SATURATION_FLOOR and mx.mean() >= BRIGHTNESS_FLOOR)
-
 
 def _words(text):
     """`12-midnight` -> ['12', 'Midnight'];  `02-the-burning-crusade` -> ['02','The','Burning','Crusade'].
@@ -133,7 +99,6 @@ def scan(art_dir=ART_DIR):
             try:
                 with Image.open(full) as im:
                     w, h = im.size
-                    tint = is_tintable(im)
             except Exception as exc:                              # noqa: BLE001 - collected, not raised
                 problems.append("%s: unreadable (%s)" % (rel, exc))
                 continue
@@ -149,7 +114,6 @@ def scan(art_dir=ART_DIR):
                 "label": titleize(leaf),
                 "file": stem.replace("/", "\\\\"),
                 "w": w, "h": h,
-                "tintable": tint,
             })
 
     seen = {}
@@ -169,10 +133,8 @@ def render(rows):
             '    category = "%s",\n'
             '    label    = "%s",\n'
             '    file     = "%s",\n'
-            '    w        = %d, h = %d,\n'
-            '    tintable = %s },'
-            % (r["id"], r["category"], r["label"], r["file"],
-               r["w"], r["h"], "true" if r["tintable"] else "false")
+            '    w        = %d, h = %d },'
+            % (r["id"], r["category"], r["label"], r["file"], r["w"], r["h"])
         )
     return "\n".join(out)
 
@@ -233,9 +195,7 @@ def main(argv=None):
     cats = {}
     for r in rows:
         cats[r["category"]] = cats.get(r["category"], 0) + 1
-    tint = sum(1 for r in rows if r["tintable"])
-    print("wrote %d rows to %s (%d tintable, %d full color)"
-          % (len(rows), os.path.relpath(CATALOG_LUA, REPO), tint, len(rows) - tint))
+    print("wrote %d rows to %s" % (len(rows), os.path.relpath(CATALOG_LUA, REPO)))
     for c in sorted(cats):
         print("  %-52s %3d" % (c, cats[c]))
     return 0

@@ -468,7 +468,7 @@ of artwork most likely to be wrong and hardest to eyeball in-game — a `FILL` c
 pixel of texture space looks fine until the panel is resized — so all five fill types can be checked
 against resize in the headless harness instead of by launching the client and squinting.
 
-A catalog row is `{ id, category, label, file, w, h, tintable }`, and **every row is
+A catalog row is `{ id, category, label, file, w, h }`, and **every row is
 generated** by `tools/artwork/update_catalog.py` from what is actually in `media/artwork/`:
 
 - `id` is the **stored** value and part of the saved-variables contract. It is never renamed —
@@ -483,14 +483,14 @@ generated** by `tools/artwork/update_catalog.py` from what is actually in `media
   than read at runtime: `Texture:GetWidth()` returns 0 until the file has loaded, which is not
   guaranteed on the first render pass, and `STATIC`, `FIT` and `TILE` cannot compute anything
   without a native size. Declaring it is also what keeps this module frame-free.
-- `tintable = false` marks finished full-color art; `BuildArtSpec` forces its RGB to white (keeping
-  the computed alpha), because tinting finished art can only darken it toward the tint. It is
-  **measured from the pixels** — art that is both unsaturated and near-white carries its shape in
-  the alpha channel and takes a tint cleanly; anything else has its own palette.
+- There is no `tintable` field. Every piece takes the per-panel tint, whose default is white and
+  therefore a no-op. Tinting finished full-color art does muddy it — multiplication can only drag
+  every hue toward the tint — which is what `artDesaturate` is for: it drains the art to grayscale
+  in hardware first, so the tint multiplies against neutral gray and returns a clean, saturated
+  version of the chosen color.
 
 Two reserved ids sit outside the catalog: `"None"` (the default, draws nothing) and `"Custom"`
-(draw `artCustomPath`). Custom counts as tintable — tinting your own art white is a no-op — and
-assumes a nominal `Artwork.CUSTOM_NATIVE_SIZE` of 256, since learning a user file's real pixel size
+(draw `artCustomPath`). Custom assumes a nominal `Artwork.CUSTOM_NATIVE_SIZE` of 256, since learning a user file's real pixel size
 would need a frame and a load round-trip. `Artwork.Entry` is a linear scan rather than a prebuilt
 index precisely so a runtime append to `Artwork.Catalog` works; `Artwork.List` is the ordered
 dropdown source (`None` first, catalog sorted by category then label, both alphabetically, `Custom` last, with

@@ -143,6 +143,32 @@ local LABEL_ROW_H        = 14
 -- whatever gaps it can find — which is what made the first version look cluttered: a checkbox would
 -- ride up beside a slider's label and two unrelated settings would end up sharing a line.
 -- Explicit rows mean a row holds exactly what it is meant to and nothing drifts into it.
+-- The panels, ordered for a HUMAN reading a dropdown rather than for storage.
+--
+-- Registry:All() returns the live `db.profile.panels` array in creation order, which is the right
+-- order for the file and the wrong one for a list you have to find a name in — after a few panels
+-- it is effectively arbitrary. Sorting a COPY is not fussiness: All() hands back the stored table
+-- itself, so sorting it in place would silently reorder the user's saved variables, and
+-- Registry:FindByName returns a positional index alongside its record.
+--
+-- Compared case-insensitively so "artwork #2" and "Artwork #2" cannot straddle a run of capitals,
+-- and tie-broken on id because table.sort is NOT stable: two panels sharing a name would otherwise
+-- be free to swap places between rebuilds and make the list flicker for no reason.
+local function panelsByName()
+  local sorted = {}
+  for i, rec in ipairs(NS.Registry:All()) do sorted[i] = rec end
+  table.sort(sorted, function(a, b)
+    local na, nb = tostring(a.name or ""):lower(), tostring(b.name or ""):lower()
+    if na ~= nb then return na < nb end
+    return tostring(a.id) < tostring(b.id)
+  end)
+  return sorted
+end
+
+-- Test seam, matching __getSelectedID above: the ordering is a decision worth asserting, and the
+-- dropdown it feeds is built by AceGUI, which the headless harness stubs out.
+E.__panelsByName = panelsByName
+
 local function editorRow(parent)
   local row = AceGUI:Create("SimpleGroup")
   row:SetLayout("Flow")
@@ -316,61 +342,6 @@ local function makeColorPair(ctx, row, rec, field, label)
   row:AddChild(cb)
 end
 
--- Whether the tint controls mean anything for the artwork a record currently has selected.
---
--- A catalog row that declares `tintable = false` is finished full-color art, and BuildArtSpec
--- forces its RGB to white regardless of what artColor holds. Offering a color picker for it would
--- therefore be a control that lies, which is worse than no control at all.
---
--- The two reserved ids have no catalog row and count as tintable: "None" draws nothing so the
--- question is moot, and tinting your own file white is a no-op — the permissive answer costs
--- nothing either way, and it keeps the picker's state from flickering as you page through the list.
-local function artTintable(rec)
-  local row = NS.Artwork.Entry(rec.artTexture)
-  return not (row and row.tintable == false)
-end
-
--- The artwork color pair, in a row that adds and removes it as the selected artwork changes.
---
--- This is the one control in the editor whose EXISTENCE is a function of another field, and AceGUI
--- gives no way to express that: both the Flow and the List layout call frame:Show() on every child
--- on every pass, so a widget hidden by hand reappears at the next DoLayout. The row therefore holds
--- the pair or holds nothing, and switching between the two is a release-and-rebuild of that row
--- alone.
---
--- Releasing widgets from inside a refresher is safe here only because of what is NOT in this row:
--- the artwork dropdown that triggers the change lives one row up, so nothing on the callback stack
--- is released (the F-002 hazard). Rebuilding the whole editor instead would release that dropdown
--- while its own click handler was still running.
---
--- The pair is given its OWN refresher list rather than ctx's. ctx.refreshers is cleared only by a
--- full rebuild, so a pair released here would otherwise leave a closure behind holding a widget
--- AceGUI has already recycled into something else — the exact failure the refresher list's own
--- header warns about, just reached from the other direction.
-local function makeArtColorRow(ctx, group, rec)
-  local row = editorRow(group)
-  local sub = { refreshers = {} }
-  local shown   -- nil, not false: the first pass must build, whatever the answer turns out to be
-
-  local function reconcile(live)
-    local want = artTintable(live)
-    if want == shown then return end
-    for i = #sub.refreshers, 1, -1 do sub.refreshers[i] = nil end
-    row:ReleaseChildren()
-    if want then makeColorPair(sub, row, rec, "artColor", "Artwork color") end
-    shown = want
-    -- The row just changed height, and every row below it has to move. The scroll frame owns that
-    -- arithmetic; nothing else on this path re-runs it.
-    if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
-  end
-
-  reconcile(rec)
-  addRefresher(ctx, rec, function(live)
-    reconcile(live)
-    for _, fn in ipairs(sub.refreshers) do fn() end
-  end)
-end
-
 -- The four edge checkboxes for the accent bar, as one quarter-width row.
 --
 -- A set of independent booleans rather than a dropdown, because the edges are not exclusive — "top
@@ -455,11 +426,14 @@ local function buildPanelEditor(ctx, parent, rec)
   -- those tokens are also what you type at the CLI, so displaying them teaches the CLI. An artwork
   -- enum stores "FIT" and has to read "Fit (contain)" — nobody should have to know the token to pick
   -- a fill mode.
-  local function optionDropdown(row, label, field, options, tooltip)
+  -- `width` is a relative width, defaulting to the half-row every other control uses. Only the
+  -- artwork picker asks for a full row, and it needs one: its labels carry the whole derived
+  -- category ("Faction -> Expansion -> 12 Midnight: Harati") and truncate to nothing at half width.
+  local function optionDropdown(row, label, field, options, tooltip, width)
     local dd = AceGUI:Create("Dropdown")
     trackDropdown(ctx, dd)
     dd:SetLabel(label)
-    dd:SetRelativeWidth(0.5)
+    dd:SetRelativeWidth(width or 0.5)
     local list, order = {}, {}
     for i, opt in ipairs(options) do list[opt.value] = opt.label; order[i] = opt.value end
     dd:SetList(list, order)
@@ -519,7 +493,7 @@ local function buildPanelEditor(ctx, parent, rec)
   -- Copy every appearance setting from another panel. Position is deliberately not copied — see
   -- Registry.CopyFrom — so the panel takes on the other's look without moving on top of it.
   local others, order = {}, {}
-  for _, other in ipairs(NS.Registry:All()) do
+  for _, other in ipairs(panelsByName()) do
     if other.id ~= rec.id then
       others[other.id] = other.name
       order[#order + 1] = other.id
@@ -712,6 +686,8 @@ local function buildPanelEditor(ctx, parent, rec)
   -- The dropdowns are all label-carrying option lists rather than raw tokens — see optionDropdown.
   editorHeading(group, "Artwork")
 
+  -- Full width. Catalog labels carry their whole derived category, so a row reads
+  -- "Faction -> Expansion -> 12 Midnight: Harati" — half a row truncates that to uselessness.
   local artRow = editorRow(group)
 
   -- Built from Artwork.List() rather than from the catalog, because that function already places
@@ -724,15 +700,15 @@ local function buildPanelEditor(ctx, parent, rec)
   end
   optionDropdown(artRow, "Artwork", "artTexture", artOptions,
     "The image drawn inside this panel. 'None' draws nothing at all, which is what every panel "
-    .. "starts as. 'Custom path\226\128\166' uses the file you name beside this instead of a "
-    .. "bundled piece.")
+    .. "starts as. 'Custom path\226\128\166' uses the file you name below instead of a bundled "
+    .. "piece.", 1.0)
 
-  -- The custom path box. Enabled only for "Custom", because a path is meaningless for every other
-  -- selection — but the text is KEPT either way (it is its own record field), so switching to a
-  -- bundled piece to compare and back again does not cost you what you typed.
+  editorSpacer(group, EDITOR_ROW_GAP)
+  -- Also full width: a texture path is long, and the useful ones are longer than half a row.
+  local artPathRow = editorRow(group)
   local pathBox = AceGUI:Create("EditBox")
   pathBox:SetLabel("Custom texture path")
-  pathBox:SetRelativeWidth(0.5)
+  pathBox:SetRelativeWidth(1.0)
   local function applyArtPath(live)
     -- The disabled state is pushed unconditionally: it tracks artTexture, and a stale one would let
     -- you type into a box whose contents nothing reads.
@@ -751,22 +727,16 @@ local function buildPanelEditor(ctx, parent, rec)
     NS.Registry:Set(rec.id, "artCustomPath", text)
   end)
   attachTooltip(pathBox, "Custom texture path",
-    "A texture file of your own, given as a full path \226\128\148 for example "
-    .. "|cffffff00Interface\\AddOns\\MyAddon\\art\\logo.tga|r. Only used while Artwork is set to "
-    .. "'Custom path\226\128\166'.\n\nWoW loads TGA and BLP files whose width and height are both "
-    .. "powers of two. Anything else draws as a green square or as nothing, with no error.")
-  artRow:AddChild(pathBox)
+    "A texture file of your own, given as a full path \226\128\148 either one of the game's own, "
+    .. "like |cffffff00Interface\\DialogFrame\\UI-DialogBox-Gold-Dragon|r, or your own, like "
+    .. "|cffffff00Interface\\AddOns\\MyAddon\\art\\logo.tga|r. Only used while Artwork is set "
+    .. "to 'Custom path\226\128\166'.\n\nWoW loads TGA and BLP files whose width and height are "
+    .. "both powers of two. Anything else draws as a green square or as nothing, with no error.")
+  artPathRow:AddChild(pathBox)
   addRefresher(ctx, rec, applyArtPath)
 
   editorSpacer(group, EDITOR_ROW_GAP)
-  -- Present only while the selected artwork is actually tintable. See makeArtColorRow.
-  makeArtColorRow(ctx, group, rec)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
   local artFillRow = editorRow(group)
-  numberField(artFillRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
-    "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
-    .. "panel's own opacity, so a faded panel fades its art with it.")
   optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
     "How the image is sized inside the panel.\n\n"
     .. "|cffffff00Native size|r draws it at its authored pixel size, aspect intact.\n"
@@ -777,30 +747,12 @@ local function buildPanelEditor(ctx, parent, rec)
     .. "two sides.\n"
     .. "|cffffff00Tile|r repeats it at native size across the panel.\n\n"
     .. "Stretch ignores Scale \226\128\148 a scaled stretch is really Fill or Native size.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  -- Position sits alone on its row rather than sharing with the X slider below it, so that X and Y
-  -- stay side by side. Splitting a pair of offsets across two rows is the one arrangement that
-  -- genuinely reads wrong.
-  local artPointRow = editorRow(group)
-  tokenDropdown(artPointRow, "Artwork position", "artPoint", C.POINTS,
+  tokenDropdown(artFillRow, "Artwork position", "artPoint", C.POINTS,
     "Which part of the panel the artwork is anchored to, and what the offsets below are measured "
     .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
     .. "is nowhere for the art to move to.")
 
   editorSpacer(group, EDITOR_ROW_GAP)
-  local artOffsetRow = editorRow(group)
-  -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
-  -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
-  numberField(artOffsetRow, "Artwork X offset", "artX",
-    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
-    "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
-    .. "have no room to move in.")
-  numberField(artOffsetRow, "Artwork Y offset", "artY",
-    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
-    "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
-    .. "have no room to move in.")
-
   editorSpacer(group, EDITOR_ROW_GAP)
   local artScaleRow = editorRow(group)
   numberField(artScaleRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
@@ -822,8 +774,11 @@ local function buildPanelEditor(ctx, parent, rec)
     "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
 
   editorSpacer(group, EDITOR_ROW_GAP)
-  local artLayerRow = editorRow(group)
-  optionDropdown(artLayerRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
+  local artOpacityRow = editorRow(group)
+  numberField(artOpacityRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
+    "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
+    .. "panel's own opacity, so a faded panel fades its art with it.")
+  optionDropdown(artOpacityRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
     "Where the artwork sits in the panel's stack.\n\n"
     .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
     .. "background that is transparent or partly so \226\128\148 with a solid background it is "
@@ -831,6 +786,45 @@ local function buildPanelEditor(ctx, parent, rec)
     .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
     .. "bar.\n"
     .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  -- The color pair gets a row to ITSELF, because makeColorPair emits TWO half-width widgets — the
+  -- swatch and its Class color companion. Sharing the row with anything else puts three half-width
+  -- controls on one line and the third wraps under, which is exactly how it looked in game.
+  --
+  -- The pair is also unconditional now. It used to exist only while the selected art was "tintable",
+  -- so it appeared and vanished as you paged the dropdown and shoved every row below it up and down.
+  -- Every piece takes a tint, and the default tint is white, so the control is always honest.
+  local artColorRow = editorRow(group)
+  makeColorPair(ctx, artColorRow, rec, "artColor", "Artwork color")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artToneRow = editorRow(group)
+  boolField(artToneRow, "Desaturate", "artDesaturate",
+    "Drains the color out of the artwork before the tint is applied.\n\nThis is what makes "
+    .. "|cffffff00Artwork color|r work properly on full-color art: tinting a gold-and-crimson crest "
+    .. "blue only drags every hue toward blue and muddies it, but draining it to grayscale first "
+    .. "means the tint comes back as a clean blue.")
+  optionDropdown(artToneRow, "Blend mode", "artBlend", C.ART_BLEND_OPTIONS,
+    "How the artwork's pixels combine with what is behind them.\n\n"
+    .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
+    .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
+    .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
+  local artOffsetRow = editorRow(group)
+  -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
+  -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
+  numberField(artOffsetRow, "Artwork X offset", "artX",
+    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+    "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
+    .. "have no room to move in.")
+  numberField(artOffsetRow, "Artwork Y offset", "artY",
+    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+    "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
+    .. "have no room to move in.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
 
   -- ── Visibility ──
   editorHeading(group, "Visibility")
@@ -918,7 +912,7 @@ local function buildPanelsPage(ctx)
     selectRow:ReleaseChildren()
     listGroup:ReleaseChildren()
 
-    local records = NS.Registry:All()
+    local records = panelsByName()
     if #records == 0 then
       local empty = AceGUI:Create("Label")
       empty:SetFullWidth(true)
