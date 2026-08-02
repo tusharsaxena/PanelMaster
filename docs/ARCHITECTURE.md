@@ -47,6 +47,52 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `settings/OptionsSetup.lua` | `NS.Helpers`, `NS.SetBuildMain` | The `LibKa0s-Options-1.0` seam. `NS.Helpers` **is** the library instance rather than a wrapper (options-ui-§1), which is what lets `settings/Panel.lua` decorate it in place. Holds the descriptor: the write seam (`NS.Schema:Set`, already the two-argument shape the library calls with), `rowsForPage`, the boot validation, the AceGUI stash and the drag throttle. `buildMain` reaches the landing page through a forward declaration `settings/Panel.lua` fills in, because that file loads after this one. |
 | `settings/Panel.lua` | `NS.Panel` | What LibKa0s-Options-1.0 does **not** own: the open-dropdown registry that closes a list on scroll, the paired-button width, the landing page's body, the Profiles page, and the four page builders. The canvas factory, the header and breadcrumb, the lazy Defaults button, the scroll frame, the scrollbar patch, section headings, spacers, tooltips, the five widget makers and the two-column flow engine are all the library's now. Two library members are wrapped **on the instance** — `RenderField` and `EnsureScroll` — because the flow engine resolves both from the instance table at call time, so a host-side helper beside them is bypassed by every page it draws. Drives the editor through `E:WireBus` / `E:BuildPage` / `E:Rebuild`. |
 
+## The LibKa0s seams, and the load order they pin
+
+Four of the five `LibKa0s` majors are adopted (`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is
+declined on structural grounds — see `LIBKA0S-31` in [`pending/LEDGER.md`](pending/LEDGER.md). The
+library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here**: a library
+problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a
+local edit and the revert reads as a regression with no cause anywhere in this repo's history.
+
+**`NS.LIBKA0S_MISSING` is a cross-file contract, not an implementation detail.** `core/CoreSetup.lua`
+publishes it — *outside* its own missing-library branch, because the later seams read it on **both**
+paths — and each of the other three appends its own consequence and its own terminal punctuation:
+
+| Seam | Appends |
+|---|---|
+| `core/CoreSetup.lua` | `"; running on reduced built-in fallbacks."` — announced once, on the first line the addon prints |
+| `core/DebugLogSetup.lua` | `", so the debug console window is unavailable."` |
+| `settings/Slash.lua` | `", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."` |
+| `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` |
+
+A degraded install therefore says the same thing about **why** at every site and a different thing
+about **what** at each one. The wording is the whole Ka0s collection's and is not this addon's to
+reword — `tests/test_libka0s.lua` pins the clause on both paths.
+
+The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
+
+- `libs\LibKa0s\LibKa0s.xml` sits **after** LibStub and Ace3. `Core` resolves LibStub; the other
+  four resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
+  too old, so the major is simply never registered.
+- `core/CoreSetup.lua` after `core/Namespace.lua` (which defines `NS.PREFIX`, passed to the printer
+  descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**
+  `core/PanelMaster.lua`, whose AceConsole embed clobbers `NS.Print` and reclaims it from
+  `NS.Util.print`. Publishing on both keys is what keeps that reclaim load-bearing and correct.
+  It must also precede the six files taking the printer as a `local print = NS.Print` **file-scope
+  upvalue** — `modules/Unlock.lua`, `settings/Schema.lua`, `settings/Slash.lua`,
+  `settings/PanelEditor.lua`, `settings/Panel.lua` — or the swap silently no-ops while appearing to
+  work.
+- `core/DebugLogSetup.lua` after `core/Constants.lua` (`C.FONT_MONO`) and `core/CoreSetup.lua`.
+  Everything else its descriptor touches is reached through a **closure**, which is what let the
+  console move out of `modules/` into `core/` without inverting a dependency.
+- `settings/OptionsSetup.lua` after `settings/Schema.lua` and `settings/Slash.lua`, and **before**
+  `settings/Panel.lua`, which captures the instance at file scope. `settings/PanelEditor.lua` binds
+  its helpers lazily inside its own rebuild, so it pins nothing.
+
+`tests/test_harness.lua` derives the suite's load list from the TOC rather than keeping a second
+copy, so a file added to one and not the other cannot go untested.
+
 ## Data model
 
 Saved to `PanelMasterDB`, in AceDB profiles, with every character starting on the **shared
