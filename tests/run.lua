@@ -69,6 +69,7 @@ local SUITES = {
   "test_schema", "test_slash", "test_panel", "test_profiles",
   "test_libka0s", "test_harness",
   "test_spelling",
+  "test_vendor_sync",
 }
 
 Kit.run({ dir = "tests/", suites = SUITES })

@@ -665,6 +665,11 @@ badge and any count quoted in the docs must agree with it.
 - Spelling: the TOC and run.lua between them name every authored source
 - Spelling: authored English is US English
 
+### test_vendor_sync.lua (2)
+
+- libs/LibKa0s is the LibKa0s release the README says this addon bundles
+- tests/_kit is the test kit that shipped with that release
+
 ## Totals
 
 | Suite | Cases |
@@ -687,4 +692,5 @@ badge and any count quoted in the docs must agree with it.
 | test_libka0s.lua | 36 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
-| **Total** | **605** |
+| test_vendor_sync.lua | 2 |
+| **Total** | **607** |
