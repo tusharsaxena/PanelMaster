@@ -253,92 +253,67 @@ texture path it cannot resolve draws nothing and raises no error.
 
 ### Contributing artwork
 
-Bundled art lives in `media/artwork/`, one file per piece, and is registered as a single row in the
-catalog at the top of `modules/Artwork.lua`. Adding a piece is that file plus that row — there is
-no other code to touch.
+Bundled art lives in `media/artwork/`, and the folder tree IS the catalog. Drop a converted `.tga`
+into a folder, run the generator, and the addon picks it up — there is no list to maintain and no
+code to touch.
 
-**Format.** 32-bit TGA with an alpha channel, uncompressed, power-of-two on both axes. 512×512 is
-the recommended size and what the bundled art uses. WoW cannot load `.png` or `.jpg` at runtime, and
-rescales anything that is not a power of two.
-
-**Authoring.** The background must be genuinely transparent — alpha 0, not white and not black —
-because the panel's own fill, texture and opacity show through it. Leave a couple of pixels of
-transparent margin at the edges so the **Fill (crop)** and **Tile** modes do not shave the outermost
-pixels off the motif.
-
-Prefer **white-on-transparent**: every visible pixel is pure white and the whole shape is carried by
-the alpha channel, so a pixel that should read at half strength is white at alpha 128, never gray at
-full alpha. Gray multiplied by a tint comes out muddy. Art authored that way declares
-`tintable = true` and picks up the per-panel color and class color for free. Only art that genuinely
-depends on several hues — a crest with heraldic colors, say — should ship in full color with
-`tintable = false`, which hides the color control and forces the tint to white so it cannot be
-spoiled.
-
-**Naming.** Lowercase kebab-case, no spaces, the file stem matching the catalog `id`, and always
-a `-bw` or `-color` suffix saying which of the two authoring modes it is:
-
-```
-media/artwork/alliance-crest-bw.tga        tintable = true  — takes the panel's tint
-media/artwork/alliance-crest-color.tga     tintable = false — ignores it
-media/artwork/raw/alliance-crest-bw.png    the source plate; committed, never shipped
+```bash
+python3 tools/artwork/artwork_cleaner.py --batch ~/my-art media/artwork
+python3 tools/artwork/update_catalog.py
 ```
 
-The suffix is required even when only one half of a pair exists, because the two behave
-differently enough that a bare name leaves you guessing which you are looking at. Each half is
-its own catalog row rather than a variant of one entry — they are different files with different
-`tintable` answers.
+**Format.** 32-bit TGA with an alpha channel, power-of-two on both axes, square. WoW cannot load
+`.png` or `.jpg` at runtime and cannot wrap a non-power-of-two texture at all, which the **Tile**
+fill needs. The background must be genuinely transparent — alpha 0, not white and not black —
+because the panel's own fill, texture and opacity show through it.
 
-**The catalog row**, in `modules/Artwork.lua`:
+**Everything is derived from the path.** `media/artwork/faction/expansion/12-midnight/harati.tga`
+becomes the id `faction-expansion-12-midnight-harati`, the category
+`Faction -> Expansion -> 12 Midnight` and the label `Harati`. To rename a piece in the UI, rename
+the file; to regroup it, move it. Categories nest as deep as your folders do and sort
+alphabetically, which is why numeric prefixes like `12-midnight` are useful.
 
-```lua
-{ id       = "alliance-crest-bw",  -- stored value; never rename it once shipped
-  category = "Factions",           -- General | Races | Classes | Expansions | Factions
-  label    = "Alliance Crest (B&W)",
-  file     = "alliance-crest-bw",  -- stem under media/artwork/
-  w        = 512, h = 512,         -- authored pixel size, declared not measured
-  tintable = true,
-  credit   = "Your Name (CC0)" },  -- required
-```
+`w`, `h` and `tintable` are **measured**, not declared. Art whose opaque pixels are unsaturated and
+near-white is authored white-on-transparent, so the panel's color drives it and the color control
+stays visible; anything else is finished full-color art, and the tint is forced to white so it
+cannot be spoiled.
 
-The `id` is what gets written into a player's saved variables. **Renaming a shipped id silently
-breaks every panel using it** — those panels fall back to drawing no artwork on the next load, with
-no error and no warning. Ids are added, never renamed. `w` and `h` are declared rather than measured
-because a texture reports a size of 0 until the file has actually loaded, and three of the five fill
-modes need the native size to compute anything.
+The `id` is what gets written into a player's saved variables. **Renaming or moving a shipped file
+silently breaks every panel using it** — those panels fall back to drawing no artwork on the next
+load, with no error and no warning. Get names right before art ships.
 
-**Licensing.** Submitted art has to be redistributable under a license compatible with this addon's
-MIT release — CC0, MIT and public domain are all fine. **Ripped or traced Blizzard art cannot ship**,
-and neither can anything under a non-commercial or no-derivatives license. Every catalog row
-carries a `credit` string naming the author and the license; that field is the attribution record,
-and a submission without one cannot be accepted.
+**Licensing.** Contributed art has to be redistributable under a license compatible with this
+addon's MIT release — CC0, MIT and public domain are all fine. Anything under a non-commercial or
+no-derivatives license cannot ship, and neither can traced Blizzard art submitted as your own work.
+Attribution for the currently bundled set is below; the deviation it represents is recorded in
+`docs/pending/LEDGER.md`.
 
-The full asset specification — the hard requirements table, the two authoring modes, prompts for
-generating a motif and the PNG-to-TGA conversion snippets — is
-[`docs/artwork-spec.md`](docs/artwork-spec.md). Read it before authoring anything.
+If you only want art for **your own** use, none of that applies: convert whatever you like and point
+a panel at it with the editor's **Custom path** option, which takes any texture path and needs no
+catalog row.
 
-### The artwork importer
+### The artwork pipeline
 
-Art is authored outside the repo and brought in through `tools/artwork/import.py`, which uses
-[Pillow](https://python-pillow.org/) to convert a plate to the 32-bit power-of-two TGA the client
-loads. It letterboxes a non-square plate onto the square canvas rather than distorting it, erases a
-generator watermark if there is one, and warns when the motif has too little transparent margin for
-the **Fill (crop)** and **Tile** modes:
+Two scripts, both using [Pillow](https://python-pillow.org/) and numpy, with a Real-ESRGAN upscaler
+vendored under `tools/artwork/bin/`:
 
-```
-python3 tools/artwork/import.py IN.png alliance-crest-bw            # white-on-black -> tintable
-python3 tools/artwork/import.py IN.png alliance-crest-color --chroma  # magenta-keyed full color
-```
+| | |
+|---|---|
+| `artwork_cleaner.py` | any image → the TGA the client loads. `--single` for one file, `--batch` for a tree |
+| `update_catalog.py` | reads `media/artwork/` and rewrites the catalog in `modules/Artwork.lua` |
 
-The source plate is kept under `media/artwork/raw/`, named for the id it produces, so an asset can
-be re-derived later without going back to whoever made it. It is committed but never shipped — see
-`.pkgmeta`. Full asset rules, and the prompts for both modes, are in
-[docs/artwork-spec.md](docs/artwork-spec.md).
+The cleaner upscales when a source is too small, derives transparency when a source has none,
+removes burned-in watermarks on request, and — most importantly — normalizes the color hiding under
+transparent pixels, which is what stops an upscaler smearing a halo along every edge.
+
+Full documentation, including how to pick good sources and how to read the per-file report, is in
+[`docs/artwork-spec.md`](docs/artwork-spec.md).
 
 **This is an accepted, documented deviation from the [Ka0s WoW Addon
 Standard](https://github.com/tusharsaxena/WowAddonStandards).** The standard defines no location for
-build tooling, and this is the first non-Lua source in the tree. Accepted on 2026-07-31 for the
-reason above: keeping the conversion in the repo, next to the raw plates it consumes, is what makes
-an asset re-derivable and its licensing auditable. `luacheck` is unaffected — it only walks Lua.
+build tooling, and this is the first non-Lua source in the tree. Accepted on 2026-07-31: keeping the
+conversion in the repo is what makes an asset re-derivable and its licensing auditable. `luacheck`
+is unaffected — it only walks Lua.
 
 ## FAQ
 

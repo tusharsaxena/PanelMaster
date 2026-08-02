@@ -36,6 +36,16 @@ end
 --
 -- The rows come off again even when the body throws, or every catalog test after this one would
 -- inherit a fixture as though it were shipped art.
+-- A real shipped row, used wherever a test needs "some valid catalog art" rather than a specific
+-- piece. Chosen over a synthetic fixture so the geometry cases exercise a row that actually ships.
+--
+-- Declared HERE, above withRows/withArt, because a Lua local is only visible after its declaration:
+-- referencing it from an earlier line silently reads a nil GLOBAL, and a fixture row with file=nil
+-- resolves to no path, which surfaces as "no spec at all" a long way from the cause.
+local SEED_ID   = "class-warrior"
+local SEED_FILE = "class\\warrior"                            -- the stem, not the id
+local SEED_PATH = C.ARTWORK_PATH_PREFIX .. SEED_FILE .. ".tga"
+
 local function withRows(rows, fn)
   local base = #Catalog
   for _, row in ipairs(rows) do Catalog[#Catalog + 1] = row end
@@ -54,8 +64,8 @@ end
 -- complaint about a file nobody ever shipped.
 local TEST_ART_ID = "pm-test-art"
 local function withArt(w, h, tintable, fn)
-  withRows({ { id = TEST_ART_ID, category = "General", label = "Test Art", file = "runic-sigil-bw",
-               w = w, h = h, tintable = tintable, credit = "test fixture" } }, fn)
+  withRows({ { id = TEST_ART_ID, category = "General", label = "Test Art", file = SEED_FILE,
+               w = w, h = h, tintable = tintable } }, fn)
 end
 
 -- Wide, tall and square on both sides of the math. Nine combinations per fill is the whole cross
@@ -109,7 +119,6 @@ local function assertUV(got, want, msg)
   end
 end
 
-local RUNIC = C.ARTWORK_PATH_PREFIX .. "runic-sigil-bw.tga"
 
 -- ── Catalog ─────────────────────────────────────────────────────────────────────
 
@@ -131,12 +140,15 @@ test("Artwork: no catalog row claims one of the two reserved ids", function()
   end
 end)
 
-test("Artwork: every catalog row sits in a declared category", function()
-  -- Categories are the dropdown's grouping order. A row in an undeclared one still sorts (last)
-  -- rather than erroring, so nothing else would ever report it.
+test("Artwork: every catalog row carries a non-empty category", function()
+  -- There is no declared category list any more: categories are derived from the artwork's folder
+  -- path by tools/artwork/update_catalog.py, so membership cannot be checked against a fixed set.
+  -- What still matters is that every row HAS one, because Artwork.List groups on it and a nil
+  -- would silently sort the row to the end of the dropdown under no heading at all.
   for _, row in ipairs(Catalog) do
-    assertTrue(C.ARTWORK_CATEGORY_SET[row.category] == true,
+    assertEqual(type(row.category), "string",
       ("row '%s' has category '%s'"):format(tostring(row.id), tostring(row.category)))
+    assertTrue(#row.category > 0, "empty category on row " .. tostring(row.id))
   end
 end)
 
@@ -150,9 +162,7 @@ test("Artwork: every catalog row declares the fields the fill math needs", funct
     assertEqual(type(row.label), "string", "label" .. at)
     assertTrue(type(row.w) == "number" and row.w > 0, "w" .. at)
     assertTrue(type(row.h) == "number" and row.h > 0, "h" .. at)
-    -- Redistribution needs the attribution, and the only moment anybody will remember to write it
-    -- is when the row is added.
-    assertEqual(type(row.credit), "string", "credit" .. at)
+    assertEqual(type(row.tintable), "boolean", "tintable" .. at)
   end
 end)
 
@@ -177,21 +187,37 @@ test("Artwork: every catalog row's derived path points at a file that exists", f
   end
 end)
 
-test("Artwork: the shipped seed row is the runic sigil, tintable and square", function()
-  local row = Art.Entry("runic-sigil-bw")
-  assertTrue(row ~= nil, "the seed catalog row is gone")
-  assertEqual(row.category, "General")
-  assertEqual(row.w, 512)
-  assertEqual(row.h, 512)
-  -- Authored white-on-transparent, so the per-panel tint is what gives it its color.
-  assertTrue(row.tintable)
+test("Artwork: every catalog row is square and a power of two", function()
+  -- Replaces an assertion about one hand-authored seed row, which no longer exists: the catalog is
+  -- generated from media/artwork/ by tools/artwork/update_catalog.py, so what is worth pinning is
+  -- the property EVERY row must hold rather than the identity of any single piece.
+  --
+  -- Power-of-two on both axes is not cosmetic. WoW cannot wrap a non-power-of-two texture, so the
+  -- TILE fill would render corrupt (or refuse to load at all on some drivers) for a row that slipped
+  -- through at, say, 1000x1000.
+  -- Halved rather than masked with `&`: this addon targets WoW's Lua 5.1, which has no bitwise
+  -- operators at all, and the test suite runs on the same dialect the client does.
+  local function isPowerOfTwo(n)
+    if type(n) ~= "number" or n < 1 or n % 1 ~= 0 then return false end
+    while n > 1 do
+      if n % 2 ~= 0 then return false end
+      n = n / 2
+    end
+    return true
+  end
+
+  for _, row in ipairs(Catalog) do
+    local at = " on row " .. tostring(row.id)
+    assertEqual(row.w, row.h, "not square" .. at)
+    assertTrue(isPowerOfTwo(row.w), "not a power of two" .. at)
+  end
 end)
 
 test("Artwork.Entry: finds a row by id and forgives its case", function()
-  -- The CLI is the reason: `/pm panel set Art runic-Sigil` should find the row rather than refuse
+  -- The CLI is the reason: `/pm panel set Art Class-Warrior` should find the row rather than refuse
   -- it, mirroring how the media field kind already forgives case.
-  assertEqual(Art.Entry("runic-sigil-bw").id, "runic-sigil-bw")
-  assertEqual(Art.Entry("RUNIC-SIGIL-BW").id, "runic-sigil-bw")
+  assertEqual(Art.Entry(SEED_ID).id, SEED_ID)
+  assertEqual(Art.Entry(SEED_ID:upper()).id, SEED_ID)
   assertEqual(Art.Entry("nope"), nil)
   assertEqual(Art.Entry(nil), nil)
   assertEqual(Art.Entry(42), nil)
@@ -209,31 +235,39 @@ end)
 
 test("Artwork.List: a catalog label carries its category as a prefix", function()
   -- The widget is a FLAT list, so the prefix is what keeps it readable until there is enough art to
-  -- justify a grouped one.
+  -- justify a grouped one. Categories are now derived from the folder path, so the prefix can be
+  -- several levels deep ("Faction -> Expansion -> 12 Midnight").
   local list = Art.List()
+  local row = Art.Entry(SEED_ID)
   local found
   for _, entry in ipairs(list) do
-    if entry.id == "runic-sigil-bw" then found = entry end
+    if entry.id == SEED_ID then found = entry end
   end
   assertTrue(found ~= nil, "the seed row is missing from the list")
-  assertEqual(found.label, "General: Runic Sigil (B&W)")
-  assertEqual(found.category, "General")
+  assertEqual(found.label, row.category .. ": " .. row.label)
+  assertEqual(found.category, row.category)
 end)
 
 test("Artwork.List: orders the catalog by category, then by label", function()
   withRows({
-    { id = "zzz-general", category = "General",  label = "Zebra", file = "runic-sigil-bw",
-      w = 8, h = 8, tintable = true, credit = "test fixture" },
-    { id = "aaa-factions", category = "Factions", label = "Aardvark", file = "runic-sigil-bw",
-      w = 8, h = 8, tintable = true, credit = "test fixture" },
+    { id = "zzz-alpha", category = "Aaa",  label = "Zebra",    file = SEED_FILE,
+      w = 8, h = 8, tintable = true },
+    { id = "aaa-omega", category = "Zzz",  label = "Aardvark", file = SEED_FILE,
+      w = 8, h = 8, tintable = true },
+    { id = "mid-two",   category = "Aaa",  label = "Antelope", file = SEED_FILE,
+      w = 8, h = 8, tintable = true },
   }, function()
     local order = {}
     for i, entry in ipairs(Art.List()) do order[entry.id] = i end
-    -- General outranks Factions on the CATEGORY, even though the labels sort the other way — which
-    -- is the whole point of ranking by C.ARTWORK_CATEGORIES rather than sorting the label strings.
-    assertTrue(order["zzz-general"] < order["aaa-factions"], "category order lost to label order")
+    -- CATEGORY decides first, even though the labels sort the other way. This is the whole reason
+    -- the sort is two-level rather than a plain label sort.
+    assertTrue(order["zzz-alpha"] < order["aaa-omega"], "category order lost to label order")
+    -- Categories rank ALPHABETICALLY now. There is no declared list to rank against, because they
+    -- are derived from the artwork's folder path, so "Aaa" precedes "Zzz" by string comparison.
+    -- That also keeps a folder's children next to it: a child's category starts with its parent's.
+    assertTrue(order["zzz-alpha"] < order["aaa-omega"], "categories are not alphabetical")
     -- And within one category, the label decides.
-    assertTrue(order["runic-sigil-bw"] < order["zzz-general"], "labels are not sorted within category")
+    assertTrue(order["mid-two"] < order["zzz-alpha"], "labels are not sorted within category")
   end)
 end)
 
@@ -512,7 +546,7 @@ end)
 -- ── UV composition ──────────────────────────────────────────────────────────────
 
 test("Artwork: an unturned, unflipped quad is the identity texture coordinate", function()
-  assertUV(specFor({ artTexture = "runic-sigil-bw", artFill = "FIT" }).uv, { 0, 0, 0, 1, 1, 0, 1, 1 })
+  assertUV(specFor({ artTexture = SEED_ID, artFill = "FIT" }).uv, { 0, 0, 0, 1, 1, 0, 1, 1 })
 end)
 
 test("Artwork: one quarter turn reproduces C.ACCENT_TEXCOORD_ROT90 exactly", function()
@@ -520,41 +554,41 @@ test("Artwork: one quarter turn reproduces C.ACCENT_TEXCOORD_ROT90 exactly", fun
   -- permutation. If artwork's rotation is a different transform from that one, then two things in
   -- the same addon mean different things by "90 degrees" — so this equality is the contract, and
   -- Artwork.lua's own comment asserts it.
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artRotation = 90 })
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT", artRotation = 90 })
   assertUV(spec.uv, C.ACCENT_TEXCOORD_ROT90, "quarter turn")
 end)
 
 test("Artwork: half a turn is the identity quad reversed", function()
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artRotation = 180 })
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT", artRotation = 180 })
   assertUV(spec.uv, { 1, 1, 1, 0, 0, 1, 0, 0 }, "half turn")
 end)
 
 test("Artwork: three quarter turns are the quarter turn applied three times", function()
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artRotation = 270 })
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT", artRotation = 270 })
   assertUV(spec.uv, { 1, 0, 0, 0, 1, 1, 0, 1 }, "three quarter turns")
 end)
 
 test("Artwork: a horizontal flip swaps the left and right columns", function()
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artFlipH = true })
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT", artFlipH = true })
   assertUV(spec.uv, { 1, 0, 1, 1, 0, 0, 0, 1 }, "flipH")
 end)
 
 test("Artwork: a vertical flip swaps the top and bottom rows", function()
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artFlipV = true })
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT", artFlipV = true })
   assertUV(spec.uv, { 0, 1, 0, 0, 1, 1, 1, 0 }, "flipV")
 end)
 
 test("Artwork: flipping both ways is the same as turning it half way round", function()
-  local both = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT",
+  local both = specFor({ artTexture = SEED_ID, artFill = "FIT",
                          artFlipH = true, artFlipV = true })
-  local half = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artRotation = 180 })
+  local half = specFor({ artTexture = SEED_ID, artFill = "FIT", artRotation = 180 })
   assertUV(both.uv, half.uv, "flipH+flipV vs 180")
 end)
 
 test("Artwork: flips are applied BEFORE the turn, and the order is part of the contract", function()
   -- Flip-then-rotate is not the same transform as rotate-then-flip. Picking one and stating it is
   -- the only way the two checkboxes and the dropdown mean something stable together.
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT",
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT",
                          artFlipH = true, artRotation = 90 })
   assertUV(spec.uv, { 1, 1, 0, 1, 1, 0, 0, 0 }, "flipH then 90")
 end)
@@ -615,22 +649,26 @@ for _, fill in ipairs({ "FILL", "FIT", "STATIC", "TILE" }) do
 end
 
 test("Artwork: a rotation that is not a quarter turn falls back to the template's", function()
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "FIT", artRotation = 45 })
+  local spec = specFor({ artTexture = SEED_ID, artFill = "FIT", artRotation = 45 })
   assertUV(spec.uv, C.ACCENT_TEXCOORD_FLAT, "45 degrees")
 end)
 
 -- ── Color ───────────────────────────────────────────────────────────────────────
 
 test("Artwork: the tint carries the stored color through", function()
-  local spec = specFor({ artTexture = "runic-sigil-bw", artColor = { 0.2, 0.4, 0.6, 1 } })
-  assertNear(spec.color[1], 0.2)
-  assertNear(spec.color[2], 0.4)
-  assertNear(spec.color[3], 0.6)
+  -- Through a TINTABLE fixture: every shipped row is full-color art, which deliberately forces the
+  -- tint to white, so the shipped catalog cannot exercise this path at all.
+  withArt(512, 512, true, function()
+    local spec = specFor({ artTexture = TEST_ART_ID, artColor = { 0.2, 0.4, 0.6, 1 } })
+    assertNear(spec.color[1], 0.2)
+    assertNear(spec.color[2], 0.4)
+    assertNear(spec.color[3], 0.6)
+  end)
 end)
 
 test("Artwork: artAlpha multiplies the tint's own alpha rather than replacing it", function()
   -- The color picker's alpha and the opacity slider compose, so neither silently wins.
-  local spec = specFor({ artTexture = "runic-sigil-bw", artColor = { 1, 1, 1, 0.5 }, artAlpha = 0.5 })
+  local spec = specFor({ artTexture = SEED_ID, artColor = { 1, 1, 1, 0.5 }, artAlpha = 0.5 })
   assertNear(spec.color[4], 0.25)
 end)
 
@@ -638,7 +676,7 @@ test("Artwork: artClassColor overrides the RGB and keeps the computed alpha", fu
   -- Through Util.ResolveColor, so class color cost one C.COLOR_FIELDS row and no code in Artwork.
   -- The mock player is a Priest (1, 1, 1) against a stored black, so the override is visible.
   local spec = specFor({
-    artTexture = "runic-sigil-bw", artColor = { 0, 0, 0, 0.5 }, artClassColor = true, artAlpha = 0.5,
+    artTexture = SEED_ID, artColor = { 0, 0, 0, 0.5 }, artClassColor = true, artAlpha = 0.5,
   })
   assertNear(spec.color[1], 1)
   assertNear(spec.color[2], 1)
@@ -712,7 +750,7 @@ end)
 test("Artwork.BuildArtSpec: a zero-sized panel is nil rather than a division by zero", function()
   -- Every fill divides by at least one of W, H, w or h. An inf or a nan reaches SetTexCoord
   -- silently and renders as a garbage smear, so it has to be refused before the arithmetic.
-  local rec = record({ artTexture = "runic-sigil-bw", artFill = "TILE" })
+  local rec = record({ artTexture = SEED_ID, artFill = "TILE" })
   assertEqual(Art.BuildArtSpec(rec, 0, 100), nil)
   assertEqual(Art.BuildArtSpec(rec, 100, 0), nil)
   assertEqual(Art.BuildArtSpec(rec, -10, 100), nil)
@@ -742,7 +780,7 @@ test("Artwork.BuildArtSpec: a catalog row with NO declared size falls back to th
     -- like — the catalog-integrity test above is what keeps it unreachable for shipped art, and
     -- degrading to a plausible size beats a bundled piece that silently never draws.
     withRows({ { id = "pm-sizeless-art", category = "General", label = "Sizeless",
-                 file = "runic-sigil-bw", tintable = true, credit = "test fixture" } }, function()
+                 file = SEED_FILE, tintable = true } }, function()
       local spec = Art.BuildArtSpec(
         record({ artTexture = "pm-sizeless-art", artFill = "STATIC" }), 200, 200)
       assertTrue(spec ~= nil, "a row with no declared size drew nothing at all")
@@ -753,14 +791,14 @@ test("Artwork.BuildArtSpec: a catalog row with NO declared size falls back to th
 
 test("Artwork.BuildArtSpec: a non-table record is nil, not a crash", function()
   assertEqual(Art.BuildArtSpec(nil, 200, 200), nil)
-  assertEqual(Art.BuildArtSpec("runic-sigil-bw", 200, 200), nil)
+  assertEqual(Art.BuildArtSpec(SEED_ID, 200, 200), nil)
 end)
 
 test("Artwork.BuildArtSpec: an unknown fill or layer falls back to the template", function()
   -- A hand-edited SavedVariables file must not reach the renderer with artFill = "COVER": every
   -- branch computes a different rectangle, and an unknown token would produce a nil size that lands
   -- in SetSize — a Lua error inside a paint, which leaves the panel half-drawn.
-  local spec = specFor({ artTexture = "runic-sigil-bw", artFill = "COVER",
+  local spec = specFor({ artTexture = SEED_ID, artFill = "COVER",
                          artLayer = "MIDDLE" })
   local t = C.PANEL_TEMPLATE
   assertEqual(spec.layer, t.artLayer)
@@ -773,7 +811,7 @@ test("Artwork.BuildArtSpec: the layer resolves to the frame level the renderer m
   -- Resolved in the spec so the ladder is stated once, in Constants, rather than re-derived by the
   -- renderer from a string it would have to know the meaning of.
   for _, layer in ipairs(C.ART_LAYER) do
-    local spec = specFor({ artTexture = "runic-sigil-bw", artLayer = layer })
+    local spec = specFor({ artTexture = SEED_ID, artLayer = layer })
     assertEqual(spec.layer, layer)
     assertEqual(spec.level, C.ART_FRAME_LEVEL[layer], "level for " .. layer)
   end
@@ -801,7 +839,7 @@ test("Artwork: Canvas.BuildSpec fits the art to the CLAMPED panel size", functio
   -- Art fitted to a width the panel will never be drawn at is art that lands in the wrong place the
   -- moment the clamp bites.
   local spec = Canvas.BuildSpec(record({
-    artTexture = "runic-sigil-bw", artFill = "STRETCH", width = 99999, height = 99999,
+    artTexture = SEED_ID, artFill = "STRETCH", width = 99999, height = 99999,
   }), {})
   assertEqual(spec.width, C.MAX_SIZE)
   assertNear(spec.art.width, C.MAX_SIZE)
@@ -813,7 +851,7 @@ end)
 -- Every art field, with a value that differs from the template's, so a field silently dropped by a
 -- copy or a profile switch cannot pass by matching the default.
 local ART_SETTINGS = {
-  artTexture = "runic-sigil-bw", artCustomPath = "Interface\\Icons\\INV_Misc_QuestionMark",
+  artTexture = SEED_ID, artCustomPath = "Interface\\Icons\\INV_Misc_QuestionMark",
   artColor = { 0.2, 0.3, 0.4, 0.5 }, artClassColor = true, artAlpha = 0.75,
   artFill = "TILE", artPoint = "TOPLEFT", artX = 11, artY = -13, artScale = 2.5,
   artRotation = 270, artFlipH = true, artFlipV = true,
@@ -887,9 +925,9 @@ end)
 test("Artwork: R:Set stores an art field through the normal write seam", function()
   fresh()
   local rec = R:New("Settable")
-  assertTrue((R:Set(rec.id, "artTexture", "runic-sigil-bw")))
+  assertTrue((R:Set(rec.id, "artTexture", SEED_ID)))
   assertTrue((R:Set(rec.id, "artFill", "FILL")))
-  assertEqual(R:Get(rec.id).artTexture, "runic-sigil-bw")
+  assertEqual(R:Get(rec.id).artTexture, SEED_ID)
   assertEqual(R:Get(rec.id).artFill, "FILL")
   -- And the panel repainted, rather than waiting for a full rebuild.
   assertTrue(Canvas:FrameFor(rec.id).artFrame:IsShown())
@@ -899,15 +937,15 @@ end)
 
 test("Canvas: a panel with artwork shows its art frame and applies the resolved path", function()
   fresh()
-  local rec = R:New("Arted", { artTexture = "runic-sigil-bw" })
+  local rec = R:New("Arted", { artTexture = SEED_ID })
   local f = Canvas:FrameFor(rec.id)
   assertTrue(f.artFrame:IsShown(), "the art frame stayed hidden")
-  assertEqual(f.art:GetTexture(), RUNIC)
+  assertEqual(f.art:GetTexture(), SEED_PATH)
 end)
 
 test("Canvas: the art frame takes the level its layer names, for all three layers", function()
   fresh()
-  local rec = R:New("Layered", { artTexture = "runic-sigil-bw" })
+  local rec = R:New("Layered", { artTexture = SEED_ID })
   for _, layer in ipairs(C.ART_LAYER) do
     R:Set(rec.id, "artLayer", layer)
     local f = Canvas:FrameFor(rec.id)
@@ -918,7 +956,7 @@ end)
 
 test("Canvas: there is ONE art frame, whose level is reassigned per render", function()
   fresh()
-  local rec = R:New("Reassigned", { artTexture = "runic-sigil-bw", artLayer = "BELOW_BG" })
+  local rec = R:New("Reassigned", { artTexture = SEED_ID, artLayer = "BELOW_BG" })
   local frame = Canvas:FrameFor(rec.id).artFrame
   R:Set(rec.id, "artLayer", "ABOVE_ALL")
   -- Three frames for three choices would be two frames per panel created to sit hidden forever.
@@ -927,7 +965,7 @@ end)
 
 test("Canvas: the artwork ladder interleaves with the fill, the border and the accent", function()
   fresh()
-  local rec = R:New("Ladder", { artTexture = "runic-sigil-bw", borderSize = 4, accentEnabled = true })
+  local rec = R:New("Ladder", { artTexture = SEED_ID, borderSize = 4, accentEnabled = true })
   local f = Canvas:FrameFor(rec.id)
   local base = f:GetFrameLevel()
   assertEqual(f.bgFrame:GetFrameLevel(), base + C.BG_FRAME_LEVEL)
@@ -943,7 +981,7 @@ end)
 
 test("Canvas: the fill lives on its own child frame, so BELOW_BG is reachable", function()
   fresh()
-  local rec = R:New("Underneath", { artTexture = "runic-sigil-bw", artLayer = "BELOW_BG" })
+  local rec = R:New("Underneath", { artTexture = SEED_ID, artLayer = "BELOW_BG" })
   local f = Canvas:FrameFor(rec.id)
   -- A child frame always draws above its PARENT's textures whatever draw layer they use, so with
   -- the fill on the panel itself there would be no level a child could take to get underneath it.
@@ -954,7 +992,7 @@ end)
 
 test("Canvas: the art frame clips its children, so offset art stays inside the panel", function()
   fresh()
-  local rec = R:New("Clipped", { artTexture = "runic-sigil-bw", artFill = "STATIC",
+  local rec = R:New("Clipped", { artTexture = SEED_ID, artFill = "STATIC",
                                  artPoint = "TOPLEFT", artScale = 4 })
   -- Clipping is on the ART frame specifically, never on the panel: the accent bars deliberately
   -- hang OUTSIDE the panel's bounds and a clip one level up would eat them.
@@ -963,12 +1001,15 @@ end)
 
 test("Canvas: the art texture takes the spec's size, anchor and texture coordinates", function()
   fresh()
-  local rec = R:New("Placed", { width = 400, height = 400, artTexture = "runic-sigil-bw",
+  local rec = R:New("Placed", { width = 400, height = 400, artTexture = SEED_ID,
                                 artFill = "STATIC", artScale = 0.5,
                                 artPoint = "TOPLEFT", artX = 10, artY = -10 })
   local tex = Canvas:FrameFor(rec.id).art
-  assertNear(tex:GetWidth(), 256)
-  assertNear(tex:GetHeight(), 256)
+  -- Derived from the row rather than hard-coded, so re-importing the art at a different size
+  -- changes one number in the catalog and nothing here.
+  local native = Art.Entry(SEED_ID).w
+  assertNear(tex:GetWidth(), native * 0.5)
+  assertNear(tex:GetHeight(), native * 0.5)
   local point, _, _, x, y = tex:GetPoint(1)
   assertEqual(point, "TOPLEFT")
   assertEqual(x, 10)
@@ -978,7 +1019,7 @@ end)
 
 test("Canvas: tiled artwork asks SetTexture to wrap; nothing else does", function()
   fresh()
-  local rec = R:New("Tiled", { artTexture = "runic-sigil-bw", artFill = "TILE" })
+  local rec = R:New("Tiled", { artTexture = SEED_ID, artFill = "TILE" })
   local tex = Canvas:FrameFor(rec.id).art
   assertEqual(tex.__wrapH, "REPEAT")
   assertEqual(tex.__wrapV, "REPEAT")
@@ -996,18 +1037,20 @@ test("Canvas: the artwork tint reaches the texture, and the blend mode is always
   -- setting was dropped. Asserted here because the texture is POOLED: it is set explicitly on every
   -- repaint so a future mode change could never leak from one panel into the next.
   fresh()
-  local rec = R:New("Tinted", { artTexture = "runic-sigil-bw", artClassColor = false,
-                                artColor = { 0.25, 0.5, 0.75, 1 }, artAlpha = 0.5 })
-  local tex = Canvas:FrameFor(rec.id).art
-  assertNear(tex.__color[1], 0.25)
-  assertNear(tex.__color[4], 0.5)
-  assertEqual(tex.__blend, C.ART_BLEND_MODE)
+  withArt(512, 512, true, function()
+    local rec = R:New("Tinted", { artTexture = TEST_ART_ID, artClassColor = false,
+                                  artColor = { 0.25, 0.5, 0.75, 1 }, artAlpha = 0.5 })
+    local tex = Canvas:FrameFor(rec.id).art
+    assertNear(tex.__color[1], 0.25)
+    assertNear(tex.__color[4], 0.5)
+    assertEqual(tex.__blend, C.ART_BLEND_MODE)
+  end)
   assertEqual(C.ART_BLEND_MODE, "BLEND")
 end)
 
 test("Canvas: turning artwork off clears the texture as well as hiding the frame", function()
   fresh()
-  local rec = R:New("Fickle", { artTexture = "runic-sigil-bw" })
+  local rec = R:New("Fickle", { artTexture = SEED_ID })
   R:Set(rec.id, "artTexture", C.ARTWORK_NONE)
   local f = Canvas:FrameFor(rec.id)
   assertFalse(f.artFrame:IsShown(), "the art frame stayed shown")
@@ -1018,7 +1061,7 @@ end)
 
 test("Canvas: a released frame keeps no artwork for the next panel to inherit", function()
   fresh()
-  local rec = R:New("Doomed", { artTexture = "runic-sigil-bw" })
+  local rec = R:New("Doomed", { artTexture = SEED_ID })
   local frameName = Util.FrameName("Doomed")
   R:Delete(rec.id)
   local pooled = Canvas.__pool[frameName]
@@ -1031,7 +1074,7 @@ end)
 
 test("Canvas: a reused frame draws the new panel's artwork, not the old panel's", function()
   fresh()
-  local first = R:New("Recycled", { artTexture = "runic-sigil-bw" })
+  local first = R:New("Recycled", { artTexture = SEED_ID })
   R:Delete(first.id)
   local second = R:New("Recycled")
   local f = Canvas:FrameFor(second.id)

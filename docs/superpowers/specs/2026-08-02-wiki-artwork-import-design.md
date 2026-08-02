@@ -1,5 +1,12 @@
 # Warcraft Wiki artwork import pipeline — design
 
+> **Superseded (2026-08-02).** The pipeline this describes has been replaced. The
+> manifest, the scaffold step and the generated-plate importer are gone; artwork is now
+> converted by `tools/artwork/artwork_cleaner.py` and catalogued by
+> `tools/artwork/update_catalog.py`, with categories derived from the folder tree. See
+> `docs/artwork-spec.md`. Kept for the reasoning, not as a description of the code.
+
+
 **Date:** 2026-08-02
 **Status:** implemented on `feat/wiki-artwork-pipeline`. See *As built* at the end for what changed.
 

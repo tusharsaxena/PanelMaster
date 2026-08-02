@@ -1,5 +1,12 @@
 # Panel Artwork — Design
 
+> **Superseded (2026-08-02).** The pipeline this describes has been replaced. The
+> manifest, the scaffold step and the generated-plate importer are gone; artwork is now
+> converted by `tools/artwork/artwork_cleaner.py` and catalogued by
+> `tools/artwork/update_catalog.py`, with categories derived from the folder tree. See
+> `docs/artwork-spec.md`. Kept for the reasoning, not as a description of the code.
+
+
 **Issue:** [#9](https://github.com/tusharsaxena/PanelMaster/issues/9) — Panel artwork: bundled
 WoW-themed art, user-supplied art, and per-panel styling options
 **Branch:** `feat/panel-artwork`

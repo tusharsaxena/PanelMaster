@@ -468,26 +468,32 @@ of artwork most likely to be wrong and hardest to eyeball in-game — a `FILL` c
 pixel of texture space looks fine until the panel is resized — so all five fill types can be checked
 against resize in the headless harness instead of by launching the client and squinting.
 
-A catalog row is `{ id, category, label, file, w, h, tintable, credit }`:
+A catalog row is `{ id, category, label, file, w, h, tintable }`, and **every row is
+generated** by `tools/artwork/update_catalog.py` from what is actually in `media/artwork/`:
 
 - `id` is the **stored** value and part of the saved-variables contract. It is never renamed —
   renaming one degrades every panel using it to "no artwork" on the next load, silently.
 - `file` is a bare stem; the path is rebuilt from `C.ARTWORK_PATH_PREFIX` at render time, so the art
   survives the addon folder being moved or renamed. Same reasoning as storing LSM *names*, not paths.
-- `w` / `h` are the **authored** pixel size, declared rather than measured: `Texture:GetWidth()`
-  returns 0 until the file has loaded, which is not guaranteed on the first render pass, and
-  `STATIC`, `FIT` and `TILE` cannot compute anything without a native size. Declaring it is also
-  what keeps this module frame-free.
+- `category` is **derived from the folder** the art sits in, so
+  `media/artwork/faction/expansion/12-midnight/harati.tga` becomes
+  `"Faction -> Expansion -> 12 Midnight"`. There is no fixed category list: a declared one could
+  only be a second opinion about the same thing, and would need editing every time a folder appears.
+- `w` / `h` are the pixel size measured at generation time and then **declared** in the row rather
+  than read at runtime: `Texture:GetWidth()` returns 0 until the file has loaded, which is not
+  guaranteed on the first render pass, and `STATIC`, `FIT` and `TILE` cannot compute anything
+  without a native size. Declaring it is also what keeps this module frame-free.
 - `tintable = false` marks finished full-color art; `BuildArtSpec` forces its RGB to white (keeping
-  the computed alpha), because tinting finished art can only darken it toward the tint.
-- `credit` is the attribution record redistribution requires.
+  the computed alpha), because tinting finished art can only darken it toward the tint. It is
+  **measured from the pixels** — art that is both unsaturated and near-white carries its shape in
+  the alpha channel and takes a tint cleanly; anything else has its own palette.
 
 Two reserved ids sit outside the catalog: `"None"` (the default, draws nothing) and `"Custom"`
 (draw `artCustomPath`). Custom counts as tintable — tinting your own art white is a no-op — and
 assumes a nominal `Artwork.CUSTOM_NATIVE_SIZE` of 256, since learning a user file's real pixel size
 would need a frame and a load round-trip. `Artwork.Entry` is a linear scan rather than a prebuilt
 index precisely so a runtime append to `Artwork.Catalog` works; `Artwork.List` is the ordered
-dropdown source (`None` first, catalog sorted by category order then label, `Custom` last, with
+dropdown source (`None` first, catalog sorted by category then label, both alphabetically, `Custom` last, with
 `"Category: Label"` prefixes because the widget is a flat list).
 
 Every division in the fill math is guarded — a nil, zero or negative `W`, `H`, `w` or `h` returns

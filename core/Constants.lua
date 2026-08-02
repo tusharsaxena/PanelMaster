@@ -104,13 +104,18 @@ C.MAX_GRID = 128
 C.EDITOR_OFFSET_RANGE = 2000
 
 -- ── Artwork ─────────────────────────────────────────────────────────────────────
--- The bundled-art catalog's fixed category list. Stored inside catalog rows (never inside a
--- panel record), so this is a source-level contract rather than a saved-variables one — but it is
--- also the ORDER the artwork dropdown groups by, which is why it is an array and not a set.
-C.ARTWORK_CATEGORIES = { "General", "Races", "Classes", "Expansions", "Factions" }
-
-C.ARTWORK_CATEGORY_SET = {}
-for _, c in ipairs(C.ARTWORK_CATEGORIES) do C.ARTWORK_CATEGORY_SET[c] = true end
+-- There is deliberately no fixed category list here any more.
+--
+-- Categories are DERIVED from the folder a piece of art sits in under media/artwork/, by
+-- tools/artwork/update_catalog.py, and are written into the catalog rows it generates:
+-- media/artwork/faction/expansion/12-midnight/harati.tga becomes the category
+-- "Faction -> Expansion -> 12 Midnight". A fixed list here could only ever be a second opinion
+-- about the same thing, and would have to be edited every time somebody adds a folder — which is
+-- exactly the drift the generator exists to remove.
+--
+-- Artwork.List therefore sorts categories alphabetically rather than by a declared rank. That
+-- ordering is stable, needs no maintenance, and keeps a folder's children adjacent to it because
+-- a child's category string starts with its parent's.
 
 -- Where bundled artwork lives. A catalog row carries a bare file STEM and the full path is
 -- rebuilt here at render time, so moving the art (or renaming the folder) is a one-line change

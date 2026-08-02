@@ -333,10 +333,10 @@ badge and any count quoted in the docs must agree with it.
 
 - Artwork: every catalog id is unique
 - Artwork: no catalog row claims one of the two reserved ids
-- Artwork: every catalog row sits in a declared category
+- Artwork: every catalog row carries a non-empty category
 - Artwork: every catalog row declares the fields the fill math needs
 - Artwork: every catalog row's derived path points at a file that exists
-- Artwork: the shipped seed row is the runic sigil, tintable and square
+- Artwork: every catalog row is square and a power of two
 - Artwork.Entry: finds a row by id and forgives its case
 - Artwork.List: brackets the catalog with None first and Custom last
 - Artwork.List: a catalog label carries its category as a prefix
