@@ -502,7 +502,9 @@ pixel of texture space looks fine until the panel is resized — so all five fil
 against resize in the headless harness instead of by launching the client and squinting.
 
 A catalog row is `{ id, category, label, file, w, h }`, and **every row is
-generated** by `tools/artwork/update_catalog.py` from what is actually in `media/artwork/`:
+generated** by `tools/artwork/update_catalog.py` from what is actually in `media/artwork/`. That
+script's scan is also imported and reused by `tools/artwork/make_poster.py`, so the catalog and the
+README's contact sheet are two renderings of one list and cannot disagree about what shipped:
 
 - `id` is the **stored** value and part of the saved-variables contract. It is never renamed —
   renaming one degrades every panel using it to "no artwork" on the next load, silently.
@@ -818,7 +820,7 @@ vendored font.
 Bundled artwork lives under `media/artwork/`, one 512×512 32-bit TGA per catalog row, addressed at
 runtime through `C.ARTWORK_PATH_PREFIX` plus the row's `file` stem. The same silent failure mode
 applies, which is why a row's path is worth asserting against the filesystem the way the logo's is.
-`tools/artwork/import.py` is what produces those files. It converts art authored *outside* the repo
+`tools/artwork/artwork_cleaner.py` is what produces those files. It converts art authored *outside* the repo
 with Pillow — luminance-to-alpha for a white-on-black plate, or a magenta chroma key for full-color
 art, which is the only one of the two that can separate dark art from a dark background. It also erases a generator's watermark,
 letterboxes a non-square plate rather than distorting it, and normalizes the RGB of fully
@@ -829,7 +831,22 @@ The source plate each asset was converted from is kept under `media/artwork/raw/
 catalog id it produces, so a piece can be re-derived at a different size or with a corrected margin
 without going back to whoever made it. It is committed to git but excluded from the package by
 `.pkgmeta` — the same reasoning as the logo's master renders, since the client cannot load a `.png`
-at all. Both the asset requirements and the contribution rules are in
+at all.
+
+`media/poster/artwork-poster.png` is another non-runtime media asset, and the only **generated** one:
+a single contact sheet of every catalog row, drawn by `tools/artwork/make_poster.py` and embedded in
+the README so the artwork set is visible without a clone. `.pkgmeta` excludes it on the same
+reasoning again. Two properties are load-bearing rather than incidental. It is built
+from `update_catalog.py`'s scan rather than its own walk, so it cannot show a set the addon does not
+have; and it renders from fonts vendored at `tools/artwork/fonts/` with no system fallback, so the
+same tree renders the same picture on any machine. Its identity is that picture — `--check` compares
+a fingerprint of the decoded pixels, not of the file, because PNG bytes are deflate's output and can
+differ between zlib builds for pixels that are identical. `media/poster/artwork-poster.txt` records
+the fingerprint and the toolchain that produced it, so a mismatch can be attributed rather than
+guessed at. Nothing in the addon reads any of it, which is exactly why staleness is undetectable by
+either green-gate command — hence the `--check` mode and `docs/testing.md` ▸ *The artwork gate*.
+
+Both the asset requirements and the contribution rules are in
 [artwork-spec.md](artwork-spec.md) and the README; `tools/` is an **accepted, documented deviation**
 from the Ka0s WoW Addon Standard (approved 2026-07-31 — the standard defines no build-tooling
 location, and this is the first non-Lua source in the tree).
