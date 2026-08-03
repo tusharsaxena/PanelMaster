@@ -15,3 +15,8 @@ __pycache__/
 tools/artwork/manifest.tsv.root
 tools/artwork/.stamps.tsv
 tools/artwork/*.tmp
+
+# The poster's staging file. Every tool here writes .tmp then os.replace()s, but make_poster.py is
+# the one that stages OUTSIDE tools/, next to its output, so the glob above cannot cover it. Only an
+# interrupted run leaves it behind.
+media/poster/*.tmp

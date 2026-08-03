@@ -1,11 +1,12 @@
 # Panel Master — Artwork
 
-How artwork gets into this addon, end to end. Two scripts do the whole job:
+How artwork gets into this addon, end to end. Three scripts do the whole job:
 
 | | |
 |---|---|
 | `tools/artwork/artwork_cleaner.py` | turns any image into the TGA the WoW client can load |
 | `tools/artwork/update_catalog.py` | reads `media/artwork/` and rewrites the addon's catalog |
+| `tools/artwork/make_poster.py` | draws every bundled piece into one contact sheet for the README |
 
 There is **no manifest and no naming step**. The folder tree and the file names *are* the
 configuration: what you call a file becomes its label, what folder you put it in becomes its
@@ -15,7 +16,8 @@ category. Name things the way you want them to appear.
 
 ## Quick start
 
-**Requirements:** Python 3 with Pillow and numpy.
+**Requirements:** Python 3 with Pillow. `artwork_cleaner.py` also needs numpy;
+`update_catalog.py` and `make_poster.py` do not.
 
 ```bash
 pip install --user Pillow numpy
@@ -47,10 +49,16 @@ Then make the addon aware of them:
 ```bash
 python3 tools/artwork/update_catalog.py
 lua tests/run.lua
+python3 tools/artwork/make_poster.py
 ```
 
 That is the whole loop. `update_catalog.py` rewrites the catalog in `modules/Artwork.lua` from
 whatever is on disk, and the test suite confirms every row points at a file that exists.
+
+The poster is the odd one out and is listed last on purpose: nothing in the addon reads it, so
+skipping it breaks nothing and fails nothing — it just leaves the README showing a set that no
+longer exists. `make_poster.py --check` is what turns that back into a detectable state; see
+[`testing.md`](testing.md) ▸ *The artwork gate*.
 
 ---
 
@@ -250,6 +258,54 @@ survives exactly until the next run. Rename the file instead.
 
 It reports problems it finds — a non-power-of-two texture, a duplicate id, an unreadable file — and
 refuses to write on the ones that would produce a broken catalog.
+
+### `make_poster.py`
+
+```
+(no arguments)         render every bundled piece into media/poster/artwork-poster.png
+--check                exit 1 if the committed poster is missing or out of date; write nothing
+--out PATH             write somewhere else
+```
+
+It writes two files: the PNG, and `artwork-poster.txt` beside it — a provenance record carrying the
+poster's pixel fingerprint, the addon version, the sha256 of each bundled font and the
+Pillow/FreeType/zlib versions that built it. Both are committed. The record is what lets `--check`
+name the component that moved when a mismatch turns up, instead of leaving a reviewer to argue about
+a binary diff.
+
+The poster is stamped with the addon's `## Version:` from the TOC, which makes **a version bump
+stale the poster**: regenerate after `/wow-addon:bump-version`. A build *date* was rejected for the
+obvious reason — it would change on every run, and a file that differs from the committed one every
+time it is generated cannot be checked for staleness at all.
+
+**It does not walk `media/artwork/` itself.** It imports `update_catalog.py` and calls that script's
+scan, so the poster and the catalog are two renderings of one list — the `raw/` exclusion and the id
+and label derivation come from `scan()`, and the order from the `SORT_KEY` both scripts sort by. The
+fatal-problem policy is shared the same way, through `is_fatal()`, so the two cannot succeed on
+different inputs either. Two walks would be two chances to disagree, and the
+disagreement would be invisible: a poster showing art the addon does not have still looks fine.
+
+**The fonts are bundled at `tools/artwork/fonts/` and there is no fallback.** A missing one exits
+with the path it wanted rather than reaching for a system font, because the whole point is that the
+same tree renders the same picture anywhere. The same reasoning pins the text layout engine to
+`BASIC` and places every string on a whole pixel — a fractional text x is the one thing two Pillow
+builds were observed to rasterize differently.
+
+**The poster's identity is its pixels, not its bytes.** `--check` compares a sha256 of the decoded
+image, not of the file, and the distinction is the difference between a guarantee and a wish: the
+pixels are this script's output and every input to them is pinned, but the bytes are deflate's, and
+a zlib-ng build can compress identical pixels into a different PNG through no fault of anything
+here. A plain run also **rewrites nothing when the pixels already match**, so a contributor on a
+different toolchain cannot churn two megabytes of visually identical binary into the history.
+
+That leaves one input a script cannot pin: a FreeType whose glyph rasterization changes would move
+the pixels themselves. It is recorded rather than pinned — hence `artwork-poster.txt`, and hence
+`--check` printing which of Pillow, FreeType or zlib differs from the build that made the committed
+image.
+
+Everything visible on the sheet is derived: the gold headings are catalog `category` strings, the
+caption under each tile is its `label`, ellipsized rather than wrapped when it overruns, and the
+footer carries the TOC version and `len(rows)`. There is nothing to hand-edit — regenerate instead.
 
 ---
 

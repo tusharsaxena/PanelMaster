@@ -45,6 +45,37 @@ diff -r ../LibKa0s/testkit tests/_kit                          # bytes   — SHO
 A fifth check answers "which LibKa0s is this?" without grepping minors out of source: `README.md`'s
 `Bundles [LibKa0s] vX.Y.Z (MIT).` line, which moves with every re-vendor.
 
+## The artwork gate
+
+Two committed files are **generated from `media/artwork/`**: the catalog block in
+`modules/Artwork.lua` and the contact sheet at `media/poster/artwork-poster.png`.
+Neither gate above can see either one go stale. `luacheck` only walks Lua, and the harness derives
+its load list from the TOC and cannot shell out to Python — so a piece added, renamed or deleted
+without a regeneration leaves the suite green while the addon and its own README describe a set that
+no longer exists. Run both whenever anything under `media/artwork/` has moved:
+
+```sh
+python3 tools/artwork/update_catalog.py --check   # exit 1 if modules/Artwork.lua is out of date
+python3 tools/artwork/make_poster.py --check      # exit 1 if the poster is missing or out of date
+```
+
+**This is deliberately NOT part of the green gate**, on the precedent `testing-§7` sets for keeping
+a benchmark suite outside it: the gate is Lua-only by design, and hooking a Python subprocess into
+`tests/run.lua` to close this would buy staleness detection at the cost of the harness's one
+dependency. It is written down here instead,
+and the exposure is recorded as `ARTWORK-05` in [`pending/LEDGER.md`](pending/LEDGER.md).
+
+The two fail differently, and the difference is the reason both are listed. A stale **catalog** is
+loud — `tests/test_artwork.lua` asserts every row points at a file that exists, so a deletion goes
+red on the next `lua tests/run.lua`. A stale **poster** is silent by construction: it is a PNG that
+nothing loads, so it stays wrong indefinitely and only a reader notices.
+
+`make_poster.py --check` compares the poster's **pixels**, not its bytes, so it does not go red
+merely because your Pillow or zlib differs from whoever generated the committed file; when it does
+go red it prints which toolchain component moved, read from `media/poster/artwork-poster.txt`. Two
+things other than `media/artwork/` legitimately stale it: a **version bump**, since the poster is
+stamped with the TOC's `## Version:`, and any edit to `make_poster.py`'s layout.
+
 ## Local toolchain
 
 WoW runs Lua 5.1, so the harness targets 5.1.

@@ -18,7 +18,7 @@ Usage:
     python3 tools/artwork/update_catalog.py --check     # exit 1 if it would change anything
     python3 tools/artwork/update_catalog.py --print     # print the rows, write nothing
 
-Requires Pillow and numpy.
+Requires Pillow (not numpy — only artwork_cleaner.py needs that).
 """
 
 import argparse
@@ -45,6 +45,27 @@ CATEGORY_SEP = " -> "
 # everything outside is left exactly as written, so the module's prose and logic are hand-owned.
 BEGIN = "-- BEGIN GENERATED CATALOG (tools/artwork/update_catalog.py) -- do not edit by hand"
 END = "-- END GENERATED CATALOG"
+
+# The catalog's order, and Artwork.List()'s. Exported rather than written inline at its one use
+# because make_poster.py sorts by it too: the poster must lay pieces out in the order the dropdown
+# lists them, and a second copy of this expression would let the two drift apart the first time
+# either was edited. The id tie-break matters — sorted() is stable but Lua's table.sort is not, so
+# the Lua side needs a total order and this must match it.
+def SORT_KEY(row):
+    return (row["category"], row["label"], row["id"])
+
+
+# The problems from scan() that stop a run, as opposed to the ones that only warn. A duplicate id
+# would silently drop a row; a file Pillow cannot open has no dimensions to record. Everything else
+# (a non-power-of-two texture) is advisory. Exported for the same reason as SORT_KEY: make_poster.py
+# applies the identical policy, so the poster and the catalog cannot succeed on different inputs.
+FATAL = ("duplicate id", "unreadable")
+
+
+def is_fatal(problems):
+    """True if any of `problems` must stop the run rather than merely warn."""
+    return any(f in p for p in problems for f in FATAL)
+
 
 def _words(text):
     """`12-midnight` -> ['12', 'Midnight'];  `02-the-burning-crusade` -> ['02','The','Burning','Crusade'].
@@ -127,7 +148,7 @@ def scan(art_dir=ART_DIR):
 def render(rows):
     """The Lua table body, sorted the way the dropdown groups it."""
     out = []
-    for r in sorted(rows, key=lambda r: (r["category"], r["label"], r["id"])):
+    for r in sorted(rows, key=SORT_KEY):
         out.append(
             '  { id       = "%s",\n'
             '    category = "%s",\n'
@@ -161,7 +182,7 @@ def main(argv=None):
         print("%d problem(s) in media/artwork/:" % len(problems))
         for p in problems:
             print("  " + p)
-        if any("duplicate id" in p or "unreadable" in p for p in problems):
+        if is_fatal(problems):
             return 1
 
     if not rows:

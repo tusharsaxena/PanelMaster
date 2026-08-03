@@ -235,6 +235,17 @@ so art that is offset or scaled up cannot spill out over the rest of your UI.
 Every panel starts with no artwork at all (`artTexture` is `None`), so nothing you already have
 changes until you choose something.
 
+Every piece that ships, in the order the artwork dropdown lists them — the poster groups them under
+their category headings, which the dropdown itself does not; it is a flat list that carries each
+category as a label prefix instead.
+
+<!-- Repo-relative like the logo above, and for the same reason: it renders on GitHub today and can
+     be swapped for the CurseForge CDN URL at first publish. It is GENERATED — regenerate it with
+     `python3 tools/artwork/make_poster.py` rather than editing it, since it is built from the same
+     scan that writes the catalog. It is a .png, so it does not ship to players; .pkgmeta excludes
+     media/poster the way it excludes the logo renders. -->
+![Bundled artwork](media/poster/artwork-poster.png)
+
 What you can set per panel:
 
 | Setting | What it does |
@@ -263,7 +274,12 @@ code to touch.
 ```bash
 python3 tools/artwork/artwork_cleaner.py --batch ~/my-art media/artwork
 python3 tools/artwork/update_catalog.py
+python3 tools/artwork/make_poster.py
 ```
+
+The third line redraws the contact sheet above. Nothing in the addon reads it, so it is the one
+step you can forget without breaking anything — which is exactly why it is written here beside the
+two that matter, and why `make_poster.py --check` exists to catch it later.
 
 **Format.** 32-bit TGA with an alpha channel, power-of-two on both axes, square. WoW cannot load
 `.png` or `.jpg` at runtime and cannot wrap a non-power-of-two texture at all, which the **Tile**
@@ -297,13 +313,23 @@ catalog row.
 
 ### The artwork pipeline
 
-Two scripts, both using [Pillow](https://python-pillow.org/) and numpy, with a Real-ESRGAN upscaler
-vendored under `tools/artwork/bin/`:
+Three scripts, all using [Pillow](https://python-pillow.org/) — `artwork_cleaner.py` also needs
+numpy, the other two do not — with a Real-ESRGAN upscaler vendored under `tools/artwork/bin/`:
 
 | | |
 |---|---|
 | `artwork_cleaner.py` | any image → the TGA the client loads. `--single` for one file, `--batch` for a tree |
 | `update_catalog.py` | reads `media/artwork/` and rewrites the catalog in `modules/Artwork.lua` |
+| `make_poster.py` | renders every bundled piece into the one contact sheet under `media/poster/` |
+
+The poster shares `update_catalog.py`'s scan rather than walking the tree again, so the picture and
+the catalog cannot disagree about what shipped, and it renders from fonts bundled under
+`tools/artwork/fonts/` — a missing font is a hard error rather than a system fallback, because the
+same tree has to produce the same picture on anybody's machine. `--check` compares the poster's
+pixels rather than its bytes, and a run that would change nothing visible rewrites nothing at all,
+so a different Pillow or zlib cannot churn two megabytes of binary into the history. It is stamped
+with the addon version from the TOC, which means **a version bump stales the poster** — regenerate
+after one.
 
 The cleaner upscales when a source is too small, derives transparency when a source has none,
 removes burned-in watermarks on request, and — most importantly — normalizes the color hiding under
