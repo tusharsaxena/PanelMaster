@@ -12,6 +12,13 @@ There is **no manifest and no naming step**. The folder tree and the file names 
 configuration: what you call a file becomes its label, what folder you put it in becomes its
 category. Name things the way you want them to appear.
 
+**Scope:** this page is about art that *ships with the addon*. Themes from user-installed
+[Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) packs also appear in
+the artwork dropdown, and none of the below applies to them — nothing is converted, committed,
+added to the catalog or licensed by us, because nothing is redistributed. `modules/SunnArt.lua`
+reads what is already on the player's disk and synthesizes catalog rows at runtime. See
+[`ARCHITECTURE.md`](ARCHITECTURE.md) ▸ *Composites, and the Sunn adapter*.
+
 ---
 
 ## Quick start

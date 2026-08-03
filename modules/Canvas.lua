@@ -64,6 +64,11 @@ function Canvas.BuildSpec(rec, settings)
     shown     = (settings.enabled ~= false) and (rec.enabled ~= false),
     width     = width,
     height    = height,
+    -- The whole frame's scale, applied to the panel and inherited by every child — background,
+    -- border, accent bars and artwork alike. It is deliberately NOT folded into `width`/`height`
+    -- here: the stored size is what the user typed and what the editor's sliders show, and
+    -- multiplying it would make a scaled panel report a size nobody set.
+    scale     = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale),
     point     = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point,
     relPoint  = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint,
     x         = tonumber(rec.x) or 0,
@@ -207,9 +212,30 @@ local function newFrame(globalName)
   if type(f.artFrame.SetClipsChildren) == "function" then
     f.artFrame:SetClipsChildren(true)
   end
-  f.art = f.artFrame:CreateTexture(nil, "ARTWORK")
+  -- A LIST of textures, of which one is built here and the rest are not.
+  --
+  -- Almost every panel draws a single piece of art, so index 1 is created eagerly exactly as the
+  -- lone texture always was. A composed Sunn bar is N files laid flush, and only such a panel ever
+  -- pays for indices 2..N — created on first use by ensureArtTexture and then kept, because a panel
+  -- that toggles between art types should not churn texture objects.
+  --
+  -- The renderer iterates this list unconditionally, so the single-texture case is a one-element
+  -- loop rather than a separate path that could drift away from the composite one.
+  f.artTextures = { f.artFrame:CreateTexture(nil, "ARTWORK") }
+  -- Kept as an alias, not a copy: `f.art` is the name the rest of the addon and the suite already
+  -- know this texture by, and it is still the only one most panels have.
+  f.art = f.artTextures[1]
 
   return f
+end
+
+-- The i'th artwork texture, built on first use. Same lazy bargain as the accent bar's border frame.
+local function ensureArtTexture(f, i)
+  local tex = f.artTextures[i]
+  if tex then return tex end
+  tex = f.artFrame:CreateTexture(nil, "ARTWORK")
+  f.artTextures[i] = tex
+  return tex
 end
 
 -- The accent bar's own border frame, built on first use.
@@ -358,14 +384,14 @@ end
 -- this is the dumb applier, which is the point: the fill math is arithmetic on a record and is
 -- verified headlessly, so nothing here needs a judgement call.
 local function applyArtwork(f, spec)
-  local frame, tex = f.artFrame, f.art
-  if not frame or not tex then return end
+  local frame = f.artFrame
+  if not frame or not f.artTextures then return end
 
   local art = spec.art
   if not art then
     -- Cleared as well as hidden. A hidden frame still holds its texture's file reference, and this
     -- same frame is about to be handed to whatever panel the pool gives it to next.
-    tex:SetTexture(nil)
+    for _, t in ipairs(f.artTextures) do t:SetTexture(nil) end
     frame:Hide()
     return
   end
@@ -376,45 +402,70 @@ local function applyArtwork(f, spec)
   local base = f:GetFrameLevel() or 0
   frame:SetFrameLevel(base + art.level)
 
-  -- REPEAT wrapping is the only thing that makes TILE's out-of-range coords mean anything; passing
-  -- it unconditionally would let a FILL crop's rounding sample the opposite edge instead of clamping
-  -- to the border pixel, so the wrap arguments are omitted entirely when the art does not tile.
-  if art.tile then
-    tex:SetTexture(art.path, "REPEAT", "REPEAT")
-  else
-    tex:SetTexture(art.path)
+  -- One quad per texture. A single piece of art is one quad; a composed Sunn bar is one per section
+  -- (times the number of bar repeats, when it tiles). Every number below was decided by
+  -- BuildArtSpec — this loop makes no judgement about any of them, which is the whole arrangement.
+  for i, quad in ipairs(art.quads) do
+    local tex = ensureArtTexture(f, i)
+
+    -- Wrap mode is the one thing the spec cannot express as a number: REPEAT is what makes TILE's
+    -- out-of-range coords mean anything, and passing it unconditionally would let a FILL crop's
+    -- rounding sample the opposite edge instead of clamping to the border pixel. A tiled COMPOSITE
+    -- clamps horizontally and repeats vertically — the vertical repeat is inside one file, but the
+    -- horizontal one runs across section boundaries and is drawn as separate quads instead.
+    if quad.wrapH then
+      tex:SetTexture(quad.path, quad.wrapH, quad.wrapV)
+    else
+      tex:SetTexture(quad.path)
+    end
+
+    tex:SetSize(quad.width, quad.height)
+    tex:ClearAllPoints()
+    tex:SetPoint(quad.point, frame, quad.point, quad.x, quad.y)
+
+    -- MUST follow SetTexture, which resets a texture's coords — the same rule the accent bars
+    -- already document, and the reason the crop/flip/rotation is reapplied on every repaint rather
+    -- than once.
+    local uv = quad.uv
+    tex:SetTexCoord(uv[1], uv[2], uv[3], uv[4], uv[5], uv[6], uv[7], uv[8])
+    -- Desaturate BEFORE the tint, because the two compose: grayscale art multiplied by a color comes
+    -- back as a clean, saturated version of that color, where full-color art multiplied by the same
+    -- one comes back as a darkened average of whatever hues it already had.
+    --
+    -- Guarded because SetDesaturated is not universally present on every texture object across
+    -- flavors, and a missing method here would take down the whole repaint rather than lose one
+    -- effect. Compat owns the deprecated-API surface, but this is an absence rather than a rename.
+    if tex.SetDesaturated then
+      tex:SetDesaturated(art.desaturate)
+    end
+
+    tex:SetVertexColor(art.color[1], art.color[2], art.color[3], art.color[4])
+
+    -- Both of these are set explicitly rather than left to the texture's default, because this
+    -- texture is POOLED: it is the same object a previous panel drew with, so any value one panel
+    -- changed would otherwise leak into the next.
+    tex:SetBlendMode(art.blend)
+    tex:Show()
   end
 
-  tex:SetSize(art.width, art.height)
-  tex:ClearAllPoints()
-  tex:SetPoint(art.point, frame, art.point, art.x, art.y)
-
-  -- MUST follow SetTexture, which resets a texture's coords — the same rule the accent bars already
-  -- document, and the reason the crop/flip/rotation is reapplied on every repaint rather than once.
-  local uv = art.uv
-  tex:SetTexCoord(uv[1], uv[2], uv[3], uv[4], uv[5], uv[6], uv[7], uv[8])
-  -- Desaturate BEFORE the tint, because the two compose: grayscale art multiplied by a color comes
-  -- back as a clean, saturated version of that color, where full-color art multiplied by the same
-  -- one comes back as a darkened average of whatever hues it already had.
-  --
-  -- Guarded because SetDesaturated is not universally present on every texture object across
-  -- flavors, and a missing method here would take down the whole repaint rather than lose one
-  -- effect. Compat owns the deprecated-API surface, but this is an absence rather than a rename.
-  if tex.SetDesaturated then
-    tex:SetDesaturated(art.desaturate)
+  -- Textures this panel no longer needs. Not destroyed — a panel that switches between a composed
+  -- bar and a single piece would otherwise churn objects on every change — but cleared as well as
+  -- hidden, for the same reason the no-art branch above clears: a hidden texture still holds its
+  -- file reference, and this frame is pooled.
+  for i = #art.quads + 1, #f.artTextures do
+    f.artTextures[i]:SetTexture(nil)
+    f.artTextures[i]:Hide()
   end
-
-  tex:SetVertexColor(art.color[1], art.color[2], art.color[3], art.color[4])
-
-  -- Both of these are set explicitly rather than left to the texture's default, because this
-  -- texture is POOLED: it is the same object a previous panel drew with, so any value one panel
-  -- changed would otherwise leak into the next.
-  tex:SetBlendMode(art.blend)
 end
 
 -- Apply a spec to a frame. Idempotent — running it twice with the same spec is a no-op — so the
 -- repaint path never has to track what changed.
 local function applySpec(f, spec)
+  -- BEFORE the size and the anchor, and that order is load-bearing. A frame's own scale is the unit
+  -- both SetSize and SetPoint's offsets are expressed in, so setting it afterwards would leave the
+  -- panel one repaint behind: sized and placed in the old scale's units, corrected only on the next
+  -- unrelated write. Guarded because a headless stub frame has no real scale.
+  if type(f.SetScale) == "function" then f:SetScale(spec.scale) end
   f:SetSize(spec.width, spec.height)
   f:ClearAllPoints()
   f:SetPoint(spec.point, UIParent, spec.relPoint, spec.x, spec.y)
@@ -561,7 +612,9 @@ local function release(f)
   -- on screen for the new one. Clearing the texture as well as hiding the frame also drops the file
   -- reference for a panel that may never come back.
   if f.artFrame then f.artFrame:Hide() end
-  if f.art then f.art:SetTexture(nil) end
+  if f.artTextures then
+    for _, t in ipairs(f.artTextures) do t:SetTexture(nil) end
+  end
   if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
   -- `__frameName` is the authority, not `GetName()`: the headless stub frame answers every
   -- PascalCase call with itself, so GetName() there returns a table and would key the pool on a

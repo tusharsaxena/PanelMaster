@@ -420,3 +420,36 @@ test("Registry: the panel messages have exactly one sender", function()
       path .. " sends a panel message; only modules/Registry.lua may")
   end
 end)
+
+test("Registry.New: a panel really lands on the documented defaults, not just the template", function()
+  fresh()
+  -- Asserted through the REAL create path rather than off C.PANEL_TEMPLATE, because `create`
+  -- demonstrably overrides some template values from the profile settings (strata and alpha both
+  -- come from `defaultStrata`/`defaultAlpha`). A future default that reached position or scale the
+  -- same way would leave the template assertions in test_constants.lua green and still move where a
+  -- new panel appears and how big it is drawn.
+  local rec = R:Get(R:New("Defaults").id)
+  assertEqual(rec.point, "CENTER", "a new panel is not anchored CENTER")
+  assertEqual(rec.relPoint, "CENTER", "a new panel is not pinned to the screen's CENTER")
+  assertEqual(rec.x, 0, "a new panel carries an x offset")
+  assertEqual(rec.y, 0, "a new panel carries a y offset")
+  assertEqual(rec.scale, 1.0, "a new panel is not drawn unscaled")
+end)
+
+test("Registry.Reset: puts position and scale back to the defaults too", function()
+  fresh()
+  local rec = R:New("Moved")
+  -- Everything a user can do to displace or resize a panel, then Reset.
+  R:Set(rec.id, "point", "TOPLEFT")
+  R:Set(rec.id, "relPoint", "TOPLEFT")
+  R:SetPosition(rec.id, 154, 204)
+  R:Set(rec.id, "scale", 2)
+  assertTrue(R:Reset(rec.id))
+
+  local live = R:Get(rec.id)
+  assertEqual(live.point, "CENTER")
+  assertEqual(live.relPoint, "CENTER")
+  assertEqual(live.x, 0, "reset left the panel displaced")
+  assertEqual(live.y, 0)
+  assertEqual(live.scale, 1.0, "reset left the panel scaled")
+end)

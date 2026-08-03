@@ -237,6 +237,8 @@ P.__ui = {
   ensureScroll    = ensureScroll,      -- library, plus this file's dropdown-close layer
   makePairButton  = makePairButton,    -- host: adds INTO a caller's row, which O.InlineButtonPair
                                        --       cannot do — it builds and owns the row itself
+  BUTTON_PAIR_REL = BUTTON_PAIR_REL,   -- library: the same inset, for a NON-button widget that has
+                                       --       to line up with one (the editor's path box)
   trackDropdown   = trackDropdown,     -- host: the open-dropdown registry is this addon's own
   forgetDropdowns = forgetDropdowns,   -- host: same
   safeRun         = safeRun,           -- host: the library pcalls its own closures, not the

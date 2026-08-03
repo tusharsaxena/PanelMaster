@@ -53,11 +53,12 @@ badge and any count quoted in the docs must agree with it.
 - Compat.MouseIsOver: answers without the frame taking mouse input
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
-### test_constants.lua (16)
+### test_constants.lua (17)
 
 - Constants: the strata list runs lowest to highest and starts at BACKGROUND
 - Constants: new panels default to LOW
 - Constants: new panels default to CENTER at 0,0
+- Constants: new panels default to an unscaled 1.0
 - Constants: STRATA_SET agrees with STRATA
 - Constants: nine anchor points, all in POINT_SET
 - Constants: STRATA_OPTIONS is dropdown-shaped
@@ -72,7 +73,7 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
 - Constants: the debug console's mono font exists
 
-### test_registry.lua (44)
+### test_registry.lua (46)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -118,6 +119,8 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Recover: leaves on-screen panels alone
 - Registry.Recover: pulls an off-screen panel back into view
 - Registry: the panel messages have exactly one sender
+- Registry.New: a panel really lands on the documented defaults, not just the template
+- Registry.Reset: puts position and scale back to the defaults too
 
 ### test_canvas.lua (29)
 
@@ -336,7 +339,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: a horizontal bar draws its texture as authored
 - Canvas: the orientation is re-applied on every repaint, not just the first
 
-### test_artwork.lua (84)
+### test_artwork.lua (98)
 
 - Artwork: every catalog id is unique
 - Artwork: no catalog row claims one of the two reserved ids
@@ -422,6 +425,20 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: a released frame keeps no artwork for the next panel to inherit
 - Canvas: a reused frame draws the new panel's artwork, not the old panel's
 - Canvas: a panel with no artwork never shows its art frame
+- Artwork composite: a bar splits into one quad per section
+- Artwork composite: the sections tile the bar rect with no gap and no double-cover
+- Artwork composite: each section samples its whole file
+- Artwork composite: a FILL crop drops the sections it pushed off the panel
+- Artwork composite: a quarter turn stacks the sections instead of ranging them
+- Artwork composite: a horizontal flip reverses the section order
+- Artwork composite: a tiled bar repeats the whole bar, not each section
+- Artwork composite: a tiled bar is clamped rather than allowed to cost hundreds of textures
+- Artwork composite: the overlap crop moves the sampled window off the transparent band
+- Artwork composite: a tiled bar drops the overlap crop rather than applying it wrongly
+- Artwork: a single texture is a one-quad spec that matches the flat rect
+- Canvas: a composed bar draws one texture per section
+- Canvas: switching from a bar to a single piece clears the sections it no longer draws
+- Artwork composite: an anchored FIT offsets each section from the same edge
 
 ### test_database.lua (20)
 
@@ -498,7 +515,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the numeric rows declare min and max
 - Schema: defaultAlpha stays a fraction
 
-### test_slash.lua (55)
+### test_slash.lua (58)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -555,8 +572,11 @@ badge and any count quoted in the docs must agree with it.
 - COMMANDS: the standard's required verbs are present (slash-commands-§3)
 - COMMANDS: the descs name the sub-verbs their handlers accept (F-011)
 - PrintHelp: the generated rows carry the sub-verbs too
+- Slash.CliPanel: fitart is an action in the field slot, and reshapes the panel
+- Slash.CliPanel: fitart explains itself when there is nothing to fit to
+- Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (41)
+### test_panel.lua (45)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -599,6 +619,10 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Panels page's Defaults action is confirm-gated
 - Tagline: the landing page, the TOC Notes and the README say one thing (F-019)
 - PanelEditor: the panel dropdowns are ordered by name, not by creation
+- Panel scale: defaults to 1, which is the identity
+- Panel scale: is clamped to its own bounds, not the artwork's
+- Panel scale: reaches the frame, and does not change the stored size
+- Panel scale: a junk value falls back rather than reaching SetScale
 
 ### test_profiles.lua (21)
 
@@ -623,6 +647,62 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page carries the framework contract like every other
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
+
+### test_sunnart.lua (53)
+
+- SunnArt: nothing is installed — the adapter is completely silent
+- SunnArt: an official pack is discovered through SunnArt's options table
+- SunnArt: a community pack is discovered with NO SunnArt addon present
+- SunnArt: both kinds of pack are merged into one list
+- SunnArt: a theme with no declared section count defaults to 3, as SunnArt does
+- SunnArt: a declared section count is honored
+- SunnArt: a nonsense section count is clamped rather than trusted
+- SunnArt: a multi-section theme yields ONE row -- the whole bar
+- SunnArt: no row anywhere points at a single section of a multi-section theme
+- SunnArt: a one-section theme yields exactly one row, not a duplicate pair
+- SunnArt: the texture path is extensionless and rooted at Interface\Addons
+- SunnArt: rows are grouped under a readable pack category
+- SunnArt: the order is stable across scans
+- SunnArt: injected rows resolve through the normal artwork seam
+- SunnArt: Inject is idempotent — a re-scan replaces rather than duplicates
+- SunnArt: injection never disturbs the bundled catalog
+- SunnArt: an uninstalled pack degrades to drawing nothing, and recovers
+- SunnArt: a theme is labeled by its own name, whatever its section count
+- SunnArt: the dropdown renders as Sunn -> <Pack>: <Texture>
+- Fit: nothing is reshaped until it is asked for
+- Fit: there is no artAutosize field left to set
+- Fit: the panel takes the artwork's exact pixel size, on BOTH axes
+- Fit: a composed bar takes the VIRTUAL bar's size, not one section's
+- Fit: an overlap crop is fitted to the VISIBLE art, and lands on a whole pixel
+- Fit: a custom path falls back to the nominal square
+- Fit: a resized panel returns to the artwork's size when it is pressed again
+- Fit: a size set by hand afterwards stays put
+- Fit: pressing it twice changes nothing the second time
+- Fit: a panel with no artwork is told so rather than reshaped
+- Fit: an unknown panel is refused by name
+- Fit: the adopted size is clamped like any stored size
+- SunnArt: a pack's section count beats a stale entry in the player's saved globals
+- SunnArt: a hand-edited SunnCustomPanels is honored, which SunnArt itself never does
+- SunnArt: overlap becomes a content crop, not a wider bar
+- SunnArt: a theme with no overlap carries no crop at all
+- SunnArt: a broken or extreme overlap value cannot crop the art out of existence
+- SunnArt: autosize shapes a panel around the visible art, not the transparent band
+- SunnArt: the packs manifest loaded and is keyed by unescaped theme paths
+- SunnArt: with no Sunn globals at all, an installed pack folder still yields its themes
+- SunnArt: a pack that is NOT installed is never offered
+- SunnArt: live registration beats the manifest for a theme they both name
+- SunnArt: a theme the manifest measured is drawn at its real shape, not the declared 2:1
+- SunnArt: an unreadable addon roster does not silently disable a working install
+- SunnArt: a theme left in saved variables by an UNINSTALLED pack is not offered
+- SunnArt: a hand-edited custom theme naming a missing folder is not offered
+- SunnArt: Installed() agrees with the dropdown rather than with the globals
+- SunnArt: Inject offers only what is installed, across both discovery paths
+- Fit: a quarter turn transposes the fitted size
+- Fit: the artwork scale multiplies the fitted size
+- Fit: scale and rotation compose, and the result is a whole pixel
+- Fit: after fitting, STATIC draws the art at exactly the panel's size
+- Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
+- Fit: a junk rotation or scale fits to what will actually be drawn
 
 ### test_libka0s.lua (36)
 
@@ -687,21 +767,22 @@ badge and any count quoted in the docs must agree with it.
 |-------|------:|
 | test_util.lua | 27 |
 | test_compat.lua | 14 |
-| test_constants.lua | 16 |
-| test_registry.lua | 44 |
+| test_constants.lua | 17 |
+| test_registry.lua | 46 |
 | test_canvas.lua | 29 |
 | test_unlock.lua | 30 |
 | test_media.lua | 83 |
 | test_accent.lua | 63 |
-| test_artwork.lua | 84 |
+| test_artwork.lua | 98 |
 | test_database.lua | 20 |
 | test_debuglog.lua | 25 |
 | test_schema.lua | 21 |
-| test_slash.lua | 55 |
-| test_panel.lua | 41 |
+| test_slash.lua | 58 |
+| test_panel.lua | 45 |
 | test_profiles.lua | 21 |
+| test_sunnart.lua | 53 |
 | test_libka0s.lua | 36 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **618** |
+| **Total** | **695** |

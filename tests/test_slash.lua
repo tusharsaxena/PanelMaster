@@ -515,3 +515,39 @@ test("PrintHelp: the generated rows carry the sub-verbs too", function()
   assertTrue(found.dump, "'dump' reaches no help row")
   assertTrue(found.deleteall, "'deleteall' reaches no help row")
 end)
+
+test("Slash.CliPanel: fitart is an action in the field slot, and reshapes the panel", function()
+  fresh()
+  local rec = R:New("Fitted")
+  R:Set(rec.id, "width", 300)
+  R:Set(rec.id, "height", 137)
+  R:Set(rec.id, "artTexture", "class-warrior")       -- 1024x1024
+  local lines = capture(function() Sl:CliPanel("Fitted fitart") end)
+  local live = R:Get(rec.id)
+  assertEqual(live.width, 1024, "fitart did not fit the panel to its artwork")
+  assertEqual(live.height, 1024)
+  -- Both axes echoed, read back off the record so the lines reflect the clamp.
+  assertEqual(#lines, 2)
+  assertTrue(lines[1]:find("1024", 1, true) ~= nil, "the echo did not report the new width")
+  assertTrue(lines[2]:find("1024", 1, true) ~= nil, "the echo did not report the new height")
+end)
+
+test("Slash.CliPanel: fitart explains itself when there is nothing to fit to", function()
+  fresh()
+  local rec = R:New("Bare")
+  R:Set(rec.id, "height", 90)
+  local lines = capture(function() Sl:CliPanel("Bare fitart") end)
+  -- A silent no-op is indistinguishable from a broken command, so the reason is printed.
+  assertEqual(R:Get(rec.id).height, 90)
+  assertTrue(lines[1]:find("no artwork", 1, true) ~= nil, "no reason was given: " .. tostring(lines[1]))
+end)
+
+test("Slash.CliPanel: artAutosize is no longer a field anyone can set", function()
+  fresh()
+  R:New("Legacy")
+  -- The stored flag became a button. A leftover command from a macro must be refused with the real
+  -- field list rather than quietly writing a key nothing reads.
+  local lines = capture(function() Sl:CliPanel("Legacy artAutosize on") end)
+  assertTrue(lines[1]:find("unknown field", 1, true) ~= nil,
+    "artAutosize was still accepted: " .. tostring(lines[1]))
+end)

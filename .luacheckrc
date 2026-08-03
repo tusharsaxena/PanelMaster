@@ -10,7 +10,7 @@ read_globals = {
   -- Core Lua/WoW globals
   "_G", "LibStub", "CreateFrame", "GetTime", "time", "date", "unpack",
   "GetLocale", "C_Timer", "hooksecurefunc", "InCombatLockdown", "PlaySound",
-  "C_AddOns", "GetAddOnMetadata", "strtrim",
+  "C_AddOns", "GetAddOnMetadata", "GetNumAddOns", "GetAddOnInfo", "strtrim",
   -- Class color (the classFile token and the palette every UI addon agrees on) and the
   -- cursor test the mouseover fade polls with.
   "UnitClass", "RAID_CLASS_COLORS", "MouseIsOver",

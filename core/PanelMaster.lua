@@ -60,6 +60,12 @@ function addon:OnEnable()
   -- the shape of the bug — panels appeared frozen until test mode was toggled.
   if NS.Canvas and NS.Canvas.Enable then NS.Canvas:Enable() end
 
+  -- Discover user-installed Sunn - Viewport Art packs and add them to the artwork catalog. Here in
+  -- OnEnable rather than at file scope because a pack addon is a SEPARATE addon: its Lua has not
+  -- necessarily run when modules/SunnArt.lua loads, and the globals it leaves behind are only
+  -- guaranteed to exist once every addon has loaded. Adds nothing when no pack is installed.
+  if NS.SunnArt and NS.SunnArt.Inject then NS.SunnArt.Inject() end
+
   -- Panels are drawn on PLAYER_ENTERING_WORLD rather than here. UIParent's size is what the
   -- registry's off-screen recovery measures against, and it is not final at OnEnable — reading it
   -- too early would judge every stored position against the wrong screen.

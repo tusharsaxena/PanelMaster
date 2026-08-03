@@ -57,6 +57,13 @@ defaults\Global.lua
 modules\Registry.lua
 # Artwork before Canvas — the renderer reads its art list and geometry math
 modules\Artwork.lua
+# The known-pack manifest, before the adapter that reads it. Pure data, no behavior: what the
+# official Sunn packs contain, so the feature survives SunnArt itself being disabled or unloadable.
+modules\SunnArtPacks.lua
+# The Sunn - Viewport Art adapter, AFTER Artwork (it appends to Artwork.Catalog) and before Canvas.
+# Discovery only: it reads globals that user-installed pack addons leave behind and ships no art of
+# its own. Silent when nothing Sunn-shaped is installed.
+modules\SunnArt.lua
 modules\Canvas.lua
 modules\Unlock.lua
 

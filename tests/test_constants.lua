@@ -24,6 +24,12 @@ test("Constants: new panels default to CENTER at 0,0", function()
   assertEqual(C.PANEL_TEMPLATE.y, 0)
 end)
 
+test("Constants: new panels default to an unscaled 1.0", function()
+  -- The identity, so adding the field left every panel that already existed untouched and SetScale
+  -- is a no-op until someone asks for one.
+  assertEqual(C.PANEL_TEMPLATE.scale, 1.0)
+end)
+
 test("Constants: STRATA_SET agrees with STRATA", function()
   local n = 0
   for _ in pairs(C.STRATA_SET) do n = n + 1 end

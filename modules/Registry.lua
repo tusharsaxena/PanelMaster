@@ -114,6 +114,7 @@ function R.Sanitize(rec)
   if not Util.IsStrata(rec.strata)  then rec.strata   = t.strata end
 
   rec.level      = Util.Clamp(rec.level, 0, 100, t.level)
+  rec.scale      = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, t.scale)
   rec.borderSize = Util.Clamp(rec.borderSize, C.MIN_BORDER, C.MAX_BORDER, t.borderSize)
   rec.borderOffset =
     Util.Clamp(rec.borderOffset, C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, t.borderOffset)
@@ -541,6 +542,106 @@ function R:Rename(key, newName)
   NS.Debug("Panel", "renamed '%s' -> '%s' (frame name stays %s)", old, newName, R.FrameName(rec))
   fire(MSG_PANELS)   -- structural: the name is how every list and dropdown labels the panel
   return true, old
+end
+
+-- ── Fit to artwork ──────────────────────────────────────────────────────────────
+
+-- Set a panel to the artwork's own pixel dimensions -- BOTH axes.
+--
+-- A 1024x1024 bundled piece gives a 1024x1024 panel; a three-section Sunn bar is 1536x256 and gives
+-- exactly that. For a composed row the size is the VIRTUAL bar's, not one section's, because
+-- Artwork.NativeSize already answers for the whole piece a panel draws.
+--
+-- This deliberately replaces an earlier design that derived only the HEIGHT, keeping the width the
+-- user had chosen. That was the right call while fitting was an always-on flag: a mode that
+-- reshaped panels on every width change had to disturb as little as possible, and adopting native
+-- size would have thrown a 1024px wall across the screen for one piece and a letterbox for another.
+-- As a BUTTON the trade inverts -- nothing happens unless it is pressed, so the honest answer to
+-- "fit this panel to its artwork" is the artwork's actual size, and a panel that comes out too big
+-- is resized by the same hand that asked.
+--
+-- A no-op unless the panel actually draws something: one naming art that is not installed keeps the
+-- shape it had, so pressing the button with a missing Sunn pack reports nothing rather than
+-- collapsing the panel.
+--
+-- ROTATION and SCALE are part of the answer, because they are part of how big the art actually is
+-- on screen. A quarter turn transposes the axes, so a 1536x256 bar turned 90 degrees wants a
+-- 256x1536 panel; and artScale is the multiplier the art is drawn at, so a piece at 0.5 wants half
+-- the panel. Ignoring either produced a panel the art then sat inside letterboxed, which is exactly
+-- what pressing this is meant to eliminate.
+--
+-- The target is the size STATIC draws the art at -- the piece's own presented size, which is what
+-- "fit the panel to the artwork" means. At the resulting size STRETCH, FILL and TILE have nothing
+-- left to distort, crop or repeat either.
+--
+-- FIT is the one fill that will still not fill the panel, and that is FIT's own definition rather
+-- than a miss here: it contains the art in the panel and THEN applies artScale, so at scale 0.5 it
+-- draws at half of whatever it was given. Fitting to FIT's output instead would be a fixed point
+-- only at scale 1 and a shrinking spiral below it -- press twice at 0.5 and the panel is a quarter
+-- the size, press again and it is a sixteenth.
+--
+-- Unpublished and side-effect-free beyond the record: it mutates and reports whether anything moved,
+-- but does not sanitize, fire or log. R:FitToArtwork below is the seam callers use.
+function R.ApplyArtSize(rec)
+  if type(rec) ~= "table" then return false end
+  -- Guarded on its own line, NOT as `local w, h = NS.Artwork and ... and NativeSize(rec)`. An `and`
+  -- chain is adjusted to ONE value in a multiple assignment, so that spelling silently drops `h` and
+  -- the fit becomes a half-applied no-op that looks correct.
+  if not (NS.Artwork and NS.Artwork.NativeSize) then return false end
+  local w, h = NS.Artwork.NativeSize(rec)
+  if not w or not h then return false end
+
+  -- Read through the same enum/clamp seams the fill math uses, so a record holding junk fits to the
+  -- size it will actually be DRAWN at rather than to the junk. A rotation of "banana" is 0 in both
+  -- places, not 0 here and a fallback there.
+  local rotation = C.PANEL_FIELD_ENUM.artRotation and tonumber(rec.artRotation) or nil
+  if rotation ~= 90 and rotation ~= 180 and rotation ~= 270 then rotation = 0 end
+  if rotation == 90 or rotation == 270 then w, h = h, w end
+
+  local scale = Util.Clamp(rec.artScale, C.MIN_ART_SCALE, C.MAX_ART_SCALE,
+    C.PANEL_TEMPLATE.artScale)
+  w, h = w * scale, h * scale
+
+  -- Rounded to whole pixels: a fractional frame size renders on a half-pixel boundary and blurs the
+  -- border, and the stored value is what every later comparison reads. Both the overlap crop
+  -- (256 x 0.70703 = 181.0) and any non-integer scale get here, so this is well travelled.
+  local width = math.floor(w + 0.5)
+  local height = math.floor(h + 0.5)
+  if width == rec.width and height == rec.height then return false end
+  rec.width, rec.height = width, height
+  return true
+end
+
+-- Fit one panel to its artwork, once, and tell the caller what happened.
+--
+-- The published seam, and deliberately shaped like R:Set rather than like a widget callback: the
+-- editor button and `/pm panel <name> fitart` are both callers, and an action that sanitized in one
+-- path and not the other is the kind of divergence the single write seam exists to prevent.
+--
+-- Sanitize runs AFTER the sizing, so the adopted dimensions meet the same MIN/MAX clamp every stored
+-- size does and a 4096px piece cannot push a panel outside C.MIN_SIZE/C.MAX_SIZE. A clamp is why the
+-- success value is read back off the record rather than returned from the arithmetic.
+--
+-- Returns false plus a reason the caller can print, rather than failing silently. "This panel draws
+-- no artwork" and "the art it names is not installed" are the two ways a player reaches this button
+-- and sees nothing happen, and both deserve a sentence.
+function R:FitToArtwork(key)
+  local rec = R:Resolve(key)
+  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+
+  local beforeW, beforeH = rec.width, rec.height
+  if not R.ApplyArtSize(rec) then
+    if not (NS.Artwork and NS.Artwork.NativeSize and NS.Artwork.NativeSize(rec)) then
+      return false, "this panel draws no artwork to fit to"
+    end
+    return false, "already fitted to its artwork"
+  end
+  R.Sanitize(rec)
+
+  NS.Debug("Panel", "fit '%s' to artwork: %sx%s -> %sx%s", rec.name, tostring(beforeW),
+    tostring(beforeH), tostring(rec.width), tostring(rec.height))
+  fire(MSG_PANEL, rec.id)
+  return true, rec.width, rec.height
 end
 
 -- ── Field edits ─────────────────────────────────────────────────────────────────

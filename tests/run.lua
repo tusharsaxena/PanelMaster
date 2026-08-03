@@ -67,6 +67,7 @@ local SUITES = {
   "test_accent", "test_artwork",
   "test_database", "test_debuglog",
   "test_schema", "test_slash", "test_panel", "test_profiles",
+  "test_sunnart",
   "test_libka0s", "test_harness",
   "test_spelling",
   "test_vendor_sync",

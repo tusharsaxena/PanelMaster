@@ -98,6 +98,16 @@ C.MIN_ACCENT_OFFSET = -32
 C.MAX_ACCENT_OFFSET = 32
 C.MIN_GRID = 1
 C.MAX_GRID = 128
+-- Per-panel scale, multiplying the whole frame -- background, border, accent bars and artwork
+-- together -- so a panel and everything drawn on it grow and shrink as one piece.
+--
+-- Bounded more tightly than the artwork's own scale (0.1 to 4.0). That one scales a texture INSIDE
+-- a panel whose size and clickable area are unchanged, so an extreme value is only ever ugly; this
+-- one scales the frame itself, and 0.1 turns a 240x120 panel into a 24x12 sliver that is hard to
+-- find and harder to grab in unlock mode. C.MIN_SIZE exists to prevent exactly that outcome, and a
+-- scale floor low enough to reproduce it would walk straight around it.
+C.MIN_PANEL_SCALE = 0.25
+C.MAX_PANEL_SCALE = 4.0
 -- The range the editor's X/Y sliders span. NOT a clamp: Registry.Sanitize deliberately does not
 -- bound offsets (a multi-monitor layout legitimately carries large ones), so this is only how far
 -- the slider can reach, and it is named here so the panel cannot invent its own number.
@@ -267,6 +277,9 @@ C.PANEL_TEMPLATE = {
   -- practice. BACKGROUND is still offered for a panel that must sit under absolutely everything.
   strata      = "LOW",
   level       = 0,
+  -- 1.0 is the identity, so every panel that already exists is unaffected and SetScale is a no-op
+  -- until someone asks for one.
+  scale       = 1.0,
   bgColor      = { 0.05, 0.05, 0.07, 0.85 },
   borderColor  = { 0.35, 0.35, 0.40, 1.00 },
   -- No panel border out of the box. The shipped look leans on the accent bar for definition
@@ -411,7 +424,7 @@ C.PANEL_FIELD_TYPE = {
   name = "string", enabled = "boolean",
   width = "number", height = "number", x = "number", y = "number",
   point = "point", relPoint = "point",
-  strata = "strata", level = "number",
+  strata = "strata", level = "number", scale = "number",
   borderSize = "number", borderOffset = "number", alpha = "number",
   bgColor = "color", borderColor = "color",
   bgTexture = "media", borderTexture = "media",
@@ -434,6 +447,14 @@ C.PANEL_FIELD_TYPE = {
   artFlipH = "boolean", artFlipV = "boolean",
   artLayer = "enum", artDesaturate = "boolean", artBlend = "enum",
 }
+
+-- Fitting a panel to its artwork is an ACTION, not a stored mode, so there is no field for it here
+-- and no set of writes that re-derive the height. It was a boolean once: the panel reshaped itself
+-- whenever the width or the artwork changed, which meant a control that silently overwrote a height
+-- the user had typed, and needed an explicit carve-out so that editing `height` did not immediately
+-- undo itself. A button does the same arithmetic once, when asked, and leaves the height an ordinary
+-- field afterwards. Registry.FitToArtwork is the seam; the editor and `/pm panel <name> fitart` are
+-- its two callers.
 
 -- Enum field → its ordered list of legal values. One generic "enum" kind driven by this table,
 -- rather than five near-identical branches in Registry:Set, so the next closed-list field costs a
@@ -458,7 +479,7 @@ C.PANEL_FIELD_MEDIA = {
 -- than pairs() order (which is arbitrary and changes between runs).
 C.PANEL_FIELD_ORDER = {
   "name", "enabled", "width", "height", "point", "relPoint", "x", "y",
-  "strata", "level", "alpha",
+  "strata", "level", "scale", "alpha",
   "bgTexture", "bgColor", "bgClassColor",
   "borderTexture", "borderSize", "borderOffset", "borderColor", "borderClassColor",
   "mouseover", "mouseoverAlpha",
