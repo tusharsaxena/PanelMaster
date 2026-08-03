@@ -580,6 +580,18 @@ local UNRANKED = "\255"
 -- enough that TILE produces visible tiles rather than one clipped copy.
 Artwork.CUSTOM_NATIVE_SIZE = 256
 
+-- The ceiling on how many textures one panel's artwork may cost.
+--
+-- Only TILE can approach it, and only on a composed row: a tiled composite repeats the WHOLE bar,
+-- which is `copies x sections` textures, and a 5-section bar at the minimum scale would otherwise
+-- ask for several hundred on a single panel. Over budget, the copy count is reduced and each tile
+-- grown to match, so the panel stays COVERED rather than going partly bare — a smaller number of
+-- larger tiles is a compromise a player can see and understand; a bald strip looks broken.
+--
+-- 24 is four copies of the widest bar SunnArt allows, which is more repeats than the fill is
+-- legible at anyway.
+Artwork.MAX_ART_QUADS = 24
+
 -- ── Lookup ──────────────────────────────────────────────────────────────────────
 
 -- Find a catalog row by id.
@@ -728,11 +740,69 @@ local function composeUV(u0, v0, u1, v1, flipH, flipV, rotation)
   return { ul[1], ul[2], ll[1], ll[2], ur[1], ur[2], lr[1], lr[2] }
 end
 
--- The record-to-geometry function. PURE: a record and a panel size in, a plain table out, no frame
--- ever touched. Returns nil for "this panel draws no artwork", which is the default and must stay
--- the cheapest possible answer.
+-- The SCREEN-space counterpart of composeUV: where a sub-rectangle of the art ends up on the panel
+-- once the same flip and rotation have been applied.
 --
--- The size arguments are the panel's ALREADY-CLAMPED render size (Canvas passes spec.width/height,
+-- composeUV answers "which corner of the texture does each corner of the quad sample". This answers
+-- "and where is that quad". A composite needs both, because the bar is sliced along the art's own
+-- u axis and the slices then have to be PLACED — and after a quarter turn "along u" is not "across
+-- the panel" any more.
+--
+-- Both take their arguments as fractions of the unturned art and compose in the SAME order — flip,
+-- then turns — because a different order here would silently disagree with the texture coordinates
+-- and slide the sections against their own pixels.
+--
+-- The turn permutation is not an independent guess: it is read off composeUV's own corner shuffle.
+-- One turn there sends (UL, LL, UR, LR) to (LL, LR, UL, UR), so afterwards the screen's UL samples
+-- the texture's (u0, v1) and its UR samples (u0, v0) — the screen's horizontal axis now runs along
+-- REVERSED v, and its vertical axis along u. That is exactly what the two lines below say, and it
+-- is the same fact `turned` already relies on when it swaps ew/eh.
+--
+-- Consequences worth naming, because they are the ones a reader will want to check by eye: a bar
+-- rotated 90 degrees STACKS its sections vertically, and flipH REVERSES their left-to-right order.
+-- Neither is special-cased anywhere; both fall out of this.
+local function transformRect(fu0, fv0, fu1, fv1, flipH, flipV, rotation)
+  if flipH then fu0, fu1 = 1 - fu1, 1 - fu0 end
+  if flipV then fv0, fv1 = 1 - fv1, 1 - fv0 end
+
+  local sx0, sy0, sx1, sy1 = fu0, fv0, fu1, fv1
+  local turns = (rotation or 0) / 90
+  for _ = 1, turns do
+    sx0, sx1, sy0, sy1 = 1 - sy1, 1 - sy0, sx0, sx1
+  end
+  return sx0, sy0, sx1, sy1
+end
+
+-- Place a sub-rectangle against the SAME anchor point the whole art rect uses.
+--
+-- Re-anchoring every quad to CENTER would have been shorter and is wrong: the art rect's own
+-- placement is stated as (point, x, y), and a quad has to be offset from whichever edge of that
+-- rect the point names. Anchoring a slice by its left edge when the rect is anchored by its right
+-- would drift the whole bar apart the moment the panel is resized.
+--
+-- The three cases per axis are the only three there are: a point names the rect's left edge, its
+-- right edge, or its center — and TOPLEFT names one of each. y is negated relative to the screen
+-- fractions because WoW's y axis runs UP and the fractions run down.
+local function subAnchor(point, x, y, W, H, sx0, sy0, sx1, sy1)
+  local qx, qy
+  if point:find("LEFT") then
+    qx = x + sx0 * W
+  elseif point:find("RIGHT") then
+    qx = x - (1 - sx1) * W
+  else
+    qx = x + ((sx0 + sx1) / 2 - 0.5) * W
+  end
+
+  if point:find("TOP") then
+    qy = y - sy0 * H
+  elseif point:find("BOTTOM") then
+    qy = y + (1 - sy1) * H
+  else
+    qy = y - ((sy0 + sy1) / 2 - 0.5) * H
+  end
+  return qx, qy
+end
+
 -- The artwork's NATIVE pixel size for a record, or nil when it draws nothing.
 --
 -- The one place that answers "how big is this piece, really", so the autosize seam in the registry
@@ -740,6 +810,10 @@ end
 -- catalog row's declared w/h, the nominal square for a Custom path whose size nothing can know, and
 -- nil for "no art", which is what makes autosize a no-op rather than a divide-by-zero when a panel
 -- names a piece that is not installed.
+--
+-- For a Sunn row this is the CONTENT size, already net of the overlap crop: SunnArt rows declare
+-- `h` as the visible height and `contentV0` as where that content starts in the file, so autosize
+-- shapes a panel around the art a player can see rather than around transparent padding.
 function Artwork.NativeSize(rec)
   local path, row = resolve(rec)
   if not path then return nil end
@@ -749,6 +823,11 @@ function Artwork.NativeSize(rec)
   return w, h
 end
 
+-- The record-to-geometry function. PURE: a record and a panel size in, a plain table out, no frame
+-- ever touched. Returns nil for "this panel draws no artwork", which is the default and must stay
+-- the cheapest possible answer.
+--
+-- The size arguments are the panel's ALREADY-CLAMPED render size (Canvas passes spec.width/height,
 -- not rec.width/height), so the art is fitted to the rectangle that will actually be on screen.
 function Artwork.BuildArtSpec(rec, panelW, panelH)
   local path, row = resolve(rec)
@@ -875,7 +954,118 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   -- for a color.
   color = { color[1], color[2], color[3], alpha }
 
+  local flipH = rec.artFlipH and true or false
+  local flipV = rec.artFlipV and true or false
+
+  -- ── The content window ────────────────────────────────────────────────────────
+  --
+  -- A row may declare that only part of its file is art. Sunn rows do: `contentV0` is the overlap
+  -- crop (see modules/SunnArt.lua), the transparent band at the top of the artwork that SunnArt
+  -- hangs over the game world and a panel has nothing to hang over. The row's declared `h` is
+  -- already the CONTENT height, so every calculation above has been working in content space; this
+  -- maps that space back onto the file at the last moment.
+  --
+  -- TILE is the exception, and it is a real limitation rather than an oversight: a REPEAT wrap
+  -- repeats a whole FILE, not a sub-range of one, so the band cannot be kept out of a tiled repeat.
+  -- The crop is dropped there instead of being applied wrongly — a tiled Sunn bar shows its
+  -- transparent gaps, which is at least what the art actually contains.
+  local cv0 = 0
+  if not tile then
+    local declared = tonumber(row and row.contentV0)
+    if declared and declared > 0 and declared < 1 then cv0 = declared end
+  end
+  local function toFileV(v) return cv0 + v * (1 - cv0) end
+
+  -- ── Slicing ───────────────────────────────────────────────────────────────────
+  --
+  -- A composed row (Sunn's whole-bar entries, and nothing else in the addon) is N files laid flush
+  -- side by side. It is treated as ONE virtual image of the bar's size, which is why every branch
+  -- above ran untouched: fill, scale, anchor, crop, flip, rotation and tint all mean precisely what
+  -- they mean for a single texture, and the bar is cut up only now that they have had their say.
+  --
+  -- Section i owns the band [(i-1)/N, i/N] of that virtual image. Intersecting each band with the
+  -- crop the fill already chose is what makes a FILL that pushes the left section off the panel
+  -- simply not draw it, rather than needing a rule about it.
+  local sections = row and row.sections
+  local n = type(sections) == "table" and #sections or 0
+  local tileClamped = false
+
+  if n >= 2 and tile then
+    -- A tiled composite repeats the whole bar, at `copies x sections` textures. Grow the tile until
+    -- the budget holds, so the panel stays covered. See Artwork.MAX_ART_QUADS.
+    local maxCopies = math.floor(Artwork.MAX_ART_QUADS / n)
+    if maxCopies < 1 then maxCopies = 1 end
+    if math.ceil(u1) - math.floor(u0) > maxCopies then
+      u1 = math.floor(u0) + maxCopies
+      tileClamped = true
+    end
+  end
+
+  local uv = composeUV(u0, toFileV(v0), u1, toFileV(v1), flipH, flipV, rotation)
+  local quads
+
+  if n >= 2 and u1 > u0 then
+    quads = {}
+    local span = u1 - u0
+    -- One pass for every fill: the non-tiling ones keep u within [0, 1], so the loop runs a single
+    -- copy and the bar is drawn once. Only the vertical repeat is left to the wrap mode, because
+    -- that one IS within a single file.
+    for copy = math.floor(u0), math.ceil(u1) - 1 do
+      for i = 1, n do
+        local bandLo = copy + (i - 1) / n
+        local bandHi = copy + i / n
+        local lo = bandLo > u0 and bandLo or u0
+        local hi = bandHi < u1 and bandHi or u1
+        -- A crop landing exactly on a band edge is the COMMON case, not a corner one: FILL centers
+        -- its window, so a 3-section bar in a panel of one third its aspect crops precisely to the
+        -- middle section's boundaries. In exact arithmetic the outer two vanish; in floating point
+        -- they survive by an ulp and become slivers a fraction of a pixel wide, which WoW draws as
+        -- a bright seam. Comparing against a fraction of the span rather than `hi > lo` is what
+        -- makes the section disappear as intended.
+        if hi - lo > span * 1e-9 then
+          local sx0, sy0, sx1, sy1 =
+            transformRect((lo - u0) / span, 0, (hi - u0) / span, 1, flipH, flipV, rotation)
+          local qx, qy = subAnchor(point, x, y, width, height, sx0, sy0, sx1, sy1)
+          quads[#quads + 1] = {
+            path   = sections[i],
+            width  = width * (sx1 - sx0),
+            height = height * (sy1 - sy0),
+            point  = point,
+            x      = qx,
+            y      = qy,
+            -- The section's own file coordinates: the surviving slice of its band, rescaled from
+            -- bar space back to the 0-1 of the one file it comes from.
+            uv     = composeUV((lo - bandLo) * n, toFileV(v0), (hi - bandLo) * n, toFileV(v1),
+              flipH, flipV, rotation),
+            wrapH  = tile and "CLAMP" or nil,
+            wrapV  = tile and "REPEAT" or nil,
+          }
+        end
+      end
+    end
+  end
+
+  -- Every spec carries quads, and a single texture is a one-element list — so the renderer has ONE
+  -- path and no branch that can rot. The flat fields below are the WHOLE-BAR rect: for a composite
+  -- that is not any single quad but the rectangle they collectively fill, and for everything else
+  -- it is quads[1] exactly, which the suite asserts.
+  if not quads then
+    quads = { {
+      path   = path,
+      width  = width,
+      height = height,
+      point  = point,
+      x      = x,
+      y      = y,
+      uv     = uv,
+      wrapH  = tile and "REPEAT" or nil,
+      wrapV  = tile and "REPEAT" or nil,
+    } }
+  end
+
   return {
+    quads  = quads,
+    tileClamped = tileClamped,
     path   = path,
     layer  = layer,
     -- The frame level the renderer must put the single art frame at for this layer choice. Resolved
@@ -892,7 +1082,6 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
     point  = point,
     x      = x,
     y      = y,
-    uv     = composeUV(u0, v0, u1, v1, rec.artFlipH and true or false,
-      rec.artFlipV and true or false, rotation),
+    uv     = uv,
   }
 end

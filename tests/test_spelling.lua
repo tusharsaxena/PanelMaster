@@ -40,11 +40,22 @@ end
 -- tests/_kit/ is excluded for exactly the same reason as libs\: it is the shared LibKa0s test kit,
 -- vendored whole-folder and byte-identical to its source of truth. Respelling a word in it would
 -- fork the copy, which the vendoring gate then reports as drift.
+--
+-- modules/SunnArtPacks.lua is excluded on a third reason, and a narrower one: every string in its
+-- generated block is ANOTHER ADDON'S, reproduced verbatim so a theme reads in this dropdown the way
+-- it reads in SunnArt's. Art Pack 1 ships a theme called "Grey". Respelling it would rename a thing
+-- this addon does not own and does not ship, and the next generator run would put it straight back.
+-- The file's own authored prose — its header comment — is not covered by this exemption in spirit,
+-- so keep that prose US English by hand; the scan cannot tell the two apart, which is precisely why
+-- the exemption is per-file and called out here rather than added to the word list.
+local EXEMPT = { ["modules/SunnArtPacks.lua"] = true }
+
 local function authoredFiles()
   local paths = {}
   for line in slurp("PanelMaster.toc"):gmatch("[^\r\n]+") do
     local rel = line:match("^([%w\\_%-%.]+%.lua)%s*$")
-    if rel and not rel:match("^libs\\") then paths[#paths + 1] = (rel:gsub("\\", "/")) end
+    rel = rel and (rel:gsub("\\", "/")) or nil
+    if rel and not rel:match("^libs/") and not EXEMPT[rel] then paths[#paths + 1] = rel end
   end
   paths[#paths + 1] = "PanelMaster.toc"
   paths[#paths + 1] = "tests/run.lua"

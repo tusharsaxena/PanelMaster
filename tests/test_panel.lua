@@ -594,3 +594,61 @@ test("PanelEditor: the panel dropdowns are ordered by name, not by creation", fu
   local stored = NS.Registry:All()
   assertEqual(stored[1].name, "Lower Bar", "creation order was mutated")
 end)
+
+-- ── Panel scale ─────────────────────────────────────────────────────────────────
+
+local R, Canvas, PC = NS.Registry, NS.Canvas, NS.Constants
+
+local function freshPanels()
+  T.mocks.__inCombat = false
+  R:DeleteAll()
+  Canvas:RenderAll()
+end
+
+test("Panel scale: defaults to 1, which is the identity", function()
+  freshPanels()
+  assertEqual(PC.PANEL_TEMPLATE.scale, 1.0)
+  local rec = R:New("Unscaled")
+  assertEqual(R:Get(rec.id).scale, 1.0)
+  assertEqual(Canvas.BuildSpec(R:Get(rec.id), {}).scale, 1.0)
+end)
+
+test("Panel scale: is clamped to its own bounds, not the artwork's", function()
+  freshPanels()
+  local rec = R:New("ClampedScale")
+  -- Tighter than C.MIN_ART_SCALE (0.1) on purpose: the artwork's scale resizes a texture inside a
+  -- panel whose clickable area is unchanged, while this resizes the frame itself, and 0.1 would
+  -- walk straight around the C.MIN_SIZE floor that exists to keep a panel grabbable.
+  R:Set(rec.id, "scale", 99)
+  assertEqual(R:Get(rec.id).scale, PC.MAX_PANEL_SCALE)
+  R:Set(rec.id, "scale", 0.01)
+  assertEqual(R:Get(rec.id).scale, PC.MIN_PANEL_SCALE)
+  assertTrue(PC.MIN_PANEL_SCALE > PC.MIN_ART_SCALE,
+    "the panel scale floor is no tighter than the artwork's")
+end)
+
+test("Panel scale: reaches the frame, and does not change the stored size", function()
+  freshPanels()
+  local rec = R:New("ScaledPanel")
+  R:Set(rec.id, "width", 200)
+  R:Set(rec.id, "height", 100)
+  R:Set(rec.id, "scale", 2)
+  local f = Canvas:FrameFor(rec.id)
+  assertEqual(f.__scale, 2, "the frame was not scaled")
+  -- Width and Height keep reading what the user typed. Folding the scale into them would make the
+  -- editor's sliders show a size nobody set, and the frame is sized in its OWN scaled units anyway.
+  local live = R:Get(rec.id)
+  assertEqual(live.width, 200)
+  assertEqual(live.height, 100)
+  assertEqual(f.__w, 200, "the scale was multiplied into the frame size as well")
+  assertEqual(f.__h, 100)
+end)
+
+test("Panel scale: a junk value falls back rather than reaching SetScale", function()
+  freshPanels()
+  local rec = R:New("JunkScale")
+  -- Straight onto the record, bypassing R:Set's type check, the way a hand-edited SavedVariables
+  -- file arrives. BuildSpec is the last line of defense before SetScale, which errors on a string.
+  R:Get(rec.id).scale = "banana"
+  assertEqual(Canvas.BuildSpec(R:Get(rec.id), {}).scale, 1.0)
+end)

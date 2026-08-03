@@ -600,3 +600,77 @@ proves nothing about the verb.
 5. `/pm resetall` → `all settings reset to defaults (your panels are untouched)` — this wording is
    preserved through the library's locale override and is the reassurance the message exists for.
    Confirm it is **not** the library's own `All settings reset to defaults`.
+
+## 18. Sunn — Viewport Art packs, and the composite renderer
+
+The one claim the headless suite cannot make: that a real pack's textures actually **resolve** in
+the client. Every path this addon builds is asserted against SunnArt's own construction, never
+against a load — so a wrong folder, a missing pack or a `.blp`-only theme looks identical to
+correct code until someone logs in.
+
+**Skip this whole section if you do not have Sunn - Viewport Art installed.** Everything below needs
+at least SunnArt and one art pack; the rest of the addon must behave identically without them, which
+is step 1.
+
+1. With **no Sunn folder installed at all**, `/pm config` → **Panels** → **Artwork**. **Expect:** no
+   `Sunn ▸` entries anywhere in the dropdown. The feature is silent on a machine that does not have
+   it. (Installed-but-disabled is a different case — step 16.)
+2. Enable SunnArt and at least one pack, `/reload`, and reopen the dropdown. **Expect:** entries
+   grouped under `Sunn ▸ Art Pack 2` (or `Sunn ▸ Built in`), **one per theme**, each under the
+   theme's own plain name. There must be no `(left)` / `(middle)` / `(right)` entries at all — the
+   sections are not offered separately.
+3. Pick one and set **Fill** to **Stretch** and the panel to something wide — say 800 × 140.
+   **Expect:** the art draws, with all sections **edge to edge**, in order, as one continuous bar.
+   This is also the step that proves the path resolves; if it draws nothing, nothing else in this
+   section will either, and the fault is the path rather than the renderer. The failure this replaces is the left section stretched across the whole
+   panel, so a bar that looks like one repeated piece means the composite path did not run.
+5. Look hard at the **seams**. **Expect:** no bright line, no dark gap and no doubled pixel where
+   two sections meet. A seam means the slicing and the texture coordinates disagree.
+6. Press **Fit to artwork**. **Expect:** the panel becomes the bar's exact size — 1536 × 256 for a
+   typical three-section theme — and chat reports both numbers. Now drag the panel smaller: it must
+   **not** snap back on its own. Press the button again and it returns to the artwork's size.
+7. Set **Rotation** to **90°** and press **Fit to artwork** again. **Expect:** 256 × 1536 — the axes
+   swap, because the art is presented turned. Set **Scale** to `0.5`, press again: every number
+   halves. Both are part of how big the art actually is on screen, so both are part of the fit.
+8. Set **Fill** to **Fill (crop)** and make the panel much taller relative to its width. **Expect:**
+   the bar covers the panel and the outer sections are cropped away entirely — on a three-section
+   bar in a panel of a third its aspect, only the middle section remains. It should **disappear**,
+   not thin down to a hairline.
+9. Set **Rotation** to **90°**. **Expect:** the sections stack **vertically**, section 1 at the top,
+   and the whole bar still covers the panel.
+10. Back to 0°, and tick **Flip horizontally**. **Expect:** the section order reverses — the piece
+    that was on the left is now on the right — and each section is itself mirrored.
+11. Set **Fill** to **Tile** and shrink **Scale**. **Expect:** the whole **bar** repeats across the
+    panel, not each section repeating in its own slot. Keep shrinking: past the cap the repeats stop
+    getting smaller and simply stay larger. **The panel must never show a bare strip.**
+12. Set a **Color** and tick **Desaturate**. **Expect:** every section takes the tint equally. One
+    section tinted differently from its neighbors means the tint is being applied per texture from
+    the wrong source.
+13. Switch the panel from the bar back to a **single bundled piece**. **Expect:** exactly one image,
+    with no leftover section still drawn beside or behind it.
+14. Pick a theme whose art has a transparent strip along its top (most do). **Expect:** after **Fit
+    to artwork**, the art sits **flush** in the panel with no empty band above it. Then set **Fill** to
+    **Tile**: the gaps reappear between repeats, which is expected and is the one case the strip is
+    not trimmed.
+15. Disable the pack addon but not SunnArt, `/reload`. **Expect:** the panel that used it draws **no
+    artwork** and raises no error, and its size is unchanged — uninstalling a pack must not reshape a
+    layout.
+16. **The case the manifest exists for.** Disable **Sunn - Viewport Art** itself in the AddOn list,
+    leaving the pack folders installed, and `/reload`. The packs are hard-dependent on it, so
+    nothing registers and no Sunn global exists at all. **Expect:** the official packs' themes are
+    *still* listed under `Sunn ▸`, and still draw. This is the whole point of
+    `modules/SunnArtPacks.lua`; if the dropdown is empty here, the folder roster or the manifest is
+    not being read.
+17. Still with SunnArt disabled, pick **Sunn ▸ Art Pack 6: Fractal** (or Pack 9's **Wrath**) and
+    press **Fit to artwork**. **Expect:** a panel 1536 × 512 — square sections, not 2:1 ones —
+    those themes are authored at 512×512 and are the reason the manifest measures rather than
+    assumes. Compare against any Pack 2 theme, which should still fit to 2:1.
+18. Re-enable SunnArt, `/reload`, and check a theme you have renamed in **SunnArt's own** options.
+    **Expect:** your name, not the manifest's — live registration always wins.
+19. **Only what is installed is listed.** Count the `Sunn ▸` groups in the dropdown against the
+    `SunnArt*` folders you actually have in `Interface/AddOns`. **Expect:** they match exactly. Then
+    delete (or rename) one pack folder, `/reload`, and reopen the dropdown. **Expect:** that pack's
+    group is gone and the rest are untouched. If SunnArt still remembers the deleted pack in its own
+    options, that is precisely the case this checks — a remembered theme with no files behind it
+    must not be offered.
+

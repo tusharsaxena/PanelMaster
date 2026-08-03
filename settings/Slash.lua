@@ -142,6 +142,25 @@ function Sl:CliPanel(arg)
     for _, line in ipairs(Sl:BuildPanelShowLines(rec)) do print(line) end
     return
   end
+
+  -- `fitart` sits in the FIELD slot but is an ACTION, the CLI half of the editor's Fit to artwork
+  -- button. It is checked before the field table for the same reason `deleteall` is checked before
+  -- the panel lookup: a verb and a name occupying one slot need a stated precedence. There is no
+  -- ambiguity to lose here — no field is called `fitart` and none can be, because the field names
+  -- are the record's own keys.
+  if field:lower() == "fitart" then
+    local ok, w, h = NS.Registry:FitToArtwork(rec.id)
+    if ok then
+      -- Both axes echoed, and read back off the record, so the line reflects the MIN/MAX clamp
+      -- rather than what the artwork asked for.
+      print(Sl.FormatKV("width", tostring(w)))
+      print(Sl.FormatKV("height", tostring(h)))
+    else
+      print(w)   -- on failure the second return is the reason
+    end
+    return
+  end
+
   if not C.PANEL_FIELD_TYPE[field] then
     print(("unknown field '%s'. Try: %s"):format(field, table.concat(C.PANEL_FIELD_ORDER, ", ")))
     return
@@ -192,7 +211,7 @@ NS.COMMANDS = {
     function(a) NS.Slash:CliRename(a) end },
   { "panels",   "List your panels", function() NS.Slash:CliPanels() end },
   { "panel",    "Inspect or edit one: /pm panel <name> [field] [value]; "
-                            .. "'deleteall' removes every panel",
+                            .. "'fitart' fits it to its artwork; 'deleteall' removes every panel",
     function(a) NS.Slash:CliPanel(a) end },
   { "unlock",   "Unlock panels for dragging", function()
       if NS.Unlock then NS.Unlock:SetUnlocked(true) end

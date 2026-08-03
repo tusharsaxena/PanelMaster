@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-644%2F644_passing-green)
+![Tests](https://img.shields.io/badge/Tests-695%2F695_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
@@ -30,6 +30,8 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - First release.
 - Create as many backdrop panels as you like, each with its own size, position, textures, colors,
   border and frame strata.
+- Scale a whole panel — its border, its accent bars and its artwork with it — the way the game's own
+  UI scale does.
 - Pick any background and border texture you have installed — anything that uses LibSharedMedia
   shares its textures with Panel Master.
 - Class-color a panel's background or border with one tick, and it follows whoever you log in as.
@@ -40,8 +42,13 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
   out of the box, class-colored, with any status-bar texture you have installed.
 - **Panel artwork** — a picture drawn inside a panel's bounds, either one of the pieces bundled with
   the addon or a texture file of your own, with its own color, opacity, fill mode, position, scale,
-  quarter-turn rotation, flip and draw layer. Nothing is drawn until you pick something,
-  so panels you already have are unchanged.
+  quarter-turn rotation, flip and draw layer. **Fit to artwork** resizes the panel to the art's own
+  pixel size in one click. Nothing is drawn until you pick something, so panels you already have are
+  unchanged.
+- Themes from **Sunn - Viewport Art** packs you already have installed show up in the artwork list
+  too, either as a whole bar or one section at a time — and they work whether or not Sunn itself is
+  switched on. Nothing is bundled: it reads what is on your disk. A panel can also take its shape
+  from whatever art it draws.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
@@ -74,7 +81,7 @@ below.
 | `/pm delete name` | Delete a panel |
 | `/pm rename old new` | Rename a panel |
 | `/pm panels` | List your panels |
-| `/pm panel name [field] [value]` | Look at, or change, one panel. `/pm panel deleteall` removes every panel |
+| `/pm panel name [field] [value]` | Look at, or change, one panel. `/pm panel name fitart` fits it to its artwork; `/pm panel deleteall` removes every panel |
 | `/pm unlock` | Show every panel with a drag handle |
 | `/pm lock` | Put them back to normal |
 | `/pm preview` | Toggle three sample panels |
@@ -89,13 +96,13 @@ below.
 | `/pm help` | Show this list |
 
 The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `point`, `relPoint`,
-`x`, `y`, `strata`, `level`, `alpha`, `bgTexture`, `bgColor`, `bgClassColor`, `borderTexture`,
+`x`, `y`, `strata`, `level`, `scale`, `alpha`, `bgTexture`, `bgColor`, `bgClassColor`, `borderTexture`,
 `borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover`, `mouseoverAlpha`,
 `accentEnabled`, `accentEdges`, `accentTexture`, `accentThickness`, `accentOffset`, `accentColor`,
 `accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
 `accentBorderColor`, `accentBorderClassColor`, `artTexture`, `artCustomPath`, `artColor`,
 `artClassColor`, `artAlpha`, `artFill`, `artPoint`, `artX`, `artY`, `artScale`, `artRotation`,
-`artFlipH`, `artFlipV` and `artLayer`. So:
+`artFlipH`, `artFlipV`, `artDesaturate`, `artBlend` and `artLayer`. So:
 
 ```
 /pm panel ChatBG width 420
@@ -168,6 +175,7 @@ Each panel's editor has:
 | Width, Height, X offset, Y offset | Size and position. |
 | Anchor | Which corner or edge of the screen the offsets are measured from. |
 | Frame strata | Which layer the panel sits in. |
+| Panel scale | Magnifies the whole panel — its size, its border, its accent bars and its artwork — as one piece, the way the game's own UI scale does. Not the same as changing Width and Height: those resize the panel and leave the border and bars at the thickness you set. Width and Height keep showing the numbers you typed; what changes is how big they turn out on screen. A scaled panel is anchored in its own scaled units, so it also shifts relative to its anchor — nudge the offsets afterwards if it matters. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
 | Background color / Class color | The fill color, or your class color. Its opacity controls the fill alone. |
 | Border texture | Any border style LibSharedMedia knows about, or **None** for no border. |
@@ -259,6 +267,50 @@ What you can set per panel:
 | Scale | 0.1 to 4. On **Fill (crop)** it zooms the crop; **Stretch** ignores it. |
 | Rotation, Flip | Quarter turns — 0°, 90°, 180°, 270° — and a horizontal and vertical mirror. Flips apply first, then the rotation. |
 | Layer | Behind the background, above the background (the default), or above the border and accent bar. |
+| Fit to artwork | A button, next to the custom path box. Press it and the panel is resized to the artwork's **exact pixel size**, taking **Scale** and **Rotation** into account — a bundled piece is 1024×1024 and gives a square panel that big; the same piece at scale 0.5 gives 512×512, and a three-section Sunn bar turned 90° gives 256×1536. Large art gives a large panel, so drag it back to the size you want afterwards; press this again any time to return to the artwork's own size. A panel with no artwork, or whose art is not installed, says so and is left alone. |
+
+### Sunn — Viewport Art packs
+
+If you have [Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) and any
+of its art packs installed, their themes appear in the artwork dropdown too, grouped under
+**Sunn ▸**. Nothing is bundled or copied — the addon reads what is already on your disk.
+
+**Only packs you actually have are listed.** A pack you uninstall stops being offered on the next
+login, even if Sunn's own saved settings still remember it — so nothing in the dropdown is an entry
+that would draw a blank panel.
+
+**You do not need Sunn itself switched on.** The art packs are ordinary texture folders, and Panel
+Master can draw them whether or not the addon that came with them is running — it knows what the
+twelve official packs contain, and offers a theme only when that pack's folder is really installed.
+So you can leave Sunn - Viewport Art disabled, or keep it if you use its viewport bars, and either
+way the art shows up here. Sunn shows as **Incompatible** in the AddOn list on current patches
+because it has not been updated since 2024; that only matters if you want to run Sunn itself, in
+which case tick **Load out of date AddOns**.
+
+A Sunn theme is several files laid side by side into one wide bar, and it is offered as that bar —
+one entry per theme, under the theme's own name. The individual sections are not listed: the twelve
+official packs are 88 themes, and one entry per section would have made that 270, four fifths of
+them fragments of something listed three lines above. If you do want a single strip, point **Custom
+path** at it — they are numbered, so
+`Interface\AddOns\SunnArtPack2\blackrock2` is the middle of Blackrock.
+
+Every setting above works on a whole bar exactly as it works on a single piece — it is treated as
+one wide image and cut up only at the last moment. So **Fit** fits the entire bar, **Fill (crop)**
+crops it and may leave only the middle section on screen, a 90° rotation stacks the sections
+vertically, and a horizontal flip reverses their order. **Fit to artwork** is worth pressing here: it
+gives you the bar at its authored size — 1536×256 for a typical three-section theme — which is the
+shape it was drawn for.
+
+Two things to know:
+
+- Packs whose art has a transparent strip along the top declare how much (Sunn uses it to hang that
+  strip over the game world). A panel has nothing to hang it over, so that strip is **trimmed**
+  instead — the art sits flush in the panel, and **Fit to artwork** measures what you can see rather than the
+  padding.
+- **Tile** on a whole bar repeats the entire bar rather than each section, and is capped so one
+  panel cannot cost hundreds of textures. Past the cap you get fewer, larger repeats — never a bare
+  strip. Tiling is also the one case where the transparent strip above is not trimmed, so a tiled
+  bar shows its gaps.
 
 Your own file has to be something WoW can load at runtime — a `.tga` or `.blp` inside an addon
 folder, written the way the game addresses it, e.g.
@@ -438,4 +490,4 @@ debug log (see above) helps a great deal for anything that looks like a bug.
 
 | Version | Notes |
 |---|---|
-| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-color option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; per-panel artwork from a bundled catalog or your own texture, with tint, fill, position, scale, rotation, flip and draw layer; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |
+| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-color option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; per-panel scale; per-panel artwork from a bundled catalog, your own texture, or a Sunn - Viewport Art pack you already have installed, with tint, fill, position, scale, rotation, flip, draw layer and fit-to-artwork; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |

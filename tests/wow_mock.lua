@@ -124,6 +124,11 @@ local function stubFrame()
     end
     if k == "GetNumPoints" then return function() return #f.__points end end
     if k == "SetSize" then return function(_, w, h) f.__w, f.__h = w, h; return f end end
+    -- Recorded rather than swallowed, for the same reason as color and blend mode: a panel's own
+    -- scale is part of "what does this look like", and a blanket no-op would make a renderer that
+    -- never set one look identical to one that set it correctly.
+    if k == "SetScale" then return function(_, v) f.__scale = v; return f end end
+    if k == "GetScale" then return function() return f.__scale or 1 end end
     if k == "SetWidth" then return function(_, w) f.__w = w; return f end end
     if k == "SetHeight" then return function(_, h) f.__h = h; return f end end
     if k == "GetWidth" then return function() return f.__w end end
@@ -219,10 +224,34 @@ return function()
   M.InCombatLockdown = function() return M.__inCombat end
 
   -- TOC metadata, so Sl:Version() resolves the packaged version rather than the in-code fallback.
+  -- The installed-addon roster, which the Sunn adapter reads to answer "is this pack's folder on
+  -- disk", including for addons the player has DISABLED. Driven per case through `M.__addons`.
+  --
+  -- Three states, not two, because the addon code distinguishes three. A LIST is a readable roster
+  -- holding exactly those folders; an empty list is a readable roster holding none; and NIL means
+  -- the roster cannot be read at all, which is a real client state and the one Compat.AddOnFolders
+  -- answers nil to.
+  --
+  -- The default is the EMPTY LIST, and that matters at bootstrap rather than in any one case: the
+  -- addon injects the Sunn catalog rows from its own OnEnable, before a suite has run a line. A nil
+  -- default would make that injection read "cannot tell", offer all 88 manifest themes, and leave
+  -- them in the shared catalog for every bundled-artwork assertion in test_artwork.lua to trip over.
+  M.__addons = {}
   M.C_AddOns = {
     GetAddOnMetadata = function(_, field)
       if field == "Version" then return "0.1.0" end
       return nil
+    end,
+    -- nil rather than 0 when the roster is unset: Compat.AddOnFolders guards on `tonumber(count())`
+    -- and returns nil from it, which is how "cannot tell" reaches the adapter. Returning 0 here
+    -- would claim a readable, empty roster and quietly test the wrong branch.
+    GetNumAddOns = function() return M.__addons and #M.__addons or nil end,
+    -- The real signature returns name, title, notes, loadable, reason, security — this mock
+    -- supplies the first two, which is all the adapter reads.
+    GetAddOnInfo = function(i)
+      local name = M.__addons and M.__addons[i]
+      if not name then return nil end
+      return name, name
     end,
   }
 

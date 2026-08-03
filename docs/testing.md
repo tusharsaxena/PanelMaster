@@ -76,6 +76,32 @@ go red it prints which toolchain component moved, read from `media/poster/artwor
 things other than `media/artwork/` legitimately stale it: a **version bump**, since the poster is
 stamped with the TOC's `## Version:`, and any edit to `make_poster.py`'s layout.
 
+## The Sunn manifest
+
+A third committed file is generated: the block in `modules/SunnArtPacks.lua`, which records what the
+official Sunn - Viewport Art packs contain so the adapter survives SunnArt itself being disabled.
+
+```sh
+python3 tools/sunn/build_manifest.py --addons "/path/to/_retail_/Interface/AddOns"
+python3 tools/sunn/build_manifest.py --addons "…" --check    # exit 1 if the manifest is stale
+```
+
+**This one cannot be checked on a clean clone at all**, which is what separates it from the artwork
+gate above. `update_catalog.py` reads `media/artwork/`, which is in this repo; this reads *somebody's
+WoW installation* with the packs installed, so `--check` is only meaningful on a machine that has
+them and CI can never run it. Rerun it when a pack is updated or a new official pack appears.
+
+The exposure is genuinely smaller than `ARTWORK-05`'s, and the reason is worth knowing before
+worrying about it: a manifest row is consulted **only** when live registration is absent, live
+registration overrides it per theme, and a row whose pack folder is not installed is never offered.
+So a stale manifest costs a theme that draws nothing — never a wrong picture, and never a theme
+offered to someone who does not have it. Recorded as `ARTWORK-10` in
+[`pending/LEDGER.md`](pending/LEDGER.md).
+
+The generator also warns, on stderr, when a pack's declared section count disagrees with the files
+on disk, or when one theme's sections differ in size. Both are worth reading rather than ignoring —
+they mean the pack changed shape — and neither is fatal: it trusts the files.
+
 ## Local toolchain
 
 WoW runs Lua 5.1, so the harness targets 5.1.

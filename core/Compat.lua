@@ -20,6 +20,37 @@ function Compat.GetAddOnMetadata(name, field)
   return nil
 end
 
+-- Every addon folder present on disk, as a set of folder names, or nil when the roster cannot be
+-- read at all.
+--
+-- Deliberately the INSTALLED list rather than the loaded one: this answers "does this folder exist",
+-- which is the only question the Sunn adapter can ask about a pack whose own Lua never ran. A pack
+-- is hard-dependent on SunnArt, so a disabled SunnArt means the pack never loads and registers
+-- nothing — but its textures are still on disk and still drawable, and this is what tells us so.
+--
+-- nil, not an empty table, when the API is missing: "cannot tell" and "nothing installed" have to
+-- stay distinguishable, or a flavor without the roster would read as a machine with no addons and
+-- silently drop every known pack.
+function Compat.AddOnFolders()
+  local count = C_AddOns and C_AddOns.GetNumAddOns
+  local info  = C_AddOns and C_AddOns.GetAddOnInfo
+  if type(count) ~= "function" or type(info) ~= "function" then
+    count = type(GetNumAddOns) == "function" and GetNumAddOns or nil
+    info  = type(GetAddOnInfo) == "function" and GetAddOnInfo or nil
+  end
+  if not count or not info then return nil end
+
+  local n = tonumber(count())
+  if not n then return nil end
+
+  local folders = {}
+  for i = 1, n do
+    local name = info(i)
+    if type(name) == "string" and name ~= "" then folders[name] = true end
+  end
+  return folders
+end
+
 -- ── Screen geometry ─────────────────────────────────────────────────────────────
 
 -- The effective screen size a panel's position is expressed against, in UI units. Used by the

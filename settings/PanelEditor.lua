@@ -28,6 +28,7 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- editor cannot depend on the page existing yet at load time.
 local attachTooltip, addSpacer, section, ensureScroll, makePairButton
 local trackDropdown, forgetDropdowns, safeRun, LSM_WIDGET, ROW_VSPACER
+local BUTTON_PAIR_REL
 
 local function bindHelpers()
   local ui = NS.Panel and NS.Panel.__ui
@@ -36,6 +37,7 @@ local function bindHelpers()
   ensureScroll,   makePairButton               = ui.ensureScroll, ui.makePairButton
   trackDropdown,  forgetDropdowns, safeRun     = ui.trackDropdown, ui.forgetDropdowns, ui.safeRun
   LSM_WIDGET,     ROW_VSPACER                  = ui.LSM_WIDGET, ui.ROW_VSPACER
+  BUTTON_PAIR_REL                              = ui.BUTTON_PAIR_REL
 end
 
 local function runRebuilders(ctx)
@@ -381,10 +383,12 @@ local function buildPanelEditor(ctx, parent, rec)
 
   editorSpacer(group, EDITOR_ROW_GAP)
 
-  local function numberField(row, label, field, minV, maxV, step, tooltip)
+  -- `rel` overrides the half-row default for a slider that has no partner on its line. Passed
+  -- rather than inferred, because "is this row full" is not something a widget maker can see.
+  local function numberField(row, label, field, minV, maxV, step, tooltip, rel)
     local s = AceGUI:Create("Slider")
     s:SetLabel(label)
-    s:SetRelativeWidth(0.5)
+    s:SetRelativeWidth(rel or 0.5)
     -- Bounds and value are set together, every time, because the span depends on the value: see
     -- E.SliderSpan. Re-run on refresh too, or a drag that pushes x past the nominal reach would
     -- leave the slider unable to show where the panel actually is.
@@ -594,6 +598,22 @@ local function buildPanelEditor(ctx, parent, rec)
     "Which layer the panel sits in. LOW keeps it under essentially all interface frames, which is "
     .. "what a backdrop usually wants. DIALOG and above will cover normal UI.")
 
+  editorSpacer(group, EDITOR_ROW_GAP)
+  -- Full width, spanning both columns. Scale is the one control on this page that acts on
+  -- EVERYTHING above it at once — width, height, border, accent bars and artwork together — so it
+  -- reads as a footer to the section rather than as one of a pair, and pairing it with any single
+  -- neighbour would imply a relationship it does not have.
+  local scaleRow = editorRow(group)
+  numberField(scaleRow, "Panel scale", "scale",
+    C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, 0.05,
+    "Scales the whole panel \226\128\148 its size, its border, its accent bars and its artwork "
+    .. "\226\128\148 as one piece.\n\nThis is not the same as changing Width and Height: those "
+    .. "resize the panel and leave the border and bars at the thickness you set, while this "
+    .. "magnifies all of it together, the way the game's own UI scale does.\n\nWidth and Height "
+    .. "keep reading the numbers you typed; what changes is how big those turn out on screen. The "
+    .. "panel is anchored in its own scaled units, so a scaled panel also moves relative to its "
+    .. "anchor \226\128\148 nudge the offsets afterwards if it matters.", 1.0)
+
   -- ── Background ──
   editorHeading(group, "Background")
 
@@ -706,11 +726,14 @@ local function buildPanelEditor(ctx, parent, rec)
     .. "piece.", 1.0)
 
   editorSpacer(group, EDITOR_ROW_GAP)
-  -- Also full width: a texture path is long, and the useful ones are longer than half a row.
+  -- Half a row each, sharing the line with Fit to artwork. The path box was full width once, on the
+  -- reasoning that a texture path is long — which is true, and it still scrolls horizontally when it
+  -- has to. Pairing them costs the box some visible characters and buys the button a home beside the
+  -- other artwork controls rather than a row of its own with empty space next to it.
   local artPathRow = editorRow(group)
   local pathBox = AceGUI:Create("EditBox")
   pathBox:SetLabel("Custom texture path")
-  pathBox:SetRelativeWidth(1.0)
+  pathBox:SetRelativeWidth(BUTTON_PAIR_REL)
   local function applyArtPath(live)
     -- The disabled state is pushed unconditionally: it tracks artTexture, and a stale one would let
     -- you type into a box whose contents nothing reads.
@@ -736,6 +759,31 @@ local function buildPanelEditor(ctx, parent, rec)
     .. "both powers of two. Anything else draws as a green square or as nothing, with no error.")
   artPathRow:AddChild(pathBox)
   addRefresher(ctx, rec, applyArtPath)
+
+  -- A BUTTON rather than a checkbox, because fitting a panel to its art is something you do once,
+  -- not a mode you leave running. As a stored flag it reshaped the panel on every width change and
+  -- overwrote a height typed by hand, which is why it shipped off by default and why `height` needed
+  -- an explicit carve-out to stop the two fighting. Pressed once, the height is an ordinary field
+  -- again and stays where it is put.
+  local fitBtn = makePairButton("Fit to artwork", function()
+    local ok, w, h = NS.Registry:FitToArtwork(rec.id)
+    -- Said out loud either way. The two failures — no artwork, or art that is not installed — look
+    -- identical to a silent no-op, and a button that does nothing without saying why reads as
+    -- broken. On failure the second return is the reason, not a width.
+    if ok then
+      print(("fitted '%s' to its artwork (%dx%d)."):format(rec.name, w, h))
+    else
+      print(w)
+    end
+  end)
+  attachTooltip(fitBtn, "Fit to artwork",
+    "Resizes this panel to the artwork's |cffffff00exact pixel size|r.\n\nA bundled piece is "
+    .. "1024x1024 and gives a square panel that big; a three-section Sunn bar is 1536x256 and gives "
+    .. "a long thin one. A composed bar uses the size of the WHOLE bar, not one section.\n\nOnly "
+    .. "when you press this \226\128\148 nothing resizes on its own. Very large art gives a very "
+    .. "large panel, so drag it back to a size you want afterwards; press this again any time to "
+    .. "return to the artwork's own size.")
+  artPathRow:AddChild(fitBtn)
 
   editorSpacer(group, EDITOR_ROW_GAP)
   local artFillRow = editorRow(group)
@@ -799,15 +847,6 @@ local function buildPanelEditor(ctx, parent, rec)
   -- Every piece takes a tint, and the default tint is white, so the control is always honest.
   local artColorRow = editorRow(group)
   makeColorPair(ctx, artColorRow, rec, "artColor", "Artwork color")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artSizeRow = editorRow(group)
-  boolField(artSizeRow, "Autosize to artwork", "artAutosize",
-    "Sets the panel's |cffffff00height|r from its width so the panel matches the artwork's own "
-    .. "proportions.\n\nSquare art gives a square panel; a Sunn section is twice as wide as it is "
-    .. "tall, and a full Sunn bar is wider still.\n\nWidth stays yours — only the height follows. "
-    .. "You can still type a height by hand afterwards; the panel is reshaped again the next time "
-    .. "you change the width or the artwork.")
 
   editorSpacer(group, EDITOR_ROW_GAP)
   local artToneRow = editorRow(group)

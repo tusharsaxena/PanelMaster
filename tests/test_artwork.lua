@@ -1110,3 +1110,247 @@ test("Canvas: a panel with no artwork never shows its art frame", function()
   local rec = R:New("Bare")
   assertFalse(Canvas:FrameFor(rec.id).artFrame:IsShown())
 end)
+
+-- ── Composite artwork: the Sunn whole-bar rows ───────────────────────────────────
+--
+-- A composed row is N section files laid flush into one bar, and it is the only row shape in the
+-- addon that is not a single texture. The design is that it is treated as ONE virtual image of the
+-- bar's size, so every fill, flip, rotation and tint runs untouched and the bar is sliced only
+-- afterwards. These cases are what hold that claim up: each one asserts against the arithmetic a
+-- single texture would have produced, rather than against a second set of composite rules.
+
+local BAR_ID = "test-composite-bar"
+local BAR_PATHS = { "Interface\\Addons\\P\\bar1", "Interface\\Addons\\P\\bar2",
+  "Interface\\Addons\\P\\bar3" }
+
+-- A three-section bar at the Sunn declared size: 512x256 per section, so 1536x256 for the bar.
+local function barRow(overrides)
+  local row = {
+    id       = BAR_ID,
+    category = "Sunn -> Test",
+    label    = "Composite",
+    path     = BAR_PATHS[1],
+    w        = 1536,
+    h        = 256,
+    sections = BAR_PATHS,
+  }
+  for k, v in pairs(overrides or {}) do row[k] = v end
+  return row
+end
+
+-- The quads sorted by where they sit, so a case can talk about "the left one" without depending on
+-- emission order — which rotation and flip legitimately change.
+local function spanOf(quads, axis)
+  local out = {}
+  for i, q in ipairs(quads) do out[i] = { q = q, at = axis == "x" and q.x or q.y } end
+  table.sort(out, function(a, b) return a.at < b.at end)
+  return out
+end
+
+test("Artwork composite: a bar splits into one quad per section", function()
+  withRows({ barRow() }, function()
+    local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "STRETCH" }), 600, 100)
+    assertEqual(#art.quads, 3, "a three-section bar did not produce three quads")
+    for i, q in ipairs(art.quads) do
+      assertEqual(q.path, BAR_PATHS[i], "quad " .. i .. " drew the wrong section file")
+    end
+  end)
+end)
+
+test("Artwork composite: the sections tile the bar rect with no gap and no double-cover", function()
+  withRows({ barRow() }, function()
+    local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "STRETCH" }), 600, 100)
+    -- STRETCH covers the panel exactly, so the three quads must partition it: each a third of the
+    -- width, full height, and butted edge to edge. A gap draws a bare stripe through the art; an
+    -- overlap double-blends the seam and shows as a bright line.
+    local sorted = spanOf(art.quads, "x")
+    local expectedX = { -200, 0, 200 }
+    for i, entry in ipairs(sorted) do
+      assertNear(entry.q.width, 200, 1e-9, "quad " .. i .. " is not a third of the panel")
+      assertNear(entry.q.height, 100, 1e-9, "quad " .. i .. " is not the full panel height")
+      assertNear(entry.q.x, expectedX[i], 1e-9, "quad " .. i .. " sits at the wrong offset")
+      assertEqual(entry.q.point, "CENTER", "a quad drifted off the bar rect's own anchor")
+    end
+  end)
+end)
+
+test("Artwork composite: each section samples its whole file", function()
+  withRows({ barRow() }, function()
+    local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "STRETCH" }), 600, 100)
+    -- The slice is taken in BAR space and rescaled back to the 0-1 of the one file it came from.
+    -- Getting that rescale wrong is the failure that renders each section as a sliver of itself.
+    for i, q in ipairs(art.quads) do
+      assertEqual(table.concat(q.uv, ","), "0,0,0,1,1,0,1,1", "quad " .. i .. " cropped its file")
+    end
+  end)
+end)
+
+test("Artwork composite: a FILL crop drops the sections it pushed off the panel", function()
+  withRows({ barRow() }, function()
+    -- The bar is 6:1 and the panel is 2:1, so cover crops to the middle third — which is exactly
+    -- section 2's band. The outer two are not drawn at all rather than drawn at zero width.
+    local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "FILL" }), 600, 300)
+    assertEqual(#art.quads, 1, "the cropped-away sections were still drawn")
+    assertEqual(art.quads[1].path, BAR_PATHS[2], "the surviving quad is the wrong section")
+    assertNear(art.quads[1].width, 600, 1e-9, "the surviving section did not cover the panel")
+  end)
+end)
+
+test("Artwork composite: a quarter turn stacks the sections instead of ranging them", function()
+  withRows({ barRow() }, function()
+    local art = Art.BuildArtSpec(
+      record({ artTexture = BAR_ID, artFill = "STRETCH", artRotation = 90 }), 600, 100)
+    assertEqual(#art.quads, 3)
+    -- After a turn the screen's vertical axis runs along the texture's u, so the bar reads top to
+    -- bottom. Every quad is full WIDTH and a third of the height — the transpose of the unturned
+    -- case, which is the whole point of deriving the placement from composeUV's own permutation.
+    for i, q in ipairs(art.quads) do
+      assertNear(q.width, 600, 1e-9, "quad " .. i .. " was not turned")
+      assertNear(q.height, 100 / 3, 1e-9, "quad " .. i .. " kept its unturned height")
+      assertNear(q.x, 0, 1e-9, "quad " .. i .. " ranged horizontally after a turn")
+    end
+    local sorted = spanOf(art.quads, "y")
+    -- Sorted by y ASCENDING and WoW's y runs up, so the last entry is the topmost — section 1.
+    assertEqual(sorted[3].q.path, BAR_PATHS[1], "section 1 is not at the top after a 90 turn")
+    assertEqual(sorted[1].q.path, BAR_PATHS[3], "section 3 is not at the bottom after a 90 turn")
+  end)
+end)
+
+test("Artwork composite: a horizontal flip reverses the section order", function()
+  withRows({ barRow() }, function()
+    local art = Art.BuildArtSpec(
+      record({ artTexture = BAR_ID, artFill = "STRETCH", artFlipH = true }), 600, 100)
+    local sorted = spanOf(art.quads, "x")
+    -- Not special-cased anywhere: the mirror is applied to the placement fractions by the same
+    -- helper, in the same order, that mirrors the texture coordinates.
+    assertEqual(sorted[1].q.path, BAR_PATHS[3], "section 3 is not leftmost under a flip")
+    assertEqual(sorted[3].q.path, BAR_PATHS[1], "section 1 is not rightmost under a flip")
+  end)
+end)
+
+test("Artwork composite: a tiled bar repeats the whole bar, not each section", function()
+  withRows({ barRow() }, function()
+    -- Two bar copies across: the panel is twice the bar's native width at scale 1.
+    local art = Art.BuildArtSpec(
+      record({ artTexture = BAR_ID, artFill = "TILE" }), 3072, 512)
+    assertEqual(#art.quads, 6, "two copies of a three-section bar is six quads")
+    for i, q in ipairs(art.quads) do
+      -- CLAMP horizontally because the horizontal repeat crosses section boundaries and is drawn
+      -- as separate quads; REPEAT vertically because that one stays inside a single file.
+      assertEqual(q.wrapH, "CLAMP", "quad " .. i .. " would wrap across a section boundary")
+      assertEqual(q.wrapV, "REPEAT", "quad " .. i .. " lost its vertical repeat")
+    end
+    assertFalse(art.tileClamped, "an affordable tile was clamped")
+  end)
+end)
+
+test("Artwork composite: a tiled bar is clamped rather than allowed to cost hundreds of textures",
+  function()
+    withRows({ barRow() }, function()
+      -- At the smallest scale a bar this wide asks for far more copies than any panel should pay
+      -- for. The tile is grown until the budget holds, so the panel stays COVERED — a bald strip
+      -- would look broken in a way that fewer, larger tiles does not.
+      local art = Art.BuildArtSpec(
+        record({ artTexture = BAR_ID, artFill = "TILE", artScale = C.MIN_ART_SCALE }), 4000, 200)
+      assertTrue(art.tileClamped, "a runaway tile was not clamped")
+      assertTrue(#art.quads <= Art.MAX_ART_QUADS,
+        "the clamp let " .. #art.quads .. " quads through a budget of " .. Art.MAX_ART_QUADS)
+      -- Still covering: the quads reach both panel edges.
+      local sorted = spanOf(art.quads, "x")
+      assertNear(sorted[1].q.x - sorted[1].q.width / 2, -2000, 1e-6, "the tiling left a bare edge")
+    end)
+  end)
+
+test("Artwork composite: the overlap crop moves the sampled window off the transparent band",
+  function()
+    -- A Sunn theme declaring 25% overlap has 25% of its file height as transparent padding at the
+    -- top. The row's `h` is already the CONTENT height, so the fill math above ran in content
+    -- space; only the sampled window moves.
+    withRows({ barRow({ h = 192, contentV0 = 0.25 }) }, function()
+      local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "STRETCH" }), 600, 100)
+      for i, q in ipairs(art.quads) do
+        assertEqual(table.concat(q.uv, ","), "0,0.25,0,1,1,0.25,1,1",
+          "quad " .. i .. " sampled the transparent band")
+      end
+    end)
+  end)
+
+test("Artwork composite: a tiled bar drops the overlap crop rather than applying it wrongly",
+  function()
+    withRows({ barRow({ h = 192, contentV0 = 0.25 }) }, function()
+      -- A REPEAT wrap repeats a whole FILE, not a sub-range of one, so the band cannot be kept out
+      -- of a tiled repeat. Dropping the crop is the honest answer; applying it would slide every
+      -- repeat against its own pixels.
+      local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "TILE" }), 3072, 512)
+      assertNear(art.quads[1].uv[2], 0, 1e-9, "a tiled composite tried to honour the crop")
+    end)
+  end)
+
+test("Artwork: a single texture is a one-quad spec that matches the flat rect", function()
+  fresh()
+  -- The invariant that keeps ONE renderer honest: the flat fields are the whole-bar rect, and for
+  -- everything that is not a composite that rect IS the only quad. If these ever diverge, the
+  -- renderer and the fill math have stopped describing the same picture.
+  local art = Art.BuildArtSpec(record({ artTexture = SEED_ID, artFill = "FIT" }), 300, 200)
+  assertEqual(#art.quads, 1, "a single piece of art produced more than one quad")
+  local q = art.quads[1]
+  assertEqual(q.path, art.path)
+  assertNear(q.width, art.width, 1e-9)
+  assertNear(q.height, art.height, 1e-9)
+  assertEqual(q.point, art.point)
+  assertNear(q.x, art.x, 1e-9)
+  assertNear(q.y, art.y, 1e-9)
+  assertEqual(table.concat(q.uv, ","), table.concat(art.uv, ","))
+end)
+
+test("Canvas: a composed bar draws one texture per section", function()
+  fresh()
+  withRows({ barRow() }, function()
+    local rec = R:New("Bar", { artTexture = BAR_ID, artFill = "STRETCH", width = 600, height = 100 })
+    local f = Canvas:FrameFor(rec.id)
+    assertEqual(#f.artTextures, 3, "the renderer did not grow to three textures")
+    for i = 1, 3 do
+      assertEqual(f.artTextures[i]:GetTexture(), BAR_PATHS[i],
+        "texture " .. i .. " drew the wrong section")
+    end
+  end)
+end)
+
+test("Canvas: switching from a bar to a single piece clears the sections it no longer draws",
+  function()
+    fresh()
+    withRows({ barRow() }, function()
+      local rec = R:New("Switcher", { artTexture = BAR_ID, artFill = "STRETCH" })
+      local f = Canvas:FrameFor(rec.id)
+      assertEqual(#f.artTextures, 3)
+      R:Set(rec.id, "artTexture", SEED_ID)
+      -- Kept, not destroyed — a panel toggling between art types should not churn objects — but
+      -- cleared, because a hidden texture still holds its file reference and this frame is pooled.
+      assertEqual(f.artTextures[1]:GetTexture(), SEED_PATH, "the single piece did not take slot 1")
+      assertEqual(f.artTextures[2]:GetTexture(), nil, "a leftover section kept its texture")
+      assertEqual(f.artTextures[3]:GetTexture(), nil, "a leftover section kept its texture")
+      assertFalse(f.artTextures[2]:IsShown(), "a leftover section stayed shown")
+    end)
+  end)
+
+test("Artwork composite: an anchored FIT offsets each section from the same edge", function()
+  withRows({ barRow() }, function()
+    -- The case the placement math is most likely to get wrong. FIT does not cover the panel, so
+    -- unlike STRETCH the bar rect has its own anchor and offset — and every quad has to hang off
+    -- the edge THAT point names. Re-anchoring the slices to CENTER would look right at one size and
+    -- drift the bar apart on the next resize.
+    local art = Art.BuildArtSpec(record({
+      artTexture = BAR_ID, artFill = "FIT", artPoint = "TOPLEFT", artX = 12, artY = -8,
+    }), 600, 300)
+    assertEqual(#art.quads, 3)
+    assertEqual(art.point, "TOPLEFT", "the bar rect lost its own anchor")
+    -- 6:1 art contained in a 2:1 panel binds on width: 600 x 100, so a third is 200 wide.
+    for i, q in ipairs(art.quads) do
+      assertEqual(q.point, "TOPLEFT", "quad " .. i .. " was re-anchored")
+      assertNear(q.width, 200, 1e-9)
+      assertNear(q.height, 100, 1e-9)
+      assertNear(q.x, 12 + (i - 1) * 200, 1e-9, "quad " .. i .. " is not flush with its neighbor")
+      assertNear(q.y, -8, 1e-9, "quad " .. i .. " drifted vertically")
+    end
+  end)
+end)
