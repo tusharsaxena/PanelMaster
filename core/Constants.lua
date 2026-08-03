@@ -364,6 +364,11 @@ C.PANEL_TEMPLATE = {
   -- Collapses the art to grayscale before the tint multiplies against it. Off by default: it
   -- changes how existing art looks, and no upgrade should restyle a panel the user already had.
   artDesaturate  = false,
+  -- Size the panel to the artwork's own proportions: height is derived from width and the piece's
+  -- native aspect, so a 512x256 Sunn section gives a 2:1 panel and the square bundled set gives a
+  -- 1:1 one. Off by default -- it OVERWRITES a height the user set by hand, which no upgrade and no
+  -- artwork change should do behind their back.
+  artAutosize    = false,
   -- Normal alpha compositing. ADD ("Glow") adds the art's color to whatever is behind, which reads
   -- as a lit emblem over a dark panel and cannot darken anything.
   artBlend       = "BLEND",
@@ -433,6 +438,15 @@ C.PANEL_FIELD_TYPE = {
   artScale = "number", artRotation = "enum",
   artFlipH = "boolean", artFlipV = "boolean",
   artLayer = "enum", artDesaturate = "boolean", artBlend = "enum",
+  artAutosize = "boolean",
+}
+
+-- The writes that can change what "fit the artwork" means, and therefore have to re-derive the
+-- height. `height` itself is deliberately ABSENT: setting it by hand while autosize is on would
+-- otherwise fight the user's own edit back to the derived value on every keystroke. Autosize
+-- reasserts itself on the next width or artwork change instead.
+C.ART_AUTOSIZE_FIELDS = {
+  artAutosize = true, artTexture = true, artCustomPath = true, width = true,
 }
 
 -- Enum field → its ordered list of legal values. One generic "enum" kind driven by this table,
@@ -467,7 +481,7 @@ C.PANEL_FIELD_ORDER = {
   "accentBorderTexture", "accentBorderSize", "accentBorderOffset",
   "accentBorderColor", "accentBorderClassColor",
   "artTexture", "artCustomPath", "artColor", "artClassColor", "artAlpha",
-  "artDesaturate", "artBlend",
+  "artDesaturate", "artBlend", "artAutosize",
   "artFill", "artPoint", "artX", "artY", "artScale",
   "artRotation", "artFlipH", "artFlipV", "artLayer",
 }

@@ -801,6 +801,15 @@ local function buildPanelEditor(ctx, parent, rec)
   makeColorPair(ctx, artColorRow, rec, "artColor", "Artwork color")
 
   editorSpacer(group, EDITOR_ROW_GAP)
+  local artSizeRow = editorRow(group)
+  boolField(artSizeRow, "Autosize to artwork", "artAutosize",
+    "Sets the panel's |cffffff00height|r from its width so the panel matches the artwork's own "
+    .. "proportions.\n\nSquare art gives a square panel; a Sunn section is twice as wide as it is "
+    .. "tall, and a full Sunn bar is wider still.\n\nWidth stays yours — only the height follows. "
+    .. "You can still type a height by hand afterwards; the panel is reshaped again the next time "
+    .. "you change the width or the artwork.")
+
+  editorSpacer(group, EDITOR_ROW_GAP)
   local artToneRow = editorRow(group)
   boolField(artToneRow, "Desaturate", "artDesaturate",
     "Drains the color out of the artwork before the tint is applied.\n\nThis is what makes "

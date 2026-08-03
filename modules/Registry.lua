@@ -543,6 +543,38 @@ function R:Rename(key, newName)
   return true, old
 end
 
+-- ── Autosize ────────────────────────────────────────────────────────────────────
+
+-- Re-derive a panel's HEIGHT from its width and the artwork's native aspect.
+--
+-- Width is the control the user keeps and height is the one that follows, rather than adopting the
+-- artwork's native pixel size outright. A bundled piece is 1024x1024 and a Sunn bar is 1536x256, so
+-- "native size" would throw a wall across the screen for one and a letterbox for the other; deriving
+-- one axis keeps the panel the size the user chose and only fixes its PROPORTIONS. Square art
+-- therefore gives a 1:1 panel, a 512x256 Sunn section gives 2:1, and a three-section bar gives 6:1.
+--
+-- A no-op unless the flag is on AND the panel actually draws something: a panel naming art that is
+-- not installed keeps the shape it had, so uninstalling a Sunn pack cannot silently reshape a
+-- layout — and reinstalling it does not need to un-reshape anything either.
+function R.ApplyAutosize(rec)
+  if type(rec) ~= "table" or not rec.artAutosize then return false end
+  -- Guarded on its own line, NOT as `local w, h = NS.Artwork and ... and NativeSize(rec)`. An `and`
+  -- chain is adjusted to ONE value in a multiple assignment, so that spelling silently drops `h` and
+  -- autosize becomes a no-op that looks correct.
+  if not (NS.Artwork and NS.Artwork.NativeSize) then return false end
+  local w, h = NS.Artwork.NativeSize(rec)
+  if not w or not h then return false end
+  local width = tonumber(rec.width)
+  if not width or width <= 0 then return false end
+
+  -- Rounded to whole pixels: a fractional frame height renders on a half-pixel boundary and blurs
+  -- the border, and the stored value is what every later comparison reads.
+  local height = math.floor(width * (h / w) + 0.5)
+  if height == rec.height then return false end
+  rec.height = height
+  return true
+end
+
 -- ── Field edits ─────────────────────────────────────────────────────────────────
 
 -- The single write seam for a panel's fields. Every edit — settings widget, CLI, drag-stop — routes
@@ -644,6 +676,9 @@ function R:Set(key, field, value)
   end
 
   rec[field] = value
+  -- BEFORE Sanitize, so the derived height goes through the same clamp every stored height does and
+  -- an extreme aspect cannot push a panel outside C.MIN_SIZE/C.MAX_SIZE.
+  if C.ART_AUTOSIZE_FIELDS[field] then R.ApplyAutosize(rec) end
   R.Sanitize(rec)
 
   -- Every panel mutation is logged ONCE, here at the write seam, mirroring the settings rule

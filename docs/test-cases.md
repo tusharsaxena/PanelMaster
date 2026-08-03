@@ -624,6 +624,35 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 
+### test_sunnart.lua (26)
+
+- SunnArt: nothing is installed — the adapter is completely silent
+- SunnArt: an official pack is discovered through SunnArt's options table
+- SunnArt: a community pack is discovered with NO SunnArt addon present
+- SunnArt: both kinds of pack are merged into one list
+- SunnArt: a theme with no declared section count defaults to 3, as SunnArt does
+- SunnArt: a declared section count is honored
+- SunnArt: a nonsense section count is clamped rather than trusted
+- SunnArt: a 3-section theme yields three section rows AND one composed row
+- SunnArt: a one-section theme yields exactly one row, not a duplicate pair
+- SunnArt: the texture path is extensionless and rooted at Interface\Addons
+- SunnArt: rows are grouped under a readable pack category
+- SunnArt: the order is stable across scans
+- SunnArt: injected rows resolve through the normal artwork seam
+- SunnArt: Inject is idempotent — a re-scan replaces rather than duplicates
+- SunnArt: injection never disturbs the bundled catalog
+- SunnArt: an uninstalled pack degrades to drawing nothing, and recovers
+- SunnArt: sections are named by position, not by number
+- SunnArt: the dropdown renders as Sunn -> <Pack>: <Texture>
+- Autosize: off by default, so no upgrade reshapes a panel anyone already had
+- Autosize: square bundled art gives a 1:1 panel
+- Autosize: a Sunn section gives 2:1, and its composed bar gives 6:1
+- Autosize: a custom path falls back to the nominal square
+- Autosize: changing the width re-derives the height
+- Autosize: setting the height by hand is NOT fought back
+- Autosize: art that is not installed leaves the panel's shape alone
+- Autosize: the derived height is clamped like any stored height
+
 ### test_libka0s.lua (36)
 
 - LibKa0s: the vendored library registered for real
@@ -700,8 +729,9 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 55 |
 | test_panel.lua | 41 |
 | test_profiles.lua | 21 |
+| test_sunnart.lua | 26 |
 | test_libka0s.lua | 36 |
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **618** |
+| **Total** | **644** |

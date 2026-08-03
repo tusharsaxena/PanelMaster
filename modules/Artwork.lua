@@ -621,7 +621,13 @@ local function resolve(rec)
   end
 
   local row = Artwork.Entry(id)
-  if not row or type(row.file) ~= "string" then return nil, nil end
+  if not row then return nil, nil end
+  -- An ABSOLUTE path on the row wins over the bundled derivation. Rows injected by the Sunn adapter
+  -- (modules/SunnArt.lua) live in someone else's addon folder, which C.ARTWORK_PATH_PREFIX cannot
+  -- reach by construction — it is rooted at this addon. Bundled rows carry `file` and no `path`, so
+  -- they take the branch below exactly as before.
+  if type(row.path) == "string" and row.path ~= "" then return row.path, row end
+  if type(row.file) ~= "string" then return nil, nil end
   return C.ARTWORK_PATH_PREFIX .. row.file .. ".tga", row
 end
 
@@ -727,6 +733,22 @@ end
 -- the cheapest possible answer.
 --
 -- The size arguments are the panel's ALREADY-CLAMPED render size (Canvas passes spec.width/height,
+-- The artwork's NATIVE pixel size for a record, or nil when it draws nothing.
+--
+-- The one place that answers "how big is this piece, really", so the autosize seam in the registry
+-- and the fill math below cannot disagree about it. Both readings are the same three cases: a
+-- catalog row's declared w/h, the nominal square for a Custom path whose size nothing can know, and
+-- nil for "no art", which is what makes autosize a no-op rather than a divide-by-zero when a panel
+-- names a piece that is not installed.
+function Artwork.NativeSize(rec)
+  local path, row = resolve(rec)
+  if not path then return nil end
+  local w = positive(row and row.w or Artwork.CUSTOM_NATIVE_SIZE)
+  local h = positive(row and row.h or Artwork.CUSTOM_NATIVE_SIZE)
+  if not w or not h then return nil end
+  return w, h
+end
+
 -- not rec.width/height), so the art is fitted to the rectangle that will actually be on screen.
 function Artwork.BuildArtSpec(rec, panelW, panelH)
   local path, row = resolve(rec)
