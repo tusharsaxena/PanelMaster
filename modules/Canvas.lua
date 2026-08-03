@@ -16,16 +16,19 @@ local Util = NS.Util
 -- collected, so "create one per record on every rebuild" is a permanent leak, not a slow one.
 --
 -- The pool is keyed by GLOBAL FRAME NAME rather than being a flat stack, because every panel frame
--- carries a deterministic name (`PanelMaster_Panel_<slug>`) that other addons anchor to — and a
--- frame's name is fixed at CreateFrame time and can never be changed afterwards. So a released
--- frame can only be reused by a panel that wants the same name, which in practice means: delete a
--- panel and re-create it with the same name and you get the same frame back.
+-- carries a name (`PanelMaster_Panel_<slug>`) that other addons anchor to — and a frame's name is
+-- fixed at CreateFrame time and can never be changed afterwards. So a released frame can only be
+-- reused by a panel that wants the same name, which in practice means: delete a panel and re-create
+-- it with the same name and you get the same frame back.
 --
--- The bound on frames is therefore "one per distinct panel name used this session", not "one per
--- create". Renaming a panel ten times does leave ten frames behind — hidden, unparented and inert —
--- which is the price of the deterministic-name contract and is bounded by how often a human renames
--- things. The alternative (anonymous pooled frames plus `_G` aliases) keeps a flat pool but hands
--- out frames whose `GetName()` is nil, which breaks every consumer that expects a real named frame.
+-- The bound on frames is therefore "one per distinct FRAME name used this session", and a frame name
+-- is stamped onto the record once at create and never recomputed (Registry.FrameName). A rename
+-- keeps the panel on the frame it already had, so renaming ten times costs no frames at all — which
+-- is what makes the bound "one per panel the user has ever created this session" rather than the
+-- open-ended "one per name they have ever typed".
+--
+-- The alternative (anonymous pooled frames plus `_G` aliases) keeps a flat pool but hands out frames
+-- whose `GetName()` is nil, which breaks every consumer that expects a real named frame.
 local pool = {}      -- globalName → a released frame, ready to be reused under that same name
 local active = {}    -- panel id → the frame currently on screen for it
 Canvas.__pool, Canvas.__active = pool, active
@@ -54,7 +57,10 @@ function Canvas.BuildSpec(rec, settings)
   return {
     id        = rec.id,
     name      = rec.name,
-    frameName = Util.FrameName(rec.name),
+    -- The record's STORED frame name, never re-derived from `rec.name` — that derivation is what
+    -- made a rename swap frames. NS.Registry owns the fallback for a record that predates the stored
+    -- field, so this stays the one reader rather than a second copy of the rule.
+    frameName = NS.Registry.FrameName(rec),
     shown     = (settings.enabled ~= false) and (rec.enabled ~= false),
     width     = width,
     height    = height,
@@ -586,9 +592,13 @@ function Canvas:Render(id)
   end
   local spec = Canvas.BuildSpec(rec, currentSettings())
   local f = active[id]
-  -- A rename changes the panel's frame NAME, and a frame's name cannot change — so the old frame is
-  -- retired and the one belonging to the new name is brought in. Anything anchored to the old global
-  -- name is now anchored to a hidden frame, which is the documented consequence of renaming a panel.
+  -- A frame can only ever answer to the name it was created with, so a frame holding the wrong name
+  -- has to be retired and the one belonging to the right name brought in.
+  --
+  -- A rename no longer reaches this branch: the frame name is stamped at create and a rename leaves
+  -- it alone, so a renamed panel keeps its frame and everything anchored to it stays attached. What
+  -- is left is the genuine mismatch — an id whose record was replaced under it (a profile switch
+  -- lands a different panel on the same id) — where swapping really is the right answer.
   if f and f.__frameName ~= spec.frameName then
     release(f)
     active[id] = nil

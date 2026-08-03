@@ -31,6 +31,11 @@ Start each run from a clean state: `/reload`, then `/pm resetall` and `/pm panel
 4. Now `/pm unlock` first, then test mode on and off. **Expect:** you are left **unlocked**, because
    you already were before test mode started.
 5. Make a panel of your own, then `/pm preview` on and off again → **Expect:** your panel survives.
+6. With test mode on, open **Panels ▸ Edit**, select a `Preview: *` panel and press **Reset**.
+   **Expect:** a cyan-tagged refusal naming test mode, and the placeholder is unchanged.
+7. Turn test mode off → **Expect:** all three placeholders go, including the one you tried to reset.
+   Then `/reload` with test mode ON, and `/pm panels` after → **Expect:** no `Preview: *` panels
+   survive. Reset must never be able to promote a placeholder into a permanent panel.
 
 ## 3. Creating and placing a panel
 
@@ -350,11 +355,13 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    control it belongs to scrolls away. Re-open it afterwards to confirm one click still opens it
    (rather than the click being eaten as a toggle-shut).
 5c. **Top action row.** **Reset** and **Delete** sit directly under **Enabled** and **Unlock**, at
-   the top of the editor — not at the bottom. The **Frame name** text has a clear gap between it and
-   the name box's Okay button.
-5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry and the
-   **Frame name** line both update. Try renaming to an existing panel's name →
-   **Expect:** a cyan-tagged error and the box reverts to the old name rather than showing a lie.
+   the top of the editor — not at the bottom. The frame name is **not** a label of its own: it lives
+   on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
+5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry updates and
+   the **Frame name** on the tooltip does **not** — it is fixed at create, so anchors survive. Try
+   renaming to an existing panel's name → **Expect:** a cyan-tagged error and the box reverts to the
+   old name rather than showing a lie. Renaming to a name that merely *slugs* the same as another
+   panel's ("Chat-BG" while "Chat BG" exists) is now **allowed**, since no frame name is claimed.
 5e. **Reset.** Configure a panel heavily — resize it, move it, change both textures and both colors,
    turn on mouseover — then press **Reset**. **Expect:** it returns to a brand-new panel's
    appearance *and position* (center of the screen), every control in the editor re-reads the new
@@ -373,7 +380,8 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 10. Change a panel's width slider and color picker → **Expect:** the panel updates as you release.
 11. Tick **Unlock** on the selected panel → **Expect:** *only that panel* grows an outline and a
     drag handle; the others stay inert. Drag it, then untick.
-12. Check the **Frame name** line in the editor reads `PanelMaster_Panel_<slug>` for that panel.
+12. Hover the **Panel name** box → **Expect:** its tooltip reads `Frame name: PanelMaster_Panel_<slug>`
+    for that panel.
 13. Click **Delete** → **Expect:** the panel goes from the screen and the dropdown, and the editor
     falls back to another panel rather than going blank.
 14. Press **Defaults** on the Panels page → **Expect:** a confirmation dialog, and nothing deleted
@@ -414,8 +422,8 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 
 The addon's public contract, and the one thing no unit test can prove works in a live client.
 
-1. Create a panel called **Chat BG**. The editor's **Frame name** line should read
-   `PanelMaster_Panel_Chat_BG`.
+1. Create a panel called **Chat BG**. Hovering the editor's **Panel name** box should report
+   `Frame name: PanelMaster_Panel_Chat_BG`.
 2. In a macro or a `/run`, confirm the frame really exists under that name:
    `/run print(PanelMaster_Panel_Chat_BG:GetWidth())` → **Expect:** the panel's width.
 3. Anchor something to it:
@@ -424,10 +432,15 @@ The addon's public contract, and the one thing no unit test can prove works in a
    unlock and drag the panel.
 4. Try creating a second panel called **Chat-BG**. **Expect:** refused, with a message naming the
    frame name it would have collided on.
-5. Rename **Chat BG** to **Chat Backdrop**. **Expect:** the Frame name line updates, and the red
-   square from step 3 stops following the panel — the documented consequence of renaming.
-6. `/reload` and repeat step 2. **Expect:** the name is the same, because it is derived from the
-   panel name rather than assigned at runtime.
+5. Rename **Chat BG** to **Chat Backdrop**. **Expect:** the frame name on the **Panel name**
+   tooltip is **still `PanelMaster_Panel_Chat_BG`**, and the red square from step 3 **keeps
+   following the panel**. The frame name is stamped at create and a rename does not touch it.
+6. Rename it back and forth a few more times, then `/pm debug dump`. **Expect:** the pooled-frame
+   count does not grow — renaming abandons no frames.
+7. Try creating a new panel called **Chat BG**, the name freed up in step 5. **Expect:** refused,
+   naming **Chat Backdrop** as the panel still holding `PanelMaster_Panel_Chat_BG`.
+8. `/reload` and repeat step 2. **Expect:** the name is the same — it is persisted on the record,
+   not recomputed.
 
 ## 12. Profiles
 

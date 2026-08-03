@@ -9,7 +9,9 @@ NS.version = "0.1.0"
 -- The persisted-DB shape this build writes. ONE source for both the shipped default
 -- (defaults/Global.lua) and the migration runner's target (NS:RunMigrations), so the two cannot
 -- drift and a fresh install can never ship a value the runner immediately migrates off.
-NS.SCHEMA_VERSION = 1
+-- v2 stamped the derived frame name onto every panel record, making it identity rather than
+-- something recomputed from the panel's name on every read (see NS:RunMigrations).
+NS.SCHEMA_VERSION = 2
 
 -- Shared chat tag. Cyan (00ffff) is the Ka0s Standard house color (slash-commands-§4) — every Ka0s
 -- addon prints the same cyan bracketed tag so a user running several recognizes them at a glance.

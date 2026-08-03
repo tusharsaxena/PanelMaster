@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-605%2F605_passing-green)
+![Tests](https://img.shields.io/badge/Tests-618%2F618_passing-green)
 
 <!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
      CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
@@ -45,7 +45,7 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
-  to it.
+  to it. It is fixed for the panel's whole life — renaming the panel does not break the anchor.
 - Test mode drops three sample panels on screen, so you can see what a panel looks like before
   making one of your own.
 - Full command-line control: create, rename, delete and edit any field of any panel from `/pm`.
@@ -118,9 +118,9 @@ their values and print the real list back at you.
 
 ### Anchoring other things to a panel
 
-Every panel has a fixed frame name built from its own name: `PanelMaster_Panel_` followed by the
-panel name with anything that is not a letter or number turned into an underscore. A panel called
-**Chat BG** is `PanelMaster_Panel_Chat_BG`. The settings page shows you the exact name.
+Every panel has a fixed frame name built from the name you gave it when you created it:
+`PanelMaster_Panel_` followed by that name with anything that is not a letter or number turned into
+an underscore. A panel created as **Chat BG** is `PanelMaster_Panel_Chat_BG`.
 
 Other addons can anchor to that name:
 
@@ -128,7 +128,10 @@ Other addons can anchor to that name:
 myFrame:SetPoint("TOPLEFT", "PanelMaster_Panel_Chat_BG", "TOPLEFT", 4, -4)
 ```
 
-Renaming a panel changes its frame name, so anything anchored to the old one stops following it.
+The frame name is fixed at that moment and never changes again — **renaming a panel does not change
+it**, so anything anchored to the panel keeps following it. The trade is that after a rename the
+frame name no longer matches the panel's name, and you can no longer work it out from the name
+alone. Hover the **Panel name** box in the settings window to see the current one.
 
 ### Settings panel
 
@@ -158,9 +161,9 @@ Each panel's editor has:
 |---|---|
 | Enabled | Draw this panel at all. |
 | Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
-| Reset | Put the panel back to how a new one starts. Its name is kept, so anything anchored to it stays anchored. |
+| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. Test mode's sample panels cannot be reset. |
 | Delete | Remove the panel. |
-| Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to. |
+| Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to — renaming does not change it. |
 | Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
 | Width, Height, X offset, Y offset | Size and position. |
 | Anchor | Which corner or edge of the screen the offsets are measured from. |
@@ -376,14 +379,17 @@ a power of two on both sides too; a texture that is not may fail to load outrigh
 one of the bundled pieces and *still* nothing shows, check the **Draw layer**: **Behind background**
 puts it under the panel's own fill, which hides it completely unless that fill is transparent.
 
-**The addon will not let me use a name.**
+**The addon will not let me create a panel with a name.**
 Two panels cannot share a frame name, and the frame name ignores punctuation and spacing — so "Chat
-BG" and "Chat-BG" are the same name as far as anchoring is concerned. Pick something that differs by
-more than punctuation.
+BG" and "Chat-BG" would want the same one. Pick something that differs by more than punctuation.
+This can also happen with a name that looks free: a panel *created* as "Alpha" and later renamed
+still holds `PanelMaster_Panel_Alpha`, and the message names whichever panel is holding it. Renaming
+is never refused for this reason — only creating.
 
-**I renamed a panel and something stopped lining up with it.**
-Renaming changes the panel's frame name, so anything anchored to the old one is now pointing at a
-frame that is no longer used. Update the anchor to the new name, which the settings page shows you.
+**I renamed a panel and want to know its frame name.**
+Renaming does not change it, so anything anchored to the panel still works. But the frame name still
+reflects the name the panel was *created* with, so it is no longer something you can work out.
+Hover the **Panel name** box in the settings window and it shows you.
 
 **I cannot address a panel whose name has spaces.**
 `/pm panel` and `/pm rename` read the name as the first word only. Use the Panels page in the

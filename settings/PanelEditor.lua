@@ -472,7 +472,8 @@ local function buildPanelEditor(ctx, parent, rec)
   nameBox:SetLabel("Panel name")
   nameBox:SetRelativeWidth(0.5)
   nameBox:SetText(rec.name)
-  -- Renaming changes the frame name and the selector entry, so it is structural: MSG_PANELS rebuilds
+  -- Renaming changes the selector entry and every label the panel appears under, so it is
+  -- structural (the frame name is NOT affected — it is stamped at create): MSG_PANELS rebuilds
   -- the page once, and this box is one of the widgets that rebuild releases. Nothing below the call
   -- may touch `widget` on the success path.
   --
@@ -486,7 +487,8 @@ local function buildPanelEditor(ctx, parent, rec)
   -- something worth a permanent line of chrome in the editor.
   attachTooltip(nameBox, "Panel name",
     ("Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor to this frame by name. "
-     .. "Renaming the panel changes it, so anything anchored to the old name will need updating.")
+     .. "It is fixed when the panel is created and does not change when you rename the panel, so "
+     .. "anything anchored to it keeps working.")
       :format(NS.Registry.FrameName(rec)))
   nameRow:AddChild(nameBox)
 

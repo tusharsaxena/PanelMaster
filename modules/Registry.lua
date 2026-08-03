@@ -87,6 +87,18 @@ function R.Sanitize(rec)
   rec.name    = Util.CleanName(rec.name) or t.name
   rec.enabled = (rec.enabled ~= false)   -- anything but an explicit false means enabled
 
+  -- The stored frame name is stamped at create and NEVER recomputed from the name afterwards — that
+  -- is the whole point of storing it (see R.FrameName). So this fills it only when it is missing:
+  -- a record from a build before frame names were stored, or a hand-edited SavedVariables file that
+  -- dropped the key. Deriving it from the current name is exactly what the old build would have
+  -- rendered it as, so an upgrade is invisible.
+  --
+  -- NS:RunMigrations stamps the whole profile at login; this is the same repair reached from the
+  -- write seam, for a record that arrives by some other route (an imported profile, a test).
+  if type(rec.frameName) ~= "string" or rec.frameName == "" then
+    rec.frameName = Util.FrameName(rec.name)
+  end
+
   rec.width  = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, t.width)
   rec.height = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, t.height)
 
@@ -196,21 +208,36 @@ end
 
 -- ── Frame name ──────────────────────────────────────────────────────────────────
 
--- The deterministic global frame name this panel's frame carries, e.g. `PanelMaster_Panel_Chat_BG`.
--- Part of the addon's public contract: other addons anchor to it by name (see C.FRAME_NAME_PREFIX).
+-- The global frame name this panel's frame carries, e.g. `PanelMaster_Panel_Chat_BG`. Part of the
+-- addon's public contract: other addons anchor to it by name (see C.FRAME_NAME_PREFIX).
+--
+-- STORED on the record and stamped once at create time, rather than derived from the name on every
+-- read. A frame's name is immutable after CreateFrame, so a name-derived frame name meant a rename
+-- had to abandon the old frame and stand up a new one — which orphaned every external anchor
+-- silently and leaked one frame per rename. Stamping it at create makes the frame name a property of
+-- the panel's IDENTITY, like its id, so a rename is a relabel and nothing else.
+--
+-- The fallback is the migration path in one expression: a record written before this build carries
+-- no `frameName`, and deriving it from the name reproduces exactly the name its frame already has.
 function R.FrameName(rec)
-  return Util.FrameName(rec and rec.name)
+  if not rec then return Util.FrameName(nil) end
+  if type(rec.frameName) == "string" and rec.frameName ~= "" then return rec.frameName end
+  return Util.FrameName(rec.name)
 end
 
--- Is `slug` already taken by a panel other than `exceptID`?
+-- Is `frameName` already carried by a panel other than `exceptID`?
 --
--- Names are unique, but SLUGS are coarser than names — "Chat BG" and "Chat-BG" are two legal names
--- that slugify to one frame name. Two frames cannot share a global name, so the second would either
--- fail to be created or silently steal the first's global, and anything anchored to it would end up
--- attached to the wrong panel. Cheaper to refuse the name.
-local function slugTaken(slug, exceptID)
+-- Two frames cannot share a global name: the second would either fail to be created or silently
+-- steal the first's global, and anything anchored to it would end up attached to the wrong panel.
+-- Names are unique, but frame names are COARSER than names — "Chat BG" and "Chat-BG" are two legal
+-- panel names that slugify to one frame name — so this is a check of its own, not a corollary of the
+-- name check.
+--
+-- Compares against the STORED frame name rather than re-slugifying each name, because after a rename
+-- the two no longer agree and it is the stored one that a frame actually answers to.
+local function frameNameTaken(frameName, exceptID)
   for _, rec in ipairs(R:All()) do
-    if rec.id ~= exceptID and Util.Slugify(rec.name) == slug then return rec end
+    if rec.id ~= exceptID and R.FrameName(rec) == frameName then return rec end
   end
   return nil
 end
@@ -266,10 +293,14 @@ local function create(name, overrides)
   name = Util.CleanName(name)
   if not name then return nil, "a panel needs a name" end
   if R:FindByName(name) then return nil, ("a panel named '%s' already exists"):format(name) end
-  local clash = slugTaken(Util.Slugify(name))
+  -- The frame name this panel would be born with. Checked BEFORE the record is made, because the
+  -- stamp is permanent: unlike the old derived name, a clash discovered later cannot be fixed by
+  -- renaming the panel.
+  local frameName = Util.FrameName(name)
+  local clash = frameNameTaken(frameName)
   if clash then
     return nil, ("'%s' would share the frame name %s with '%s' \226\128\148 pick another name")
-      :format(name, Util.FrameName(name), clash.name)
+      :format(name, frameName, clash.name)
   end
 
   local rec = Util.DeepCopy(C.PANEL_TEMPLATE)
@@ -285,6 +316,10 @@ local function create(name, overrides)
 
   rec.id = p.nextID or 1
   p.nextID = rec.id + 1
+  -- Stamped AFTER the overrides loop, alongside the id and for the same reason: both are identity,
+  -- and neither is a caller's to supply. A preview spec or a CLI override that carried a frameName
+  -- would otherwise hand this panel another panel's global.
+  rec.frameName = frameName
 
   R.Sanitize(rec)
   p.panels[#p.panels + 1] = rec
@@ -368,22 +403,33 @@ end
 -- not just appearance. A partial reset that left the panel where it was would be a different,
 -- fuzzier promise, and the user would have to work out which half it covered.
 --
--- `id` and `name` survive, because they are what the panel IS rather than how it looks: resetting
--- must not change the frame name and break anything anchored to it.
+-- `id`, `name` and `frameName` survive, because they are what the panel IS rather than how it looks:
+-- resetting must not change the frame name and break anything anchored to it.
 --
 -- The profile's New-Panel-Defaults are applied exactly as R:New applies them, so "reset" and "make a
 -- new one" land on the same state — otherwise the two would drift the moment a user changed their
 -- defaults.
+--
+-- A PREVIEW PLACEHOLDER is refused outright. The reset rewrites the record from C.PANEL_TEMPLATE,
+-- which deliberately carries no preview marker (see C.PREVIEW_FIELD), so resetting one stripped its
+-- marker and promoted a throwaway placeholder into a permanent panel that survived the next sweep —
+-- the one path by which test mode could leave litter in a real layout. Refusing rather than
+-- re-stamping, because resetting a placeholder to the shipped template is not a meaningful thing to
+-- want, and a reason the caller can print is more use than silently doing nothing.
 function R:Reset(key)
   local p = NS.db and NS.db.profile
   if not p then return false, "database not ready" end
   local rec = R:Resolve(key)
   if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if rec[C.PREVIEW_FIELD] then
+    return false, ("'%s' is a test-mode placeholder \226\128\148 turn test mode off to remove it")
+      :format(rec.name)
+  end
 
-  local id, name = rec.id, rec.name
+  local id, name, frameName = rec.id, rec.name, rec.frameName
   for k in pairs(rec) do rec[k] = nil end
   for k, v in pairs(C.PANEL_TEMPLATE) do rec[k] = Util.DeepCopy(v) end
-  rec.id, rec.name = id, name
+  rec.id, rec.name, rec.frameName = id, name, frameName
   rec.strata = p.settings.defaultStrata
   rec.alpha  = p.settings.defaultAlpha
   R.Sanitize(rec)
@@ -399,7 +445,9 @@ end
 -- Fields a copy never carries across, because they are what make a panel *that* panel rather than
 -- a description of how it looks.
 --
--- `id` and `name` are identity: copying them would either clash or rename. The four geometry fields
+-- `id`, `name` and `frameName` are identity: copying them would either clash or rename — and
+-- copying the frame name in particular would hand the target another panel's global, which is the
+-- one collision the registry spends two checks preventing. The four geometry fields
 -- are position — the whole reason to copy settings from another panel is to make this one MATCH it
 -- while staying where it is; a copy that also moved it would land the two exactly on top of each
 -- other, which is never what was wanted. Size IS copied: two panels of matching appearance usually
@@ -408,7 +456,7 @@ end
 -- The preview marker is excluded for a different reason: it is not appearance at all but a lifetime
 -- flag, and smearing it onto a real panel would make that panel vanish at the next sweep.
 local COPY_EXCLUDED = {
-  id = true, name = true,
+  id = true, name = true, frameName = true,
   point = true, relPoint = true, x = true, y = true,
   [C.PREVIEW_FIELD] = true,
 }
@@ -482,15 +530,15 @@ function R:Rename(key, newName)
   if clash and clash.id ~= rec.id then
     return false, ("a panel named '%s' already exists"):format(newName)
   end
-  local slugClash = slugTaken(Util.Slugify(newName), rec.id)
-  if slugClash then
-    return false, ("'%s' would share the frame name %s with '%s' \226\128\148 pick another name")
-      :format(newName, Util.FrameName(newName), slugClash.name)
-  end
 
+  -- No frame-name check here, deliberately. The frame name is stamped at create and a rename does
+  -- not touch it (see R.FrameName), so renaming cannot produce a collision — there is no second
+  -- global being claimed. That also means a rename no longer has to be refused for slugging to a
+  -- name already in use: "Chat-BG" is now a legal new name for a panel even while "Chat BG" exists,
+  -- because the two keep the distinct frame names they were born with.
   local old = rec.name
   rec.name = newName
-  NS.Debug("Panel", "renamed '%s' -> '%s'", old, newName)
+  NS.Debug("Panel", "renamed '%s' -> '%s' (frame name stays %s)", old, newName, R.FrameName(rec))
   fire(MSG_PANELS)   -- structural: the name is how every list and dropdown labels the panel
   return true, old
 end

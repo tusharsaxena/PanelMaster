@@ -282,6 +282,45 @@ test("Registry.FormatField: renders each field type readably", function()
   assertTrue(R.FormatField(rec, "bgColor"):find(",", 1, true) ~= nil)
 end)
 
+test("Registry.Reset: refuses a preview placeholder rather than stripping its marker", function()
+  fresh()
+  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
+  local ok, err = R:Reset(ghost.id)
+  -- Reset rewrites the record from C.PANEL_TEMPLATE, which carries no marker — so a reset used to
+  -- PROMOTE a throwaway placeholder into a permanent panel that survived the next sweep. Refusing is
+  -- the fix: resetting a placeholder to the shipped template is not a meaningful thing to want.
+  assertFalse(ok)
+  assertTrue(err:find("test mode", 1, true) ~= nil, "the refusal should explain why: " .. tostring(err))
+  assertEqual(R:Get(ghost.id)[C.PREVIEW_FIELD], true, "the reset stripped the preview marker")
+end)
+
+test("Registry.Reset: a reset placeholder is still swept, so preview leaves no litter", function()
+  fresh()
+  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
+  R:New("Mine")
+  R:Reset(ghost.id)               -- refused, but the record must survive the attempt intact
+  R:Reset(R:FindByName("Mine").id)   -- and a real panel still resets normally
+  assertEqual(NS:SweepPreviewPanels(), 1, "the placeholder escaped the sweep after being reset")
+  assertTrue(R:FindByName("Mine") ~= nil, "the sweep took the user's own panel")
+end)
+
+test("Registry: a preview placeholder cannot lose its marker through any write seam", function()
+  fresh()
+  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
+
+  -- Every seam that writes a record, one after the other. The marker is what the reload sweep finds
+  -- these by, so any seam that dropped it would leave a placeholder behind permanently.
+  R:Set(ghost.id, "width", 400)
+  R:SetPosition(ghost.id, 10, 10)
+  R:Rename(ghost.id, "Ghost Renamed")
+  R:Reset(ghost.id)
+  R.Sanitize(R:Get(ghost.id))
+  local other = R:New("Real")
+  R:CopyFrom(ghost.id, other.id)
+
+  assertEqual(R:Get(ghost.id)[C.PREVIEW_FIELD], true, "a write seam dropped the preview marker")
+end)
+
 test("Registry.CopyFrom: never spreads the preview marker onto a real panel", function()
   fresh()
   local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })

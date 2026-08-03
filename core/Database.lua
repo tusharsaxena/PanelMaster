@@ -86,11 +86,32 @@ function NS:RunMigrations()
   if not g then return end
   g.schemaVersion = g.schemaVersion or 1
   if g.schemaVersion < NS.SCHEMA_VERSION then
-    -- No migrations yet — 0.1.0 ships schema v1, so this branch cannot be reached on a current
-    -- build. It exists so the first real schema change is a body edit rather than a structural one.
     local from = g.schemaVersion
+    local rows = 0
+
+    -- v1 → v2: stamp each panel's frame name onto its record.
+    --
+    -- Before v2 the frame name was derived from the panel's name on every read, so a rename produced
+    -- a DIFFERENT frame name — which abandoned the old frame and silently orphaned every external
+    -- anchor pointed at it. Storing it makes it identity, like the id, and a rename becomes a
+    -- relabel.
+    --
+    -- Deriving it here from the name is what makes the upgrade invisible: it reproduces exactly the
+    -- name the previous build already gave that panel's frame, so nothing anchored to it moves.
+    -- Guarded on the key being absent rather than rewritten unconditionally, so this is idempotent
+    -- and so a record already stamped by R.Sanitize on some earlier path is left alone.
+    if from < 2 then
+      local p = NS.db.profile
+      for _, rec in ipairs((p and p.panels) or {}) do
+        if type(rec.frameName) ~= "string" or rec.frameName == "" then
+          rec.frameName = NS.Util.FrameName(rec.name)
+          rows = rows + 1
+        end
+      end
+    end
+
     g.schemaVersion = NS.SCHEMA_VERSION
-    NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, 0))
+    NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, rows))
   end
 end
 
