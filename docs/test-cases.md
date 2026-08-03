@@ -72,7 +72,7 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
 - Constants: the debug console's mono font exists
 
-### test_registry.lua (41)
+### test_registry.lua (44)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -106,6 +106,9 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Set: clamps out-of-range input rather than rejecting it
 - Registry.SetPosition: writes both coordinates at once
 - Registry.FormatField: renders each field type readably
+- Registry.Reset: refuses a preview placeholder rather than stripping its marker
+- Registry.Reset: a reset placeholder is still swept, so preview leaves no litter
+- Registry: a preview placeholder cannot lose its marker through any write seam
 - Registry.CopyFrom: never spreads the preview marker onto a real panel
 - Registry.NewBatch: creates every spec and broadcasts once
 - Registry.NewBatch: skips a spec whose name is taken, keeping the rest
@@ -181,7 +184,7 @@ badge and any count quoted in the docs must agree with it.
 - Unlock: the overlay outranks every rung of the panel's own ladder
 - Unlock: the overlay follows the panel's level when the panel's level changes
 
-### test_media.lua (79)
+### test_media.lua (83)
 
 - Util.Slugify: keeps alphanumerics and collapses everything else
 - Util.Slugify: trims leading and trailing separators
@@ -190,11 +193,15 @@ badge and any count quoted in the docs must agree with it.
 - Util.Slugify: is deterministic
 - Util.FrameName: prefixes the slug
 - Registry.FrameName: matches Util.FrameName for a record
+- Registry.FrameName: is stamped onto the record at create, not derived on every read
+- Registry.FrameName: derives one for a record that predates the stored field
+- Registry.New: refuses a name whose frame name a RENAMED panel still carries
 - Canvas: the frame is created under its deterministic global name
 - Registry.New: refuses a name whose slug collides with an existing panel
-- Registry.Rename: refuses a slug collision too
+- Registry.Rename: does NOT refuse a slug collision, because renaming claims no frame name
 - Registry.Rename: a panel may still be renamed to its own slug
-- Canvas: renaming a panel moves it to a new frame
+- Registry.Rename: keeps the panel on the frame it already had
+- Canvas: renaming a panel N times leaves no abandoned frames
 - Constants: new panels default to the solid texture on both surfaces
 - Constants: both media fields declare their LSM media type
 - Canvas.BuildSpec: carries both texture names
@@ -416,7 +423,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: a reused frame draws the new panel's artwork, not the old panel's
 - Canvas: a panel with no artwork never shows its art frame
 
-### test_database.lua (18)
+### test_database.lua (20)
 
 - Database: InitDB opened both scopes
 - Database: a fresh install ships the current schema version
@@ -428,6 +435,8 @@ badge and any count quoted in the docs must agree with it.
 - Database.RunMigrations: is idempotent
 - Database.RunMigrations: stamps a version onto an unstamped DB
 - Database.RunMigrations: upgrades an older DB to the current version
+- Database.RunMigrations: v2 stamps a frame name onto every unstamped panel
+- Database.RunMigrations: v2 leaves an already-stamped frame name alone
 - Database.RunMigrations: survives being called before the DB exists
 - Database.MigrationSummary: is a pure, readable line
 - Database.InitSummary: names the addon, version, schema, profile and count
@@ -679,13 +688,13 @@ badge and any count quoted in the docs must agree with it.
 | test_util.lua | 27 |
 | test_compat.lua | 14 |
 | test_constants.lua | 16 |
-| test_registry.lua | 41 |
+| test_registry.lua | 44 |
 | test_canvas.lua | 29 |
 | test_unlock.lua | 30 |
-| test_media.lua | 79 |
+| test_media.lua | 83 |
 | test_accent.lua | 63 |
 | test_artwork.lua | 84 |
-| test_database.lua | 18 |
+| test_database.lua | 20 |
 | test_debuglog.lua | 25 |
 | test_schema.lua | 21 |
 | test_slash.lua | 55 |
@@ -695,4 +704,4 @@ badge and any count quoted in the docs must agree with it.
 | test_harness.lua | 5 |
 | test_spelling.lua | 2 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **609** |
+| **Total** | **618** |

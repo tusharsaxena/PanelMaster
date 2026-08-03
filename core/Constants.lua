@@ -521,10 +521,16 @@ C.PREVIEW_PANELS = {
 --
 --     myFrame:SetPoint("TOPLEFT", "PanelMaster_Panel_Chat_BG", "TOPLEFT", 4, -4)
 --
--- The name is derived from the panel's own name (Util.Slugify), which makes it predictable from the
--- UI rather than something the user has to look up. It also makes the slug part of the addon's
--- PUBLIC contract: renaming a panel changes its frame name and breaks anything anchored to the old
--- one, which is why the settings page shows the frame name next to the panel name.
+-- The name is derived from the panel's name (Util.Slugify) AT CREATE TIME and then stored on the
+-- record, which makes it predictable when you make the panel rather than something you have to look
+-- up. From that moment it is identity, like the panel's id: a rename relabels the panel and leaves
+-- the frame name alone, so anything anchored to it stays anchored.
+--
+-- The trade that buys: after a rename the frame name no longer matches the panel's name and stops
+-- being derivable from it. That is deliberate. The alternative — recomputing it — is what used to
+-- orphan every external anchor the moment somebody renamed a panel, silently and with no migration
+-- possible, because a frame's name is immutable after CreateFrame. The settings page shows the
+-- current frame name on the name box's tooltip, which is where you look it up after a rename.
 C.FRAME_NAME_PREFIX = "PanelMaster_Panel_"
 
 -- ── Unlock-mode styling ─────────────────────────────────────────────────────────

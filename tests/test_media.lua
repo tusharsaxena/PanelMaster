@@ -55,6 +55,37 @@ test("Registry.FrameName: matches Util.FrameName for a record", function()
   assertEqual(R.FrameName(rec), "PanelMaster_Panel_Action_Bars")
 end)
 
+test("Registry.FrameName: is stamped onto the record at create, not derived on every read", function()
+  fresh()
+  local rec = R:New("Action Bars")
+  -- Stored, so it can survive a rename. That is the whole difference between this build and the one
+  -- where renaming orphaned every external anchor.
+  assertEqual(rec.frameName, "PanelMaster_Panel_Action_Bars")
+end)
+
+test("Registry.FrameName: derives one for a record that predates the stored field", function()
+  fresh()
+  local rec = R:New("Legacy")
+  rec.frameName = nil   -- a record written by a build before frame names were stored
+  -- The fallback must reproduce EXACTLY what the old build rendered that panel's frame as, or an
+  -- upgrade would move somebody's anchors.
+  assertEqual(R.FrameName(rec), "PanelMaster_Panel_Legacy")
+  R.Sanitize(rec)
+  assertEqual(rec.frameName, "PanelMaster_Panel_Legacy", "Sanitize left the record unstamped")
+end)
+
+test("Registry.New: refuses a name whose frame name a RENAMED panel still carries", function()
+  fresh()
+  local rec = R:New("Alpha")           -- born as PanelMaster_Panel_Alpha
+  R:Rename(rec.id, "Beta")             -- keeps that frame name
+  -- The name "Alpha" is free again, but its frame name is not — and two frames cannot share a
+  -- global. Refusing is the honest answer; the message has to name the panel actually holding it.
+  local made, err = R:New("Alpha")
+  assertEqual(made, nil)
+  assertTrue(err:find("frame name", 1, true) ~= nil)
+  assertTrue(err:find("Beta", 1, true) ~= nil, "the error should name the holder: " .. tostring(err))
+end)
+
 test("Canvas: the frame is created under its deterministic global name", function()
   fresh()
   local rec = R:New("Chat BG")
@@ -75,34 +106,53 @@ test("Registry.New: refuses a name whose slug collides with an existing panel", 
   assertTrue(err:find("PanelMaster_Panel_Chat_BG", 1, true) ~= nil)
 end)
 
-test("Registry.Rename: refuses a slug collision too", function()
-  fresh()
-  R:New("Chat BG")
-  R:New("Bars")
-  local ok, err = R:Rename("Bars", "Chat.BG")
-  assertFalse(ok)
-  assertTrue(err:find("frame name", 1, true) ~= nil)
-end)
+test("Registry.Rename: does NOT refuse a slug collision, because renaming claims no frame name",
+  function()
+    fresh()
+    R:New("Chat BG")
+    local bars = R:New("Bars")
+    -- "Chat.BG" slugs to the frame name "Chat BG" already carries — which used to be refused,
+    -- because the rename would have gone on to claim that global. It no longer does: the frame name
+    -- is stamped at create, so this panel keeps PanelMaster_Panel_Bars whatever it is called.
+    assertTrue((R:Rename("Bars", "Chat.BG")))
+    assertEqual(R.FrameName(R:Get(bars.id)), "PanelMaster_Panel_Bars")
+  end)
 
 test("Registry.Rename: a panel may still be renamed to its own slug", function()
   fresh()
   R:New("Chat BG")
-  -- "Chat-BG" slugs the same as the panel's CURRENT name, so the check must exclude the panel being
-  -- renamed or this legitimate edit would be refused.
   assertTrue((R:Rename("Chat BG", "Chat-BG")))
 end)
 
-test("Canvas: renaming a panel moves it to a new frame", function()
+test("Registry.Rename: keeps the panel on the frame it already had", function()
   fresh()
   local rec = R:New("Before")
   local old = Canvas:FrameFor(rec.id)
+  local frameName = R.FrameName(rec)
   R:Rename(rec.id, "After")
   local new = Canvas:FrameFor(rec.id)
-  -- A frame's name cannot change, so a rename must swap frames. The old one is retired, which is
-  -- the documented consequence: anything anchored to the old global name now follows a hidden frame.
-  assertTrue(new ~= old, "the panel kept a frame carrying its old name")
-  assertEqual(new:GetName(), "PanelMaster_Panel_After")
-  assertFalse(old:IsShown(), "the retired frame was left on screen")
+
+  -- The fix for #7. A frame's name cannot change, so deriving the frame name from the panel name
+  -- meant a rename had to swap frames and silently orphan every external anchor. The frame name is
+  -- identity now, so the rename is a relabel: same frame, same global, anchors intact.
+  assertTrue(new == old, "the rename swapped the panel onto a different frame")
+  assertEqual(new:GetName(), frameName)
+  assertEqual(R.FrameName(R:Get(rec.id)), "PanelMaster_Panel_Before")
+  assertEqual(R:Get(rec.id).name, "After")
+  assertTrue(new:IsShown(), "the panel's frame was retired by its own rename")
+end)
+
+test("Canvas: renaming a panel N times leaves no abandoned frames", function()
+  fresh()
+  local before = Canvas.PooledCount()
+  local rec = R:New("Churn 0")
+  -- The fix for #6. Each of these used to retire a frame into the pool under the name it was born
+  -- with, never to be claimed again — one permanently-live frame per distinct name typed.
+  for i = 1, 5 do
+    assertTrue((R:Rename(rec.id, "Churn " .. i)))
+  end
+  assertEqual(Canvas.PooledCount(), before, "renaming abandoned frames into the pool")
+  assertEqual(Canvas:FrameFor(rec.id):GetName(), "PanelMaster_Panel_Churn_0")
 end)
 
 -- ── LibSharedMedia textures ─────────────────────────────────────────────────────

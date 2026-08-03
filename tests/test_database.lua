@@ -72,6 +72,43 @@ test("Database.RunMigrations: upgrades an older DB to the current version", func
   NS.db.global.schemaVersion = saved
 end)
 
+test("Database.RunMigrations: v2 stamps a frame name onto every unstamped panel", function()
+  local R = NS.Registry
+  local saved = NS.db.global.schemaVersion
+  R:DeleteAll()
+  local rec = R:New("Old Panel")
+  rec.frameName = nil            -- as a v1 profile would have stored it: derived, never persisted
+
+  NS.db.global.schemaVersion = 1
+  NS:RunMigrations()
+
+  -- Derived from the name, which is exactly what v1 rendered this panel's frame as — so the upgrade
+  -- moves nobody's anchors. Without it, the first rename after upgrading would still swap frames.
+  assertEqual(rec.frameName, "PanelMaster_Panel_Old_Panel")
+  assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION)
+
+  R:DeleteAll()
+  NS.db.global.schemaVersion = saved
+end)
+
+test("Database.RunMigrations: v2 leaves an already-stamped frame name alone", function()
+  local R = NS.Registry
+  local saved = NS.db.global.schemaVersion
+  R:DeleteAll()
+  local rec = R:New("Renamed Panel")
+  R:Rename(rec.id, "Something Else")   -- the stored frame name no longer matches the name
+
+  NS.db.global.schemaVersion = 1
+  NS:RunMigrations()
+
+  -- Re-deriving here would undo the very thing the stored field exists to protect: it would hand the
+  -- panel a frame name it has never answered to and orphan the anchors the rename kept.
+  assertEqual(rec.frameName, "PanelMaster_Panel_Renamed_Panel")
+
+  R:DeleteAll()
+  NS.db.global.schemaVersion = saved
+end)
+
 test("Database.RunMigrations: survives being called before the DB exists", function()
   local saved = NS.db
   NS.db = nil

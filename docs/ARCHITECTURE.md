@@ -37,7 +37,7 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `defaults/Global.lua` | `NS.defaults.global` | The `schemaVersion` stamp — the one account-wide value. |
 | `locales/enUS.lua` | `NS.L` | The canonical locale table and its key-is-the-string fallback. Carries no keys in 0.1.0 — see **Localization**. |
 | `locales/PostLoad.lua` | — | Derived-key aliases, loaded after every locale file so it reads whatever the active locale resolved. Empty in 0.1.0. |
-| `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, copy-from, field edits, sanitizing, slug-uniqueness, off-screen recovery, profile reload. Sole sender of both panel messages. |
+| `modules/Registry.lua` | `NS.Registry` | **Owns `db.profile.panels`.** Create, delete, rename, reset, copy-from, field edits, sanitizing, name and frame-name uniqueness (the latter on create only — see *Frame names and the pool*), off-screen recovery, profile reload. Sole sender of both panel messages. |
 | `modules/Artwork.lua` | `NS.Artwork` | The bundled-art catalog and the pure `BuildArtSpec` geometry — fill math, UV crop/flip/rotation composition, tint resolution. Touches no frames and calls no WoW API. Loads **before** `Canvas`, which reads it. |
 | `modules/Canvas.lua` | `NS.Canvas` | Turns records into frames. The pure `BuildSpec`, the name-keyed frame pool, the background, border, accent and artwork child frames (the last clipping and re-leveled per render), the four accent bars and their lazy borders, the shared mouseover ticker, targeted and full repaints. |
 | `modules/Unlock.lua` | `NS.Unlock` | Unlock mode (outline, label, drag, snap), global and per-panel, and preview mode. |
@@ -117,7 +117,7 @@ PanelMasterDB
 ### The panel record
 
 ```lua
-{ id, name, enabled, width, height, point, relPoint, x, y, strata, level, alpha,
+{ id, name, frameName, enabled, width, height, point, relPoint, x, y, strata, level, alpha,
   bgTexture,     bgColor,    bgClassColor,
   borderTexture, borderSize, borderOffset, borderColor, borderClassColor,
   mouseover, mouseoverAlpha,
@@ -129,6 +129,12 @@ PanelMasterDB
   artFill, artPoint, artX, artY, artScale,
   artRotation, artFlipH, artFlipV, artLayer }
 ```
+
+`id`, `name` and `frameName` are the record's **identity** — what the panel *is* rather than how it
+looks — and the three seams that rewrite a record wholesale all preserve them: `R:Reset` restores
+them after the template rewrite, `COPY_EXCLUDED` keeps `CopyFrom` off them, and `R:Rename` writes
+only `name`. `frameName` and the preview marker are deliberately absent from `PANEL_TEMPLATE` and
+from `PANEL_FIELD_TYPE`, so neither is a settable field.
 
 `core/Constants.lua`'s `PANEL_TEMPLATE` is the single definition of that shape — the shipped default
 AND the source every missing field is repaired from. Four sibling maps derive everything else from
@@ -244,14 +250,21 @@ them, and both are needed:
 returns the count. It runs from `NS:InitDB` — after `NS:RunMigrations`, before
 `NS:RegisterProfileCallbacks`, therefore before `Canvas:Enable` and the first `RenderAll`, so an
 orphan is never drawn — and again on the profile-reload path, since a copied profile can carry
-someone else's orphans. It is idempotent, and the marker is additive, so `NS.SCHEMA_VERSION` stays
-at 1.
+someone else's orphans. It is idempotent, and the marker is additive, so it needed no schema bump of
+its own.
 
 The marker is deliberately **not** in `PANEL_FIELD_TYPE`, `PANEL_FIELD_ORDER` or `PANEL_TEMPLATE` —
 the CLI cannot set it, `/pm panel <name>` does not print it, and a normally-created panel never has
 it — and it is in the registry's `COPY_EXCLUDED`, so `CopyFrom` cannot smear it onto a real panel.
-Known trade-off: a preview panel the user runs `/pm panel <name> reset` on loses the marker and
-becomes a real panel.
+
+`R:Reset` **refuses** a marked record outright, with a reason the caller prints. It rewrites the
+record from `C.PANEL_TEMPLATE`, which carries no marker, so a reset used to strip it and promote a
+throwaway placeholder into a permanent panel the user then had to delete by hand — the one remaining
+path by which preview could leave litter in a saved layout. Refusing rather than re-stamping:
+resetting a placeholder to the shipped template is not a meaningful thing to want, and a tagged
+notice explains why more usefully than silently doing nothing. With that closed, the marker survives
+every registry write seam, which is what makes "preview off removes exactly what preview added" true
+unconditionally.
 
 Both transitions go through `U:SetUnlocked`, never a direct write to `NS.State.unlocked`, so leaving
 preview clears the per-panel unlock and pending sets the same way any other lock does. The order is
@@ -369,28 +382,48 @@ value that landed may not be the one asked for.
 
 ### Frame names and the pool
 
-Every panel frame is created under a deterministic global name, `PanelMaster_Panel_<slug>`, derived
-from the panel's own name by `Util.Slugify`. That is a **public contract**: another addon or a
-WeakAura anchors to it by name with no API call, and can work the name out from the panel name alone.
+Every panel frame is created under a global name, `PanelMaster_Panel_<slug>`, derived from the
+panel's name by `Util.Slugify` **at create time and then stored on the record** as `rec.frameName`.
+That is a **public contract**: another addon or a WeakAura anchors to it by name with no API call.
 
-Two consequences follow, and both are load-bearing:
+The frame name is **identity, like the id** — `Registry.FrameName` reads the stored field and never
+recomputes it. `R:Reset` preserves it alongside `id` and `name`; `COPY_EXCLUDED` keeps `CopyFrom`
+from smearing one panel's global onto another; and `R:Rename` does not touch it at all.
 
-- **Slugs must be unique, not just names.** "Chat BG" and "Chat-BG" are two legal panel names that
-  slugify to one frame name, and two frames cannot share a global name. `Registry` refuses the
-  second on both create and rename.
-- **The pool is keyed by frame name, not a flat stack.** A frame's name is fixed at `CreateFrame`
-  time and can never change, so a released frame can only be reused by a panel wanting that same
-  name. Delete a panel and re-create it with the same name and you get the same frame back.
+Three consequences follow, and all are load-bearing:
 
-Frames are still pooled rather than leaked (`hard rule #14`) — a user with thirty panels toggling
-the master switch twice would otherwise leak sixty frames permanently — but the bound is "one frame
-per distinct panel name used this session" rather than "one per live panel". Renaming a panel ten
-times does leave ten hidden, unparented frames behind. That is the price of the naming contract, and
-it is bounded by how often a human renames things.
+- **A rename is a relabel.** The panel keeps the frame it already had, so nothing anchored to it
+  moves and no frame is abandoned. This is the fix for the pair of bugs (#6, #7) that the derived
+  frame name caused: a frame's name is immutable after `CreateFrame`, so recomputing it meant a
+  rename had to retire the old frame and stand up a new one — silently orphaning every external
+  anchor, with no migration possible, and leaking one frame per distinct name typed.
+- **Frame names must be unique on create, and only on create.** "Chat BG" and "Chat-BG" are two
+  legal panel names wanting one frame name, and two frames cannot share a global. `Registry` refuses
+  the second at create. It does **not** check on rename, because a rename claims no new global. A
+  name that looks free can still be refused: a panel created as "Alpha" and later renamed still
+  holds `PanelMaster_Panel_Alpha`, and the refusal names it.
+- **The pool is keyed by frame name, not a flat stack.** A released frame can only be reused by a
+  panel wanting that same name. Delete a panel and re-create it with the same name and you get the
+  same frame back.
+
+Frames are pooled rather than leaked (`hard rule #14`) — a user with thirty panels toggling the
+master switch twice would otherwise leak sixty frames permanently — and the bound is now "one frame
+per distinct frame name used this session", which renaming no longer grows.
+
+The trade this buys, stated plainly: after a rename the frame name no longer matches the panel's
+name and stops being derivable from it. Predictability at create was judged the lesser half of the
+contract — you look the name up once, when you wire something to the panel, and the settings page's
+name-box tooltip is where. Anchors that silently stop tracking, days later, are the worse failure.
 
 The alternative considered and rejected: anonymous pooled frames plus `_G` aliases. It keeps a flat
 pool, but hands out frames whose `GetName()` is `nil`, which breaks every consumer expecting a real
 named frame.
+
+`NS.SCHEMA_VERSION` is **2** for this: the v1 → v2 migration stamps `frameName` onto every panel by
+deriving it from the name, which reproduces exactly the global that build already gave the frame, so
+the upgrade moves nobody's anchors. `R.Sanitize` fills the field the same way for a record arriving
+by another route (an imported profile, a test), which is what covers profiles other than the one
+active when the migration ran.
 
 ### Mouseover fade
 
@@ -752,7 +785,7 @@ Two things must **never** be routed through `NS.L`:
 
 | Not localized | Why |
 |---|---|
-| Panel names | User-supplied data, not UI strings. A user's "Chat" is their text, and translating it would rename their panel — and with it the `PanelMaster_Panel_<slug>` frame name other addons anchor to. |
+| Panel names | User-supplied data, not UI strings. A user's "Chat" is their text, and translating it would rename their panel — silently, behind their back, in every list and dropdown. (It would no longer move the `PanelMaster_Panel_<slug>` frame name, which is stamped at create, so external anchors would survive — but a panel that relabels itself when the client language changes is its own problem.) |
 | Stored `point` / `strata` tokens | Matched on stable identifiers, never on a localized display string (`localization-§4`). A dropdown may show a translated label, but the value written to SavedVariables stays `TOPLEFT` / `LOW`. |
 
 ## Taint
@@ -807,12 +840,14 @@ location, and this is the first non-Lua source in the tree).
   the first word, so a panel called "Chat BG" can be created and renamed *to*, but not addressed by
   its full name from the command line. Inventing a quoting syntax for a job the settings UI already
   does well was judged the worse trade.
-- **Renaming a panel orphans anything anchored to it.** The frame name is derived from the panel
-  name, and a frame's name cannot change — so a rename swaps frames and the old global name is left
-  pointing at a hidden one. The settings page shows the current frame name so the change is visible;
-  there is no migration for external anchors, and there cannot be.
-- **Renames accumulate frames.** One per distinct panel name used in a session, never freed (see
-  *Frame names and the pool*). Bounded by human behavior rather than by code.
+- **A renamed panel's frame name no longer matches its name.** The frame name is stamped at create
+  and is identity from then on, so a rename cannot break an anchor — but it also cannot be worked
+  out from the panel's current name. The name box's tooltip shows it. This is the deliberate half of
+  the trade described in *Frame names and the pool*, not an oversight.
+- **A panel name can be refused because a renamed panel still holds its frame name.** Creating
+  "Alpha" fails while a panel created as "Alpha" and since renamed still carries
+  `PanelMaster_Panel_Alpha`. The refusal names the holder. Refusing is correct — two frames cannot
+  share a global — but the reason is not obvious from the panel list.
 - **No per-panel strata *level* UI.** `level` is in the record and settable from the CLI, but the
   settings page exposes only the strata dropdown. Two panels sharing a strata *and* a level are
   ordered by frame creation, which the name-keyed pool does not keep in panel order; distinct
