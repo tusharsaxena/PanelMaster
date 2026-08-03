@@ -582,7 +582,7 @@ end)
 -- ── the `L` trap ───────────────────────────────────────────────────────────────
 --
 -- Three of the five majors take a descriptor `L` and can render raw keys if handed a table whose
--- __index synthesises one. Core CANNOT express the trap at all — it ships no STRINGS and reads no
+-- __index synthesizes one. Core CANNOT express the trap at all — it ships no STRINGS and reads no
 -- descriptor L — so a "rendered label is prose" case there would be a case that cannot fail, which
 -- is worse than no case because it reads as coverage. The stand-in is a TRIPWIRE on the library
 -- itself: it passes today and goes red the day Core grows a user-visible string, which is the day

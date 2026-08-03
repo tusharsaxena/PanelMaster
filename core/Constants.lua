@@ -8,7 +8,7 @@ local C = NS.Constants
 --
 -- The full set is offered. A backdrop usually wants to be low — LOW is the default, one step above
 -- BACKGROUND so a panel sits above the world/parchment art but still under essentially all
--- interface frames — but "which layer" is a judgement about the user's particular UI, not something
+-- interface frames — but "which layer" is a judgment about the user's particular UI, not something
 -- this addon can make for them. Choosing a high strata is a real choice with a real consequence
 -- (the panel covers what is beneath it), and the tooltip says so rather than the list hiding the
 -- option.
@@ -386,7 +386,7 @@ C.PANEL_TEMPLATE = {
   -- FIT, not STRETCH: fitting shows the whole image undistorted at any panel size, which is the
   -- only fill type that cannot make a bundled piece look broken on a panel it was not authored for.
   artFill        = "FIT",
-  -- Anchor of the art within the panel. Honoured only by the fill types that leave room to move
+  -- Anchor of the art within the panel. Honored only by the fill types that leave room to move
   -- (STATIC and FIT) — STRETCH, FILL and TILE cover the panel by definition.
   artPoint       = "CENTER",
   artX           = 0,

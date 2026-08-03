@@ -154,8 +154,8 @@ end
 -- SunnCustomPanels / SunnCustomOverlap are last, and that is a deliberate DIVERGENCE from SunnArt
 -- rather than a match. CustomTheme.lua:2-3 declares both globals and invites the player to fill
 -- them in, and ImportThemes then never reads either — so a player who writes
--- `SunnCustomPanels["SunnArt\\MyArtWork"] = 5` is silently given 3 sections. We honour it, and we
--- honour it last, because a hand-edited file is the only source a human actually typed.
+-- `SunnCustomPanels["SunnArt\\MyArtWork"] = 5` is silently given 3 sections. We honor it, and we
+-- honor it last, because a hand-edited file is the only source a human actually typed.
 local function meta()
   local panels, overlap = {}, {}
 

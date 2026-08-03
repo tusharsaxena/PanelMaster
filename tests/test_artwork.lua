@@ -411,7 +411,7 @@ end)
 
 test("Artwork STRETCH: deliberately ignores scale", function()
   -- Stretching IS "match the panel exactly", so a scaled stretch is really FILL or STATIC depending
-  -- on which the user meant. Honouring scale here would draw art that no longer matches the panel
+  -- on which the user meant. Honoring scale here would draw art that no longer matches the panel
   -- while still claiming to be stretched to it.
   forEachCombo("STRETCH", { artScale = C.MAX_ART_SCALE }, function(spec, p, _, where)
     assertNear(spec.width,  p.W, 1e-9, "width" .. where)
@@ -503,7 +503,7 @@ end)
 
 -- ── Position ────────────────────────────────────────────────────────────────────
 
-test("Artwork: position is honoured by STATIC and FIT, which leave room to move", function()
+test("Artwork: position is honored by STATIC and FIT, which leave room to move", function()
   for _, fill in ipairs({ "STATIC", "FIT" }) do
     withArt(64, 64, true, function()
       local spec = Art.BuildArtSpec(record({
@@ -1282,7 +1282,7 @@ test("Artwork composite: a tiled bar drops the overlap crop rather than applying
       -- of a tiled repeat. Dropping the crop is the honest answer; applying it would slide every
       -- repeat against its own pixels.
       local art = Art.BuildArtSpec(record({ artTexture = BAR_ID, artFill = "TILE" }), 3072, 512)
-      assertNear(art.quads[1].uv[2], 0, 1e-9, "a tiled composite tried to honour the crop")
+      assertNear(art.quads[1].uv[2], 0, 1e-9, "a tiled composite tried to honor the crop")
     end)
   end)
 

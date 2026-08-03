@@ -41,7 +41,7 @@ test("Canvas.BuildSpec: a missing settings table means shown", function()
   assertTrue(Canvas.BuildSpec({ enabled = true }, nil).shown)
 end)
 
-test("Canvas.BuildSpec: a zero border is honoured, not floored to 1", function()
+test("Canvas.BuildSpec: a zero border is honored, not floored to 1", function()
   assertEqual(Canvas.BuildSpec({ borderSize = 0 }, {}).borderSize, 0)
 end)
 

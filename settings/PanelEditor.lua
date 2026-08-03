@@ -602,7 +602,7 @@ local function buildPanelEditor(ctx, parent, rec)
   -- Full width, spanning both columns. Scale is the one control on this page that acts on
   -- EVERYTHING above it at once — width, height, border, accent bars and artwork together — so it
   -- reads as a footer to the section rather than as one of a pair, and pairing it with any single
-  -- neighbour would imply a relationship it does not have.
+  -- neighbor would imply a relationship it does not have.
   local scaleRow = editorRow(group)
   numberField(scaleRow, "Panel scale", "scale",
     C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, 0.05,

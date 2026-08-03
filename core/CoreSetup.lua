@@ -75,7 +75,7 @@ NS.Core = lib
 NS.IsConcatSafe = lib.IsConcatSafe
 NS.SafeToString = lib.SafeToString
 
--- The prefix is passed VERBATIM as the library requires — never synthesised. NS.PREFIX carries no
+-- The prefix is passed VERBATIM as the library requires — never synthesized. NS.PREFIX carries no
 -- trailing space of its own, so the default `sep = " "` is correct and is left unstated.
 --
 -- `sink` is NOT passed: Core's own default is DEFAULT_CHAT_FRAME:AddMessage, which is exactly where

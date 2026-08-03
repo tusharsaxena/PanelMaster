@@ -402,7 +402,7 @@ end)
 
 test("Canvas: the accent/border stacking survives a frame-level change", function()
   fresh()
-  local rec = R:New("Levelled", { accentEnabled = true, borderSize = 4, level = 5 })
+  local rec = R:New("Leveled", { accentEnabled = true, borderSize = 4, level = 5 })
   local f = Canvas:FrameFor(rec.id)
   assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.ACCENT_FRAME_LEVEL)
   R:Set(rec.id, "level", 20)

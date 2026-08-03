@@ -103,7 +103,7 @@ Saved to `PanelMasterDB`, in AceDB profiles, with every character starting on th
 Shared rather than character-keyed because a panel layout is a description of a UI and most people
 run one UI: under a per-character default, anyone wanting a common layout has to rebuild or copy it
 on every alt, whereas under this one anyone wanting a private layout makes one on the Profiles page
-in two clicks. The asymmetry favours the shared default.
+in two clicks. The asymmetry favors the shared default.
 
 Note AceDB's precedence — `sv.profileKeys[charKey] or defaultProfile or charKey` — so a character
 that has already been assigned a profile keeps it. This governs where *new* characters land.
@@ -548,7 +548,7 @@ dropdown source (`None` first, catalog sorted by category then label, both alpha
 Every division in the fill math is guarded — a nil, zero or negative `W`, `H`, `w` or `h` returns
 `nil` rather than reaching a division, because WoW accepts inf/nan texture coordinates silently and
 renders them as a garbage smear. `STRETCH` deliberately ignores `artScale`: stretching *is* "match
-the panel exactly". Position is honoured for `STATIC` and `FIT` only; the other three cover the
+the panel exactly". Position is honored for `STATIC` and `FIT` only; the other three cover the
 panel exactly, so the spec forces `CENTER, 0, 0` rather than letting an offset shove panel-filling
 art out through the clip.
 

@@ -221,7 +221,7 @@ def key_dark_background(im, lo=KEY_LO, hi=KEY_HI):
 
 
 def _box_sum(arr):
-    """Sum over the 3x3 neighbourhood, edges replicated."""
+    """Sum over the 3x3 neighborhood, edges replicated."""
     p = np.pad(arr, ((1, 1), (1, 1), (0, 0)), mode="edge")
     total = np.zeros_like(arr)
     for dy in range(3):
@@ -237,7 +237,7 @@ def solidify(im, iters=SOLIDIFY_ITERS):
     sits under a transparent pixel — (0,0,0,0) on most, (255,255,255,0) on many, and occasionally
     something arbitrary like (217,182,103,0). Nothing renders that color, so nothing complains.
 
-    An upscaler does not care. Its kernel samples neighbouring pixels including the transparent
+    An upscaler does not care. Its kernel samples neighboring pixels including the transparent
     ones, so a white-under-alpha source grows a white halo along every edge and a black-under-alpha
     source grows a dark one. Replacing that arbitrary constant with a continuation of the adjacent
     artwork means the kernel samples something plausible instead.

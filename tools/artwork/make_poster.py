@@ -218,15 +218,15 @@ def ellipsize(draw, text, fnt, maxw):
         s = s[:-1]
     # A label whose first character alone overruns the tile leaves nothing to trim. The bare
     # ellipsis is still honest — it says "there is a name here and it did not fit" — and it keeps
-    # the tile from looking unlabelled.
+    # the tile from looking unlabeled.
     return (s + ELLIPSIS) if s else ELLIPSIS
 
 
 def thumb(row):
-    """One tile: the artwork letterboxed and centred on the tile backing.
+    """One tile: the artwork letterboxed and centered on the tile backing.
 
     Composited rather than pasted because the TGAs are RGBA and their transparent regions must
-    resolve to the tile colour, not to black.
+    resolve to the tile color, not to black.
     """
     try:
         with Image.open(art_path(row)) as src:
@@ -289,11 +289,11 @@ def render(rows):
             draw.rectangle([x, y, x + BOX - 1, y + BOX - 1], outline=TILE_EDGE, width=1)
 
             label = ellipsize(draw, row["label"], f_label, BOX + LABEL_OVERHANG)
-            # round(), not the raw centre. Centring gives a fractional x for most labels, and a
+            # round(), not the raw center. Centering gives a fractional x for most labels, and a
             # fractional x is the one input here that different FreeType/Pillow builds disagree
             # about: they bucket the sub-pixel offset differently, so the same label rasterizes to
             # different bytes and --check reports staleness that is not there. Whole pixels are
-            # rasterized identically everywhere, and half a pixel of centring is invisible.
+            # rasterized identically everywhere, and half a pixel of centering is invisible.
             lw = round(draw.textlength(label, font=f_label))
             tx = x + round((BOX - lw) / 2)
             # A label is allowed to overhang its TILE by LABEL_OVERHANG — that is what keeps the

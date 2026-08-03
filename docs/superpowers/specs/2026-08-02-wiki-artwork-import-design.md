@@ -57,7 +57,7 @@ source: `(0,0,0,0)` on most, `(255,255,255,0)` on the `MajorFactionsIcons` set a
 
 This is invisible in a normal viewer and destructive in two places:
 
-1. **Upscaling** blends neighbouring pixels. A white-under-alpha source bleeds a white halo into
+1. **Upscaling** blends neighboring pixels. A white-under-alpha source bleeds a white halo into
    every emblem edge; a black-under-alpha source bleeds a dark one.
 2. **Three of the addon's blend modes read RGB under zero alpha** — Additive adds it, Alpha-key
    thresholds and draws it opaque, Opaque ignores alpha entirely. This is the exact failure
@@ -247,7 +247,7 @@ All three were raised before the decision and confirmed. Recorded in `docs/pendi
    Note this also costs 4 MB of VRAM per distinct texture in use, since WoW decompresses RLE TGA
    to 32 bpp — RLE saves disk, not video memory.
 
-3. **Naming.** The mandatory `-bw`/`-color` suffix is dropped in favour of
+3. **Naming.** The mandatory `-bw`/`-color` suffix is dropped in favor of
    a source-mirroring layout. Tint behavior is no longer visible in a file listing; the catalog
    row's `tintable` field is the sole source of truth. `docs/artwork-spec.md` is rewritten to
    match.

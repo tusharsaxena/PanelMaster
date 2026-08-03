@@ -878,7 +878,7 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   if fill == "STRETCH" then
     -- Stretch IS "fill the panel exactly", so scale is deliberately ignored rather than quietly
     -- applied: a scaled stretch is either FILL (still covers, crops instead of distorting) or
-    -- STATIC (keeps the aspect, does not cover), and honouring scale here would produce art that
+    -- STATIC (keeps the aspect, does not cover), and honoring scale here would produce art that
     -- no longer matches the panel while still claiming to be stretched to it. The tooltip says so.
     width, height = W, H
 
@@ -927,7 +927,7 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
     tile = true
   end
 
-  -- Position is honoured only by the two fills that do not cover the panel. STRETCH, FILL and TILE
+  -- Position is honored only by the two fills that do not cover the panel. STRETCH, FILL and TILE
   -- all draw a rectangle exactly the size of the panel, so an anchor or an offset could only push
   -- that rectangle off the panel and leave a bare strip — the setting would be actively harmful
   -- rather than merely inert. Forcing center here means the spec always states where the art really

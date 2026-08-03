@@ -57,7 +57,7 @@ order, independent of the name order. See §4.
 **`SunnCustomPanels` / `SunnCustomOverlap` are dead in SunnArt.** `CustomTheme.lua:2-3` declares
 them and invites the player to fill them in; `ImportThemes` never reads either. A player who sets
 `SunnCustomPanels["SunnArt\\MyArtWork"] = 5` is silently given 3 sections. We do read them, which
-is better behaviour than the addon we adapt, and they are ordered **last** — the player's own hand
+is better behavior than the addon we adapt, and they are ordered **last** — the player's own hand
 edit is the only source a human typed, so it wins. Recorded as a deliberate divergence, not a bug
 to match.
 
@@ -116,10 +116,10 @@ For each bar copy `m` (one copy for every fill but TILE) and each section `i`:
    |---|---|
    | `LEFT`   | `x + sx0 * width` |
    | `RIGHT`  | `x - (1 - sx1) * width` |
-   | centred  | `x + ((sx0 + sx1) / 2 - 0.5) * width` |
+   | centered | `x + ((sx0 + sx1) / 2 - 0.5) * width` |
    | `TOP`    | `y - sy0 * height` |
    | `BOTTOM` | `y + (1 - sy1) * height` |
-   | centred  | `y - ((sy0 + sy1) / 2 - 0.5) * height` |
+   | centered | `y - ((sy0 + sy1) / 2 - 0.5) * height` |
 
 5. `uv = composeUV(file_u0, file_v0, file_u1, file_v1, flipH, flipV, rotation)`.
 
@@ -159,7 +159,7 @@ order.
   `SunnCustomPanels`/`SunnCustomOverlap`. The middle two reproduce `ImportThemes`; the last is the
   documented divergence from §2.
 - Overlap is a **percentage** (SunnArt's own slider is `min = 0, max = 100, step = 0.01`),
-  normalised to a fraction and clamped to `[0, 0.9]`. 100 would crop the art out of existence.
+  normalized to a fraction and clamped to `[0, 0.9]`. 100 would crop the art out of existence.
 - Rows gain `contentV0` (omitted when 0) and their `h` becomes `SECTION_H * (1 - ov)`. Composed
   rows keep `w = SECTION_W * N` and carry `sections`.
 

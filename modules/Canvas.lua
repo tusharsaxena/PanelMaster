@@ -82,7 +82,7 @@ function Canvas.BuildSpec(rec, settings)
     border    = Util.ResolveColor(rec, "borderColor"),
     bgTexture     = rec.bgTexture or C.PANEL_TEMPLATE.bgTexture,
     borderTexture = rec.borderTexture or C.PANEL_TEMPLATE.borderTexture,
-    -- A zero border is a real choice (a plain block with no outline), so it is honoured rather than
+    -- A zero border is a real choice (a plain block with no outline), so it is honored rather than
     -- floored to 1 — it means no backdrop is applied at all rather than one drawn at zero size.
     borderSize = Util.Clamp(rec.borderSize, C.MIN_BORDER, C.MAX_BORDER, 1),
     borderOffset =
@@ -367,7 +367,7 @@ local function applyBorder(f, spec)
   local path = spec.borderSize > 0 and NS.Compat.FetchMedia("border", spec.borderTexture) or nil
   if not path then
     -- No border at all: a zero thickness, or the "None" texture. Clearing the backdrop is what
-    -- removes it — a backdrop drawn at zero size still costs a draw call and can leave artefacts.
+    -- removes it — a backdrop drawn at zero size still costs a draw call and can leave artifacts.
     b:SetBackdrop(nil)
     b:Hide()
     return
@@ -382,7 +382,7 @@ end
 
 -- Paint the artwork layer. Every decision worth making was already made in Artwork.BuildArtSpec —
 -- this is the dumb applier, which is the point: the fill math is arithmetic on a record and is
--- verified headlessly, so nothing here needs a judgement call.
+-- verified headlessly, so nothing here needs a judgment call.
 local function applyArtwork(f, spec)
   local frame = f.artFrame
   if not frame or not f.artTextures then return end
@@ -404,7 +404,7 @@ local function applyArtwork(f, spec)
 
   -- One quad per texture. A single piece of art is one quad; a composed Sunn bar is one per section
   -- (times the number of bar repeats, when it tiles). Every number below was decided by
-  -- BuildArtSpec — this loop makes no judgement about any of them, which is the whole arrangement.
+  -- BuildArtSpec — this loop makes no judgment about any of them, which is the whole arrangement.
   for i, quad in ipairs(art.quads) do
     local tex = ensureArtTexture(f, i)
 

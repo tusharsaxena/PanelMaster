@@ -128,7 +128,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
 - Canvas.BuildSpec: shown requires BOTH the master switch and the panel's own
 - Canvas.BuildSpec: a missing settings table means shown
-- Canvas.BuildSpec: a zero border is honoured, not floored to 1
+- Canvas.BuildSpec: a zero border is honored, not floored to 1
 - Canvas.BuildSpec: normalizes colors to four clamped components
 - Canvas.BuildSpec: a non-table record is nil, not a crash
 - Canvas.Render: builds a frame and applies the spec's size
@@ -369,7 +369,7 @@ badge and any count quoted in the docs must agree with it.
 - Artwork TILE: scale sizes the tile, so a bigger scale means fewer copies
 - Artwork: only TILE asks the renderer to wrap
 - Artwork: all five fills behave as the panel is resized
-- Artwork: position is honoured by STATIC and FIT, which leave room to move
+- Artwork: position is honored by STATIC and FIT, which leave room to move
 - Artwork: STRETCH, FILL and TILE force center, since they already cover the panel
 - Artwork: a nonsense art anchor falls back to the template's own
 - Artwork: an unturned, unflipped quad is the identity texture coordinate
@@ -751,9 +751,10 @@ badge and any count quoted in the docs must agree with it.
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: the runner derives the addon's load list from the TOC
 
-### test_spelling.lua (2)
+### test_spelling.lua (3)
 
 - Spelling: the TOC and run.lua between them name every authored source
+- Spelling: the matcher catches the British verb and spares the US noun
 - Spelling: authored English is US English
 
 ### test_vendor_sync.lua (2)
@@ -783,6 +784,6 @@ badge and any count quoted in the docs must agree with it.
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 36 |
 | test_harness.lua | 5 |
-| test_spelling.lua | 2 |
+| test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **695** |
+| **Total** | **696** |

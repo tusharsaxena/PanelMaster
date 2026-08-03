@@ -604,7 +604,7 @@ function R.ApplyArtSize(rec)
 
   -- Rounded to whole pixels: a fractional frame size renders on a half-pixel boundary and blurs the
   -- border, and the stored value is what every later comparison reads. Both the overlap crop
-  -- (256 x 0.70703 = 181.0) and any non-integer scale get here, so this is well travelled.
+  -- (256 x 0.70703 = 181.0) and any non-integer scale get here, so this is well traveled.
   local width = math.floor(w + 0.5)
   local height = math.floor(h + 0.5)
   if width == rec.width and height == rec.height then return false end
