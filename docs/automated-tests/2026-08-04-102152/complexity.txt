@@ -1,54 +1,3 @@
-# Complexity report
-
-<!-- GENERATED — do not hand-edit. Regenerate per performance-§10. -->
-
-- **Generated:** 2026-08-04
-- **Tool:** lizard 1.23.0
-- **Command:** `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .`
-- **Standard:** v2.18.0
-
-**This is the first report for this addon, so there is no previous one to diff against.** Every
-entry below is a baseline reading, not a regression: nothing here "newly crossed" anything, because
-nothing was measured before. The next release's report is the first one whose watch list can carry
-the *newly crossed* / *newly entered* judgements `performance-§10` asks for. It closes deviation
-`PM-011` in [`audits/2026-08-04/02_DEVIATIONS.md`](audits/2026-08-04/02_DEVIATIONS.md).
-
-Totals: **10651 NLOC** across **1291 functions** in **47 files**, average CCN **2.0**, **9**
-warnings. The vendored trees (`libs/`, `tests/_kit/`) are excluded — they are not this addon's
-surface — and the addon's own `tests/` are measured, which is why test files appear below.
-
-## Watch list
-
-### Functions `lizard` warned on (CCN > 15)
-
-No function trips the length (> 1000) or parameter (> 100) thresholds; all nine warnings are
-cyclomatic complexity.
-
-| CCN | Function | Disposition |
-|-----|----------|-------------|
-| 51 | `Artwork.BuildArtSpec` — `modules/Artwork.lua:832-1046` | **Peel next.** The single worst number in the repo and the one place a threshold is doing real work. It is pure and very well covered (`tests/test_artwork.lua`, the largest suite here), so the risk is comprehension rather than correctness — but the fill-mode chain (`STRETCH`, `FIT`, `STATIC`, `FILL`, and tiling) branches inside one body from `:878` and then shares a position/crop/flip/rotate post-pass from `:936`. One helper per fill mode over a common post-pass is the obvious split and does not change the signature. Not done in this change, which is documentation only. |
-| 40 | `R.Sanitize` — `modules/Registry.lua:83-208` | **Accepted, with a caveat.** It is one flat field-by-field repair loop over `C.PANEL_TEMPLATE`; the CCN is the field count, not nesting, and flattening it further would mean a table-driven validator that buys nothing a reader cannot already follow line by line. The caveat is that a per-field function is exactly the shape that lets a field be *forgotten* — which is finding `F-002` in [`reviews/2026-08-03/01_FINDINGS.md`](reviews/2026-08-03/01_FINDINGS.md) (`artDesaturate` and `artBlend` are skipped). Already tracked as **`F-002`**; fix the miss there before considering any restructure here. |
-| 33 | `(anonymous)` — `tests/wow_mock.lua:125-200` | **Accepted.** The mock frame's `__index`, an if-chain of method names. Every branch is one line returning one closure, and the chain is deliberately explicit — `docs/testing.md` ▸ *Mock fidelity that is load-bearing* explains why each recorded property exists. A dispatch table would lower the number and make the file harder to read, which is the wrong trade for test scaffolding. |
-| 29 | `R:Set` — `modules/Registry.lua:652-762` | **Accepted.** The single write seam every panel edit routes through (settings widget, CLI, drag-stop), so its branching *is* the per-field-type validation the design deliberately centralizes. Splitting it would put validation back at the three call sites, which is the state it was written to replace. Revisit only if a fifth caller appears. |
-| 24 | `Canvas.BuildSpec` — `modules/Canvas.lua:47-126` | **Accepted for now, watch it.** Pure record + settings → render spec, unit-tested headlessly, and the branching is the accumulation of independent optional features (mouseover, class color, border, artwork). It is where every new panel feature lands, so it grows a little each release; if it passes 30 it should be peeled by feature group rather than by line count. |
-| 22 | `S.Themes` — `modules/SunnArt.lua:303-363` | **Accepted.** Merges four theme sources in a fixed precedence with two different merge orders that reproduce SunnArt's own (see `ARTWORK-09` in [`pending/LEDGER.md`](pending/LEDGER.md)). The branching is the compatibility contract; simplifying it is how the inverted merge order got introduced the first time. Pinned by `tests/test_sunnart.lua`. |
-| 21 | `D:Diagnose` — `core/DebugLogSetup.lua:33-76` | **Accepted.** A diagnostic report builder: one branch per line it can emit, resolved at call time so the file can live in `core/`. It runs when a human types `/pm debug diagnose`, never on a hot path, and every branch is a printed line. |
-| 17 | `Sl:CliPanel` — `settings/Slash.lua:113-177` | **Accepted, but adjacent to open work.** Argument-shape dispatch for `/pm panel` — inherently a decision tree over how many words the player typed. Two open items already touch this function's neighborhood: `PM-007` (the degradation stub omits `Sl.FormatKV`, which these verbs call) and `F-005` (a documented `panel set …` grammar that does not exist). Neither is a complexity fix; do them first and re-read the number afterwards. |
-| 17 | `release` — `modules/Canvas.lua:585-624` | **Accepted.** The frame-pool teardown: one reset per property the renderer can set, and the count tracks the property list rather than any control flow. A property missed here is a leak into the next panel that reuses the frame, so the explicit list is the point. |
-
-### Files in the 1000–1500 LOC on-notice band (`layout-§1`)
-
-Raw line counts, not NLOC. Nothing is over the 1500 hard cap.
-
-| LOC | File | Disposition |
-|-----|------|-------------|
-| 1356 | `tests/test_artwork.lua` | **Accepted.** A test file, and the largest suite here (155 cases) because it covers the largest and most branch-heavy module. Test files are measured deliberately by `performance-§10`, but length in a flat list of independent cases carries none of the change-risk that length in a module does. It should be split only when `modules/Artwork.lua` is, and along the same seams. |
-| 1087 | `modules/Artwork.lua` | **Peel next**, together with `BuildArtSpec` above — same file, same seam. Already named in the on-notice band by `docs/audits/2026-08-04/01_CURRENT_STATE.md:56` and by `PM-011`. |
-| 1064 | `settings/PanelEditor.lua` | **Accepted.** Long but shallow — 59 functions, average CCN 2.4, and not one of them trips a threshold. It is a wide AceGUI widget-construction surface, so LOC grows with the number of editable fields and nothing else; the length is inventory, not tangle. Worth a second look only if it approaches 1500 or if a function in it starts warning. |
-
-## Raw output
-
-```text
 ================================================
   NLOC    CCN   token  PARAM  length  location  
 ------------------------------------------------
@@ -1413,4 +1362,3 @@ NLOC    Avg.NLOC  AvgCCN  Avg.token  function_cnt    file
 Total nloc   Avg.NLOC  AvgCCN  Avg.token   Fun Cnt  Warning cnt   Fun Rt   nloc Rt
 ------------------------------------------------------------------------------------------
      10651       7.2     2.0       57.0     1291            9      0.01    0.05
-```

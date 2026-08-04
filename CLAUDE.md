@@ -29,7 +29,7 @@ Start here, then read the docs:
 - **`docs/testing.md`** — how to verify: the headless harness, lint, and the green commit gate.
 - **`DEPENDENCIES.md`** (root) — what to install to build, run, test or release this addon, split
   runtime / development / release-and-assets, with WSL2-Ubuntu commands.
-- Topic detail in `docs/` as needed (`smoke-tests.md`, `test-cases.md`, `complexity.md`, …).
+- Topic detail in `docs/` as needed (`smoke-tests.md`, `test-cases.md`, `automated-tests/`, …).
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
 — into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Four of the five majors are adopted
@@ -44,7 +44,7 @@ Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus
 never bump the version without an explicit instruction.
 
 At **release** — the same change that bumps the version and rolls the README forward, before the tag
-— also regenerate `docs/complexity.md` with `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` from
+— also produce a full automated-test bundle with `tests/_kit/run-automated-tests.sh` from
 the repo root, read its diff, and refresh its watch list. This is a **release** step and **not** a
 commit gate: nothing about it may ever block a commit (`performance-§10`; `docs/testing.md` ▸ *The
 complexity report*).

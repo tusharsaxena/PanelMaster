@@ -102,40 +102,42 @@ The generator also warns, on stderr, when a pack's declared section count disagr
 on disk, or when one theme's sections differ in size. Both are worth reading rather than ignoring —
 they mean the pack changed shape — and neither is fatal: it trusts the files.
 
-## The complexity report — a RELEASE step, not a commit gate
+## Automated test records — the consolidated run
 
-[`complexity.md`](complexity.md) is another generated file, and the only one whose checkpoint is a
-**release** rather than a commit. Regenerate it and **read its diff** in the same change that bumps
-the version and rolls the README's `## What's new` and `## Version History` forward, **before** the
-tag:
+All four out-of-game suites go through one vendored runner, and every run is recorded
+(`automated-tests`):
 
 ```sh
-lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .
+tests/_kit/run-automated-tests.sh                            # all four, writes a bundle
+tests/_kit/run-automated-tests.sh --suite complexity          # a subset
+tests/_kit/run-automated-tests.sh --suite lint --suite tests --no-bundle   # the green gate; writes nothing
 ```
 
-Run it from the repo root, exactly as written — no extra flags, no re-tuned thresholds, no narrowed
-path. Two reports produced by different invocations cannot be diffed against each other, and the
-diff is the entire point: one report is a page of numbers, while the same function going from CCN 9
-to CCN 24 since the last tag is a finding with a name on it.
+| Suite | Command | Gates? |
+|---|---|---|
+| `lint` | `luacheck .` | **yes** |
+| `tests` | `lua tests/run.lua` | **yes** |
+| `perf` | `lua tests/perf.lua` | no — recorded only |
+| `complexity` | `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` | no — recorded only |
 
-**This is explicitly NOT part of the green gate**, and it must not become one. Cyclomatic complexity
-is a hint, not a verdict; a build that fails on a threshold teaches people to reach for
-`--no-verify`, after which the gate protects nothing and the habit stays. Nothing here blocks a
-commit.
+**`perf` and `complexity` never fail a run.** They are measured, recorded and diffed — a threshold
+that fails a run teaches everyone to reach for `--no-verify`, after which the gate protects nothing
+and the habit remains. They contribute `amber`, which is a signal rather than a stop. **A missing
+tool is a skip recorded with its reason**, never a pass.
 
-When you regenerate it, update the `## Watch list` above the raw output — every function `lizard`
-warns on and every file in the 1000–1500 LOC on-notice band, each with a one-line disposition — and
-call out anything that **newly** crossed a threshold or entered the band. Degradation that is
-noticed and accepted is a decision; degradation that gets regenerated over in silence is the report
-failing at its only job. The file is **generated — never hand-edit its numbers**; a hand-edited
-complexity report is worse than a missing one, because it reads as measured.
+The runner is **vendored** from `LibKa0s`'s `testkit/`; never edit `tests/_kit/`. A kit fix goes
+upstream and is re-vendored.
 
-`lizard` is an optional local tool (see [`../DEPENDENCIES.md`](../DEPENDENCIES.md)). Without it
-installed the report is **stale, not non-compliant** — leave the committed one alone with its
-original header, which dates itself, and say so in the release notes.
+**At release, not at commit.** A full bundle is produced as part of every version bump, before the
+tag, with an `ANALYSIS.md` write-up. Commits are gated on lint + tests only.
 
-The full rule, including the reasoning, is `performance-§10` in the Ka0s WoW Addon Standard. It is
-not restated here.
+Results live in [`automated-tests/`](./automated-tests/): `RESULTS.md` is one row per run across all
+four suites plus the current complexity watch list — **one file, overwritten in place**, so its git
+history is the trend line — and each `<YYYY-MM-DD-HHMMSS>/` is a frozen bundle of that run's raw
+output. Bundles are never edited and never pruned.
+
+`docs/complexity.md` was this addon's standalone complexity report through standard v2.18.0; it is
+**retired** — its raw output is each bundle's `complexity.txt` and its trend line is `RESULTS.md`.
 
 ## Local toolchain
 

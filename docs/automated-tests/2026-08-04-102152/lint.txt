@@ -1,0 +1,27 @@
+Checking core/Compat.lua                          [0m[32m[1mOK[0m
+Checking core/Constants.lua                       [0m[32m[1mOK[0m
+Checking core/CoreSetup.lua                       [0m[32m[1mOK[0m
+Checking core/Database.lua                        [0m[32m[1mOK[0m
+Checking core/DebugLogSetup.lua                   [0m[32m[1mOK[0m
+Checking core/LSMPatch.lua                        [0m[32m[1mOK[0m
+Checking core/Namespace.lua                       [0m[32m[1mOK[0m
+Checking core/PanelMaster.lua                     [0m[32m[1mOK[0m
+Checking core/State.lua                           [0m[32m[1mOK[0m
+Checking core/Util.lua                            [0m[32m[1mOK[0m
+Checking defaults/Global.lua                      [0m[32m[1mOK[0m
+Checking defaults/Profile.lua                     [0m[32m[1mOK[0m
+Checking locales/PostLoad.lua                     [0m[32m[1mOK[0m
+Checking locales/enUS.lua                         [0m[32m[1mOK[0m
+Checking modules/Artwork.lua                      [0m[32m[1mOK[0m
+Checking modules/Canvas.lua                       [0m[32m[1mOK[0m
+Checking modules/Registry.lua                     [0m[32m[1mOK[0m
+Checking modules/SunnArt.lua                      [0m[32m[1mOK[0m
+Checking modules/SunnArtPacks.lua                 [0m[32m[1mOK[0m
+Checking modules/Unlock.lua                       [0m[32m[1mOK[0m
+Checking settings/OptionsSetup.lua                [0m[32m[1mOK[0m
+Checking settings/Panel.lua                       [0m[32m[1mOK[0m
+Checking settings/PanelEditor.lua                 [0m[32m[1mOK[0m
+Checking settings/Schema.lua                      [0m[32m[1mOK[0m
+Checking settings/Slash.lua                       [0m[32m[1mOK[0m
+
+Total: [0m[0m[1m0[0m warnings / [0m[0m[1m0[0m errors in 25 files
