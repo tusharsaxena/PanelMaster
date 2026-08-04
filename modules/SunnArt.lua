@@ -295,22 +295,28 @@ local function sectionSize(file)
   return S.SECTION_W, S.SECTION_H
 end
 
--- Every theme installed, as {file, name, sections, overlap, folder}, in a fixed order.
---
--- Sorted by (folder, name, file) for the same reason the catalog sorts by (category, label, id):
--- these come out of hash tables, whose iteration order is an accident that can differ between
--- sessions, and a dropdown that reshuffles itself between logins looks broken.
-function S.Themes()
-  local panels, overlaps = meta()
-  local folders = addonFolders()
-  local seen, list = {}, {}
+-- A stored section count -> a usable one. Written once because BOTH collection passes below need
+-- it, and it used to be written out twice in two different spellings — the same result reached two
+-- ways is two things to keep in step.
+local function clampSections(value)
+  local n = math.floor(tonumber(value) or DEFAULT_SECTIONS)
+  if n < 1 then return 1 elseif n > MAX_SECTIONS then return MAX_SECTIONS end
+  return n
+end
+
+-- Is this (file, name) pair a theme that can be offered at all? A registration is a raw table from
+-- another addon, so every part of it is checked: a usable key, not one of SunnArt's own reserved
+-- rows, a usable label, and a folder actually on disk.
+local function isRegisterable(file, name, folders)
+  return type(file) == "string" and file ~= "" and not RESERVED[file] and type(name) == "string"
+    and folderInstalled(folders, file)
+end
+
+-- Pass one: every theme anything registered live, merged across the sources.
+local function collectRegistered(seen, list, folders, panels, overlaps)
   for _, names in ipairs(sources()) do
     for file, name in pairs(names) do
-      if type(file) == "string" and file ~= "" and not RESERVED[file] and type(name) == "string"
-        and folderInstalled(folders, file) then
-        local sections = tonumber(panels[file]) or DEFAULT_SECTIONS
-        sections = math.floor(sections)
-        if sections < 1 then sections = 1 elseif sections > MAX_SECTIONS then sections = MAX_SECTIONS end
+      if isRegisterable(file, name, folders) then
         -- Later sources win, matching SunnArt's own NAME merge order, so a player's in-game
         -- override of a pack theme is what they see here too. Sections and overlap do not vary by
         -- source at all — they come from their own merge, for the reasons at `meta`.
@@ -320,7 +326,7 @@ function S.Themes()
           seen[file] = {
             file     = file,
             name     = name,
-            sections = sections,
+            sections = clampSections(panels[file]),
             overlap  = overlapFraction(overlaps[file]),
             folder   = folderOf(file),
           }
@@ -329,36 +335,50 @@ function S.Themes()
       end
     end
   end
+end
 
-  -- The known-pack fallback, added only for themes nothing registered. `seen` is the whole test:
-  -- a theme that registered is already in it, so live registration wins by construction rather
-  -- than by an ordering rule that could be got backwards.
+-- Pass two: the known-pack fallback, added only for themes nothing registered. `seen` is the whole
+-- test: a theme that registered is already in it, so live registration wins by construction rather
+-- than by an ordering rule that could be got backwards.
+local function collectKnownPacks(seen, list, folders)
   local manifest = NS.SunnArtPacks
-  if type(manifest) == "table" then
-    for file, row in pairs(manifest) do
-      if not seen[file] and type(row) == "table" and folderInstalled(folders, file) then
-        local sections = math.floor(tonumber(row.sections) or DEFAULT_SECTIONS)
-        if sections < 1 then sections = 1 elseif sections > MAX_SECTIONS then sections = MAX_SECTIONS end
-        seen[file] = {
-          file     = file,
-          name     = type(row.name) == "string" and row.name or file,
-          sections = sections,
-          overlap  = overlapFraction(row.overlap),
-          folder   = folderOf(file),
-          -- Marked so a reader of a theme — and the suite — can tell a live discovery from a
-          -- remembered one. Nothing downstream branches on it; the two shapes are identical.
-          known    = true,
-        }
-        list[#list + 1] = seen[file]
-      end
+  if type(manifest) ~= "table" then return end
+  for file, row in pairs(manifest) do
+    if not seen[file] and type(row) == "table" and folderInstalled(folders, file) then
+      seen[file] = {
+        file     = file,
+        name     = type(row.name) == "string" and row.name or file,
+        sections = clampSections(row.sections),
+        overlap  = overlapFraction(row.overlap),
+        folder   = folderOf(file),
+        -- Marked so a reader of a theme — and the suite — can tell a live discovery from a
+        -- remembered one. Nothing downstream branches on it; the two shapes are identical.
+        known    = true,
+      }
+      list[#list + 1] = seen[file]
     end
   end
+end
 
-  table.sort(list, function(a, b)
-    if a.folder ~= b.folder then return a.folder < b.folder end
-    if a.name ~= b.name then return a.name < b.name end
-    return a.file < b.file
-  end)
+-- Hoisted out of S.Themes so it is created once at load rather than on every enumeration.
+local function byFolderNameFile(a, b)
+  if a.folder ~= b.folder then return a.folder < b.folder end
+  if a.name ~= b.name then return a.name < b.name end
+  return a.file < b.file
+end
+
+-- Every theme installed, as {file, name, sections, overlap, folder}, in a fixed order.
+--
+-- Sorted by (folder, name, file) for the same reason the catalog sorts by (category, label, id):
+-- these come out of hash tables, whose iteration order is an accident that can differ between
+-- sessions, and a dropdown that reshuffles itself between logins looks broken.
+function S.Themes()
+  local panels, overlaps = meta()
+  local folders = addonFolders()
+  local seen, list = {}, {}
+  collectRegistered(seen, list, folders, panels, overlaps)
+  collectKnownPacks(seen, list, folders)
+  table.sort(list, byFolderNameFile)
   return list
 end
 

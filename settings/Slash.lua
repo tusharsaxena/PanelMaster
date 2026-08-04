@@ -103,6 +103,38 @@ function Sl:BuildPanelShowLines(rec)
   return lines
 end
 
+-- The confirm-gated wipe. The StaticPopup fallback is what lets the headless suite drive DeleteAll
+-- without a popup, so the test is on the function's presence rather than a nil check on some other
+-- global that happens to be absent too.
+local function doDeleteAll()
+  if type(StaticPopup_Show) == "function" then
+    StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
+  else
+    local n = NS.Registry:DeleteAll()
+    print(("deleted %d %s."):format(n, n == 1 and "panel" or "panels"))
+  end
+end
+
+-- The CLI half of the editor's Fit to artwork button.
+local function doFitArt(rec)
+  local ok, w, h = NS.Registry:FitToArtwork(rec.id)
+  if ok then
+    -- Both axes echoed, and read back off the record, so the line reflects the MIN/MAX clamp
+    -- rather than what the artwork asked for.
+    print(Sl.FormatKV("width", tostring(w)))
+    print(Sl.FormatKV("height", tostring(h)))
+  else
+    print(w)   -- on failure the second return is the reason
+  end
+end
+
+-- `<field> <value>` from the tail, or just `<field>`, or neither.
+local function parseFieldValue(tail)
+  local field, value = tail:match("^(%S+)%s+(.+)$")
+  if not field then field = tail:match("^(%S+)$") end
+  return field, value
+end
+
 -- `/pm panel <name>`              → dump every field
 -- `/pm panel <name> <field>`      → one field
 -- `/pm panel <name> <field> <v>`  → set it
@@ -123,20 +155,11 @@ function Sl:CliPanel(arg)
   -- permanently shadowed by the wipe — and the wipe stays reachable the moment that panel is gone.
   local rec = NS.Registry:Resolve(key)
 
-  if not rec and key:lower() == "deleteall" then
-    if type(StaticPopup_Show) == "function" then
-      StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
-    else
-      local n = NS.Registry:DeleteAll()
-      print(("deleted %d %s."):format(n, n == 1 and "panel" or "panels"))
-    end
-    return
-  end
+  if not rec and key:lower() == "deleteall" then return doDeleteAll() end
 
   if not rec then print(("no panel called '%s'"):format(key)); return end
 
-  local field, value = tail:match("^(%S+)%s+(.+)$")
-  if not field then field = tail:match("^(%S+)$") end
+  local field, value = parseFieldValue(tail)
 
   if not field then
     for _, line in ipairs(Sl:BuildPanelShowLines(rec)) do print(line) end
@@ -148,18 +171,7 @@ function Sl:CliPanel(arg)
   -- the panel lookup: a verb and a name occupying one slot need a stated precedence. There is no
   -- ambiguity to lose here — no field is called `fitart` and none can be, because the field names
   -- are the record's own keys.
-  if field:lower() == "fitart" then
-    local ok, w, h = NS.Registry:FitToArtwork(rec.id)
-    if ok then
-      -- Both axes echoed, and read back off the record, so the line reflects the MIN/MAX clamp
-      -- rather than what the artwork asked for.
-      print(Sl.FormatKV("width", tostring(w)))
-      print(Sl.FormatKV("height", tostring(h)))
-    else
-      print(w)   -- on failure the second return is the reason
-    end
-    return
-  end
+  if field:lower() == "fitart" then return doFitArt(rec) end
 
   if not C.PANEL_FIELD_TYPE[field] then
     print(("unknown field '%s'. Try: %s"):format(field, table.concat(C.PANEL_FIELD_ORDER, ", ")))
