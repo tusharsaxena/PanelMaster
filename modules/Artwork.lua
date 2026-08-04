@@ -1029,12 +1029,31 @@ end
 -- crop the fill already chose is what makes a FILL that pushes the left section off the panel
 -- simply not draw it, rather than needing a rule about it.
 --
--- Arguments are passed POSITIONALLY, long list and all. An earlier draft of this split took one
--- ctx table assembled at the call site; that added a hash table to every composed BuildArtSpec
--- call (measured at +616 bytes/call, +10.8% on the composite path) and bought nothing but a
--- shorter signature. A render-path allocation is not worth paying for a tidier parameter list.
-local function buildSectionQuads(sections, n, u0, u1, fv0, fv1, width, height,
-                                 point, x, y, flipH, flipV, rotation, tile)
+-- `bar` carries the whole-bar state every section is cut from: the crop window (u0/u1) and its file
+-- coordinates (fv0/fv1), the rect the bar occupies (width/height/point/x/y), the transform
+-- (flipH/flipV/rotation) and the wrap mode (tile). One table, built once per composed spec.
+--
+-- An earlier draft of this split passed all thirteen POSITIONALLY to avoid that table, on the
+-- measurement that it costs +616 bytes/call and +10.8% on the composite path. The measurement is
+-- real; the conclusion did not hold, because this is not a per-frame path. BuildArtSpec is reached
+-- only through Canvas.BuildSpec <- Canvas:Render(id), which runs on a config change, a panel drag,
+-- a profile switch or load — user-action frequency. (The module's one OnUpdate is the 10Hz
+-- mouseover driver, and it only calls SetAlpha on a cached spec; it never reaches Render.) So the
+-- allocation lands a few dozen times when someone moves a panel, not sixty times a second.
+--
+-- What the positional form cost is legibility at the boundary: `u0, u1, fv0, fv1` are four adjacent
+-- numbers, `x, y` two more, and `flipH, flipV` two adjacent booleans, at a single call site with
+-- nothing alongside it to cross-check the order against. Named fields make a transposition a nil
+-- rather than a plausible wrong number.
+--
+-- Not that such a slip would ship: the composite suite is load-bearing here, and was checked to be.
+-- Swapping `flipH`/`flipV` in this very destructuring fails one case, and swapping `fv0`/`fv1` fails
+-- three. So this is a readability change with the tests already standing behind it, not a fix for a
+-- silent failure — the argument for it is the allocation reasoning above, which did not hold.
+local function buildSectionQuads(sections, n, bar)
+  local u0, u1, fv0, fv1 = bar.u0, bar.u1, bar.fv0, bar.fv1
+  local width, height, point, x, y = bar.width, bar.height, bar.point, bar.x, bar.y
+  local flipH, flipV, rotation, tile = bar.flipH, bar.flipV, bar.rotation, bar.tile
   local quads = {}
   local span = u1 - u0
   -- One pass for every fill: the non-tiling ones keep u within [0, 1], so the loop runs a single
@@ -1130,8 +1149,11 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   local quads
 
   if n >= 2 and u1 > u0 then
-    quads = buildSectionQuads(sections, n, u0, u1, fv0, fv1, width, height,
-      point, x, y, flipH, flipV, rotation, tile)
+    quads = buildSectionQuads(sections, n, {
+      u0 = u0, u1 = u1, fv0 = fv0, fv1 = fv1,
+      width = width, height = height, point = point, x = x, y = y,
+      flipH = flipH, flipV = flipV, rotation = rotation, tile = tile,
+    })
   end
 
   -- Every spec carries quads, and a single texture is a one-element list — so the renderer has ONE
