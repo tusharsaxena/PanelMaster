@@ -220,7 +220,7 @@ indistinguishable from having picked **None** — so every check below it is mea
 one passes.
 
 1. Create a panel, size it around 300x300, and open its **Artwork** section.
-2. Set **Artwork** to `General: Runic Sigil (B&W)`. **Expect:** the sigil appears inside the panel.
+2. Set **Artwork** to `Class: Death Knight`. **Expect:** the emblem appears inside the panel.
 3. Step through every other catalog entry. **Expect:** each one draws. If any renders blank, that
    file is bad — the headless suite only proves the file *exists*, never that the client can decode
    it.
@@ -255,17 +255,23 @@ panel: three of the five fills only differ once the panel stops matching the art
    around. **Expect:** the art is cut off exactly at the panel's edges and never spills outside them.
    Confirm the **accent bar still hangs outside** the panel — it is deliberately unclipped, and
    clipping it would be a regression.
-6. **Expect:** there is no blend-mode control. Artwork always draws with normal transparency —
-   two of WoW's five modes cannot be correct for art defined by its alpha channel, so the setting
-   was removed rather than shipped with two traps in it.
+6. **Blend mode → Glow.** **Expect:** the art brightens whatever is behind it and never darkens
+   anything — strongest over a dark panel, barely visible over a pale one. Set it back to **Normal**
+   and the art paints over the panel obeying its own transparency. Only those two modes are offered:
+   the other three of WoW's five cannot be correct for art defined by its alpha channel.
 
-## 5e-4. Artwork — color and the tintable split
+## 5e-4. Artwork — color, class color and Desaturate
 
-1. On a **(B&W)** piece: change **Color**. **Expect:** the art takes the color. Tick **Class color**
-   → it takes your class color. Drop **Opacity** → it fades independently of the panel's own
-   background alpha.
-2. On the **(Color)** piece: **Expect:** the Color and Class color controls are **hidden** — it is
-   finished art, and tinting could only muddy it. Its **Opacity** still works.
+1. On any piece: change **Color**. **Expect:** the art takes the color. Tick **Class color** → it
+   takes your class color. Drop **Opacity** → it fades independently of the panel's own background
+   alpha.
+2. **Expect:** the Color and Class color controls are present for **every** piece, and do not appear
+   and disappear as you page through the artwork dropdown. They used to be hidden for full-color
+   art, which shoved every row below them up and down.
+3. On a full-color piece with a strong tint set, tick **Desaturate**. **Expect:** the muddy
+   average turns into a clean, saturated version of the color you picked. Untick it and the mud
+   comes back. On a white-on-black piece Desaturate should make no visible difference — it is
+   already neutral.
 
 ## 5e-5. Artwork — the two z-order regressions
 
@@ -613,10 +619,10 @@ at least SunnArt and one art pack; the rest of the addon must behave identically
 is step 1.
 
 1. With **no Sunn folder installed at all**, `/pm config` → **Panels** → **Artwork**. **Expect:** no
-   `Sunn ▸` entries anywhere in the dropdown. The feature is silent on a machine that does not have
+   `Sunn ->` entries anywhere in the dropdown. The feature is silent on a machine that does not have
    it. (Installed-but-disabled is a different case — step 16.)
 2. Enable SunnArt and at least one pack, `/reload`, and reopen the dropdown. **Expect:** entries
-   grouped under `Sunn ▸ Art Pack 2` (or `Sunn ▸ Built in`), **one per theme**, each under the
+   grouped under `Sunn -> Art Pack 2` (or `Sunn -> Built in`), **one per theme**, each under the
    theme's own plain name. There must be no `(left)` / `(middle)` / `(right)` entries at all — the
    sections are not offered separately.
 3. Pick one and set **Fill** to **Stretch** and the panel to something wide — say 800 × 140.
@@ -658,16 +664,16 @@ is step 1.
 16. **The case the manifest exists for.** Disable **Sunn - Viewport Art** itself in the AddOn list,
     leaving the pack folders installed, and `/reload`. The packs are hard-dependent on it, so
     nothing registers and no Sunn global exists at all. **Expect:** the official packs' themes are
-    *still* listed under `Sunn ▸`, and still draw. This is the whole point of
+    *still* listed under `Sunn ->`, and still draw. This is the whole point of
     `modules/SunnArtPacks.lua`; if the dropdown is empty here, the folder roster or the manifest is
     not being read.
-17. Still with SunnArt disabled, pick **Sunn ▸ Art Pack 6: Fractal** (or Pack 9's **Wrath**) and
+17. Still with SunnArt disabled, pick **Sunn -> Art Pack 6: Fractal** (or Pack 9's **Wrath**) and
     press **Fit to artwork**. **Expect:** a panel 1536 × 512 — square sections, not 2:1 ones —
     those themes are authored at 512×512 and are the reason the manifest measures rather than
     assumes. Compare against any Pack 2 theme, which should still fit to 2:1.
 18. Re-enable SunnArt, `/reload`, and check a theme you have renamed in **SunnArt's own** options.
     **Expect:** your name, not the manifest's — live registration always wins.
-19. **Only what is installed is listed.** Count the `Sunn ▸` groups in the dropdown against the
+19. **Only what is installed is listed.** Count the `Sunn ->` groups in the dropdown against the
     `SunnArt*` folders you actually have in `Interface/AddOns`. **Expect:** they match exactly. Then
     delete (or rename) one pack folder, `/reload`, and reopen the dropdown. **Expect:** that pack's
     group is gone and the rest are untouched. If SunnArt still remembers the deleted pack in its own

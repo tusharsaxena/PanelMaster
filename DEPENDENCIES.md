@@ -56,7 +56,7 @@ sudo apt install -y pipx && pipx ensurepath && pipx install lizard
 | **luacheck** | any recent (verified with 1.2.0) | Half the green gate. Config at `.luacheckrc`; run per `docs/testing.md` ▸ *The green gate*. Pinning a version would be false precision — no rule in `.luacheckrc` depends on one. | `luacheck --version` |
 | **lizard** | any recent (verified with 1.23.0) | Generates [`docs/complexity.md`](docs/complexity.md) at release, per `performance-§10`. Optional day to day: without it the report is simply **stale**, which is a visible state, not a compliance failure. | `lizard --version` |
 | **git** | any recent | Beyond version control, one suite shells out to it: `tests/test_vendor_sync.lua:53` runs `git -C <sibling> …` to read the LibKa0s tag the vendored payload claims. Absent git, that case degrades rather than errors (`:52` guards on `io.popen`). | `git --version` |
-| **A POSIX shell with `ls`** | — | `tests/test_harness.lua:30` enumerates suites with `ls tests/test_*.lua`, and `tests/test_vendor_sync.lua:88` lists vendored folders the same way (Lua 5.1 has no directory API and this repo declines a LuaFileSystem dependency — see that file's comment at `:73-76`). Any WSL2/Ubuntu shell has this; it is listed because it is a real, invisible assumption. | `ls --version` |
+| **A POSIX shell with `ls`** | — | `tests/test_harness.lua:30` enumerates suites with `ls tests/test_*.lua`, and `tests/test_vendor_sync.lua:89` lists vendored folders the same way (Lua 5.1 has no directory API and this repo declines a LuaFileSystem dependency — see that file's comment at `:74-76`). Any WSL2/Ubuntu shell has this; it is listed because it is a real, invisible assumption. | `ls --version` |
 | **The sibling `../LibKa0s` checkout** | matching tag | Not a package — a **checked-out repo next to this one**, needed only to run the vendor gate's four `diff -r` commands (`docs/testing.md` ▸ *The vendor gate*) or to re-vendor. The addon builds, runs and tests without it; `tests/test_vendor_sync.lua` skips what it cannot reach. | `ls ../LibKa0s/LibKa0s` |
 
 **`pip install lizard` does not work on Ubuntu 24.04.** Its Python is marked
@@ -119,7 +119,7 @@ sudo apt install -y python3 python3-pil python3-numpy
 Two notes on Pillow specifically. `make_poster.py --check` compares the poster's **pixels**, not its
 bytes, so a differing Pillow or zlib does not by itself stale the poster (`ARTWORK-05`,
 `ARTWORK-06`). And it reports its own toolchain — Pillow, **FreeType** and **zlib** versions
-(`make_poster.py:386-388`) — into `media/poster/artwork-poster.txt`, so when the pixels *do* move you
+(`make_poster.py:387-389`) — into `media/poster/artwork-poster.txt`, so when the pixels *do* move you
 can see which component moved. FreeType and zlib arrive with Pillow; they are not separately
 installed.
 

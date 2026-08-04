@@ -42,13 +42,13 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
   out of the box, class-colored, with any status-bar texture you have installed.
 - **Panel artwork** — a picture drawn inside a panel's bounds, either one of the pieces bundled with
   the addon or a texture file of your own, with its own color, opacity, fill mode, position, scale,
-  quarter-turn rotation, flip and draw layer. **Fit to artwork** resizes the panel to the art's own
-  pixel size in one click. Nothing is drawn until you pick something, so panels you already have are
-  unchanged.
+  quarter-turn rotation, flip, desaturate, blend mode and draw layer. **Fit to artwork** resizes the
+  panel to the art's own pixel size in one click. Nothing is drawn until you pick something, so
+  panels you already have are unchanged.
 - Themes from **Sunn - Viewport Art** packs you already have installed show up in the artwork list
-  too, either as a whole bar or one section at a time — and they work whether or not Sunn itself is
-  switched on. Nothing is bundled: it reads what is on your disk. A panel can also take its shape
-  from whatever art it draws.
+  too, one entry per theme as the whole bar — and they work whether or not Sunn itself is switched
+  on. Nothing is bundled: it reads what is on your disk. A panel can also take its shape from
+  whatever art it draws.
 - Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
   label, a drag handle and optional snap-to-grid.
 - Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
@@ -112,7 +112,7 @@ The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `
 /pm panel ChatBG strata LOW
 /pm panel ChatBG accentEnabled on
 /pm panel ChatBG accentEdges top,left
-/pm panel ChatBG artTexture runic-sigil
+/pm panel ChatBG artTexture class-death-knight
 /pm panel ChatBG artFill FILL
 ```
 
@@ -260,7 +260,9 @@ What you can set per panel:
 |---|---|
 | Artwork | Which piece. **None**, one of the bundled pieces, or **Custom path…** for your own file. |
 | Custom path | The texture to draw when **Custom** is picked. Only read in that case, so switching to a bundled piece and back does not lose what you typed. |
-| Color / Class color | Tints the art. The bundled pieces are drawn in white so the tint is what gives them their color, and class color works on them like it does on everything else. Art that ships in full color is left alone by the tint. |
+| Color / Class color | Tints the art, whichever piece it is. The white-on-black pieces are drawn in white, so the tint is what gives them their color; full-color art wants **Desaturate** below first, or the tint only muddies it. Class color works here like it does everywhere else. |
+| Desaturate | Drains the art to grayscale *before* the tint applies, so tinting full-color art gives you a clean version of the color you picked instead of mud. Off by default, so nothing you already have changes. |
+| Blend mode | **Normal** paints over the panel obeying the image's transparency. **Glow** adds the art's light instead — it can only brighten, never darken, and reads as a lit emblem over a dark panel. |
 | Opacity | How solid the art is, on top of the panel's own opacity. |
 | Fill | **Native size** draws it at its authored pixel size; **Stretch** fills the panel exactly and ignores scale; **Fill (crop)** covers the panel and crops the overflow; **Fit (contain)** — the default — fits the whole image inside the panel; **Tile** repeats it across the panel. |
 | Position, X, Y | Where the art sits in the panel. Only **Native size** and **Fit** honor it — the other three cover the panel exactly, so there is nothing to move. |
@@ -273,7 +275,7 @@ What you can set per panel:
 
 If you have [Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) and any
 of its art packs installed, their themes appear in the artwork dropdown too, grouped under
-**Sunn ▸**. Nothing is bundled or copied — the addon reads what is already on your disk.
+**Sunn ->**. Nothing is bundled or copied — the addon reads what is already on your disk.
 
 **Only packs you actually have are listed.** A pack you uninstall stops being offered on the next
 login, even if Sunn's own saved settings still remember it — so nothing in the dropdown is an entry
