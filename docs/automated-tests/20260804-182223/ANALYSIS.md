@@ -52,12 +52,27 @@ the first one that can say something moved, and this record is what it will be r
 
 ## Complexity watch list
 
-| `Artwork.BuildArtSpec` | 51 | `modules/Artwork.lua` | **Peel next.** The worst number here; pure and very well covered, so the risk is comprehension. One helper per fill mode over a shared post-pass. |
-| `R.Sanitize` | 40 | `modules/Registry.lua` | **Accepted, with a caveat** — a per-field loop is exactly the shape that lets a field be forgotten, which is finding `F-002`. |
+### Functions `lizard` warned on
 
-Seven further entries accepted with reasons recorded 2026-08-04.
+| Function | CCN | Location | Disposition |
+|---|---|---|---|
+| `Artwork.BuildArtSpec` | 51 | `modules/Artwork.lua` | **Peel next.** The worst number here. Pure and very well covered, so the risk is comprehension: one helper per fill mode over the shared position/crop/flip post-pass. |
+| `R.Sanitize` | 40 | `modules/Registry.lua` | **Accepted, with a caveat.** A flat field-by-field repair loop; the caveat is that per-field is exactly the shape that lets a field be *forgotten* — which is finding **F-002**. |
+| `(anonymous)` mock `__index` | 33 | `tests/wow_mock.lua` | **Accepted.** One branch per method name, deliberately explicit; a dispatch table would lower the number and make the file harder to read. |
+| `R:Set` | 29 | `modules/Registry.lua` | **Accepted.** The single write seam every panel edit routes through, so its branching *is* the per-field validation the design centralises. |
+| `Canvas.BuildSpec` | 24 | `modules/Canvas.lua` | **Accepted for now, watch it.** Where every new panel feature lands; peel by feature group if it passes 30. |
+| `S.Themes` | 22 | `modules/SunnArt.lua` | **Accepted.** Merges four theme sources in a fixed precedence that reproduces SunnArt's own; simplifying it is how the inverted merge order was introduced once. |
+| `D:Diagnose` | 21 | `core/DebugLogSetup.lua` | **Accepted.** One branch per line it can emit, on a `/pm debug diagnose` path a human types. |
+| `Sl:CliPanel` | 17 | `settings/Slash.lua` | **Accepted, adjacent to open work.** `PM-007` and `F-005` both touch this function's neighbourhood; do those first and re-read the number. |
+| `release` | 17 | `modules/Canvas.lua` | **Accepted.** Frame-pool teardown: one reset per property the renderer can set. A property missed here leaks into the next panel. |
 
-**Files in the 1000–1500 band:** `tests/test_artwork.lua` (1356), `modules/Artwork.lua` (1087) — **peel next**, same seam; `settings/PanelEditor.lua` (1064) — accepted, long but shallow.
+### Files by `layout-§1` band
+
+| Band | File | LOC | Disposition |
+|---|---|---|---|
+| 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** The largest suite here (155 cases) because it covers the largest, most branch-heavy module. Split only when `modules/Artwork.lua` is, along the same seams. |
+| 1000–1500 (on notice) | `modules/Artwork.lua` | 1087 | **Peel next**, together with `Artwork.BuildArtSpec` — same file, same seam. Already named by `PM-011`. |
+| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1064 | **Accepted.** Long but shallow — 59 functions, avg CCN 2.4, none tripping a threshold. Length is inventory, not tangle. |
 
 ## Actions
 
