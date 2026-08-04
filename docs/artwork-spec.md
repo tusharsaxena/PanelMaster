@@ -348,3 +348,18 @@ precedent for a contribution.
 If you are making art **for your own use**, none of this applies. Convert whatever you like and
 point a panel at it with the editor's **Custom path** option, which takes any texture path without
 touching the catalog at all.
+
+---
+
+## Where the tooling lives, and why that is a deviation
+
+**This is an accepted, documented deviation from the [Ka0s WoW Addon
+Standard](https://github.com/tusharsaxena/WowAddonStandards).** The standard defines no location for
+build tooling, and `tools/artwork/` is the first non-Lua source in the tree. Accepted on 2026-07-31:
+keeping the conversion in the repo is what makes an asset re-derivable and its licensing auditable.
+`luacheck` is unaffected — it only walks Lua, and `.pkgmeta` ignores `tools` outright, so none of it
+reaches a player.
+
+This note lived in `README.md` until 2026-08-05, when the README was rewritten for players rather
+than contributors. The related asset decisions — the vendored upscaler, the bundled poster fonts and
+the ungated poster — are `ARTWORK-04`, `ARTWORK-06` and `ARTWORK-05` in `docs/pending/LEDGER.md`.

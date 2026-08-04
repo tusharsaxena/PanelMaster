@@ -5,9 +5,6 @@
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
 ![Tests](https://img.shields.io/badge/Tests-706%2F706_passing-green)
 
-<!-- The repo-relative path renders on GitHub today. At first publish this can be swapped for the
-     CurseForge CDN URL, which also renders on the project page. The .tga beside it is the asset the
-     addon actually loads in-game — WoW cannot read .png or .jpg at runtime. -->
 ![Logo](media/logos/panelmaster.logo.256.jpg)
 
 Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.7.0 (MIT).
@@ -61,9 +58,6 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
   its own — create, switch, copy and reset profiles.
 
 ## Screenshots
-
-<!-- Captured at first release and served from the CurseForge CDN, per .pkgmeta (media/screenshots is
-     not shipped to players). -->
 
 *Screenshots are added with the first published release.*
 
@@ -124,6 +118,9 @@ capitals), `None`, or `Custom`; the five `art*` dropdown fields refuse anything 
 their values and print the real list back at you.
 
 ### Anchoring other things to a panel
+
+*Only useful if you write your own UI code or edit a config that takes frame names — skip it
+otherwise.*
 
 Every panel has a fixed frame name built from the name you gave it when you created it:
 `PanelMaster_Panel_` followed by that name with anything that is not a letter or number turned into
@@ -243,15 +240,10 @@ so art that is offset or scaled up cannot spill out over the rest of your UI.
 Every panel starts with no artwork at all (`artTexture` is `None`), so nothing you already have
 changes until you choose something.
 
-Every piece that ships, in the order the artwork dropdown lists them — the poster groups them under
-their category headings, which the dropdown itself does not; it is a flat list that carries each
-category as a label prefix instead.
+Here is every piece that ships. The poster groups them under their category headings; the dropdown
+in-game is a flat list that carries each category as a label prefix instead, in this same order.
 
-<!-- Repo-relative like the logo above, and for the same reason: it renders on GitHub today and can
-     be swapped for the CurseForge CDN URL at first publish. It is GENERATED — regenerate it with
-     `python3 tools/artwork/make_poster.py` rather than editing it, since it is built from the same
-     scan that writes the catalog. It is a .png, so it does not ship to players; .pkgmeta excludes
-     media/poster the way it excludes the logo renders. -->
+<!-- GENERATED — regenerate with `python3 tools/artwork/make_poster.py`, never by hand. -->
 ![Bundled artwork](media/poster/artwork-poster.png)
 
 Where the bundled art comes from: every piece started life on
@@ -281,8 +273,13 @@ What you can set per panel:
 ### Sunn — Viewport Art packs
 
 If you have [Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) and any
-of its art packs installed, their themes appear in the artwork dropdown too, grouped under
-**Sunn ->**. Nothing is bundled or copied — the addon reads what is already on your disk.
+of its [official art packs](https://www.curseforge.com/members/sunn6/projects) installed, their
+themes appear in the artwork dropdown too, grouped under **Sunn ->**. Nothing is bundled or copied —
+the addon reads what is already on your disk.
+
+**The art packs only.** Panel Master borrows Sunn's *artwork*; it does not do anything with Sunn's
+viewport — the black bars that letterbox the game world. If enough people want viewport support, it
+can be added later as an enhancement; say so on the issue tracker.
 
 **Only packs you actually have are listed.** A pack you uninstall stops being offered on the next
 login, even if Sunn's own saved settings still remember it — so nothing in the dropdown is an entry
@@ -291,20 +288,13 @@ that would draw a blank panel.
 **You do not need Sunn itself switched on.** The art packs are ordinary texture folders, and Panel
 Master can draw them whether or not the addon that came with them is running — it knows what the
 twelve official packs contain, and offers a theme only when that pack's folder is really installed.
-So you can leave Sunn - Viewport Art disabled, or keep it if you use its viewport bars, and either
-way the art shows up here. Sunn shows as **Incompatible** in the AddOn list on current patches
-because it has not been updated since 2024; that only matters if you want to run Sunn itself, in
-which case tick **Load out of date AddOns**.
+So you can leave Sunn - Viewport Art disabled. Sadly the original addon has not been updated in a
+while and is incompatible with WoW 12.x.x — but its art packs work with Panel Master regardless.
 
-A Sunn theme is several files laid side by side into one wide bar, and it is offered as that bar —
-one entry per theme, under the theme's own name. The individual sections are not listed: the twelve
-official packs are 88 themes, and one entry per section would have made that 270, four fifths of
-them fragments of something listed three lines above. If you do want a single strip, point **Custom
-path** at it — they are numbered, so
-`Interface\AddOns\SunnArtPack2\blackrock2` is the middle of Blackrock.
-
-Every setting above works on a whole bar exactly as it works on a single piece — it is treated as
-one wide image and cut up only at the last moment. So **Fit** fits the entire bar, **Fill (crop)**
+A Sunn theme is several files laid side by side into one wide bar, and that whole bar is what you
+get: one dropdown entry per theme, under the theme's own name. Every setting above works on it
+exactly as it works on a single piece — it is treated as one wide image and cut up only at the last
+moment. So **Fit** fits the entire bar, **Fill (crop)**
 crops it and may leave only the middle section on screen, a 90° rotation stacks the sections
 vertically, and a horizontal flip reverses their order. **Fit to artwork** is worth pressing here: it
 gives you the bar at its authored size — 1536×256 for a typical three-section theme — which is the
@@ -321,89 +311,40 @@ Two things to know:
   strip. Tiling is also the one case where the transparent strip above is not trimmed, so a tiled
   bar shows its gaps.
 
-Your own file has to be something WoW can load at runtime — a `.tga` or `.blp` inside an addon
-folder, written the way the game addresses it, e.g.
-`Interface\AddOns\MyStuff\art\crest.tga`. The game cannot read `.png` or `.jpg` at all, and a
-texture path it cannot resolve draws nothing and raises no error.
+### Using your own artwork
 
-### Contributing artwork
+Any picture can become panel artwork, but it has to be in a format WoW can load: a `.tga` or `.blp`
+sitting inside an addon folder, addressed the way the game addresses it, e.g.
+`Interface\AddOns\MyStuff\art\crest.tga`. The game cannot read `.png` or `.jpg` at all, and a path
+it cannot resolve draws nothing and raises no error.
 
-Bundled art lives in `media/artwork/`, and the folder tree IS the catalog. Drop a converted `.tga`
-into a folder, run the generator, and the addon picks it up — there is no list to maintain and no
-code to touch.
+Converting one is the fiddly part, so the converter this addon's own art was made with is yours to
+use — you do not have to be a developer to run it. It takes any image and writes the TGA the client
+wants, upscaling a source that is too small, giving one transparency if it has none, and cleaning up
+the halo an upscaler otherwise smears along every edge:
 
 ```bash
-python3 tools/artwork/artwork_cleaner.py --batch ~/my-art media/artwork
-python3 tools/artwork/update_catalog.py
-python3 tools/artwork/make_poster.py
+python3 tools/artwork/artwork_cleaner.py --single ~/Pictures/crest.png
+python3 tools/artwork/artwork_cleaner.py --batch  ~/Pictures/art ~/my-wow-art
 ```
 
-The third line redraws the contact sheet above. Nothing in the addon reads it, so it is the one
-step you can forget without breaking anything — which is exactly why it is written here beside the
-two that matter, and why `make_poster.py --check` exists to catch it later.
+`--single` writes the `.tga` beside the image you pointed it at; `--batch` converts a whole tree
+into a folder of your choosing. It needs Python with [Pillow](https://python-pillow.org/) and numpy,
+and it lives in the [source repo](https://github.com/tusharsaxena/PanelMaster) rather than in the
+addon you downloaded — the packaged addon carries no build tools. Put the result in a folder under
+`Interface\AddOns\`, then point the editor's **Custom path** at it: that takes any texture path, so
+nothing else has to be set up.
 
-**Format.** 32-bit TGA with an alpha channel, power-of-two on both axes, square. WoW cannot load
-`.png` or `.jpg` at runtime and cannot wrap a non-power-of-two texture at all, which the **Tile**
-fill needs. The background must be genuinely transparent — alpha 0, not white and not black —
-because the panel's own fill, texture and opacity show through it.
+**What makes a good file.** 32-bit TGA with an alpha channel, square, and a power of two on both
+axes — WoW cannot wrap a non-power-of-two texture at all, which the **Tile** fill needs. The
+background wants to be genuinely transparent (alpha 0, not white and not black), because the panel's
+own fill, texture and opacity show through it.
 
-**Everything is derived from the path.** `media/artwork/faction/expansion/12-midnight/harati.tga`
-becomes the id `faction-expansion-12-midnight-harati`, the category
-`Faction -> Expansion -> 12 Midnight` and the label `Harati`. To rename a piece in the UI, rename
-the file; to regroup it, move it. Categories nest as deep as your folders do and sort
-alphabetically, which is why numeric prefixes like `12-midnight` are useful.
-
-`w` and `h` are **measured** from the file, not declared. There is no per-asset tint opt-out:
-every piece takes the per-panel **Artwork color**, whose default is white and therefore a no-op.
-Tinting full-color art directly only muddies it, which is what **Desaturate** is for — it drains
-the art to grayscale first, so the tint comes back clean.
-
-The `id` is what gets written into a player's saved variables. **Renaming or moving a shipped file
-silently breaks every panel using it** — those panels fall back to drawing no artwork on the next
-load, with no error and no warning. Get names right before art ships.
-
-**Licensing.** Contributed art has to be redistributable under a license compatible with this
-addon's MIT release — CC0, MIT and public domain are all fine. Anything under a non-commercial or
-no-derivatives license cannot ship, and neither can traced Blizzard art submitted as your own work.
-Attribution for the currently bundled set is below; the deviation it represents is recorded in
-`docs/pending/LEDGER.md`.
-
-If you only want art for **your own** use, none of that applies: convert whatever you like and point
-a panel at it with the editor's **Custom path** option, which takes any texture path and needs no
-catalog row.
-
-### The artwork pipeline
-
-Three scripts, all using [Pillow](https://python-pillow.org/) — `artwork_cleaner.py` also needs
-numpy, the other two do not — with a Real-ESRGAN upscaler vendored under `tools/artwork/bin/`:
-
-| | |
-|---|---|
-| `artwork_cleaner.py` | any image → the TGA the client loads. `--single` for one file, `--batch` for a tree |
-| `update_catalog.py` | reads `media/artwork/` and rewrites the catalog in `modules/Artwork.lua` |
-| `make_poster.py` | renders every bundled piece into the one contact sheet under `media/poster/` |
-
-The poster shares `update_catalog.py`'s scan rather than walking the tree again, so the picture and
-the catalog cannot disagree about what shipped, and it renders from fonts bundled under
-`tools/artwork/fonts/` — a missing font is a hard error rather than a system fallback, because the
-same tree has to produce the same picture on anybody's machine. `--check` compares the poster's
-pixels rather than its bytes, and a run that would change nothing visible rewrites nothing at all,
-so a different Pillow or zlib cannot churn two megabytes of binary into the history. It is stamped
-with the addon version from the TOC, which means **a version bump stales the poster** — regenerate
-after one.
-
-The cleaner upscales when a source is too small, derives transparency when a source has none,
-removes burned-in watermarks on request, and — most importantly — normalizes the color hiding under
-transparent pixels, which is what stops an upscaler smearing a halo along every edge.
-
-Full documentation, including how to pick good sources and how to read the per-file report, is in
+If you would like a piece added to the bundled set instead of keeping it to yourself, open an issue.
+Art has to be redistributable — CC0, MIT and public domain are all fine, non-commercial and
+no-derivatives licenses are not, and neither is traced Blizzard art submitted as your own. The full
+conversion guide, including how to pick good sources, is in
 [`docs/artwork-spec.md`](docs/artwork-spec.md).
-
-**This is an accepted, documented deviation from the [Ka0s WoW Addon
-Standard](https://github.com/tusharsaxena/WowAddonStandards).** The standard defines no location for
-build tooling, and this is the first non-Lua source in the tree. Accepted on 2026-07-31: keeping the
-conversion in the repo is what makes an asset re-derivable and its licensing auditable. `luacheck`
-is unaffected — it only walks Lua.
 
 ## FAQ
 
