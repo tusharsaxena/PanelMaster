@@ -13,8 +13,16 @@ which is never the same as a pass.
 | Run | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [`20260804-233329`](20260804-233329/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10941 | 1348 | 7.1 | 2.0 | 15 | 0 | **green** |
-| [`20260804-215132`](20260804-215132/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10936 | 1348 | 7.1 | 2.0 | 0 | 0 | **green** |
+| [`20260804-215132`](20260804-215132/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10936 | 1348 | 7.1 | 2.0 | 15 † | 0 | **green** |
 | [`20260804-182223`](20260804-182223/) | 0.1.0 | 0/0 | 25 | 696/696 | skip | 10651 | 1291 | 7.2 | 2.0 | 51 | 9 | **green** |
+
+† That row's `manifest.json` records `maxCcn: 0`, which is wrong, and the **15** above is read back
+from its own frozen [`complexity.txt`](20260804-215132/complexity.txt). The kit derived Max CCN from
+`lizard`'s warnings block, which is empty at zero warnings — so the field had no input rather than a
+value, and the trend read `51 -> 0 -> 15`, i.e. complexity vanishing and returning. The bundle is
+frozen and keeps its wrong number; the trend line is corrected here. The runner was fixed in
+`tests/_kit/` (vendored from LibKa0s) to measure the maximum over every function, which is why
+`20260804-233329` reports 15 for an unchanged tree.
 
 ## Test suite
 
@@ -30,7 +38,7 @@ This addon ships no `tests/perf.lua`, so the `perf` column is a permanent `skip`
 
 ## Complexity watch list
 
-Current state as of [`20260804-215132`](20260804-215132/) — not that run's diff.
+Current state as of [`20260804-233329`](20260804-233329/) — not that run's diff.
 Every function `lizard` warned on, and every file at or above `layout-§1`'s 1000-LOC
 on-notice threshold, each with a one-line disposition.
 
@@ -55,5 +63,5 @@ comes back from "None."
 | Band | File | LOC | Disposition |
 |---|---|---|---|
 | 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** The largest suite here (98 cases) because it covers the largest, most branch-heavy module. Split only when `modules/Artwork.lua` is, along the same seams. |
-| 1000–1500 (on notice) | `modules/Artwork.lua` | 1166 | **Accepted, and watch the direction.** Up 79 lines on the previous run: driving `BuildArtSpec` from 51 to 13 turned one long function into a file-scope fill-dispatch table plus eleven named helpers, and the signatures and their reasoning cost lines even though the logic did not change. That is the trade the branch chose, but the file is now 334 lines off the 1500 band and its growth is no longer offset by anything. Split along the catalog / geometry seam before the next feature lands in it. |
+| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** Up 101 lines across this branch (1087 at `20260804-182223`): driving `BuildArtSpec` from 51 to 13 turned one long function into a file-scope fill-dispatch table plus eleven named helpers, and the signatures and their reasoning cost lines even though the logic did not change. That is the trade the branch chose, but the file is now 312 lines off the 1500 band and its growth is no longer offset by anything. Split along the catalog / geometry seam before the next feature lands in it. |
 | 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1064 | **Accepted.** Long but shallow — 59 functions, avg CCN 2.4, none tripping a threshold. Length is inventory, not tangle. Untouched by this branch. |
