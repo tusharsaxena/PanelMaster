@@ -7,8 +7,6 @@
 
 ![Logo](media/logos/panelmaster.logo.256.jpg)
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.7.0 (MIT).
-
 Ka0s Panel Master draws plain backdrop panels behind your UI, so a screen full of separate frames
 reads as a few deliberate groups.
 
@@ -246,12 +244,10 @@ in-game is a flat list that carries each category as a label prefix instead, in 
 <!-- GENERATED — regenerate with `python3 tools/artwork/make_poster.py`, never by hand. -->
 ![Bundled artwork](media/poster/artwork-poster.png)
 
-Where the bundled art comes from: every piece started life on
-[warcraft.wiki.gg](https://warcraft.wiki.gg/) and was AI-upscaled to the sizes the client wants.
-The originals are published under the
-[Creative Commons Attribution-ShareAlike 4.0 License](https://creativecommons.org/licenses/by-sa/4.0/),
-and the upscales are shipped under that same license — so if you reuse them, credit the source and
-keep them under CC BY-SA 4.0.
+Every piece started life on [warcraft.wiki.gg](https://warcraft.wiki.gg/) and was AI-upscaled to the
+sizes the client wants. The originals are published under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) and the upscales ship under that
+same license, so if you reuse them, credit the source and keep them under CC BY-SA 4.0.
 
 What you can set per panel:
 
@@ -348,102 +344,54 @@ conversion guide, including how to pick good sources, is in
 
 ## FAQ
 
-**Does this move my frames around?**
-No. It never touches another addon's frames, or Blizzard's. It only draws its own rectangles behind
-them. If you want a frame moved, you still move it with whatever addon owns it — Panel Master just
-puts something nice behind it.
-
-**Can I put a frame *inside* a panel?**
-No, and that is deliberate. A panel is scenery, not a container. Nothing is ever parented into it.
-
-**Will a panel block my clicks?**
-Not when locked. A locked panel ignores the mouse completely, so clicks, tooltips and keybinds all
-pass straight through to whatever is on top of it. It only takes the mouse while you have the screen
-unlocked, which is the whole point of unlocking.
-
-**Do my panels follow me to my alts?**
-Yes, by default — every character starts on the same shared profile, so a layout you build once
-shows up everywhere. If you want one character to differ, give it its own profile on the **Profiles**
-page.
-
-**How many panels can I have?**
-As many as you like. They are cheap: a panel is a handful of flat textures and it costs nothing while
-it sits there.
-
-**There is a lot of artwork in here. Will it cost me frames?**
-No. The bundled art costs disk space and nothing else. WoW does not load a texture because it is
-sitting in the addon folder — it loads one when something on screen asks for it, so the only art in
-memory is the art your panels are actually drawing. A hundred unused pieces and none at all are the
-same to the client while you play.
-
-**Does it work without any other addons?**
-Yes. It is completely self-contained and does not need ElvUI or any suite. It works alongside them
-perfectly well, but it never depends on one.
+| Question | Answer |
+|----------|--------|
+| Does this move my frames around? | No. It never touches another addon's frames, or Blizzard's — it only draws its own rectangles behind them. If you want a frame moved, you still move it with whatever addon owns it; Panel Master just puts something nice behind it. |
+| Can I put a frame *inside* a panel? | No, and that is deliberate. A panel is scenery, not a container. Nothing is ever parented into it. |
+| Will a panel block my clicks? | Not when locked. A locked panel ignores the mouse completely, so clicks, tooltips and keybinds all pass straight through to whatever is on top of it. It only takes the mouse while you have the screen unlocked, which is the whole point of unlocking. |
+| Do my panels follow me to my alts? | Yes, by default — every character starts on the same shared profile, so a layout you build once shows up everywhere. If you want one character to differ, give it its own profile on the **Profiles** page. |
+| How many panels can I have? | As many as you like. They are cheap: a panel is a handful of flat textures and it costs nothing while it sits there. |
+| There is so much artwork bundled with this addon — will it affect my performance? | No. The bundled art costs disk space and nothing else. WoW does not load a texture because it is sitting in the addon folder; it loads one when something on screen asks for it, so the only art in memory is the art your panels are actually drawing. A hundred unused pieces and none at all are the same to the client while you play. |
+| Do I need Sunn - Viewport Art installed? | Only if you want its themes in the artwork list. Its packs are read straight off your disk if you have them, and Sunn itself does not even have to be enabled. Nothing is bundled or copied. |
+| Does it work without any other addons? | Yes. It is completely self-contained and does not need ElvUI or any suite. It works alongside them perfectly well, but it never depends on one. |
 
 ## Troubleshooting
 
-**I made a panel and cannot see it.**
-Three usual causes. It might be behind something opaque — try `/pm unlock`, which shows every panel
-with an outline and a name regardless. It might be switched off — check `/pm panels`, where a
-disabled panel is listed in gray. Or the master switch might be off — `/pm set settings.enabled
-true`.
+| Problem | Fix |
+|---------|-----|
+| I made a panel and cannot see it | Three usual causes. It might be behind something opaque — run `/pm unlock`, which outlines and names every panel regardless. It might be switched off — check `/pm panels`, where a disabled panel is listed in gray. Or the master switch is off — `/pm set settings.enabled true`. |
+| A panel has ended up off the edge of the screen | `/pm recover` brings every stray panel back into view. This never happens by itself, so a panel you deliberately parked half off-screen stays exactly where you put it. |
+| I unlocked panels but nothing became draggable | You were in combat, so the unlock was queued rather than applied — you will have seen a gray notice saying so. It happens by itself the moment you leave combat. |
+| `/pm config` says it cannot open during combat | Blizzard's restriction, not a bug: the settings window cannot be switched to while you are fighting. Run it again once you are out. |
+| I picked a texture and the panel went plain | That texture came from another addon which is no longer loaded. Panel Master keeps your choice and falls back to a flat fill until the addon is back, so nothing is lost — pick another texture if you would rather not wait. |
+| I picked artwork and nothing appeared | If it was your own file, the path is the likely cause: WoW loads a `.tga` or `.blp` only from inside an addon folder, addressed the way the game addresses it, and a path it cannot resolve draws nothing and raises no error — so a typo looks exactly like having picked **None**. Check the file is a power of two on both sides too; one that is not may fail to load outright. If it is a bundled piece and *still* nothing shows, check the **Draw layer**: **Behind background** puts the art under the panel's own fill, which hides it unless that fill is transparent. |
+| The addon will not let me create a panel with a name | Two panels cannot share a frame name, and the frame name ignores punctuation and spacing — so "Chat BG" and "Chat-BG" want the same one. Pick something that differs by more than punctuation. This also happens with a name that looks free: a panel *created* as "Alpha" and later renamed still holds `PanelMaster_Panel_Alpha`, and the message names whichever panel is holding it. Renaming is never refused for this reason — only creating. |
+| I renamed a panel and want to know its frame name | Renaming does not change it, so anything anchored to the panel still works — but the frame name still reflects the name the panel was *created* with, so it is no longer something you can work out. Hover the **Panel name** box in the settings window and it shows you. |
+| I cannot address a panel whose name has spaces | `/pm panel` and `/pm rename` read the name as the first word only. Use the Panels page in the settings window for those, or give the panel a one-word name. |
+| I dragged a panel and it jumped somewhere slightly different | Snap-to-grid is on. Turn it off (`/pm set settings.snapToGrid false`) or make the grid finer (`/pm set settings.gridSize 1`). |
+| Something is genuinely broken | Run `/pm debug on`, reproduce it, then `/pm debug` to open the log and **Copy** to grab the text. Attaching that to an issue makes it far easier to work out what happened. |
 
-**A panel has ended up off the edge of the screen.**
-`/pm recover` brings every stray panel back into view. This never happens by itself, so a panel you
-deliberately parked half off-screen stays exactly where you put it.
+## Credits and libraries
 
-**I unlocked panels but nothing became draggable.**
-If you were in combat, the unlock was queued rather than applied — you will have seen a gray notice
-saying so. It happens by itself the moment you leave combat.
+Everything this addon needs ships inside it — nothing else has to be installed. Alongside Ace3,
+LibStub, CallbackHandler-1.0 and LibSharedMedia-3.0, it
+bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.7.0 (MIT), the shared Ka0s library
+behind the chat printer, the debug console, the slash dispatcher and schema CLI, and the settings
+panel toolkit. Each library sits in `libs/` under its own license.
 
-**`/pm config` says it cannot open during combat.**
-That one is Blizzard's restriction, not a bug: the settings window cannot be switched to while you
-are fighting. Run it again once you are out.
-
-**I picked a texture and the panel went plain.**
-That texture came from another addon which is no longer loaded. Panel Master keeps your choice and
-falls back to a flat fill until the addon is back, so nothing is lost — pick another texture if you
-would rather not wait.
-
-**I picked artwork and nothing appeared.**
-If it was your own file, the path is the likely cause: WoW can only load a `.tga` or `.blp` from
-inside an addon folder, addressed the way the game addresses it, and a path it cannot resolve draws
-nothing and raises no error — so a typo looks exactly like having picked **None**. Check the file is
-a power of two on both sides too; a texture that is not may fail to load outright. If the artwork is
-one of the bundled pieces and *still* nothing shows, check the **Draw layer**: **Behind background**
-puts it under the panel's own fill, which hides it completely unless that fill is transparent.
-
-**The addon will not let me create a panel with a name.**
-Two panels cannot share a frame name, and the frame name ignores punctuation and spacing — so "Chat
-BG" and "Chat-BG" would want the same one. Pick something that differs by more than punctuation.
-This can also happen with a name that looks free: a panel *created* as "Alpha" and later renamed
-still holds `PanelMaster_Panel_Alpha`, and the message names whichever panel is holding it. Renaming
-is never refused for this reason — only creating.
-
-**I renamed a panel and want to know its frame name.**
-Renaming does not change it, so anything anchored to the panel still works. But the frame name still
-reflects the name the panel was *created* with, so it is no longer something you can work out.
-Hover the **Panel name** box in the settings window and it shows you.
-
-**I cannot address a panel whose name has spaces.**
-`/pm panel` and `/pm rename` read the name as the first word only. Use the Panels page in the
-settings window for those, or give the panel a one-word name.
-
-**I dragged a panel and it jumped somewhere slightly different.**
-Snap-to-grid is on. Either turn it off (`/pm set settings.snapToGrid false`) or make the grid finer
-(`/pm set settings.gridSize 1`).
-
-**Something is genuinely broken.**
-Run `/pm debug on`, reproduce it, then `/pm debug` to open the log and **Copy** to grab the text.
-Attaching that to an issue makes it far easier to work out what happened.
+The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
+the sizes the client wants and redistributed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
 
 ## Issues and feature requests
 
-Bugs and ideas both go to [GitHub issues](https://github.com/tusharsaxena/PanelMaster/issues). A
-debug log (see above) helps a great deal for anything that looks like a bug.
+Bugs and feature requests are tracked at
+[github.com/tusharsaxena/PanelMaster/issues](https://github.com/tusharsaxena/PanelMaster/issues).
+Please file them there rather than in comments — it is the single place the project's to-do list
+lives. A debug log (see above) helps a great deal for anything that looks like a bug.
 
 ## Version History
 
-| Version | Notes |
-|---|---|
-| 0.1.0 | First release. Create, place and style backdrop panels; LibSharedMedia background and border textures; class-color option for both; mouseover-only fade; all eight frame strata; per-panel and global unlock with snap-to-grid; fixed frame names for anchoring; accent bars with their own border; per-panel scale; per-panel artwork from a bundled catalog, your own texture, or a Sunn - Viewport Art pack you already have installed, with tint, fill, position, scale, rotation, flip, draw layer and fit-to-artwork; test mode; copy-settings-between-panels; full command-line control; AceDB profiles. |
+| Version | Date | Highlights |
+|---------|------|------------|
+| 0.1.0 | — | First release: create, place and style as many backdrop panels as you like<br>LibSharedMedia background and border textures, with a class-color option for both<br>Accent bars along any edge, with their own texture, border and class color<br>Per-panel scale, mouseover-only fade, and all eight frame strata<br>Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>Full command-line control and AceDB profiles |
