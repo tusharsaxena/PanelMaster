@@ -13,7 +13,7 @@ which is never the same as a pass.
 | Run | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [`20260804-233329`](20260804-233329/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10941 | 1348 | 7.1 | 2.0 | 15 | 0 | **green** |
-| [`20260804-215132`](20260804-215132/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10936 | 1348 | 7.1 | 2.0 | 15 † | 0 | **green** |
+| [`20260804-215132`](20260804-215132/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10936 | 1348 | 7.1 | 2.0 | 0 | 0 | **green** |
 | [`20260804-182223`](20260804-182223/) | 0.1.0 | 0/0 | 25 | 696/696 | skip | 10651 | 1291 | 7.2 | 2.0 | 51 | 9 | **green** |
 
 † That row's `manifest.json` records `maxCcn: 0`, which is wrong, and the **15** above is read back
@@ -67,8 +67,11 @@ here, [`20260804-215132`](20260804-215132/), and any run recorded before the tes
 re-vendor. The kit read `CCN_MAX` out of `lizard`'s `!!!! Warnings` block, which is empty the moment
 an addon reaches zero warnings, so the field had no input and the manifest stored `0`. The true
 figure was always in that same bundle's own `complexity.txt` — for `20260804-215132` it is **15**,
-identical to the run after it. The bundles are frozen evidence and keep the number they recorded;
-the trend column is corrected in place with the dagger above, and the whole reading is written up in
+identical to the run after it. The row keeps the `0` it recorded. It is generated evidence and is
+not corrected in place: a table edited to read what it should have measured is indistinguishable
+from one that measured it, which is the failure `performance-§10` names when it says a hand-edited
+record is worse than a wrong one. So the trend column reads `51 -> 0 -> 15`, and this paragraph is
+how a reader learns the middle figure is an instrument fault. The whole reading is written up in
 [`20260804-233329/ANALYSIS.md`](20260804-233329/ANALYSIS.md).
 
 ### Files by `layout-§1` band

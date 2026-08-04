@@ -129,7 +129,8 @@ Nothing newly crossed a band at this run; all three entries carry forward.
    geometry split, and nothing in `docs/pending/LEDGER.md` owns it: it is new here.
 2. **`tests/perf.lua` does not exist.** Every run so far records `perf` as a skip, so the addon has
    no offline runtime-cost evidence at all. Adding scenarios is the only thing that changes that
-   column. New here; no deviation ID or review finding owns it.
+   column. Owned by **PM-004** (`docs/audits/2026-08-04/02_DEVIATIONS.md:26`, against
+   `performance-§9`), which names the same gap and the same remedy — this is not new here.
 3. **The two functions at CCN 15 are the release gate's whole margin.** `R.ApplyArtSize` and
    `Compat.AddOnFolders` pass today and warn on one added branch. No action now — named so that a
    future change to either is read against it.

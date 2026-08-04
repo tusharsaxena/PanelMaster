@@ -254,6 +254,13 @@ category as a label prefix instead.
      media/poster the way it excludes the logo renders. -->
 ![Bundled artwork](media/poster/artwork-poster.png)
 
+Where the bundled art comes from: every piece started life on
+[warcraft.wiki.gg](https://warcraft.wiki.gg/) and was AI-upscaled to the sizes the client wants.
+The originals are published under the
+[Creative Commons Attribution-ShareAlike 4.0 License](https://creativecommons.org/licenses/by-sa/4.0/),
+and the upscales are shipped under that same license — so if you reuse them, credit the source and
+keep them under CC BY-SA 4.0.
+
 What you can set per panel:
 
 | Setting | What it does |
@@ -421,6 +428,12 @@ page.
 **How many panels can I have?**
 As many as you like. They are cheap: a panel is a handful of flat textures and it costs nothing while
 it sits there.
+
+**There is a lot of artwork in here. Will it cost me frames?**
+No. The bundled art costs disk space and nothing else. WoW does not load a texture because it is
+sitting in the addon folder — it loads one when something on screen asks for it, so the only art in
+memory is the art your panels are actually drawing. A hundred unused pieces and none at all are the
+same to the client while you play.
 
 **Does it work without any other addons?**
 Yes. It is completely self-contained and does not need ElvUI or any suite. It works alongside them
