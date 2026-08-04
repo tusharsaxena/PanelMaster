@@ -1029,14 +1029,14 @@ end
 -- crop the fill already chose is what makes a FILL that pushes the left section off the panel
 -- simply not draw it, rather than needing a rule about it.
 --
--- Takes ONE ctx table, assembled by the caller. That is a single extra allocation, and only on the
--- composite path — which already allocates the spec plus one table per quad, and runs on panel
--- render rather than per frame.
-local function buildSectionQuads(ctx)
+-- Arguments are passed POSITIONALLY, long list and all. An earlier draft of this split took one
+-- ctx table assembled at the call site; that added a hash table to every composed BuildArtSpec
+-- call (measured at +616 bytes/call, +10.8% on the composite path) and bought nothing but a
+-- shorter signature. A render-path allocation is not worth paying for a tidier parameter list.
+local function buildSectionQuads(sections, n, u0, u1, fv0, fv1, width, height,
+                                 point, x, y, flipH, flipV, rotation, tile)
   local quads = {}
-  local u0, u1, n, span = ctx.u0, ctx.u1, ctx.n, ctx.span
-  local flipH, flipV, rotation = ctx.flipH, ctx.flipV, ctx.rotation
-  local width, height = ctx.width, ctx.height
+  local span = u1 - u0
   -- One pass for every fill: the non-tiling ones keep u within [0, 1], so the loop runs a single
   -- copy and the bar is drawn once. Only the vertical repeat is left to the wrap mode, because
   -- that one IS within a single file.
@@ -1055,20 +1055,20 @@ local function buildSectionQuads(ctx)
       if hi - lo > span * 1e-9 then
         local sx0, sy0, sx1, sy1 =
           transformRect((lo - u0) / span, 0, (hi - u0) / span, 1, flipH, flipV, rotation)
-        local qx, qy = subAnchor(ctx.point, ctx.x, ctx.y, width, height, sx0, sy0, sx1, sy1)
+        local qx, qy = subAnchor(point, x, y, width, height, sx0, sy0, sx1, sy1)
         quads[#quads + 1] = {
-          path   = ctx.sections[i],
+          path   = sections[i],
           width  = width * (sx1 - sx0),
           height = height * (sy1 - sy0),
-          point  = ctx.point,
+          point  = point,
           x      = qx,
           y      = qy,
           -- The section's own file coordinates: the surviving slice of its band, rescaled from
           -- bar space back to the 0-1 of the one file it comes from.
-          uv     = composeUV((lo - bandLo) * n, ctx.fv0, (hi - bandLo) * n, ctx.fv1,
+          uv     = composeUV((lo - bandLo) * n, fv0, (hi - bandLo) * n, fv1,
             flipH, flipV, rotation),
-          wrapH  = ctx.tile and "CLAMP" or nil,
-          wrapV  = ctx.tile and "REPEAT" or nil,
+          wrapH  = tile and "CLAMP" or nil,
+          wrapV  = tile and "REPEAT" or nil,
         }
       end
     end
@@ -1130,12 +1130,8 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   local quads
 
   if n >= 2 and u1 > u0 then
-    quads = buildSectionQuads({
-      sections = sections, n = n, u0 = u0, u1 = u1, span = u1 - u0,
-      fv0 = fv0, fv1 = fv1, width = width, height = height,
-      point = point, x = x, y = y,
-      flipH = flipH, flipV = flipV, rotation = rotation, tile = tile,
-    })
+    quads = buildSectionQuads(sections, n, u0, u1, fv0, fv1, width, height,
+      point, x, y, flipH, flipV, rotation, tile)
   end
 
   -- Every spec carries quads, and a single texture is a one-element list — so the renderer has ONE

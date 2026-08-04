@@ -80,16 +80,12 @@ local stubFrame
 
 -- The three shapes almost every modeled method has, as factories over the state key they record.
 -- Written once here so the two dozen recorders in METHOD are one line each and cannot drift apart.
-local function reader(key, default)
+-- A plain recorder: whatever was stored comes back, defaulting to nothing. Every value a renderer
+-- can choose — 0 for a zero-thickness border, false for a flag it deliberately cleared — reads
+-- back exactly as it was set, which is the bug these readers exist to make visible.
+local function reader(key)
   return function(f)
-    return function()
-      local v = f[key]
-      -- `== nil` rather than `or`: a recorded 0 (a zero-thickness border, a fully transparent panel)
-      -- and a recorded false are real values a renderer chose, and `or` would report the default for
-      -- both — which is exactly the bug these readers exist to make visible.
-      if v == nil then return default end
-      return v
-    end
+    return function() return f[key] end
   end
 end
 
@@ -171,7 +167,11 @@ METHOD.GetHeight = reader("__h")
 -- scale is part of "what does this look like", and a blanket no-op would make a renderer that
 -- never set one look identical to one that set it correctly. A frame nothing scaled reads 1.
 METHOD.SetScale = writer("__scale")
-METHOD.GetScale = reader("__scale", 1)
+-- The one reader with a default, and it keeps the `or` the hand-written shim used rather than an
+-- `== nil` test. The two differ only for a stored `false`, and `or` is the behavior every existing
+-- assertion was written against. Note that 0 is TRUTHY in Lua, so `f.__scale or 1` hands back a
+-- recorded 0 untouched — only nil and false fall through to the 1.
+METHOD.GetScale = function(f) return function() return f.__scale or 1 end end
 METHOD.SetAlpha = writer("__alpha")
 METHOD.GetAlpha = reader("__alpha")
 METHOD.SetFrameStrata = writer("__strata")

@@ -185,8 +185,11 @@ test("Mock frame: SetPoint records both overloads and GetPoint hands them back",
 end)
 
 test("Mock frame: a recorded 0 survives and GetScale defaults to 1", function()
-  -- The reason the stub's readers test for nil rather than falling back with `or`: a border size of
-  -- 0 and an alpha of 0 are real user choices, and `or` would report the default for both.
+  -- The stub's readers hand back exactly what was stored: a border size of 0 and an alpha of 0 are
+  -- real user choices, and reporting the default for either would hide the bug that put it there.
+  -- 0 is truthy in Lua, so an `or` fallback would not have swallowed one anyway — only nil and
+  -- false fall through an `or`, which is why GetScale's `or 1` and a nil test agree on every value
+  -- this addon can produce. The `false` case below pins which of the two the stub actually does.
   local f = newStub()
   assertEqual(f:GetWidth(), 0, "a fresh stub is 0 wide, not nil")
   f:SetSize(120, 40)
@@ -199,6 +202,14 @@ test("Mock frame: a recorded 0 survives and GetScale defaults to 1", function()
   assertEqual(f:GetScale(), 1, "a frame nothing scaled reads 1, the way a real frame does")
   f:SetScale(0.5)
   assertEqual(f:GetScale(), 0.5)
+  f:SetScale(0)
+  assertEqual(f:GetScale(), 0, "0 is truthy, so a recorded 0 scale survives the `or 1` fallback")
+  -- Pins GetScale's `or` against a rewrite to `if v == nil then return default end`. Nothing in the
+  -- addon can store a false scale (Canvas hands SetScale a clamped number), but the two spellings
+  -- diverge exactly here, so the assertion is what makes the next refactor of the stub prove it
+  -- kept the same semantics rather than merely kept the tests green.
+  f:SetScale(false)
+  assertEqual(f:GetScale(), 1, "a stored false is not a scale; `or` falls through to the default")
 end)
 
 test("Mock frame: a lowercase or custom key misses through to nil", function()
