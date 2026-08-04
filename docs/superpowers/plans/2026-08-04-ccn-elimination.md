@@ -312,3 +312,22 @@ This is the one function on the list whose residual CCN is honest structure rath
 **Coverage.** tests/test_canvas.lua asserts the pool count grows by one when a panel is deleted (line 164) and that active+pooled is conserved (line 144); tests/test_accent.lua and tests/test_artwork.lua drive frames through the pool. Nothing directly asserts that a released frame's accent bars and art textures were cleared — add a characterization test on __color/__texture/__backdrop being nil after release before touching this.
 
 ---
+
+---
+
+## Outcome (2026-08-04, after the branch merged)
+
+All nine functions came in at CCN <= 15 and `lizard` warns on nothing over 1348 functions; the run
+of record is [`docs/automated-tests/20260804-233329/`](../../automated-tests/20260804-233329/) and
+its `ANALYSIS.md`.
+
+**One step did not ship as planned.** Step 8 above specifies `buildSectionQuads` taking its inputs
+positionally — fifteen arguments — to keep the render path allocation-free. That signature shipped
+at run [`20260804-215132`](../../automated-tests/20260804-215132/) (its frozen `complexity.txt`
+records `PARAM 15`) and was then replaced in commit `645868a` by one named `bar` table, which
+[`20260804-233329/complexity.txt`](../../automated-tests/20260804-233329/complexity.txt) records at
+`PARAM 3`. The shipped call site builds that table inline at `modules/Artwork.lua:1152`, inside the
+composed-row branch only — so the allocation step 8 declined is taken, but on the composed path
+rather than on every `BuildArtSpec` call, which is not the case the +616 bytes/call (+10.8%) figure
+was measured over. The plan text above is left as written: it is the reasoning at the time. This
+note is the correction, so nobody reads step 8 as a description of the code that ships today.

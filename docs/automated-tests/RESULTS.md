@@ -26,7 +26,8 @@ frozen and keeps its wrong number; the trend line is corrected here. The runner 
 
 ## Test suite
 
-706 cases, up ten on the previous run. `test_artwork.lua` is 98 of them, covering the addon's most branch-heavy module; that concentration is why the suite is the largest file in the repo. The ten new ones are the CCN work's own cover: eight pin `tests/wow_mock.lua`'s frame stub, which every other suite builds its frames through and which nothing had asserted on before that stub was rewritten from a chain of string compares into a dispatch table; one pins `modules/Canvas.lua`'s frame-pool teardown, and one `core/DebugLogSetup.lua`'s active/pooled/orphaned frame tally — the two seams the same work split into helpers. The generated inventory `test-cases.md` in each bundle is the authority on what exists at that point; the README badge tracks the same number.
+706 cases as of [`20260804-233329`](20260804-233329/), flat on the run before it and up ten on the
+baseline. `test_artwork.lua` is 98 of them, covering the addon's most branch-heavy module; that concentration is why the suite is the largest file in the repo. The ten added at [`20260804-215132`](20260804-215132/) are the CCN work's own cover: eight pin `tests/wow_mock.lua`'s frame stub, which every other suite builds its frames through and which nothing had asserted on before that stub was rewritten from a chain of string compares into a dispatch table; one pins `modules/Canvas.lua`'s frame-pool teardown, and one `core/DebugLogSetup.lua`'s active/pooled/orphaned frame tally — the two seams the same work split into helpers. The generated inventory `test-cases.md` in each bundle is the authority on what exists at that point; the README badge tracks the same number.
 
 ## Lint
 
@@ -46,17 +47,29 @@ on-notice threshold, each with a one-line disposition.
 
 None.
 
-That is a result, not an empty section. The previous run warned on nine functions, topping out at
-`Artwork.BuildArtSpec` at CCN 51; every one of them is gone, and `lizard` now reports 0 warnings
-over 1348 functions. The highest cyclomatic complexity left in the addon is 15 — `R.ApplyArtSize`
-and `Compat.AddOnFolders`, both at the cap and neither refactored for it — and `BuildArtSpec`
-itself now reads 13. Nothing was suppressed and no threshold was moved: the nine came down by
-extraction, and every file-local helper they were split into is under the cap on its own account
-rather than by being small enough to hide.
+That is a result, not an empty section. `lizard` reports 0 warnings over 1348 functions, and has at
+both of the last two runs; the last run that warned was the baseline
+[`20260804-182223`](20260804-182223/), on nine functions. Naming all nine rather than counting them:
+`Artwork.BuildArtSpec` (51), `R.Sanitize` (40), the `wow_mock` frame stub's anonymous `__index`
+(33), `R:Set` (29), `Canvas.BuildSpec` (24), `S.Themes` (22), `D:Diagnose` (21), `Sl:CliPanel` (17)
+and `Canvas`'s `release` (17). Every one is gone. Nothing was suppressed and no threshold was moved:
+the nine came down by extraction, and every file-local helper they were split into is under the cap
+on its own account rather than by being small enough to hide.
 
-The two numbers the record should be read against next run are those 15s. A function sitting
-exactly on the cap warns the moment anybody adds one branch to it, so they are where this table
-comes back from "None."
+The highest cyclomatic complexity left in the addon is 15, in exactly two functions —
+`R.ApplyArtSize` (`modules/Registry.lua`) and `Compat.AddOnFolders` (`core/Compat.lua`), both at the
+cap and neither refactored for it. `BuildArtSpec` itself now reads 13. Those two 15s are what the
+record should be read against next run: a function sitting exactly on the cap warns the moment
+anybody adds one branch to it, so they are where this table comes back from "None."
+
+**A `0` in the Max CCN column above is an instrument fault, not a measurement.** It affects one run
+here, [`20260804-215132`](20260804-215132/), and any run recorded before the testkit rev-6
+re-vendor. The kit read `CCN_MAX` out of `lizard`'s `!!!! Warnings` block, which is empty the moment
+an addon reaches zero warnings, so the field had no input and the manifest stored `0`. The true
+figure was always in that same bundle's own `complexity.txt` — for `20260804-215132` it is **15**,
+identical to the run after it. The bundles are frozen evidence and keep the number they recorded;
+the trend column is corrected in place with the dagger above, and the whole reading is written up in
+[`20260804-233329/ANALYSIS.md`](20260804-233329/ANALYSIS.md).
 
 ### Files by `layout-§1` band
 
