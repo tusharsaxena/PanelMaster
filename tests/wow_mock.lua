@@ -74,125 +74,172 @@ local function recordPoint(point, ...)
   return { point = point, relativeTo = a, relativePoint = b or point, x = c or 0, y = d or 0 }
 end
 
-local function stubFrame()
+-- Forward-declared: the method table below hands CreateTexture a FRESH stub, and it is built at file
+-- load, before stubFrame's body exists.
+local stubFrame
+
+-- The three shapes almost every modeled method has, as factories over the state key they record.
+-- Written once here so the two dozen recorders in METHOD are one line each and cannot drift apart.
+-- A plain recorder: whatever was stored comes back, defaulting to nothing. Every value a renderer
+-- can choose — 0 for a zero-thickness border, false for a flag it deliberately cleared — reads
+-- back exactly as it was set, which is the bug these readers exist to make visible.
+local function reader(key)
+  return function(f)
+    return function() return f[key] end
+  end
+end
+
+local function writer(key)
+  return function(f) return function(_, v) f[key] = v; return f end end
+end
+
+-- For the flags WoW itself coerces: a real frame's IsMouseEnabled answers a boolean whatever it was
+-- handed, so a stub that stored a 1 would make an assertion on `true` fail against correct code.
+local function boolWriter(key)
+  return function(f) return function(_, v) f[key] = v and true or false; return f end end
+end
+
+local function rgbaWriter(key)
+  return function(f) return function(_, r, g, b, a) f[key] = { r, g, b, a }; return f end end
+end
+
+-- Method name -> factory(f) -> the bound closure. Built ONCE at file load, so __index is a lookup
+-- rather than a thirty-arm chain of string compares.
+local METHOD = {}
+
+METHOD.Show = function(f) return function() f.__shown = true; return f end end
+METHOD.Hide = function(f)
+  return function()
+    local was = f.__shown
+    f.__shown = false
+    if was and f.__onHide then
+      for _, fn in ipairs(f.__onHide) do fn(f) end
+    end
+    return f
+  end
+end
+METHOD.SetShown = function(f)
+  return function(_, v) if v then f:Show() else f:Hide() end; return f end
+end
+METHOD.IsShown = reader("__shown")
+METHOD.IsVisible = METHOD.IsShown
+
+METHOD.HookScript = function(f)
+  return function(_, script, handler)
+    if script == "OnHide" then
+      f.__onHide = f.__onHide or {}
+      f.__onHide[#f.__onHide + 1] = handler
+    end
+    return f
+  end
+end
+-- Scripts are RECORDED rather than dropped: the drag handler and every panel OnShow are real
+-- behavior, and a test that cannot invoke them can only assert that registration happened, not
+-- that the handler does the right thing.
+METHOD.SetScript = function(f)
+  return function(_, script, handler) f.__scripts[script] = handler; return f end
+end
+METHOD.GetScript = function(f)
+  return function(_, script) return f.__scripts[script] end
+end
+
+METHOD.SetPoint = function(f)
+  return function(_, point, ...) f.__points[#f.__points + 1] = recordPoint(point, ...); return f end
+end
+METHOD.ClearAllPoints = function(f)
+  return function() f.__points = {}; return f end
+end
+METHOD.GetPoint = function(f)
+  return function(_, i)
+    local p = f.__points[i or 1]
+    if not p then return nil end
+    return p.point, p.relativeTo, p.relativePoint, p.x, p.y
+  end
+end
+METHOD.GetNumPoints = function(f) return function() return #f.__points end end
+
+METHOD.SetSize = function(f) return function(_, w, h) f.__w, f.__h = w, h; return f end end
+METHOD.SetWidth  = writer("__w")
+METHOD.SetHeight = writer("__h")
+METHOD.GetWidth  = reader("__w")
+METHOD.GetHeight = reader("__h")
+-- Recorded rather than swallowed, for the same reason as color and blend mode: a panel's own
+-- scale is part of "what does this look like", and a blanket no-op would make a renderer that
+-- never set one look identical to one that set it correctly. A frame nothing scaled reads 1.
+METHOD.SetScale = writer("__scale")
+-- The one reader with a default, and it keeps the `or` the hand-written shim used rather than an
+-- `== nil` test. The two differ only for a stored `false`, and `or` is the behavior every existing
+-- assertion was written against. Note that 0 is TRUTHY in Lua, so `f.__scale or 1` hands back a
+-- recorded 0 untouched — only nil and false fall through to the 1.
+METHOD.GetScale = function(f) return function() return f.__scale or 1 end end
+METHOD.SetAlpha = writer("__alpha")
+METHOD.GetAlpha = reader("__alpha")
+METHOD.SetFrameStrata = writer("__strata")
+METHOD.GetFrameStrata = reader("__strata")
+METHOD.SetFrameLevel = writer("__level")
+METHOD.GetFrameLevel = reader("__level")
+METHOD.EnableMouse = boolWriter("__mouse")
+METHOD.IsMouseEnabled = reader("__mouse")
+
+-- Color is the other half of "what does this panel look like", so a texture stub records what
+-- it was told to draw. Without this, every color assertion would have to trust the code.
+METHOD.SetColorTexture = rgbaWriter("__color")
+METHOD.SetVertexColor  = rgbaWriter("__color")
+
+METHOD.SetText = writer("__text")
+METHOD.GetText = reader("__text")
+METHOD.GetName = reader("__name")
+
+-- The backdrop the border is drawn with. Recorded rather than no-op'd: which edge texture and
+-- thickness a panel asked for is exactly what the LSM border tests assert on.
+METHOD.SetBackdrop = writer("__backdrop")
+METHOD.GetBackdrop = reader("__backdrop")
+METHOD.SetBackdropBorderColor = rgbaWriter("__backdropBorderColor")
+
+-- The WRAP arguments are kept alongside the path, not dropped. Tiled artwork is the one thing
+-- whose correctness lives entirely in them: a spec that computes coordinates past 1 but forgets
+-- REPEAT clamps to the edge pixel and draws one smeared copy, and a path-only capture cannot
+-- tell that apart from a correct tile.
+METHOD.SetTexture = function(f)
+  return function(_, path, wrapH, wrapV)
+    f.__texture, f.__wrapH, f.__wrapV = path, wrapH, wrapV
+    return f
+  end
+end
+METHOD.GetTexture = reader("__texture")
+
+-- The blend mode is part of "what does this look like" in the same way color is — ADD over a
+-- dark panel is a glow and BLEND is not — so it is recorded rather than swallowed.
+METHOD.SetBlendMode = writer("__blend")
+
+-- Recorded because "artwork renders inside the panel's bounds" is asserted by asking whether the
+-- art frame was ever told to clip. A stub cannot really clip anything, so the CALL is the only
+-- evidence there is, and a blanket no-op would make a renderer that never asked look identical.
+METHOD.SetClipsChildren = boolWriter("__clipsChildren")
+
+-- Texture ORIENTATION, recorded for the same reason as color: which way a texture was rotated is
+-- part of "what does this look like", and an accent bar on a vertical edge is drawn with the
+-- 8-argument form. Stored as the flat 8-number list the caller passed, in SetTexCoord's own
+-- UL, LL, UR, LR order, so a test asserts on exactly what the renderer said. The 4-argument
+-- (crop) form is recorded too — nothing uses it today, but silently dropping it would make a
+-- future crop look like no call at all.
+METHOD.SetTexCoord = function(f)
+  return function(_, ...) f.__texCoord = { ... }; return f end
+end
+
+-- Child regions are fresh stubs, not the parent: a texture that WAS the frame would make every
+-- edge share one color slot and hide a whole class of border bug.
+METHOD.CreateTexture = function() return function() return stubFrame() end end
+METHOD.CreateFontString = METHOD.CreateTexture
+
+function stubFrame()
   local f = { __shown = true, __points = {}, __w = 0, __h = 0,
               __alpha = 1, __scripts = {}, __mouse = false }
   setmetatable(f, { __index = function(_, k)
-    if k == "Show" then return function() f.__shown = true; return f end end
-    if k == "Hide" then
-      return function()
-        local was = f.__shown
-        f.__shown = false
-        if was and f.__onHide then
-          for _, fn in ipairs(f.__onHide) do fn(f) end
-        end
-        return f
-      end
-    end
-    if k == "SetShown" then
-      return function(_, v) if v then f:Show() else f:Hide() end; return f end
-    end
-    if k == "IsShown" or k == "IsVisible" then return function() return f.__shown end end
-    if k == "HookScript" then
-      return function(_, script, handler)
-        if script == "OnHide" then
-          f.__onHide = f.__onHide or {}
-          f.__onHide[#f.__onHide + 1] = handler
-        end
-        return f
-      end
-    end
-    -- Scripts are RECORDED rather than dropped: the drag handler and every panel OnShow are real
-    -- behavior, and a test that cannot invoke them can only assert that registration happened, not
-    -- that the handler does the right thing.
-    if k == "SetScript" then
-      return function(_, script, handler) f.__scripts[script] = handler; return f end
-    end
-    if k == "GetScript" then return function(_, script) return f.__scripts[script] end end
-    if k == "SetPoint" then
-      return function(_, point, ...) f.__points[#f.__points + 1] = recordPoint(point, ...); return f end
-    end
-    if k == "ClearAllPoints" then
-      return function() f.__points = {}; return f end
-    end
-    if k == "GetPoint" then
-      return function(_, i)
-        local p = f.__points[i or 1]
-        if not p then return nil end
-        return p.point, p.relativeTo, p.relativePoint, p.x, p.y
-      end
-    end
-    if k == "GetNumPoints" then return function() return #f.__points end end
-    if k == "SetSize" then return function(_, w, h) f.__w, f.__h = w, h; return f end end
-    -- Recorded rather than swallowed, for the same reason as color and blend mode: a panel's own
-    -- scale is part of "what does this look like", and a blanket no-op would make a renderer that
-    -- never set one look identical to one that set it correctly.
-    if k == "SetScale" then return function(_, v) f.__scale = v; return f end end
-    if k == "GetScale" then return function() return f.__scale or 1 end end
-    if k == "SetWidth" then return function(_, w) f.__w = w; return f end end
-    if k == "SetHeight" then return function(_, h) f.__h = h; return f end end
-    if k == "GetWidth" then return function() return f.__w end end
-    if k == "GetHeight" then return function() return f.__h end end
-    if k == "SetAlpha" then return function(_, a) f.__alpha = a; return f end end
-    if k == "GetAlpha" then return function() return f.__alpha end end
-    if k == "SetFrameStrata" then return function(_, s) f.__strata = s; return f end end
-    if k == "GetFrameStrata" then return function() return f.__strata end end
-    if k == "SetFrameLevel" then return function(_, l) f.__level = l; return f end end
-    if k == "GetFrameLevel" then return function() return f.__level end end
-    if k == "EnableMouse" then return function(_, v) f.__mouse = v and true or false; return f end end
-    if k == "IsMouseEnabled" then return function() return f.__mouse end end
-    -- Color is the other half of "what does this panel look like", so a texture stub records what
-    -- it was told to draw. Without this, every color assertion would have to trust the code.
-    if k == "SetColorTexture" then
-      return function(_, r, g, b, a) f.__color = { r, g, b, a }; return f end
-    end
-    if k == "SetVertexColor" then
-      return function(_, r, g, b, a) f.__color = { r, g, b, a }; return f end
-    end
-    if k == "SetText" then return function(_, t) f.__text = t; return f end end
-    if k == "GetText" then return function() return f.__text end end
-    if k == "GetName" then return function() return f.__name end end
-    -- The backdrop the border is drawn with. Recorded rather than no-op'd: which edge texture and
-    -- thickness a panel asked for is exactly what the LSM border tests assert on.
-    if k == "SetBackdrop" then return function(_, b) f.__backdrop = b; return f end end
-    if k == "GetBackdrop" then return function() return f.__backdrop end end
-    if k == "SetBackdropBorderColor" then
-      return function(_, r, g, b, a) f.__backdropBorderColor = { r, g, b, a }; return f end
-    end
-    -- The WRAP arguments are kept alongside the path, not dropped. Tiled artwork is the one thing
-    -- whose correctness lives entirely in them: a spec that computes coordinates past 1 but forgets
-    -- REPEAT clamps to the edge pixel and draws one smeared copy, and a path-only capture cannot
-    -- tell that apart from a correct tile.
-    if k == "SetTexture" then
-      return function(_, path, wrapH, wrapV)
-        f.__texture, f.__wrapH, f.__wrapV = path, wrapH, wrapV
-        return f
-      end
-    end
-    if k == "GetTexture" then return function() return f.__texture end end
-    -- The blend mode is part of "what does this look like" in the same way color is — ADD over a
-    -- dark panel is a glow and BLEND is not — so it is recorded rather than swallowed.
-    if k == "SetBlendMode" then return function(_, mode) f.__blend = mode; return f end end
-    -- Recorded because "artwork renders inside the panel's bounds" is asserted by asking whether the
-    -- art frame was ever told to clip. A stub cannot really clip anything, so the CALL is the only
-    -- evidence there is, and a blanket no-op would make a renderer that never asked look identical.
-    if k == "SetClipsChildren" then
-      return function(_, v) f.__clipsChildren = v and true or false; return f end
-    end
-    -- Texture ORIENTATION, recorded for the same reason as color: which way a texture was rotated is
-    -- part of "what does this look like", and an accent bar on a vertical edge is drawn with the
-    -- 8-argument form. Stored as the flat 8-number list the caller passed, in SetTexCoord's own
-    -- UL, LL, UR, LR order, so a test asserts on exactly what the renderer said. The 4-argument
-    -- (crop) form is recorded too — nothing uses it today, but silently dropping it would make a
-    -- future crop look like no call at all.
-    if k == "SetTexCoord" then
-      return function(_, ...) f.__texCoord = { ... }; return f end
-    end
-    -- Child regions are fresh stubs, not the parent: a texture that WAS the frame would make every
-    -- edge share one color slot and hide a whole class of border bug.
-    if k == "CreateTexture" or k == "CreateFontString" then
-      return function() return stubFrame() end
-    end
+    local make = METHOD[k]
+    if make then return make(f) end
+    -- The PascalCase fall-through stays AFTER the table, and everything else is still nil: that
+    -- lowercase miss is what lets addon code do `if not f.someCustomField then ... end` safely.
     if type(k) == "string" and k:match("^%u") then
       return function() return f end
     end

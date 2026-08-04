@@ -587,7 +587,7 @@ bounds and a clip one level up would eat them.
 `release()` clears **every** art texture and hides the art frame, so a pooled frame reused by another
 panel cannot inherit the previous panel's artwork.
 
-**Fitting a panel to its art is an action, not a stored mode.** `Registry.FitToArtwork(key)` sets
+**Fitting a panel to its art is an action, not a stored mode.** `Registry:FitToArtwork(key)` sets
 **both axes** to the art's PRESENTED size — `Artwork.NativeSize`'s answer (the whole piece, which
 for a composed row is the virtual bar rather than one section), transposed when `artRotation` is 90
 or 270, then multiplied by `artScale`. Both are read through the same enum and clamp seams the fill

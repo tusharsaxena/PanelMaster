@@ -164,6 +164,36 @@ test("Canvas: a delete returns its frame to the pool", function()
   assertEqual(Canvas.PooledCount(), pooledWhileActive + 1, "the deleted panel's frame was dropped")
 end)
 
+test("Canvas: a released frame is inert, not merely hidden", function()
+  -- A pooled frame sits under its old name until some other panel claims it, and Unlock's overlay, a
+  -- debug dump or a stray Show() all reach it before applySpec runs again. So every visible part has
+  -- to be torn down, not just the parent hidden: the accent bars are anchored OUTSIDE the panel's
+  -- bounds and would leave four colored strips floating, and an uncleared art texture would put the
+  -- previous panel's artwork on screen for the next one.
+  fresh()
+  local rec = R:New("Inerted", { accentEnabled = true,
+    accentEdges = { TOP = true, BOTTOM = true, LEFT = true, RIGHT = true },
+    artTexture = NS.Artwork.Catalog[1].id })
+  local f = Canvas:FrameFor(rec.id)
+  assertTrue(f ~= nil, "the panel never got a frame")
+  assertTrue(f.artTextures[1].__texture ~= nil, "the artwork never reached a texture")
+
+  R:Delete(rec.id)
+
+  assertFalse(f.__shown, "the released frame is still shown")
+  assertEqual(f.borderFrame.__backdrop, nil, "the border backdrop survived the release")
+  for edge, bar in pairs(f.accents) do
+    assertFalse(bar.__shown, "accent bar " .. edge .. " is still shown")
+    assertEqual(bar.borderFrame.__backdrop, nil,
+      "accent bar " .. edge .. " kept its border backdrop")
+  end
+  assertFalse(f.artFrame.__shown, "the art frame is still shown")
+  for i, t in ipairs(f.artTextures) do
+    assertEqual(t.__texture, nil, "art texture " .. i .. " still names a file")
+  end
+  assertEqual(f.panelID, nil, "the released frame still names the record it drew")
+end)
+
 test("Canvas: a re-created panel gets its own frame back", function()
   fresh()
   local first = R:New("Recurring")

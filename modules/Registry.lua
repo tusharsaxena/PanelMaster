@@ -73,6 +73,108 @@ function R:Count()
 end
 
 -- ── Sanitize ────────────────────────────────────────────────────────────────────
+
+-- The repair rules, as data. Almost every field in a panel record is repaired by one of five
+-- identical shapes, so they are DECLARED here and applied by a loop below rather than written out
+-- as fifty near-identical statements: a field added to C.PANEL_TEMPLATE later costs one row, and
+-- the fallback is always the template's own value, which is the one thing that must never diverge.
+-- The fields whose repair carries a real decision stay written out in R.Sanitize itself.
+
+-- {field, min, max} — clamped into range, falling back to t[field].
+local CLAMPED = {
+  { "width",              C.MIN_SIZE,             C.MAX_SIZE },
+  { "height",             C.MIN_SIZE,             C.MAX_SIZE },
+  { "level",              0,                      100 },
+  { "scale",              C.MIN_PANEL_SCALE,      C.MAX_PANEL_SCALE },
+  { "borderSize",         C.MIN_BORDER,           C.MAX_BORDER },
+  { "borderOffset",       C.MIN_BORDER_OFFSET,    C.MAX_BORDER_OFFSET },
+  { "alpha",              0,                      1 },
+  { "mouseoverAlpha",     0,                      1 },
+  { "accentThickness",    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS },
+  { "accentOffset",       C.MIN_ACCENT_OFFSET,    C.MAX_ACCENT_OFFSET },
+  -- The accent bar's own border shares the panel border's bounds, so a value legal on one is legal
+  -- on the other.
+  { "accentBorderSize",   C.MIN_BORDER,           C.MAX_BORDER },
+  { "accentBorderOffset", C.MIN_BORDER_OFFSET,    C.MAX_BORDER_OFFSET },
+  { "artAlpha",           0,                      1 },
+  { "artScale",           C.MIN_ART_SCALE,        C.MAX_ART_SCALE },
+}
+
+-- Numbers deliberately left UNBOUNDED. The panel's own offsets are not clamped to the screen: a
+-- legitimate multi-monitor or high-resolution layout can carry offsets far outside the current
+-- UIParent, and clamping on every write would quietly destroy that layout the first time the user
+-- logged in at a lower resolution. Recovering a genuinely unreachable panel is R.Recover's job, and
+-- it runs on demand. The art offset is unbounded for the same reason: it is measured against a panel
+-- whose size is not known here, and a bound invented at this point would clamp a perfectly good
+-- placement on a large panel the first time the record was touched.
+local FREE_NUMBERS = { "x", "y", "artX", "artY" }
+
+-- Names that must be a NON-EMPTY string; an empty one is a dropped key rather than a choice.
+--
+-- Media names are kept as free strings and NOT validated against the live LibSharedMedia list: an
+-- addon that registers a texture may load after this one, so a name that resolves to nothing right
+-- now can be perfectly valid a second later. Compat.FetchMedia degrades at render time instead,
+-- which keeps the user's choice in the file rather than silently rewriting it to the default.
+--
+-- artTexture is NOT validated against the live catalog here for the same reason: an id that resolves
+-- to nothing right now can be perfectly valid a moment later (an art pack appending to the artwork
+-- catalog loads after this addon), and BuildArtSpec already degrades an unresolvable id to "draw
+-- nothing" at render time. Rewriting it to "None" on the first touch would destroy the user's choice
+-- permanently to fix a problem that fixes itself. R:Set still refuses a typo up front, which is when
+-- there is somebody to tell. artCustomPath is NOT on this list — see R.Sanitize.
+local NONEMPTY_STRINGS = {
+  "bgTexture", "borderTexture", "accentTexture", "accentBorderTexture", "artTexture",
+}
+
+local POINT_FIELDS = { "point", "relPoint", "artPoint" }
+
+-- The closed lists snap back to their template default when what is stored is not a member.
+-- A hand-edited SavedVariables file carrying artFill = "COVER" must not reach the renderer: every
+-- fill branch computes a different rectangle and a different set of texture coordinates, so an
+-- unknown token would either fall through to whichever branch happens to be last or produce a nil
+-- size that lands in SetSize — a Lua error inside a paint, which aborts the rest of that panel's
+-- render and leaves it half-drawn. Snapping to the default here means the worst outcome of a
+-- corrupt file is artwork that looks wrong, which the user can see and re-pick.
+--
+-- enumMatch also normalizes case, so a lower-case token typed straight into the file is repaired
+-- rather than discarded.
+local ENUM_FIELDS = { "artFill", "artRotation", "artLayer" }
+
+-- Flags coerced to a real boolean. `enabled` is NOT one of them — nil means enabled there, which is
+-- the opposite default and is written out in R.Sanitize.
+local BOOL_FIELDS = { "mouseover", "accentEnabled", "artFlipH", "artFlipV" }
+
+local function sanitizeNumbers(rec, t)
+  for _, rule in ipairs(CLAMPED) do
+    rec[rule[1]] = Util.Clamp(rec[rule[1]], rule[2], rule[3], t[rule[1]])
+  end
+  for _, field in ipairs(FREE_NUMBERS) do
+    rec[field] = tonumber(rec[field]) or t[field]
+  end
+end
+
+local function sanitizeTokens(rec, t)
+  for _, field in ipairs(NONEMPTY_STRINGS) do
+    if type(rec[field]) ~= "string" or rec[field] == "" then rec[field] = t[field] end
+  end
+  for _, field in ipairs(POINT_FIELDS) do
+    if not Util.IsPoint(rec[field]) then rec[field] = t[field] end
+  end
+  for _, field in ipairs(ENUM_FIELDS) do
+    rec[field] = enumMatch(field, rec[field]) or t[field]
+  end
+end
+
+local function sanitizeFlags(rec)
+  for _, field in ipairs(BOOL_FIELDS) do
+    rec[field] = rec[field] and true or false
+  end
+  -- Class-color flags, driven off C.COLOR_FIELDS so a color added later needs no edit here.
+  for _, flag in pairs(C.COLOR_FIELDS) do
+    rec[flag] = rec[flag] and true or false
+  end
+end
+
 -- Fill every missing field from the template and clamp every numeric one into range. PURE with
 -- respect to the DB — it mutates the record it is handed and returns it, so it is equally usable on
 -- a stored record, on a candidate that has not been stored yet, and in a headless test.
@@ -99,110 +201,27 @@ function R.Sanitize(rec)
     rec.frameName = Util.FrameName(rec.name)
   end
 
-  rec.width  = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, t.width)
-  rec.height = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, t.height)
-
-  -- Offsets are intentionally NOT clamped to the screen here: a legitimate multi-monitor or
-  -- high-resolution layout can carry offsets far outside the current UIParent, and clamping on every
-  -- write would quietly destroy that layout the first time the user logged in at a lower resolution.
-  -- Recovering a genuinely unreachable panel is R.Recover's job, and it runs on demand.
-  rec.x = tonumber(rec.x) or t.x
-  rec.y = tonumber(rec.y) or t.y
-
-  if not Util.IsPoint(rec.point)    then rec.point    = t.point end
-  if not Util.IsPoint(rec.relPoint) then rec.relPoint = t.relPoint end
-  if not Util.IsStrata(rec.strata)  then rec.strata   = t.strata end
-
-  rec.level      = Util.Clamp(rec.level, 0, 100, t.level)
-  rec.scale      = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, t.scale)
-  rec.borderSize = Util.Clamp(rec.borderSize, C.MIN_BORDER, C.MAX_BORDER, t.borderSize)
-  rec.borderOffset =
-    Util.Clamp(rec.borderOffset, C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, t.borderOffset)
-  rec.alpha      = Util.Clamp(rec.alpha, 0, 1, t.alpha)
+  -- Strata has its own predicate rather than a rule table row: it is the one token field that is not
+  -- a point.
+  if not Util.IsStrata(rec.strata) then rec.strata = t.strata end
 
   rec.bgColor     = Util.Color(rec.bgColor, t.bgColor)
   rec.borderColor = Util.Color(rec.borderColor, t.borderColor)
+  rec.artColor    = Util.Color(rec.artColor, t.artColor)
 
-  -- Media names are kept as free strings and NOT validated against the live LibSharedMedia list: an
-  -- addon that registers a texture may load after this one, so a name that resolves to nothing right
-  -- now can be perfectly valid a second later. Compat.FetchMedia degrades at render time instead,
-  -- which keeps the user's choice in the file rather than silently rewriting it to the default.
-  if type(rec.bgTexture) ~= "string" or rec.bgTexture == "" then rec.bgTexture = t.bgTexture end
-  if type(rec.borderTexture) ~= "string" or rec.borderTexture == "" then
-    rec.borderTexture = t.borderTexture
-  end
-
-  -- Class-color flags, driven off C.COLOR_FIELDS so a color added later needs no edit here.
-  for _, flag in pairs(C.COLOR_FIELDS) do
-    rec[flag] = rec[flag] and true or false
-  end
-
-  rec.mouseover      = rec.mouseover and true or false
-  rec.mouseoverAlpha = Util.Clamp(rec.mouseoverAlpha, 0, 1, t.mouseoverAlpha)
-
-  -- Accent bar. The edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
+  -- The accent edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
   -- (the user unticked every edge) and must not be quietly repopulated with TOP, so only a
   -- non-table falls back to the template's.
-  rec.accentEnabled = rec.accentEnabled and true or false
   rec.accentEdges = Util.EdgeSet(
     type(rec.accentEdges) == "table" and rec.accentEdges or t.accentEdges)
-  if type(rec.accentTexture) ~= "string" or rec.accentTexture == "" then
-    rec.accentTexture = t.accentTexture
-  end
-  rec.accentThickness = Util.Clamp(rec.accentThickness,
-    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, t.accentThickness)
-  rec.accentOffset = Util.Clamp(rec.accentOffset,
-    C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, t.accentOffset)
 
-  -- The accent bar's own border. Shares the panel border's bounds, so a value legal on one is legal
-  -- on the other.
-  if type(rec.accentBorderTexture) ~= "string" or rec.accentBorderTexture == "" then
-    rec.accentBorderTexture = t.accentBorderTexture
-  end
-  rec.accentBorderSize = Util.Clamp(rec.accentBorderSize,
-    C.MIN_BORDER, C.MAX_BORDER, t.accentBorderSize)
-  rec.accentBorderOffset = Util.Clamp(rec.accentBorderOffset,
-    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, t.accentBorderOffset)
-
-  -- ── Artwork ──
-  -- artTexture is NOT validated against the live catalog here, for the same reason the media names
-  -- above are left as free strings: an id that resolves to nothing right now can be perfectly valid
-  -- a moment later (an art pack appending to the artwork catalog loads after this addon), and
-  -- BuildArtSpec already degrades an unresolvable id to "draw nothing" at render time. Rewriting it
-  -- to "None" on the first touch would destroy the user's choice permanently to fix a problem that
-  -- fixes itself. R:Set still refuses a typo up front, which is when there is somebody to tell.
-  if type(rec.artTexture) ~= "string" or rec.artTexture == "" then rec.artTexture = t.artTexture end
   -- An EMPTY custom path is a legitimate state — the user has picked Custom and has not typed the
   -- path yet — so only a non-string falls back, the same distinction the accent edge set makes.
   if type(rec.artCustomPath) ~= "string" then rec.artCustomPath = t.artCustomPath end
 
-  rec.artColor = Util.Color(rec.artColor, t.artColor)
-  rec.artAlpha = Util.Clamp(rec.artAlpha, 0, 1, t.artAlpha)
-  rec.artScale = Util.Clamp(rec.artScale, C.MIN_ART_SCALE, C.MAX_ART_SCALE, t.artScale)
-
-  -- Deliberately unbounded, exactly as the panel's own x/y are above: the art offset is measured
-  -- against a panel whose size is not known here, and a bound invented at this point would clamp a
-  -- perfectly good placement on a large panel the first time the record was touched.
-  rec.artX = tonumber(rec.artX) or t.artX
-  rec.artY = tonumber(rec.artY) or t.artY
-  if not Util.IsPoint(rec.artPoint) then rec.artPoint = t.artPoint end
-
-  rec.artFlipH = rec.artFlipH and true or false
-  rec.artFlipV = rec.artFlipV and true or false
-
-  -- The four closed lists snap back to their template default when what is stored is not a member.
-  -- A hand-edited SavedVariables file carrying artFill = "COVER" must not reach the renderer: every
-  -- fill branch computes a different rectangle and a different set of texture coordinates, so an
-  -- unknown token would either fall through to whichever branch happens to be last or produce a nil
-  -- size that lands in SetSize — a Lua error inside a paint, which aborts the rest of that panel's
-  -- render and leaves it half-drawn. Snapping to the default here means the worst outcome of a
-  -- corrupt file is artwork that looks wrong, which the user can see and re-pick.
-  --
-  -- enumMatch also normalizes case, so a lower-case token typed straight into the file is repaired
-  -- rather than discarded.
-  rec.artFill     = enumMatch("artFill",     rec.artFill)     or t.artFill
-  rec.artRotation = enumMatch("artRotation", rec.artRotation) or t.artRotation
-  rec.artLayer    = enumMatch("artLayer",    rec.artLayer)    or t.artLayer
+  sanitizeNumbers(rec, t)
+  sanitizeTokens(rec, t)
+  sanitizeFlags(rec)
 
   return rec
 end
@@ -646,6 +665,116 @@ end
 
 -- ── Field edits ─────────────────────────────────────────────────────────────────
 
+-- kind -> coerce(value, field), returning the value to store, or nil plus the sentence to show the
+-- user. Built once at file load and keyed off C.PANEL_FIELD_TYPE, so the write seam below is a
+-- lookup rather than a chain of `elseif kind ==` arms.
+--
+-- A kind ABSENT from this table is stored verbatim — that is "string" (artCustomPath), and it is
+-- exactly what the old chain's fall-through did.
+local COERCE = {}
+
+function COERCE.number(value)
+  local n = tonumber(value)
+  if n == nil then return nil, "expected a number" end
+  return n
+end
+
+function COERCE.boolean(value)
+  local parsed = Util.ParseBool(value)
+  if parsed == nil then return nil, Util.BOOL_USAGE end
+  return parsed
+end
+
+function COERCE.point(value)
+  value = tostring(value):upper()
+  if not Util.IsPoint(value) then
+    return nil, "expected one of: " .. table.concat(C.POINTS, ", ")
+  end
+  return value
+end
+
+function COERCE.strata(value)
+  value = tostring(value):upper()
+  if not Util.IsStrata(value) then
+    return nil, "expected one of: " .. table.concat(C.STRATA, ", ")
+  end
+  return value
+end
+
+function COERCE.color(value)
+  if type(value) ~= "table" then
+    local parsed = Util.ParseColor(value)
+    if not parsed then return nil, "expected r,g,b[,a] (0-1 or 0-255)" end
+    return parsed
+  end
+  return value
+end
+
+function COERCE.edges(value)
+  if type(value) ~= "table" then
+    local parsed = Util.ParseEdges(value)
+    if not parsed then
+      return nil, ("expected any of: %s (or 'none')"):format(table.concat(C.EDGES, ", "):lower())
+    end
+    value = parsed
+  end
+  -- Copied, not aliased, on BOTH paths: a caller that keeps its table would otherwise be able to
+  -- mutate the stored set behind the registry's back, skipping the write seam entirely.
+  return Util.EdgeSet(value)
+end
+
+-- Matched case-insensitively against the LIVE LibSharedMedia list so the CLI accepts
+-- `/pm panel X bgTexture blizzard marble` for "Blizzard Marble", and so a typo is refused with
+-- the real list rather than silently stored and resolved to the fallback at render time.
+function COERCE.media(value, field)
+  value = tostring(value)
+  local mediaType = C.PANEL_FIELD_MEDIA[field]
+  local names = NS.Compat.MediaList(mediaType)
+  local wanted, matched = value:lower(), nil
+  for _, candidate in ipairs(names) do
+    if candidate:lower() == wanted then matched = candidate break end
+  end
+  if not matched then
+    return nil, ("unknown %s texture. Available: %s"):format(mediaType, table.concat(names, ", "))
+  end
+  return matched
+end
+
+-- One coercer for every closed-list field. See enumMatch above for why the artwork enums share a
+-- kind instead of getting a branch each: they differ only in their contents, so the next one is a
+-- C.PANEL_FIELD_ENUM row rather than another copy of this code.
+function COERCE.enum(value, field)
+  local matched, list = enumMatch(field, value)
+  -- A field typed "enum" with no list is a Constants bug, not user error, so say so rather than
+  -- crashing table.concat on a nil.
+  if not list then return nil, ("'%s' has no value list"):format(tostring(field)) end
+  if not matched then
+    return nil, "expected one of: " .. table.concat(list, ", ")
+  end
+  return matched
+end
+
+-- Matched case-insensitively against the LIVE catalog, mirroring the media coercer above and
+-- for the same reason: a typo must come back with the real list of ids rather than being stored
+-- and then silently resolving to nothing at render time, which reads as "artwork is broken"
+-- instead of "that is not one of the names".
+--
+-- Artwork.List() is the source rather than the raw catalog because it already carries the two
+-- reserved ids in their agreed places — "None" first, "Custom" last — so accepting them costs
+-- nothing here and the offered order matches what the dropdown shows.
+function COERCE.artwork(value)
+  value = tostring(value)
+  local wanted, matched, ids = value:lower(), nil, {}
+  for _, entry in ipairs(NS.Artwork.List()) do
+    ids[#ids + 1] = entry.id
+    if tostring(entry.id):lower() == wanted then matched = entry.id end
+  end
+  if not matched then
+    return nil, ("unknown artwork. Available: %s"):format(table.concat(ids, ", "))
+  end
+  return matched
+end
+
 -- The single write seam for a panel's fields. Every edit — settings widget, CLI, drag-stop — routes
 -- through here, so validation, sanitizing, the debug trace and the repaint broadcast happen exactly
 -- once and identically for all three.
@@ -660,88 +789,13 @@ function R:Set(key, field, value)
   -- constraint, and duplicating that check here is how the two would eventually disagree.
   if field == "name" then return R:Rename(rec.id, value) end
 
-  if kind == "number" then
-    local n = tonumber(value)
-    if n == nil then return false, "expected a number" end
-    value = n
-  elseif kind == "boolean" then
-    local parsed = Util.ParseBool(value)
-    if parsed == nil then return false, Util.BOOL_USAGE end
-    value = parsed
-  elseif kind == "point" then
-    value = tostring(value):upper()
-    if not Util.IsPoint(value) then
-      return false, "expected one of: " .. table.concat(C.POINTS, ", ")
-    end
-  elseif kind == "strata" then
-    value = tostring(value):upper()
-    if not Util.IsStrata(value) then
-      return false, "expected one of: " .. table.concat(C.STRATA, ", ")
-    end
-  elseif kind == "color" then
-    if type(value) ~= "table" then
-      local parsed = Util.ParseColor(value)
-      if not parsed then return false, "expected r,g,b[,a] (0-1 or 0-255)" end
-      value = parsed
-    end
-  elseif kind == "edges" then
-    if type(value) ~= "table" then
-      local parsed = Util.ParseEdges(value)
-      if not parsed then
-        return false, ("expected any of: %s (or 'none')")
-          :format(table.concat(C.EDGES, ", "):lower())
-      end
-      value = parsed
-    end
-    -- Copied, not aliased: a caller that keeps its table would otherwise be able to mutate the
-    -- stored set behind the registry's back, skipping the write seam entirely.
-    value = Util.EdgeSet(value)
-  elseif kind == "media" then
-    -- Matched case-insensitively against the LIVE LibSharedMedia list so the CLI accepts
-    -- `/pm panel X bgTexture blizzard marble` for "Blizzard Marble", and so a typo is refused with
-    -- the real list rather than silently stored and resolved to the fallback at render time.
-    value = tostring(value)
-    local mediaType = C.PANEL_FIELD_MEDIA[field]
-    local names = NS.Compat.MediaList(mediaType)
-    local wanted, matched = value:lower(), nil
-    for _, candidate in ipairs(names) do
-      if candidate:lower() == wanted then matched = candidate break end
-    end
-    if not matched then
-      return false, ("unknown %s texture. Available: %s"):format(mediaType, table.concat(names, ", "))
-    end
-    value = matched
-  elseif kind == "enum" then
-    -- One branch for every closed-list field. See enumMatch above for why the four artwork enums
-    -- share a kind instead of getting a branch each: they differ only in their contents, so the
-    -- next one is a C.PANEL_FIELD_ENUM row rather than another copy of this code.
-    local matched, list = enumMatch(field, value)
-    -- A field typed "enum" with no list is a Constants bug, not user error, so say so rather than
-    -- crashing table.concat on a nil.
-    if not list then return false, ("'%s' has no value list"):format(tostring(field)) end
-    if not matched then
-      return false, "expected one of: " .. table.concat(list, ", ")
-    end
-    value = matched
-  elseif kind == "artwork" then
-    -- Matched case-insensitively against the LIVE catalog, mirroring the media branch above and
-    -- for the same reason: a typo must come back with the real list of ids rather than being stored
-    -- and then silently resolving to nothing at render time, which reads as "artwork is broken"
-    -- instead of "that is not one of the names".
-    --
-    -- Artwork.List() is the source rather than the raw catalog because it already carries the two
-    -- reserved ids in their agreed places — "None" first, "Custom" last — so accepting them costs
-    -- nothing here and the offered order matches what the dropdown shows.
-    value = tostring(value)
-    local wanted, matched, ids = value:lower(), nil, {}
-    for _, entry in ipairs(NS.Artwork.List()) do
-      ids[#ids + 1] = entry.id
-      if tostring(entry.id):lower() == wanted then matched = entry.id end
-    end
-    if not matched then
-      return false, ("unknown artwork. Available: %s"):format(table.concat(ids, ", "))
-    end
-    value = matched
+  -- `err` rather than a nil test on the coerced value: the boolean coercer's success value is
+  -- legitimately `false`, and a nil test would refuse every `/pm panel X mouseover off`.
+  local coerce = COERCE[kind]
+  if coerce then
+    local coerced, err = coerce(value, field)
+    if err then return false, err end
+    value = coerced
   end
 
   rec[field] = value

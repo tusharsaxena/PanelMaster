@@ -44,17 +44,79 @@ local mouseoverDriver
 --
 -- `shown` folds the two independent switches — the addon-wide master and the panel's own — into one
 -- answer, so no call site has to remember both.
+-- Where the panel sits and how big it is. Written into the spec in place rather than returned as a
+-- tuple, so each writer owns a coherent slice and nothing has to be threaded back through a caller.
+local function addGeometry(spec, rec)
+  -- Written first because the artwork geometry needs the CLAMPED size, not the raw record fields:
+  -- art fitted to a width the panel will never actually be drawn at is art that lands in the wrong
+  -- place the moment the clamp bites.
+  spec.width  = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.width)
+  spec.height = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.height)
+  -- The whole frame's scale, applied to the panel and inherited by every child — background,
+  -- border, accent bars and artwork alike. It is deliberately NOT folded into `width`/`height`
+  -- here: the stored size is what the user typed and what the editor's sliders show, and
+  -- multiplying it would make a scaled panel report a size nobody set.
+  spec.scale    = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale)
+  spec.point    = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point
+  spec.relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
+  spec.x        = tonumber(rec.x) or 0
+  spec.y        = tonumber(rec.y) or 0
+  spec.strata   = Util.IsStrata(rec.strata) and rec.strata or C.PANEL_TEMPLATE.strata
+  spec.level    = Util.Clamp(rec.level, 0, 100, 0)
+end
+
+-- What the panel looks like: opacity and its mouseover fade, the background and the border.
+local function addAppearance(spec, rec)
+  local alpha = Util.Clamp(rec.alpha, 0, 1, 1)
+  local mouseover = rec.mouseover and true or false
+  spec.alpha = alpha
+  -- Colors come from the shared resolver, so the class-color override is applied in exactly one
+  -- place for every color the addon will ever have (C.COLOR_FIELDS).
+  spec.bg     = Util.ResolveColor(rec, "bgColor")
+  spec.border = Util.ResolveColor(rec, "borderColor")
+  spec.bgTexture     = rec.bgTexture or C.PANEL_TEMPLATE.bgTexture
+  spec.borderTexture = rec.borderTexture or C.PANEL_TEMPLATE.borderTexture
+  -- A zero border is a real choice (a plain block with no outline), so it is honored rather than
+  -- floored to 1 — it means no backdrop is applied at all rather than one drawn at zero size.
+  spec.borderSize   = Util.Clamp(rec.borderSize, C.MIN_BORDER, C.MAX_BORDER, 1)
+  spec.borderOffset =
+    Util.Clamp(rec.borderOffset, C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 0)
+  spec.mouseover = mouseover
+  -- The alpha the panel rests at when the cursor is elsewhere. Clamped to at most `alpha`: a
+  -- resting alpha above the hover alpha would make the panel FADE when you moused over it, which
+  -- is not what the setting says it does.
+  spec.mouseoverAlpha =
+    mouseover and math.min(Util.Clamp(rec.mouseoverAlpha, 0, 1, 0), alpha) or alpha
+end
+
+-- The accent bar, resolved into one sub-table so the renderer takes a single decision per edge
+-- rather than re-reading and re-validating the record four times.
+local function buildAccentSpec(rec)
+  return {
+    enabled   = rec.accentEnabled and true or false,
+    edges     = Util.EdgeSet(rec.accentEdges),
+    texture   = rec.accentTexture or C.PANEL_TEMPLATE.accentTexture,
+    thickness = Util.Clamp(rec.accentThickness,
+      C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, C.PANEL_TEMPLATE.accentThickness),
+    offset    = Util.Clamp(rec.accentOffset,
+      C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, C.PANEL_TEMPLATE.accentOffset),
+    -- Through the same shared resolver as every other color, so the class-color override needed
+    -- no new code here at all — just the C.COLOR_FIELDS row.
+    color     = Util.ResolveColor(rec, "accentColor"),
+    -- The bar's own border, sharing the panel border's bounds so the two sliders read alike.
+    borderTexture = rec.accentBorderTexture or C.PANEL_TEMPLATE.accentBorderTexture,
+    borderSize    = Util.Clamp(rec.accentBorderSize,
+      C.MIN_BORDER, C.MAX_BORDER, C.PANEL_TEMPLATE.accentBorderSize),
+    borderOffset  = Util.Clamp(rec.accentBorderOffset,
+      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, C.PANEL_TEMPLATE.accentBorderOffset),
+    borderColor   = Util.ResolveColor(rec, "accentBorderColor"),
+  }
+end
+
 function Canvas.BuildSpec(rec, settings)
   if type(rec) ~= "table" then return nil end
   settings = settings or {}
-  local alpha = Util.Clamp(rec.alpha, 0, 1, 1)
-  local mouseover = rec.mouseover and true or false
-  -- Hoisted out of the table below because the artwork geometry needs the CLAMPED size, not the raw
-  -- record fields: art fitted to a width the panel will never actually be drawn at is art that lands
-  -- in the wrong place the moment the clamp bites.
-  local width  = Util.Clamp(rec.width,  C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.width)
-  local height = Util.Clamp(rec.height, C.MIN_SIZE, C.MAX_SIZE, C.PANEL_TEMPLATE.height)
-  return {
+  local spec = {
     id        = rec.id,
     name      = rec.name,
     -- The record's STORED frame name, never re-derived from `rec.name` — that derivation is what
@@ -62,67 +124,22 @@ function Canvas.BuildSpec(rec, settings)
     -- field, so this stays the one reader rather than a second copy of the rule.
     frameName = NS.Registry.FrameName(rec),
     shown     = (settings.enabled ~= false) and (rec.enabled ~= false),
-    width     = width,
-    height    = height,
-    -- The whole frame's scale, applied to the panel and inherited by every child — background,
-    -- border, accent bars and artwork alike. It is deliberately NOT folded into `width`/`height`
-    -- here: the stored size is what the user typed and what the editor's sliders show, and
-    -- multiplying it would make a scaled panel report a size nobody set.
-    scale     = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale),
-    point     = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point,
-    relPoint  = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint,
-    x         = tonumber(rec.x) or 0,
-    y         = tonumber(rec.y) or 0,
-    strata    = Util.IsStrata(rec.strata) and rec.strata or C.PANEL_TEMPLATE.strata,
-    level     = Util.Clamp(rec.level, 0, 100, 0),
-    alpha     = alpha,
-    -- Colors come from the shared resolver, so the class-color override is applied in exactly one
-    -- place for every color the addon will ever have (C.COLOR_FIELDS).
-    bg        = Util.ResolveColor(rec, "bgColor"),
-    border    = Util.ResolveColor(rec, "borderColor"),
-    bgTexture     = rec.bgTexture or C.PANEL_TEMPLATE.bgTexture,
-    borderTexture = rec.borderTexture or C.PANEL_TEMPLATE.borderTexture,
-    -- A zero border is a real choice (a plain block with no outline), so it is honored rather than
-    -- floored to 1 — it means no backdrop is applied at all rather than one drawn at zero size.
-    borderSize = Util.Clamp(rec.borderSize, C.MIN_BORDER, C.MAX_BORDER, 1),
-    borderOffset =
-      Util.Clamp(rec.borderOffset, C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 0),
-    mouseover  = mouseover,
-    -- The alpha the panel rests at when the cursor is elsewhere. Clamped to at most `alpha`: a
-    -- resting alpha above the hover alpha would make the panel FADE when you moused over it, which
-    -- is not what the setting says it does.
-    mouseoverAlpha = mouseover and math.min(Util.Clamp(rec.mouseoverAlpha, 0, 1, 0), alpha) or alpha,
-
-    -- The accent bar, resolved into one sub-table so the renderer takes a single decision per edge
-    -- rather than re-reading and re-validating the record four times.
-    accent = {
-      enabled   = rec.accentEnabled and true or false,
-      edges     = Util.EdgeSet(rec.accentEdges),
-      texture   = rec.accentTexture or C.PANEL_TEMPLATE.accentTexture,
-      thickness = Util.Clamp(rec.accentThickness,
-        C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, C.PANEL_TEMPLATE.accentThickness),
-      offset    = Util.Clamp(rec.accentOffset,
-        C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, C.PANEL_TEMPLATE.accentOffset),
-      -- Through the same shared resolver as every other color, so the class-color override needed
-      -- no new code here at all — just the C.COLOR_FIELDS row.
-      color     = Util.ResolveColor(rec, "accentColor"),
-      -- The bar's own border, sharing the panel border's bounds so the two sliders read alike.
-      borderTexture = rec.accentBorderTexture or C.PANEL_TEMPLATE.accentBorderTexture,
-      borderSize    = Util.Clamp(rec.accentBorderSize,
-        C.MIN_BORDER, C.MAX_BORDER, C.PANEL_TEMPLATE.accentBorderSize),
-      borderOffset  = Util.Clamp(rec.accentBorderOffset,
-        C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, C.PANEL_TEMPLATE.accentBorderOffset),
-      borderColor   = Util.ResolveColor(rec, "accentBorderColor"),
-    },
-
-    -- The artwork layer, resolved entirely by modules/Artwork.lua — every fill, crop, flip and
-    -- quarter-turn is arithmetic on the record, and none of it belongs in a renderer. nil means
-    -- "this panel draws no artwork", which is the default and stays the cheapest answer.
-    --
-    -- Guarded on the module existing so a partial load (or a test harness that skips it) yields a
-    -- panel with no art rather than an error out of the spec builder, which every render path calls.
-    art = NS.Artwork and NS.Artwork.BuildArtSpec(rec, width, height) or nil,
   }
+  addGeometry(spec, rec)
+  addAppearance(spec, rec)
+  spec.accent = buildAccentSpec(rec)
+
+  -- The artwork layer, resolved entirely by modules/Artwork.lua — every fill, crop, flip and
+  -- quarter-turn is arithmetic on the record, and none of it belongs in a renderer. nil means
+  -- "this panel draws no artwork", which is the default and stays the cheapest answer.
+  --
+  -- Fed spec.width/spec.height rather than the record's own, so "the art is fitted to the size the
+  -- panel will really be drawn at" is enforced by the structure instead of by a convention.
+  --
+  -- Guarded on the module existing so a partial load (or a test harness that skips it) yields a
+  -- panel with no art rather than an error out of the spec builder, which every render path calls.
+  spec.art = NS.Artwork and NS.Artwork.BuildArtSpec(rec, spec.width, spec.height) or nil
+  return spec
 end
 
 local function currentSettings()
@@ -582,6 +599,49 @@ local function acquire(globalName)
   return newFrame(globalName)
 end
 
+-- Tear down the backdrop border a panel frame or an accent bar carries. The same idiom for both,
+-- because both hang their outline off a `borderFrame` child — and the SetBackdrop type test is
+-- presence-based rather than a build check, exactly as applyBorder is: a headless stub frame has no
+-- real SetBackdrop either.
+local function clearBackdrop(owner)
+  if owner and owner.borderFrame and type(owner.borderFrame.SetBackdrop) == "function" then
+    owner.borderFrame:SetBackdrop(nil)
+    owner.borderFrame:Hide()
+  end
+end
+
+-- Accent bars are anchored OUTSIDE the panel's bounds, so a pooled frame that kept them would
+-- leave four colored strips floating where the panel used to be.
+local function releaseAccents(f)
+  for _, bar in pairs(f.accents or {}) do
+    bar:Hide()
+    clearBackdrop(bar)
+  end
+end
+
+-- Same reasoning as the bars: a released frame must be inert, not merely hidden. It sits in the
+-- pool until some other panel claims its name, and anything that shows it before applySpec runs
+-- again — Unlock's overlay, a debug dump, a stray Show() — would put the PREVIOUS panel's artwork
+-- on screen for the new one. Clearing the texture as well as hiding the frame also drops the file
+-- reference for a panel that may never come back.
+local function releaseArt(f)
+  if f.artFrame then f.artFrame:Hide() end
+  if f.artTextures then
+    for _, t in ipairs(f.artTextures) do t:SetTexture(nil) end
+  end
+end
+
+-- The key this frame goes back into the pool under, or nil for a frame that has no usable name.
+--
+-- `__frameName` is the authority, not `GetName()`: the headless stub frame answers every
+-- PascalCase call with itself, so GetName() there returns a table and would key the pool on a
+-- frame object.
+local function poolName(f)
+  local name = f.__frameName or (f.GetName and f:GetName())
+  if type(name) == "string" then return name end
+  return nil
+end
+
 local function release(f)
   if not f then return end
   f:Hide()
@@ -593,34 +653,12 @@ local function release(f)
   -- name a record it no longer draws — harmless (Canvas:Render reassigns it) but misleading in a
   -- `/pm debug dump`.
   f.panelID = nil
-  if f.borderFrame and type(f.borderFrame.SetBackdrop) == "function" then
-    f.borderFrame:SetBackdrop(nil)
-    f.borderFrame:Hide()
-  end
-  -- Accent bars are anchored OUTSIDE the panel's bounds, so a pooled frame that kept them would
-  -- leave four colored strips floating where the panel used to be.
-  for _, bar in pairs(f.accents or {}) do
-    bar:Hide()
-    if bar.borderFrame and type(bar.borderFrame.SetBackdrop) == "function" then
-      bar.borderFrame:SetBackdrop(nil)
-      bar.borderFrame:Hide()
-    end
-  end
-  -- Same reasoning as the bars: a released frame must be inert, not merely hidden. It sits in the
-  -- pool until some other panel claims its name, and anything that shows it before applySpec runs
-  -- again — Unlock's overlay, a debug dump, a stray Show() — would put the PREVIOUS panel's artwork
-  -- on screen for the new one. Clearing the texture as well as hiding the frame also drops the file
-  -- reference for a panel that may never come back.
-  if f.artFrame then f.artFrame:Hide() end
-  if f.artTextures then
-    for _, t in ipairs(f.artTextures) do t:SetTexture(nil) end
-  end
+  clearBackdrop(f)
+  releaseAccents(f)
+  releaseArt(f)
   if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
-  -- `__frameName` is the authority, not `GetName()`: the headless stub frame answers every
-  -- PascalCase call with itself, so GetName() there returns a table and would key the pool on a
-  -- frame object.
-  local name = f.__frameName or (f.GetName and f:GetName())
-  if type(name) == "string" then pool[name] = f end
+  local name = poolName(f)
+  if name then pool[name] = f end
 end
 
 -- How many frames are parked in the pool. A helper rather than `#pool` because the pool is keyed by

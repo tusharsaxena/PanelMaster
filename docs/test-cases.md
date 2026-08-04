@@ -122,7 +122,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.New: a panel really lands on the documented defaults, not just the template
 - Registry.Reset: puts position and scale back to the defaults too
 
-### test_canvas.lua (29)
+### test_canvas.lua (30)
 
 - Canvas.BuildSpec: carries the record's geometry through
 - Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
@@ -141,6 +141,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas.RenderAll: renders every record and retires nothing else
 - Canvas: frames are pooled, not leaked (hard rule #14)
 - Canvas: a delete returns its frame to the pool
+- Canvas: a released frame is inert, not merely hidden
 - Canvas: a re-created panel gets its own frame back
 - Canvas: a DIFFERENT panel name gets a different frame
 - Canvas: a released frame is mouse-disabled again
@@ -463,7 +464,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (25)
+### test_debuglog.lua (26)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -483,6 +484,7 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog: window visibility is independent of the logging flag
 - DebugLog.Toggle: alternates window visibility
 - DebugLog.Diagnose: reports the registry and the renderer together
+- DebugLog.Diagnose: counts active, pooled and orphaned frames
 - DebugLog.Diagnose: works with logging off
 - NS.Debug: call sites do not restate the gate
 - NS.Debug: the ungated call sites still log when logging is on
@@ -743,13 +745,21 @@ badge and any count quoted in the docs must agree with it.
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 
-### test_harness.lua (5)
+### test_harness.lua (13)
 
 - Harness: every suite the runner lists exists on disk
 - Harness: every suite on disk is listed by the runner
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: the runner derives the addon's load list from the TOC
+- Mock frame: visibility starts shown and Show/Hide/SetShown flip it
+- Mock frame: Hide fires each OnHide hook once, and only from shown
+- Mock frame: SetPoint records both overloads and GetPoint hands them back
+- Mock frame: a recorded 0 survives and GetScale defaults to 1
+- Mock frame: a lowercase or custom key misses through to nil
+- Mock frame: child regions are fresh stubs, never the parent
+- Mock frame: SetTexture keeps the wrap arguments and SetTexCoord the flat list
+- Mock frame: the recorded odds and ends round-trip
 
 ### test_spelling.lua (3)
 
@@ -770,20 +780,20 @@ badge and any count quoted in the docs must agree with it.
 | test_compat.lua | 14 |
 | test_constants.lua | 17 |
 | test_registry.lua | 46 |
-| test_canvas.lua | 29 |
+| test_canvas.lua | 30 |
 | test_unlock.lua | 30 |
 | test_media.lua | 83 |
 | test_accent.lua | 63 |
 | test_artwork.lua | 98 |
 | test_database.lua | 20 |
-| test_debuglog.lua | 25 |
+| test_debuglog.lua | 26 |
 | test_schema.lua | 21 |
 | test_slash.lua | 58 |
 | test_panel.lua | 45 |
 | test_profiles.lua | 21 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 36 |
-| test_harness.lua | 5 |
+| test_harness.lua | 13 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **696** |
+| **Total** | **706** |
