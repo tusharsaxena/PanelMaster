@@ -102,6 +102,41 @@ The generator also warns, on stderr, when a pack's declared section count disagr
 on disk, or when one theme's sections differ in size. Both are worth reading rather than ignoring —
 they mean the pack changed shape — and neither is fatal: it trusts the files.
 
+## The complexity report — a RELEASE step, not a commit gate
+
+[`complexity.md`](complexity.md) is another generated file, and the only one whose checkpoint is a
+**release** rather than a commit. Regenerate it and **read its diff** in the same change that bumps
+the version and rolls the README's `## What's new` and `## Version History` forward, **before** the
+tag:
+
+```sh
+lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .
+```
+
+Run it from the repo root, exactly as written — no extra flags, no re-tuned thresholds, no narrowed
+path. Two reports produced by different invocations cannot be diffed against each other, and the
+diff is the entire point: one report is a page of numbers, while the same function going from CCN 9
+to CCN 24 since the last tag is a finding with a name on it.
+
+**This is explicitly NOT part of the green gate**, and it must not become one. Cyclomatic complexity
+is a hint, not a verdict; a build that fails on a threshold teaches people to reach for
+`--no-verify`, after which the gate protects nothing and the habit stays. Nothing here blocks a
+commit.
+
+When you regenerate it, update the `## Watch list` above the raw output — every function `lizard`
+warns on and every file in the 1000–1500 LOC on-notice band, each with a one-line disposition — and
+call out anything that **newly** crossed a threshold or entered the band. Degradation that is
+noticed and accepted is a decision; degradation that gets regenerated over in silence is the report
+failing at its only job. The file is **generated — never hand-edit its numbers**; a hand-edited
+complexity report is worse than a missing one, because it reads as measured.
+
+`lizard` is an optional local tool (see [`../DEPENDENCIES.md`](../DEPENDENCIES.md)). Without it
+installed the report is **stale, not non-compliant** — leave the committed one alone with its
+original header, which dates itself, and say so in the release notes.
+
+The full rule, including the reasoning, is `performance-§10` in the Ka0s WoW Addon Standard. It is
+not restated here.
+
 ## Local toolchain
 
 WoW runs Lua 5.1, so the harness targets 5.1.
@@ -112,6 +147,11 @@ sudo luarocks install luacheck
 ```
 
 Syntax-check a single file with `luac -p path/to/file.lua`.
+
+Everything else this repo needs — `lizard`, `git`, and the Python side of the artwork and Sunn
+pipelines with the vendored upscaler's system libraries — is in
+[`../DEPENDENCIES.md`](../DEPENDENCIES.md), with an install command and a verification command for
+each. That file answers *what to install*; this one answers *how to verify*.
 
 ## How the harness works
 

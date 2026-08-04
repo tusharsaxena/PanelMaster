@@ -27,7 +27,9 @@ Start here, then read the docs:
 - **`docs/ARCHITECTURE.md`** — what this addon is: module map, settings schema, message bus, slash
   surface, event wiring, taint notes, known limitations.
 - **`docs/testing.md`** — how to verify: the headless harness, lint, and the green commit gate.
-- Topic detail in `docs/` as needed (`smoke-tests.md`, `test-cases.md`, …).
+- **`DEPENDENCIES.md`** (root) — what to install to build, run, test or release this addon, split
+  runtime / development / release-and-assets, with WSL2-Ubuntu commands.
+- Topic detail in `docs/` as needed (`smoke-tests.md`, `test-cases.md`, `complexity.md`, …).
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
 — into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Four of the five majors are adopted
@@ -40,6 +42,12 @@ Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus
 `../LibKa0s` has moved, the **vendor gate** — neither of the other two can see a stale vendored copy;
 `docs/testing.md` has the four diffs and what each answer means. Never auto-stage/commit/push and
 never bump the version without an explicit instruction.
+
+At **release** — the same change that bumps the version and rolls the README forward, before the tag
+— also regenerate `docs/complexity.md` with `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` from
+the repo root, read its diff, and refresh its watch list. This is a **release** step and **not** a
+commit gate: nothing about it may ever block a commit (`performance-§10`; `docs/testing.md` ▸ *The
+complexity report*).
 
 ## The `docs/` set — there is no `agent-context.md`
 
