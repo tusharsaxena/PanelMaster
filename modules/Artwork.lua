@@ -814,13 +814,266 @@ end
 -- For a Sunn row this is the CONTENT size, already net of the overlap crop: SunnArt rows declare
 -- `h` as the visible height and `contentV0` as where that content starts in the file, so autosize
 -- shapes a panel around the art a player can see rather than around transparent padding.
-function Artwork.NativeSize(rec)
-  local path, row = resolve(rec)
-  if not path then return nil end
+-- The declared pixel size of a catalog row, or the nominal square for a Custom path whose size
+-- nothing can know. nil when either axis is unusable — a catalog row with a typo'd `w` must not
+-- reach a division any more than a missing one may.
+--
+-- Shared by NativeSize and BuildArtSpec so the autosize seam and the fill math cannot come to
+-- different conclusions about how big a piece is.
+local function nativeSize(row)
   local w = positive(row and row.w or Artwork.CUSTOM_NATIVE_SIZE)
   local h = positive(row and row.h or Artwork.CUSTOM_NATIVE_SIZE)
   if not w or not h then return nil end
   return w, h
+end
+
+function Artwork.NativeSize(rec)
+  local path, row = resolve(rec)
+  if not path then return nil end
+  return nativeSize(row)
+end
+
+-- The art's extent AS PRESENTED, after the turn, plus whether a turn happened at all.
+--
+-- A quarter turn TRANSPOSES the texture's axes against the screen: afterwards the screen's
+-- horizontal extent is sampled along the texture's v axis and its vertical extent along u. Every
+-- fill but STRETCH reasons about "how big is this art on screen", so each has to see the art's
+-- dimensions the way the turn will actually present them rather than the way they were authored.
+--
+-- Getting this wrong is invisible on square art and catastrophic on anything else: a 512x128
+-- piece at FIT and 90 degrees was sized into a rect for the UNturned art and then drawn turned,
+-- squashing it 16:1. Square art hides it completely, which is why the whole fill matrix below is
+-- run against wide and tall art on both sides.
+local function presentedExtent(rotation, w, h)
+  if rotation == 90 or rotation == 270 then return h, w, true end
+  return w, h, false
+end
+
+-- Map a pair of SCREEN-space spans onto the texture's own axes. The one place the quarter-turn
+-- transpose is applied, so FILL and TILE state their spans in screen terms and stay readable.
+local function toTextureAxes(turned, screenH, screenV)
+  if turned then return screenV, screenH end
+  return screenH, screenV
+end
+
+-- ── The fill matrix ─────────────────────────────────────────────────────────────
+--
+-- fill → (W, H, ew, eh, s, turned) → width, height, u0, v0, u1, v1, tile. One arm per fill, built
+-- ONCE at file load: the table and its five closures are allocated here, never per call.
+--
+-- `ew`/`eh` are the art's extent AS PRESENTED — already transposed for a quarter turn by the
+-- caller — because every fill but STRETCH reasons about "how big is this art on screen".
+local FILL = {}
+
+-- Stretch IS "fill the panel exactly", so scale is deliberately ignored rather than quietly
+-- applied: a scaled stretch is either FILL (still covers, crops instead of distorting) or
+-- STATIC (keeps the aspect, does not cover), and honoring scale here would produce art that
+-- no longer matches the panel while still claiming to be stretched to it. The tooltip says so.
+FILL.STRETCH = function(W, H)
+  return W, H, 0, 0, 1, 1, false
+end
+
+-- Contain: the larger of the two shortfalls decides, so the whole image is inside the panel and
+-- the aspect is preserved. Scale then shrinks or grows that result about the anchor.
+FILL.FIT = function(W, H, ew, eh, s)
+  local r = math.min(W / ew, H / eh) * s
+  return ew * r, eh * r, 0, 0, 1, 1, false
+end
+
+FILL.STATIC = function(_, _, ew, eh, s)
+  return ew * s, eh * s, 0, 0, 1, 1, false
+end
+
+-- Cover. The frame is the whole panel, and the overflow comes off the TEXTURE COORDINATES
+-- rather than off the frame size — that is the whole point. Cover has to fill the panel exactly
+-- AND preserve the art's aspect, and those two demands cannot both be met by resizing a
+-- rectangle: something has to be thrown away, and throwing it away in UV space crops the image
+-- while leaving the drawn rectangle flush with the panel. Resizing instead would letterbox
+-- (that is FIT) or distort (that is STRETCH).
+--
+-- a compares the panel's aspect to the art's AS PRESENTED. a > 1 means the panel is relatively
+-- wider, so the horizontal axis is the binding one and the vertical is cropped to 1/a;
+-- otherwise the reverse. Both spans are in SCREEN terms and are transposed onto the texture's
+-- axes at the end, which is what keeps cover honest under a quarter turn.
+FILL.FILL = function(W, H, ew, eh, s, turned)
+  local a = (W / H) / (ew / eh)
+  local spanH, spanV = 1, 1
+  if a > 1 then spanV = 1 / a else spanH = a end
+  -- Scale tightens BOTH surviving ranges, so s > 1 samples less of the texture across the same
+  -- rectangle, which reads as zooming in. Dividing (rather than multiplying) is what makes the
+  -- slider's direction agree with every other fill, where s > 1 also makes the art bigger.
+  spanH, spanV = spanH / s, spanV / s
+  local uSpan, vSpan = toTextureAxes(turned, spanH, spanV)
+  return W, H,
+    0.5 - uSpan / 2, 0.5 - vSpan / 2,
+    0.5 + uSpan / 2, 0.5 + vSpan / 2, false
+end
+
+-- The texture repeats at its native size (times scale) across the whole panel, so the UV range
+-- is "how many copies fit" rather than a 0-1 crop. Values above 1 are the point here, and they
+-- only mean anything because the renderer sets wrap mode REPEAT — hence the flag, which is the
+-- one bit of this spec the renderer cannot infer from the numbers.
+-- Counted in SCREEN terms — "how many copies fit across the panel, and how many down it" —
+-- then transposed, so a quarter turn re-tiles rather than stretching each tile.
+--
+-- This is also the FALL-THROUGH arm: anything not one of the four named fills tiles, exactly as
+-- the old `else -- TILE` branch did, rather than erroring.
+FILL.TILE = function(W, H, ew, eh, s, turned)
+  local u1, v1 = toTextureAxes(turned, W / (ew * s), H / (eh * s))
+  return W, H, 0, 0, u1, v1, true
+end
+
+-- Position is honored only by the two fills that do not cover the panel. STRETCH, FILL and TILE
+-- all draw a rectangle exactly the size of the panel, so an anchor or an offset could only push
+-- that rectangle off the panel and leave a bare strip — the setting would be actively harmful
+-- rather than merely inert. Forcing center here means the spec always states where the art really
+-- sits, instead of the renderer having to know which fills to ignore the record for.
+local function artPlacement(rec, fill, T)
+  if fill ~= "STATIC" and fill ~= "FIT" then return "CENTER", 0, 0 end
+  return Util.IsPoint(rec.artPoint) and rec.artPoint or T.artPoint,
+    tonumber(rec.artX) or 0,
+    tonumber(rec.artY) or 0
+end
+
+-- Through the shared resolver, so class color cost one C.COLOR_FIELDS row and no code here.
+-- artAlpha then multiplies the resolved alpha rather than replacing it, so the color picker's own
+-- alpha and the opacity slider compose instead of one silently winning.
+--
+-- The tint applies to EVERY piece, full-color included. It used to be forced to white for art the
+-- catalog declared full-color, on the reasoning that multiplying finished art by a color can only
+-- muddy it — which is true, and is why Desaturate exists: collapsing the art to grayscale first
+-- means the tint multiplies against neutral gray and comes back as a clean, saturated version of
+-- the chosen color rather than a darkened average of the original hues.
+--
+-- The default tint is white, which is a no-op, so nothing changes for anyone who has not asked
+-- for a color.
+local function artTint(rec, T)
+  local color = Util.ResolveColor(rec, "artColor")
+  local alpha = color[4] * Util.Clamp(rec.artAlpha, 0, 1, T.artAlpha)
+  return { color[1], color[2], color[3], alpha }
+end
+
+-- The two mirror switches, coerced to REAL booleans rather than passed through truthy: they travel
+-- through composeUV and transformRect and end up in the spec the headless suite asserts on, so a
+-- stray string or number would compare unequal to `false` there for no reason a reader could see.
+local function artFlips(rec)
+  return rec.artFlipH and true or false, rec.artFlipV and true or false
+end
+
+-- The two fields the renderer reads as-is: whether to drain the art to grayscale before the tint
+-- multiplies against it, and which blend mode to draw with.
+--
+-- Resolved here rather than read off the record by the renderer, so "what does this panel draw"
+-- stays a question BuildArtSpec answers completely and the headless suite can assert on.
+local function artRenderHints(rec)
+  return rec.artDesaturate and true or false,
+    C.ART_BLEND_SET[rec.artBlend] and rec.artBlend or C.PANEL_TEMPLATE.artBlend
+end
+
+-- ── The content window ────────────────────────────────────────────────────────
+--
+-- A row may declare that only part of its file is art. Sunn rows do: `contentV0` is the overlap
+-- crop (see modules/SunnArt.lua), the transparent band at the top of the artwork that SunnArt
+-- hangs over the game world and a panel has nothing to hang over. The row's declared `h` is
+-- already the CONTENT height, so every calculation above has been working in content space; this
+-- maps that space back onto the file at the last moment.
+--
+-- TILE is the exception, and it is a real limitation rather than an oversight: a REPEAT wrap
+-- repeats a whole FILE, not a sub-range of one, so the band cannot be kept out of a tiled repeat.
+-- The crop is dropped there instead of being applied wrongly — a tiled Sunn bar shows its
+-- transparent gaps, which is at least what the art actually contains.
+local function contentCropV0(row, tile)
+  if tile then return 0 end
+  local declared = tonumber(row and row.contentV0)
+  if declared and declared > 0 and declared < 1 then return declared end
+  return 0
+end
+
+-- A tiled composite repeats the whole bar, at `copies x sections` textures. Grow the tile until
+-- the budget holds, so the panel stays covered. See Artwork.MAX_ART_QUADS.
+local function clampTiledComposite(u0, u1, n)
+  local maxCopies = math.floor(Artwork.MAX_ART_QUADS / n)
+  if maxCopies < 1 then maxCopies = 1 end
+  if math.ceil(u1) - math.floor(u0) > maxCopies then
+    return math.floor(u0) + maxCopies, true
+  end
+  return u1, false
+end
+
+-- The one-element quad list a non-composed piece draws as, so the renderer has ONE path.
+--
+-- Both wrap axes are REPEAT here, unlike a composite's CLAMP/REPEAT: a single file tiles in both
+-- directions, while a bar sliced along u can only repeat down.
+local function singleTextureQuad(path, width, height, point, x, y, uv, tile)
+  return { {
+    path   = path,
+    width  = width,
+    height = height,
+    point  = point,
+    x      = x,
+    y      = y,
+    uv     = uv,
+    wrapH  = tile and "REPEAT" or nil,
+    wrapV  = tile and "REPEAT" or nil,
+  } }
+end
+
+-- ── Slicing ───────────────────────────────────────────────────────────────────
+--
+-- A composed row (Sunn's whole-bar entries, and nothing else in the addon) is N files laid flush
+-- side by side. It is treated as ONE virtual image of the bar's size, which is why every branch
+-- above ran untouched: fill, scale, anchor, crop, flip, rotation and tint all mean precisely what
+-- they mean for a single texture, and the bar is cut up only now that they have had their say.
+--
+-- Section i owns the band [(i-1)/N, i/N] of that virtual image. Intersecting each band with the
+-- crop the fill already chose is what makes a FILL that pushes the left section off the panel
+-- simply not draw it, rather than needing a rule about it.
+--
+-- Takes ONE ctx table, assembled by the caller. That is a single extra allocation, and only on the
+-- composite path — which already allocates the spec plus one table per quad, and runs on panel
+-- render rather than per frame.
+local function buildSectionQuads(ctx)
+  local quads = {}
+  local u0, u1, n, span = ctx.u0, ctx.u1, ctx.n, ctx.span
+  local flipH, flipV, rotation = ctx.flipH, ctx.flipV, ctx.rotation
+  local width, height = ctx.width, ctx.height
+  -- One pass for every fill: the non-tiling ones keep u within [0, 1], so the loop runs a single
+  -- copy and the bar is drawn once. Only the vertical repeat is left to the wrap mode, because
+  -- that one IS within a single file.
+  for copy = math.floor(u0), math.ceil(u1) - 1 do
+    for i = 1, n do
+      local bandLo = copy + (i - 1) / n
+      local bandHi = copy + i / n
+      local lo = bandLo > u0 and bandLo or u0
+      local hi = bandHi < u1 and bandHi or u1
+      -- A crop landing exactly on a band edge is the COMMON case, not a corner one: FILL centers
+      -- its window, so a 3-section bar in a panel of one third its aspect crops precisely to the
+      -- middle section's boundaries. In exact arithmetic the outer two vanish; in floating point
+      -- they survive by an ulp and become slivers a fraction of a pixel wide, which WoW draws as
+      -- a bright seam. Comparing against a fraction of the span rather than `hi > lo` is what
+      -- makes the section disappear as intended.
+      if hi - lo > span * 1e-9 then
+        local sx0, sy0, sx1, sy1 =
+          transformRect((lo - u0) / span, 0, (hi - u0) / span, 1, flipH, flipV, rotation)
+        local qx, qy = subAnchor(ctx.point, ctx.x, ctx.y, width, height, sx0, sy0, sx1, sy1)
+        quads[#quads + 1] = {
+          path   = ctx.sections[i],
+          width  = width * (sx1 - sx0),
+          height = height * (sy1 - sy0),
+          point  = ctx.point,
+          x      = qx,
+          y      = qy,
+          -- The section's own file coordinates: the surviving slice of its band, rescaled from
+          -- bar space back to the 0-1 of the one file it comes from.
+          uv     = composeUV((lo - bandLo) * n, ctx.fv0, (hi - bandLo) * n, ctx.fv1,
+            flipH, flipV, rotation),
+          wrapH  = ctx.tile and "CLAMP" or nil,
+          wrapV  = ctx.tile and "REPEAT" or nil,
+        }
+      end
+    end
+  end
+  return quads
 end
 
 -- The record-to-geometry function. PURE: a record and a panel size in, a plain table out, no frame
@@ -839,9 +1092,8 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   -- Native size: declared by the catalog row, or the nominal fallback for a custom path. Guarded
   -- the same way as the panel size, because a catalog row with a typo'd `w` must not divide by
   -- zero either.
-  local w = positive(row and row.w or Artwork.CUSTOM_NATIVE_SIZE)
-  local h = positive(row and row.h or Artwork.CUSTOM_NATIVE_SIZE)
-  if not w or not h then return nil end
+  local w, h = nativeSize(row)
+  if not w then return nil end
 
   local T = C.PANEL_TEMPLATE
   local fill  = pickEnum(rec.artFill,  C.ART_FILL_SET,  T.artFill)
@@ -849,200 +1101,41 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   local rotation = pickEnum(tonumber(rec.artRotation), C.ART_ROTATION_SET, T.artRotation)
   local s = Util.Clamp(rec.artScale, C.MIN_ART_SCALE, C.MAX_ART_SCALE, T.artScale)
 
-  -- A quarter turn TRANSPOSES the texture's axes against the screen: afterwards the screen's
-  -- horizontal extent is sampled along the texture's v axis and its vertical extent along u. Every
-  -- fill but STRETCH reasons about "how big is this art on screen", so each has to see the art's
-  -- dimensions the way the turn will actually present them rather than the way they were authored.
-  --
-  -- Getting this wrong is invisible on square art and catastrophic on anything else: a 512x128
-  -- piece at FIT and 90 degrees was sized into a rect for the UNturned art and then drawn turned,
-  -- squashing it 16:1. Square art hides it completely, which is why the whole fill matrix below is
-  -- run against wide and tall art on both sides.
-  local turned = (rotation == 90 or rotation == 270)
-  local ew, eh = w, h                       -- the art's extent AS PRESENTED, after the turn
-  if turned then ew, eh = h, w end
+  local ew, eh, turned = presentedExtent(rotation, w, h)
 
-  -- Map a pair of SCREEN-space spans onto the texture's own axes. The one place the transpose is
-  -- applied, so FILL and TILE state their spans in screen terms and stay readable.
-  local function toTextureAxes(screenH, screenV)
-    if turned then return screenV, screenH end
-    return screenH, screenV
-  end
+  -- Every arm of FILL returns all seven, so there is no partly-set state to guard against and no
+  -- default here that could hide an arm which forgot one. TILE is the fall-through.
+  local width, height, u0, v0, u1, v1, tile =
+    (FILL[fill] or FILL.TILE)(W, H, ew, eh, s, turned)
 
-  -- Declared without a default on purpose: every one of the five branches below sets both, so an
-  -- initial value here would only hide a future branch that forgot to.
-  local width, height
-  local u0, v0, u1, v1 = 0, 0, 1, 1
-  local tile = false
+  local point, x, y = artPlacement(rec, fill, T)
+  local color = artTint(rec, T)
 
-  if fill == "STRETCH" then
-    -- Stretch IS "fill the panel exactly", so scale is deliberately ignored rather than quietly
-    -- applied: a scaled stretch is either FILL (still covers, crops instead of distorting) or
-    -- STATIC (keeps the aspect, does not cover), and honoring scale here would produce art that
-    -- no longer matches the panel while still claiming to be stretched to it. The tooltip says so.
-    width, height = W, H
+  local flipH, flipV = artFlips(rec)
 
-  elseif fill == "FIT" then
-    -- Contain: the larger of the two shortfalls decides, so the whole image is inside the panel and
-    -- the aspect is preserved. Scale then shrinks or grows that result about the anchor.
-    local r = math.min(W / ew, H / eh) * s
-    width, height = ew * r, eh * r
-
-  elseif fill == "STATIC" then
-    width, height = ew * s, eh * s
-
-  elseif fill == "FILL" then
-    -- Cover. The frame is the whole panel, and the overflow comes off the TEXTURE COORDINATES
-    -- rather than off the frame size — that is the whole point. Cover has to fill the panel exactly
-    -- AND preserve the art's aspect, and those two demands cannot both be met by resizing a
-    -- rectangle: something has to be thrown away, and throwing it away in UV space crops the image
-    -- while leaving the drawn rectangle flush with the panel. Resizing instead would letterbox
-    -- (that is FIT) or distort (that is STRETCH).
-    --
-    -- a compares the panel's aspect to the art's AS PRESENTED. a > 1 means the panel is relatively
-    -- wider, so the horizontal axis is the binding one and the vertical is cropped to 1/a;
-    -- otherwise the reverse. Both spans are in SCREEN terms and are transposed onto the texture's
-    -- axes at the end, which is what keeps cover honest under a quarter turn.
-    width, height = W, H
-    local a = (W / H) / (ew / eh)
-    local spanH, spanV = 1, 1
-    if a > 1 then spanV = 1 / a else spanH = a end
-    -- Scale tightens BOTH surviving ranges, so s > 1 samples less of the texture across the same
-    -- rectangle, which reads as zooming in. Dividing (rather than multiplying) is what makes the
-    -- slider's direction agree with every other fill, where s > 1 also makes the art bigger.
-    spanH, spanV = spanH / s, spanV / s
-    local uSpan, vSpan = toTextureAxes(spanH, spanV)
-    u0, u1 = 0.5 - uSpan / 2, 0.5 + uSpan / 2
-    v0, v1 = 0.5 - vSpan / 2, 0.5 + vSpan / 2
-
-  else -- TILE
-    -- The texture repeats at its native size (times scale) across the whole panel, so the UV range
-    -- is "how many copies fit" rather than a 0-1 crop. Values above 1 are the point here, and they
-    -- only mean anything because the renderer sets wrap mode REPEAT — hence the flag, which is the
-    -- one bit of this spec the renderer cannot infer from the numbers.
-    -- Counted in SCREEN terms — "how many copies fit across the panel, and how many down it" —
-    -- then transposed, so a quarter turn re-tiles rather than stretching each tile.
-    width, height = W, H
-    u1, v1 = toTextureAxes(W / (ew * s), H / (eh * s))
-    tile = true
-  end
-
-  -- Position is honored only by the two fills that do not cover the panel. STRETCH, FILL and TILE
-  -- all draw a rectangle exactly the size of the panel, so an anchor or an offset could only push
-  -- that rectangle off the panel and leave a bare strip — the setting would be actively harmful
-  -- rather than merely inert. Forcing center here means the spec always states where the art really
-  -- sits, instead of the renderer having to know which fills to ignore the record for.
-  local point, x, y = "CENTER", 0, 0
-  if fill == "STATIC" or fill == "FIT" then
-    point = Util.IsPoint(rec.artPoint) and rec.artPoint or T.artPoint
-    x = tonumber(rec.artX) or 0
-    y = tonumber(rec.artY) or 0
-  end
-
-  -- Through the shared resolver, so class color cost one C.COLOR_FIELDS row and no code here.
-  -- artAlpha then multiplies the resolved alpha rather than replacing it, so the color picker's own
-  -- alpha and the opacity slider compose instead of one silently winning.
-  local color = Util.ResolveColor(rec, "artColor")
-  local alpha = color[4] * Util.Clamp(rec.artAlpha, 0, 1, T.artAlpha)
-  -- The tint applies to EVERY piece, full-color included. It used to be forced to white for art the
-  -- catalog declared full-color, on the reasoning that multiplying finished art by a color can only
-  -- muddy it — which is true, and is why Desaturate exists: collapsing the art to grayscale first
-  -- means the tint multiplies against neutral gray and comes back as a clean, saturated version of
-  -- the chosen color rather than a darkened average of the original hues.
-  --
-  -- The default tint is white, which is a no-op, so nothing changes for anyone who has not asked
-  -- for a color.
-  color = { color[1], color[2], color[3], alpha }
-
-  local flipH = rec.artFlipH and true or false
-  local flipV = rec.artFlipV and true or false
-
-  -- ── The content window ────────────────────────────────────────────────────────
-  --
-  -- A row may declare that only part of its file is art. Sunn rows do: `contentV0` is the overlap
-  -- crop (see modules/SunnArt.lua), the transparent band at the top of the artwork that SunnArt
-  -- hangs over the game world and a panel has nothing to hang over. The row's declared `h` is
-  -- already the CONTENT height, so every calculation above has been working in content space; this
-  -- maps that space back onto the file at the last moment.
-  --
-  -- TILE is the exception, and it is a real limitation rather than an oversight: a REPEAT wrap
-  -- repeats a whole FILE, not a sub-range of one, so the band cannot be kept out of a tiled repeat.
-  -- The crop is dropped there instead of being applied wrongly — a tiled Sunn bar shows its
-  -- transparent gaps, which is at least what the art actually contains.
-  local cv0 = 0
-  if not tile then
-    local declared = tonumber(row and row.contentV0)
-    if declared and declared > 0 and declared < 1 then cv0 = declared end
-  end
+  -- The content window, mapped back onto the file at the last moment (see contentCropV0).
+  local cv0 = contentCropV0(row, tile)
   local function toFileV(v) return cv0 + v * (1 - cv0) end
+  local fv0, fv1 = toFileV(v0), toFileV(v1)
 
-  -- ── Slicing ───────────────────────────────────────────────────────────────────
-  --
-  -- A composed row (Sunn's whole-bar entries, and nothing else in the addon) is N files laid flush
-  -- side by side. It is treated as ONE virtual image of the bar's size, which is why every branch
-  -- above ran untouched: fill, scale, anchor, crop, flip, rotation and tint all mean precisely what
-  -- they mean for a single texture, and the bar is cut up only now that they have had their say.
-  --
-  -- Section i owns the band [(i-1)/N, i/N] of that virtual image. Intersecting each band with the
-  -- crop the fill already chose is what makes a FILL that pushes the left section off the panel
-  -- simply not draw it, rather than needing a rule about it.
   local sections = row and row.sections
   local n = type(sections) == "table" and #sections or 0
   local tileClamped = false
 
   if n >= 2 and tile then
-    -- A tiled composite repeats the whole bar, at `copies x sections` textures. Grow the tile until
-    -- the budget holds, so the panel stays covered. See Artwork.MAX_ART_QUADS.
-    local maxCopies = math.floor(Artwork.MAX_ART_QUADS / n)
-    if maxCopies < 1 then maxCopies = 1 end
-    if math.ceil(u1) - math.floor(u0) > maxCopies then
-      u1 = math.floor(u0) + maxCopies
-      tileClamped = true
-    end
+    u1, tileClamped = clampTiledComposite(u0, u1, n)
   end
 
-  local uv = composeUV(u0, toFileV(v0), u1, toFileV(v1), flipH, flipV, rotation)
+  local uv = composeUV(u0, fv0, u1, fv1, flipH, flipV, rotation)
   local quads
 
   if n >= 2 and u1 > u0 then
-    quads = {}
-    local span = u1 - u0
-    -- One pass for every fill: the non-tiling ones keep u within [0, 1], so the loop runs a single
-    -- copy and the bar is drawn once. Only the vertical repeat is left to the wrap mode, because
-    -- that one IS within a single file.
-    for copy = math.floor(u0), math.ceil(u1) - 1 do
-      for i = 1, n do
-        local bandLo = copy + (i - 1) / n
-        local bandHi = copy + i / n
-        local lo = bandLo > u0 and bandLo or u0
-        local hi = bandHi < u1 and bandHi or u1
-        -- A crop landing exactly on a band edge is the COMMON case, not a corner one: FILL centers
-        -- its window, so a 3-section bar in a panel of one third its aspect crops precisely to the
-        -- middle section's boundaries. In exact arithmetic the outer two vanish; in floating point
-        -- they survive by an ulp and become slivers a fraction of a pixel wide, which WoW draws as
-        -- a bright seam. Comparing against a fraction of the span rather than `hi > lo` is what
-        -- makes the section disappear as intended.
-        if hi - lo > span * 1e-9 then
-          local sx0, sy0, sx1, sy1 =
-            transformRect((lo - u0) / span, 0, (hi - u0) / span, 1, flipH, flipV, rotation)
-          local qx, qy = subAnchor(point, x, y, width, height, sx0, sy0, sx1, sy1)
-          quads[#quads + 1] = {
-            path   = sections[i],
-            width  = width * (sx1 - sx0),
-            height = height * (sy1 - sy0),
-            point  = point,
-            x      = qx,
-            y      = qy,
-            -- The section's own file coordinates: the surviving slice of its band, rescaled from
-            -- bar space back to the 0-1 of the one file it comes from.
-            uv     = composeUV((lo - bandLo) * n, toFileV(v0), (hi - bandLo) * n, toFileV(v1),
-              flipH, flipV, rotation),
-            wrapH  = tile and "CLAMP" or nil,
-            wrapV  = tile and "REPEAT" or nil,
-          }
-        end
-      end
-    end
+    quads = buildSectionQuads({
+      sections = sections, n = n, u0 = u0, u1 = u1, span = u1 - u0,
+      fv0 = fv0, fv1 = fv1, width = width, height = height,
+      point = point, x = x, y = y,
+      flipH = flipH, flipV = flipV, rotation = rotation, tile = tile,
+    })
   end
 
   -- Every spec carries quads, and a single texture is a one-element list — so the renderer has ONE
@@ -1050,18 +1143,10 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
   -- that is not any single quad but the rectangle they collectively fill, and for everything else
   -- it is quads[1] exactly, which the suite asserts.
   if not quads then
-    quads = { {
-      path   = path,
-      width  = width,
-      height = height,
-      point  = point,
-      x      = x,
-      y      = y,
-      uv     = uv,
-      wrapH  = tile and "REPEAT" or nil,
-      wrapV  = tile and "REPEAT" or nil,
-    } }
+    quads = singleTextureQuad(path, width, height, point, x, y, uv, tile)
   end
+
+  local desaturate, blend = artRenderHints(rec)
 
   return {
     quads  = quads,
@@ -1072,10 +1157,8 @@ function Artwork.BuildArtSpec(rec, panelW, panelH)
     -- here so the ladder is stated once, in Constants, rather than re-derived by the renderer.
     level  = C.ART_FRAME_LEVEL[layer],
     color  = color,
-    -- Resolved here rather than read off the record by the renderer, so "what does this panel draw"
-    -- stays a question BuildArtSpec answers completely and the headless suite can assert on.
-    desaturate = rec.artDesaturate and true or false,
-    blend  = C.ART_BLEND_SET[rec.artBlend] and rec.artBlend or C.PANEL_TEMPLATE.artBlend,
+    desaturate = desaturate,
+    blend  = blend,
     tile   = tile,
     width  = width,
     height = height,

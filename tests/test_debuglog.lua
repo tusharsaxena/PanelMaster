@@ -175,6 +175,21 @@ test("DebugLog.Diagnose: reports the registry and the renderer together", functi
   NS.Registry:DeleteAll()
 end)
 
+test("DebugLog.Diagnose: counts active, pooled and orphaned frames", function()
+  quiet()
+  NS.Registry:DeleteAll()
+  NS.Canvas:RenderAll()
+  NS.Registry:New("Counted")
+  NS.Registry:New("Tallied")
+  -- Every frame belongs to a record here, so the orphan count is the interesting zero: a frame with
+  -- no record is a leak, and the pool count is how you tell a leak from healthy reuse.
+  local pooled = NS.Canvas.PooledCount()
+  local joined = table.concat(D:Diagnose(), "\n")
+  assertTrue(joined:find(("frames: 2 active, %d pooled, 0 orphaned"):format(pooled), 1, true) ~= nil,
+    "the frame-count line does not read as expected: " .. joined)
+  NS.Registry:DeleteAll()
+end)
+
 test("DebugLog.Diagnose: works with logging off", function()
   quiet()
   -- It is a structured DUMP verb, not a log line: it must work whether or not capture is enabled

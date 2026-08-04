@@ -29,6 +29,58 @@ local UNAVAILABLE = NS.LIBKA0S_MISSING .. ", so the debug console window is unav
 -- The registry's view and the renderer's view are printed together on purpose: a panel that is in
 -- the registry but has no frame (or the reverse) is the exact shape of every rendering bug this
 -- addon can have. Everything is resolved at CALL time, which is what lets this file sit in core/.
+--
+-- The four writers below are file-local rather than nested inside attachDiagnose: they capture
+-- nothing, so hoisting them means they are built once at load rather than once per attachDiagnose
+-- call — and attachDiagnose runs on the library path OR the degraded one. Each still resolves every
+-- module through NS at CALL time, which is the property that lets this file sit in core/.
+
+-- The renderer's live frame map, or an empty table when Canvas has not loaded. Asked for twice
+-- below — once to find orphans, once to count — so it is stated once.
+local function activeFrames()
+  return (NS.Canvas and NS.Canvas.__active) or {}
+end
+
+-- The two lines describing the addon's own switches and the screen they are drawn on.
+local function addHeader(add)
+  local settings = (NS.db and NS.db.profile and NS.db.profile.settings) or {}
+  add("master=%s unlocked=%s preview=%s snap=%s/%s",
+    tostring(settings.enabled), tostring(NS.State.unlocked), tostring(NS.State.preview),
+    tostring(settings.snapToGrid), tostring(settings.gridSize))
+
+  local w, h = NS.Compat.GetScreenSize()
+  add("screen=%s x %s scale=%s", tostring(w), tostring(h), tostring(NS.Compat.GetUIScale()))
+end
+
+-- One record, as two lines: its geometry, and its identity plus the media it draws with.
+local function addPanel(add, rec)
+  local f = NS.Canvas and NS.Canvas:FrameFor(rec.id)
+  add("  [%s] '%s' %sx%s @%s %s,%s %s a=%s frame=%s",
+    tostring(rec.id), tostring(rec.name),
+    tostring(rec.width), tostring(rec.height), tostring(rec.point),
+    tostring(rec.x), tostring(rec.y), tostring(rec.strata),
+    NS.Registry.FormatField(rec, "alpha"),
+    f and "yes" or "NO")
+  -- The global name is the addon's public anchor contract, and the media names are the two
+  -- values most likely to be the reason a panel "looks wrong" — both belong in a pasted log.
+  add("        %s  bg=%s border=%s/%s%s%s",
+    NS.Registry.FrameName(rec),
+    tostring(rec.bgTexture), tostring(rec.borderTexture), tostring(rec.borderSize),
+    (rec.bgClassColor or rec.borderClassColor) and " classcolor" or "",
+    NS.Unlock and NS.Unlock:IsPanelUnlocked(rec.id) and " UNLOCKED" or "")
+end
+
+-- A frame with no record is a leak; the pool count is how you tell a leak from healthy reuse.
+local function addFrames(add)
+  local orphans, count = 0, 0
+  for id in pairs(activeFrames()) do
+    count = count + 1
+    if not NS.Registry:Get(id) then orphans = orphans + 1 end
+  end
+  add("frames: %d active, %d pooled, %d orphaned", count,
+    (NS.Canvas and NS.Canvas.PooledCount and NS.Canvas.PooledCount()) or 0, orphans)
+end
+
 local function attachDiagnose(D)
   function D:Diagnose()
     local out = {}
@@ -36,41 +88,15 @@ local function attachDiagnose(D)
       out[#out + 1] = select("#", ...) > 0 and fmt:format(...) or fmt
     end
 
-    local settings = (NS.db and NS.db.profile and NS.db.profile.settings) or {}
-    add("master=%s unlocked=%s preview=%s snap=%s/%s",
-      tostring(settings.enabled), tostring(NS.State.unlocked), tostring(NS.State.preview),
-      tostring(settings.snapToGrid), tostring(settings.gridSize))
-
-    local w, h = NS.Compat.GetScreenSize()
-    add("screen=%s x %s scale=%s", tostring(w), tostring(h), tostring(NS.Compat.GetUIScale()))
+    addHeader(add)
 
     local records = NS.Registry:All()
     add("registry: %d panels", #records)
     for _, rec in ipairs(records) do
-      local f = NS.Canvas and NS.Canvas:FrameFor(rec.id)
-      add("  [%s] '%s' %sx%s @%s %s,%s %s a=%s frame=%s",
-        tostring(rec.id), tostring(rec.name),
-        tostring(rec.width), tostring(rec.height), tostring(rec.point),
-        tostring(rec.x), tostring(rec.y), tostring(rec.strata),
-        NS.Registry.FormatField(rec, "alpha"),
-        f and "yes" or "NO")
-      -- The global name is the addon's public anchor contract, and the media names are the two
-      -- values most likely to be the reason a panel "looks wrong" — both belong in a pasted log.
-      add("        %s  bg=%s border=%s/%s%s%s",
-        NS.Registry.FrameName(rec),
-        tostring(rec.bgTexture), tostring(rec.borderTexture), tostring(rec.borderSize),
-        (rec.bgClassColor or rec.borderClassColor) and " classcolor" or "",
-        NS.Unlock and NS.Unlock:IsPanelUnlocked(rec.id) and " UNLOCKED" or "")
+      addPanel(add, rec)
     end
 
-    -- A frame with no record is a leak; the pool count is how you tell a leak from healthy reuse.
-    local orphans = 0
-    for id in pairs((NS.Canvas and NS.Canvas.__active) or {}) do
-      if not NS.Registry:Get(id) then orphans = orphans + 1 end
-    end
-    add("frames: %d active, %d pooled, %d orphaned",
-      (function() local n = 0 for _ in pairs((NS.Canvas and NS.Canvas.__active) or {}) do n = n + 1 end return n end)(),
-      (NS.Canvas and NS.Canvas.PooledCount and NS.Canvas.PooledCount()) or 0, orphans)
+    addFrames(add)
 
     return out
   end
