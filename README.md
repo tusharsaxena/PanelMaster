@@ -10,7 +10,7 @@
      addon actually loads in-game — WoW cannot read .png or .jpg at runtime. -->
 ![Logo](media/logos/panelmaster.logo.256.jpg)
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.6.0 (MIT).
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.6.1 (MIT).
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so a screen full of separate frames
 reads as a few deliberate groups.
