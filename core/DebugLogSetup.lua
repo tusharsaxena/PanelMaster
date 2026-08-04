@@ -30,16 +30,11 @@ local UNAVAILABLE = NS.LIBKA0S_MISSING .. ", so the debug console window is unav
 -- the registry but has no frame (or the reverse) is the exact shape of every rendering bug this
 -- addon can have. Everything is resolved at CALL time, which is what lets this file sit in core/.
 --
--- The four writers below are file-local rather than nested inside attachDiagnose: they capture
--- nothing, so hoisting them means they are built once at load rather than once per attachDiagnose
--- call — and attachDiagnose runs on the library path OR the degraded one. Each still resolves every
--- module through NS at CALL time, which is the property that lets this file sit in core/.
-
--- The renderer's live frame map, or an empty table when Canvas has not loaded. Asked for twice
--- below — once to find orphans, once to count — so it is stated once.
-local function activeFrames()
-  return (NS.Canvas and NS.Canvas.__active) or {}
-end
+-- The three writers below — addHeader, addPanel, addFrames — are file-local rather than nested
+-- inside attachDiagnose: they capture nothing, so hoisting them means they are built once at load
+-- rather than once per attachDiagnose call — and attachDiagnose runs on the library path OR the
+-- degraded one. Each still resolves every module through NS at CALL time, which is the property
+-- that lets this file sit in core/.
 
 -- The two lines describing the addon's own switches and the screen they are drawn on.
 local function addHeader(add)
@@ -70,10 +65,12 @@ local function addPanel(add, rec)
     NS.Unlock and NS.Unlock:IsPanelUnlocked(rec.id) and " UNLOCKED" or "")
 end
 
--- A frame with no record is a leak; the pool count is how you tell a leak from healthy reuse.
+-- A frame with no record is a leak; the pool count is how you tell a leak from healthy reuse. Both
+-- numbers come off one pass over the renderer's live frame map, which is read straight here — an
+-- empty table when Canvas has not loaded, so the loop runs zero times rather than erroring.
 local function addFrames(add)
   local orphans, count = 0, 0
-  for id in pairs(activeFrames()) do
+  for id in pairs((NS.Canvas and NS.Canvas.__active) or {}) do
     count = count + 1
     if not NS.Registry:Get(id) then orphans = orphans + 1 end
   end

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "addon": "PanelMaster",
+  "addonVersion": "0.1.0",
+  "run": "20260804-215132",
+  "startedAt": "2026-08-04T21:51:32+05:30",
+  "durationMs": 6000,
+  "label": null,
+  "release": null,
+  "git": { "sha": "ee1ad6a6c2f04cae2938b99db7928f92b58f936e", "branch": "feat/fix-ccn", "dirty": true },
+  "host": { "lua": "Lua 5.1.5  Copyright (C) 1994-2012 Lua.org, PUC-Rio", "luacheck": "Luacheck: 1.2.0", "lizard": "1.23.0" },
+  "suites": {
+    "lint": { "status": "pass", "durationMs": 1000, "warnings": 0, "errors": 0, "files": 25, "gating": true },
+    "tests": { "status": "pass", "durationMs": 2000, "passed": 706, "failed": 0, "total": 706, "gating": true },
+    "perf": { "status": "skip", "durationMs": 0, "skipReason": "no tests/perf.lua — this addon ships no offline scenarios", "scenarios": 0, "gating": false },
+    "complexity": { "status": "pass", "durationMs": 2000, "warnings": 0, "maxCcn": 0, "nloc": 10936, "functions": 1348, "avgCcn": 2.0, "avgNloc": 7.1, "avgToken": 55.6, "warnFunRatio": 0.00, "warnNlocRatio": 0.00, "bandFiles": 3, "overCapFiles": 0, "gating": false }
+  },
+  "verdict": "green"
+}
