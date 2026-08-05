@@ -66,10 +66,13 @@ paths — and each of the other three appends its own consequence and its own te
 | `core/CoreSetup.lua` | `"; running on reduced built-in fallbacks."` — announced once, on the first line the addon prints |
 | `core/DebugLogSetup.lua` | `", so the debug console window is unavailable."` |
 | `settings/Slash.lua` | `", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."` |
-| `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` |
+| `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` — said on **every** `/pm config`, never latched |
 
 A degraded install therefore says the same thing about **why** at every site and a different thing
-about **what** at each one. The wording is the whole Ka0s collection's and is not this addon's to
+about **what** at each one. The latching differs on purpose, and the rule is what the line rides:
+the Core and DebugLog notices ride other output, where repeating would drown the line the user
+asked for, so they are once per session; `/pm config`'s line rides nothing — it *is* the answer to a
+verb the user invoked — so latching it would make the second invocation read as a broken command. The wording is the whole Ka0s collection's and is not this addon's to
 reword — `tests/test_libka0s.lua` pins the clause on both paths.
 
 The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:

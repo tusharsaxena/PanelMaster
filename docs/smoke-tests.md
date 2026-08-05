@@ -522,7 +522,9 @@ addon still *works*.
 11. `/pm list` → `…, so the slash help index and the settings CLI (list/get/set/reset) are
     unavailable.`
 12. `/pm resetall` → **still works**: it is the one schema verb with no library dependency.
-13. `/pm config` → `…, so the settings panel is unavailable.`
+13. `/pm config` → `…, so the settings panel is unavailable.` Run it **three times**: it must answer
+    every time. Unlike step 8's console notice, which rides other output, this line *is* the verb's
+    whole answer, and a second invocation that printed nothing would read as a broken command.
 14. **The cause clause is word-for-word the same in every one of those four**, differing only after
     the comma. Compare against any other adopted Ka0s addon on the same install; a user with a
     broken install must not get a different sentence depending on which addon they open.

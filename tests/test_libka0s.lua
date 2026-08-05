@@ -33,20 +33,37 @@ local function readFile(path)
   return src
 end
 
---- Load the WHOLE addon into a fresh environment with libs/LibKa0s deliberately absent.
+--- Load the WHOLE addon into a fresh environment from a PARTIAL library file list.
 ---
---- The library files are simply never loaded, so `LibStub("LibKa0s-Core-1.0", true)` answers nil
---- exactly as it does in an install where the folder was not copied. That is the point: hand-
---- stubbing `lib = nil` inside a seam would test a branch, not an install, and would not catch a
---- seam that raises at load before it ever reaches its own guard.
-local function loadDegraded()
+--- `omit` names LibKa0s basenames to leave out (`{ Slash = true }`). Everything else in
+--- LibKa0s.xml still loads, so `LibStub("LibKa0s-Slash-1.0", true)` answers nil for exactly the
+--- one major under test while the rest of the addon runs on the real library — which is what an
+--- install with a truncated libs/ folder looks like, and what a per-seam parity assertion needs.
+---
+--- The degraded arm is built THIS WAY on purpose. Hand-stubbing `lib = nil` inside a seam tests a
+--- branch rather than an install, and never catches a seam that raises at load before it reaches
+--- its own guard; hand-stubbing the member under test asserts the test's own typing.
+local function loadPartial(omit)
   local m = buildMocks()
   local ns = {}
   Loader.addonName = "PanelMaster"
+  local libs = {}
+  for _, path in ipairs(LIB_FILES) do
+    if not omit[path:match("([^/]+)%.lua$")] then libs[#libs + 1] = path end
+  end
+  Loader.loadAll(libs, ns, m)
   Loader.loadAll(Loader.tocFiles("PanelMaster.toc"), ns, m)
   ns.addon:OnInitialize()
   ns.addon:OnEnable()
   return ns, m
+end
+
+--- The whole library absent — the empty end of the same partial list, and the state a player who
+--- never copied libs/ is actually in.
+local function loadDegraded()
+  local everything = {}
+  for _, path in ipairs(LIB_FILES) do everything[path:match("([^/]+)%.lua$")] = true end
+  return loadPartial(everything)
 end
 
 -- ── the library is actually loaded ─────────────────────────────────────────────
@@ -577,55 +594,156 @@ test("Degraded install: the fallback printer renders the same bytes as the libra
   assertEqual(ns.SafeToString(true), "true")
 end)
 
-test("Degraded install: the Slash stub answers the WHOLE member set, FormatKV included", function()
-  -- The member set was read off the degraded namespace itself and cross-checked against every
-  -- caller in this addon's own source:
-  --
-  --   grep -rn "Slash[:.]\|Sl[:.]" --include="*.lua" core/ modules/ settings/ tests/*.lua \
-  --     | grep -oE "(NS\.Slash|Sl)[:.][A-Za-z_]+" | sort -u
-  --
-  -- It is asserted as a SET, in both directions, because the defect this case exists for was a
-  -- single omission: `Sl.FormatKV` was assigned on the live path (settings/Slash.lua:381) and not
-  -- in the `if not lib then` branch, so `/pm panel <name>` — a host-owned PANEL verb the branch is
-  -- written to keep working — raised "attempt to call field 'FormatKV' (a nil value)" at
-  -- settings/Slash.lua:101 on a degraded install. A one-by-one presence check on the members
-  -- someone remembered would have missed it exactly as the branch did; only a set can.
-  --
-  -- `Text` is deliberately NOT here. It is the library descriptor's string accessor, forwarded on
-  -- the live path for this suite's `L`-trap probe, and no addon code path calls it — a stub
-  -- member with no caller is the anti-pattern, not the omission.
-  local EXPECTED = {
-    "BuildListLines", "BuildPanelLines", "BuildPanelShowLines",
-    "CliDelete", "CliGet", "CliList", "CliNew", "CliPanel", "CliPanels", "CliRecover",
-    "CliRename", "CliReset", "CliResetAll", "CliSet", "CliVersion",
-    "FormatKV", "HelpRows", "LandingRows", "OnSlash", "PrintHelp", "Register", "Version",
-  }
-  local ns = loadDegraded()
-  local Sl = ns.Slash
-  assertTrue(Sl ~= nil, "NS.Slash is nil in a degraded install")
+-- ── stub-surface parity, one case per adopted seam (testing-§8) ────────────────
+--
+-- Four seams are adopted — Core, DebugLog, Slash, Options — and each has an `if not lib then`
+-- branch whose member set is what a degraded install runs on. A member the live path publishes and
+-- the branch forgets is not a degraded feature, it is a Lua error on a verb the branch was written
+-- to keep working: `Sl.FormatKV` was assigned at settings/Slash.lua:381 and not in the branch, so
+-- `/pm panel <name>` raised "attempt to call field 'FormatKV' (a nil value)" at
+-- settings/Slash.lua:101. A presence check on the members someone remembered misses that exactly as
+-- the branch did. Only a SET comparison catches it, which is Kit.assertSurfaceParity.
+--
+-- Each degraded arm comes from loadPartial() — the real loader, fed a partial file list, omitting
+-- only the library file for the seam under test. Nothing here is hand-stubbed.
+--
+-- Each `ignore` entry is a member the LIVE path publishes on purpose and no addon code path calls,
+-- so the branch has nothing to answer with. They are listed as data with the reason beside them,
+-- because without that an intentional omission and a bug read the same.
 
-  local want = {}
-  for _, name in ipairs(EXPECTED) do
-    want[name] = true
-    assertTrue(type(Sl[name]) == "function",
-      "the degraded slash surface cannot answer " .. name ..
-      " — a host-owned verb that calls it raises instead of degrading")
+local assertSurfaceParity = T.assertSurfaceParity
+
+test("Parity: the Core seam's degraded surface matches the live one", function()
+  -- Core publishes onto NS itself rather than onto one table, so both arms are PROJECTED over the
+  -- names the seam assigns. Keys from the source, values from the two loads:
+  --   grep -nE "^NS\.[A-Za-z]+ *=|^  function NS\.[A-Za-z]+" core/CoreSetup.lua
+  local PUBLISHED = { "Core", "IsConcatSafe", "SafeToString", "Print", "Format" }
+  local degradedNS = loadPartial({ Core = true })
+  local live, degraded = {}, {}
+  for _, name in ipairs(PUBLISHED) do
+    assertTrue(NS[name] ~= nil, "core/CoreSetup.lua no longer publishes NS." .. name ..
+      " — update PUBLISHED from the grep above rather than deleting the name")
+    live[name], degraded[name] = NS[name], degradedNS[name]
   end
+  assertSurfaceParity(live, degraded, "Core stub", {
+    -- The library instance itself. Its absence IS the degraded state; a stub standing in for it
+    -- would be a second LibKa0s.
+    "Core",
+    -- printer.Format has no caller in this addon (the four printing paths all go through
+    -- NS.Print), so the branch has nothing to answer with and reproducing it would be a member
+    -- written for nobody.
+    "Format",
+  })
+  -- NS.Util.print is the real name NS.Print is reclaimed from after the AceConsole embed, and it
+  -- has to survive on both paths or the reclaim in core/PanelMaster.lua restores nil.
+  assertTrue(type(degradedNS.Util.print) == "function", "the degraded NS.Util.print is missing")
+  assertEqual(degradedNS.Util.print, degradedNS.Print)
+end)
+
+test("Parity: the DebugLog seam's degraded surface matches the live one", function()
+  -- Members from: grep -rn "NS\.DebugLog[:.]" core modules settings
+  local degradedNS = loadPartial({ DebugLog = true })
+  assertTrue(NS.DebugLog ~= nil and degradedNS.DebugLog ~= nil, "a DebugLog arm is missing")
+  assertSurfaceParity(NS.DebugLog, degradedNS.DebugLog, "DebugLog stub", {
+    -- Window internals with no addon caller: the console is what went away, so a stub that
+    -- answered them would be pretending to own a frame it never built.
+    "ConsoleCheckbox", "CopyText", "MakeCloseButton",
+    -- The library's line formatters. Reproducing them in the branch is the debug-logging-§7
+    -- defect, not the fix — a stub with the right member set and a hand-copied line format is
+    -- exactly what a parity case cannot catch, so it is kept out rather than faked.
+    "FormatColored", "FormatPlain",
+    -- D.Debug is the instance method; the addon calls the BARE NS.Debug, which the branch assigns
+    -- itself (core/DebugLogSetup.lua) and which is asserted below.
+    "Debug",
+    -- The descriptor's string accessor, forwarded on the live path for this suite's L-trap probe.
+    -- No addon code path calls it; a stub member with no caller is the anti-pattern.
+    "Text",
+    -- The library's own test affordances, which it attaches to the live instance the first time
+    -- the console is built — so they are present here only because an earlier case in this suite
+    -- called Show(). They are hooks for a test, not members the addon calls.
+    "_frameForTest", "_toggleClickForTest",
+  })
+  assertTrue(type(degradedNS.Debug) == "function", "the degraded NS.Debug is missing")
+  assertTrue(type(degradedNS.DebugBuild) == "function", "the degraded NS.DebugBuild is missing")
+end)
+
+test("Parity: the Slash seam's degraded surface matches the live one", function()
+  -- Members from:
+  --   grep -rn "Slash[:.]\|Sl[:.]" core modules settings \
+  --     | grep -oE "(NS\.Slash|Sl)[:.][A-Za-z_]+" | sort -u
+  local degradedNS = loadPartial({ Slash = true })
+  local Sl = degradedNS.Slash
+  assertTrue(NS.Slash ~= nil and Sl ~= nil, "a Slash arm is missing")
+  assertSurfaceParity(NS.Slash, Sl, "Slash stub", {
+    -- The descriptor's string accessor, forwarded on the live path for this suite's L-trap probe
+    -- and called by no addon code path.
+    "Text",
+  })
+
+  -- The other direction, which the primitive does not walk: a stub that grew a member the live
+  -- path does not have is a divergence too, and it is how a branch quietly re-implements the
+  -- library.
   local extra = {}
   for name, value in pairs(Sl) do
-    if type(value) == "function" and not want[name] then extra[#extra + 1] = name end
+    if type(value) == "function" and NS.Slash[name] == nil then extra[#extra + 1] = name end
   end
   table.sort(extra)
-  assertEqual(#extra, 0, "the degraded slash surface grew unlisted members (" ..
-    table.concat(extra, ", ") .. ") — add them here with the caller that needs them, or drop them")
+  assertEqual(#extra, 0, "the degraded slash surface grew members the live one lacks (" ..
+    table.concat(extra, ", ") .. ")")
 
-  -- The set is not enough on its own: a stub member that renders different bytes is a silent
-  -- divergence. FormatKV has no library to route to on this path, so its one line is reproduced —
-  -- and pinned here against the library's own implementation so the two cannot drift.
+  -- And the limit the primitive states in its own docs: it cannot see a stub with the right member
+  -- set and a WRONG implementation. FormatKV has no library to route to on this path, so its one
+  -- line is reproduced — and pinned against the library's own so the two cannot drift.
   local libSlash = mocks.LibStub("LibKa0s-Slash-1.0", true)
   assertTrue(libSlash ~= nil, "LibKa0s-Slash-1.0 did not register on the live path")
   assertEqual(Sl.FormatKV("a.b", "7"), libSlash.FormatKV("a.b", "7"))
   assertEqual(Sl.FormatKV("a.b", "7"), "|cFFFFFF00a.b|r = |cFFFFFFFF7|r")
+end)
+
+test("Parity: the Options seam's degraded surface matches the live one", function()
+  -- Members from: grep -rn "NS\.Helpers[:.]\|\bO[:.]" core modules settings
+  -- Options is one major over three files, so all three come out of the partial list together.
+  local degradedNS = loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true })
+  assertTrue(NS.Helpers ~= nil and degradedNS.Helpers ~= nil, "an Options arm is missing")
+  assertTrue(degradedNS.Helpers.__degraded == true, "the Options arm did not take its stub branch")
+  assertSurfaceParity(NS.Helpers, degradedNS.Helpers, "Options stub", {
+    -- The library's AceGUI handle. The branch sets the key to nil ON PURPOSE: handing back a real
+    -- AceGUI with no panel to build into is worse than a nil a caller must guard.
+    "AceGUI",
+    -- Library-side page builders and layout this addon never calls: its landing page is its own
+    -- (settings/Panel.lua), and the three layout constants it DOES read are answered by the branch
+    -- as zero rather than as plausible geometry.
+    "BuildLandingPage", "TextRow", "PADDING_X",
+  })
+  -- The three layout constants the addon reads are present and are ZERO, not the library's values:
+  -- a stub reporting plausible geometry lets a caller lay something out against numbers no widget
+  -- was ever built from.
+  for _, k in ipairs({ "ROW_VSPACER", "SECTION_HEADING_H", "BUTTON_PAIR_REL" }) do
+    assertEqual(degradedNS.Helpers[k], 0, "the Options stub reports a real-looking " .. k)
+  end
+end)
+
+test("Degraded install: /pm config answers on EVERY invocation, not once", function()
+  -- PM-R-07. The stub latched its explanation behind a `said` flag, so the first `/pm config`
+  -- printed why the panel was unavailable and every one after it did nothing at all — which reads
+  -- as the command being broken rather than as the panel being missing.
+  --
+  -- The once-per-session latches elsewhere in this addon are correct and stay: they sit on notices
+  -- that ride other output. This line rides nothing; it IS the answer to a verb the user invoked.
+  local ns, m = loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true })
+  ns.Print("warm up the Core notice")
+  local before = #m.__chat
+  ns.Helpers.OpenOptionsPanel()
+  ns.Helpers.OpenOptionsPanel()
+  ns.Helpers.OpenOptionsPanel()
+  local said = 0
+  for i = before + 1, #m.__chat do
+    if m.__chat[i]:find("so the settings panel is unavailable.", 1, true) then said = said + 1 end
+  end
+  assertEqual(said, 3, "`/pm config` went silent after the first invocation")
+  -- It carries the collection's shared cause clause, like every other degraded notice here.
+  assertTrue(m.__chat[before + 1]:find(ns.LIBKA0S_MISSING, 1, true) ~= nil,
+    "the /pm config notice does not lead with the shared cause clause")
 end)
 
 -- ── the `L` trap ───────────────────────────────────────────────────────────────

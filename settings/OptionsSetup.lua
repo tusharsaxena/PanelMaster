@@ -32,10 +32,13 @@ if not lib then
   -- three layout constants are set to ZERO rather than to the library's real values: a stub that
   -- reported plausible geometry would let a caller lay something out against numbers no widget was
   -- ever built from.
-  local said = false
+  -- Answers EVERY time, and this is the one place in the addon where that is the rule rather than
+  -- the exception. The once-per-session latches elsewhere — the Core printer's notice, the
+  -- console's — sit on lines that RIDE OTHER OUTPUT, where repeating would drown the line the user
+  -- actually asked for. Nothing rides this one: `/pm config` is a verb the user invoked and this
+  -- line is its whole answer, so a latch makes the second invocation do nothing at all, which reads
+  -- as the command being broken rather than as the panel being unavailable (PM-R-07).
   local function explain()
-    if said then return end
-    said = true
     NS.Print(UNAVAILABLE)
   end
   local noop = function() end
