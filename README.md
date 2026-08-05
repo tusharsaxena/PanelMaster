@@ -375,7 +375,7 @@ conversion guide, including how to pick good sources, is in
 
 Everything this addon needs ships inside it — nothing else has to be installed. Alongside Ace3,
 LibStub, CallbackHandler-1.0 and LibSharedMedia-3.0, it
-bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.7.0 (MIT), the shared Ka0s library
+bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.0 (MIT), the shared Ka0s library
 behind the chat printer, the debug console, the slash dispatcher and schema CLI, and the settings
 panel toolkit. Each library sits in `libs/` under its own license.
 
