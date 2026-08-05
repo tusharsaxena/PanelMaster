@@ -96,8 +96,9 @@ NS.Helpers = lib:New({
   -- this once, before the page builders.
   validate = function() if NS.Schema and NS.Schema.Register then NS.Schema:Register() end end,
 
-  -- Ka0s standard §3.4: the resolved AceGUI is stashed once and re-used, rather than every page
-  -- file making its own LibStub call.
+  -- options-ui-§1: `onAceGUI` is one of the descriptor's optional seams, and the library resolves
+  -- AceGUI through LibStub once at panel-build time. Stashing what it hands back means no page file
+  -- makes its own LibStub call.
   onAceGUI = function(AceGUI) NS.AceGUI = AceGUI end,
 
   -- The landing page's body. Through the forward-declared upvalue, so settings/Panel.lua can define
