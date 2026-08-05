@@ -82,8 +82,12 @@ NS.SafeToString = lib.SafeToString
 -- this addon's printer has always written and exactly what tests/wow_mock.lua captures.
 local printer = lib:New({ prefix = NS.PREFIX })
 
+-- Only Print is republished. The instance also carries `Format` — the same assembly with no sink —
+-- and this addon has no caller for it: every printing path goes through NS.Print. Publishing it
+-- would put a member on the namespace that nothing calls, and one the degraded branch above could
+-- only answer by writing a function for nobody. The seam's surface is therefore exactly what the
+-- addon calls, identically on both paths.
 NS.Print = printer.Print
-NS.Format = printer.Format
 
 -- The real name is NS.Util.print; NS.Print is reclaimed from it after the AceConsole embed
 -- (core/PanelMaster.lua, architecture-§2). Both keys point at the same library printer, so the

@@ -617,7 +617,7 @@ test("Parity: the Core seam's degraded surface matches the live one", function()
   -- Core publishes onto NS itself rather than onto one table, so both arms are PROJECTED over the
   -- names the seam assigns. Keys from the source, values from the two loads:
   --   grep -nE "^NS\.[A-Za-z]+ *=|^  function NS\.[A-Za-z]+" core/CoreSetup.lua
-  local PUBLISHED = { "Core", "IsConcatSafe", "SafeToString", "Print", "Format" }
+  local PUBLISHED = { "Core", "IsConcatSafe", "SafeToString", "Print" }
   local degradedNS = loadPartial({ Core = true })
   local live, degraded = {}, {}
   for _, name in ipairs(PUBLISHED) do
@@ -629,10 +629,6 @@ test("Parity: the Core seam's degraded surface matches the live one", function()
     -- The library instance itself. Its absence IS the degraded state; a stub standing in for it
     -- would be a second LibKa0s.
     "Core",
-    -- printer.Format has no caller in this addon (the four printing paths all go through
-    -- NS.Print), so the branch has nothing to answer with and reproducing it would be a member
-    -- written for nobody.
-    "Format",
   })
   -- NS.Util.print is the real name NS.Print is reclaimed from after the AceConsole embed, and it
   -- has to survive on both paths or the reclaim in core/PanelMaster.lua restores nil.
