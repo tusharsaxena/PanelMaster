@@ -18,19 +18,32 @@ silently by the next re-vendor.
 
 ## What gates, and what only records
 
-| Suite | Command | Gates? |
-|---|---|---|
-| `lint` | `luacheck .` | **yes** |
-| `tests` | `lua tests/run.lua` | **yes** |
-| `perf` | `lua tests/perf.lua` | no — recorded only |
-| `complexity` | `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` | no — recorded only |
+**Name the checkpoint or the answer is a half-truth.** There are two — the commit and the tag — and
+`perf` and `complexity` answer differently at each.
 
-`perf` and `complexity` are **measured, recorded and diffed — never used to fail a run.** A
-threshold that fails a run teaches everyone to reach for `--no-verify`, after which the gate protects
-nothing and the habit remains. They contribute `amber`, which is a signal rather than a stop.
+| Suite | Command | Gates the commit? | Gates the tag? |
+|---|---|---|---|
+| `lint` | `luacheck .` | **yes** | **yes** |
+| `tests` | `lua tests/run.lua` | **yes** | **yes** |
+| `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
+| `complexity` | `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` | no — recorded only | **yes** |
+
+`perf` and `complexity` are **measured, recorded and diffed — they never fail a run and never block
+a commit** (`testing-§4`). A threshold on every commit teaches everyone to reach for `--no-verify`,
+after which the gate protects nothing and the habit remains. They contribute `amber`, which is a
+signal rather than a stop.
+
+**The tag is a stricter gate**: all four suites at `pass` plus **zero** functions above CCN 15
+(`automated-tests-§3`, *The release gate*), evaluated by `/wow-addon:bump-version` from this run's
+`manifest.json` — never by the runner, whose exit code is unchanged because the same script is the
+commit gate. The manifest's `suites.<name>.gates` object describes both checkpoints; nothing reads
+it, and nothing should.
 
 **A missing tool is a skip, not a failure**, and the skip is recorded with its reason — so a green
-run that measured nothing cannot be mistaken for a green run that measured everything.
+run that measured nothing cannot be mistaken for a green run that measured everything. At the
+release gate a skip is **NOT EVALUATED** rather than passed. The one exception is an addon that
+ships no `tests/perf.lua`, which is this one: `perf: skip` passes the release gate and **must** be
+stated in the release notes.
 
 ## What is here
 
