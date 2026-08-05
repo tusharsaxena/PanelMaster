@@ -30,7 +30,7 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:565` installs
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:577` installs
 a single shared driver the first time any panel is tracked for mouseover:
 
 ```lua
@@ -76,7 +76,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:565` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:577` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
 
 ### `RegisterEvent` — 4 hits
 

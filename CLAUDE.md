@@ -41,7 +41,7 @@ seam files and the load order they pin, and `docs/pending/LEDGER.md` for every a
 The `Perf` decline is **not ratified**. It is reasoned at `docs/pending/LEDGER.md` ▸ `PLAN-06` and
 has no row in `docs/ARCHITECTURE.md` ▸ *Documented deviations*, which is the only place an audit
 looks — so `performance-§1` is a genuinely open MUST here, not a recorded deviation. The
-`performance-§12` no-combat-path exemption **does not apply to this addon**: `modules/Canvas.lua:565`
+`performance-§12` no-combat-path exemption **does not apply to this addon**: `modules/Canvas.lua:577`
 runs a shared 10Hz `OnUpdate`, which fails criterion (a). `docs/performance.md` carries the sweep.
 
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever

@@ -1055,7 +1055,7 @@ now mandated or permitted outright — is **retired**, not kept for the history.
 ratified — so an audit will keep re-filing `performance-§1` against this addon, and that is the
 correct outcome today. The obvious row to write would cite `performance-§12`'s no-combat-path
 exemption, and **this addon does not qualify for it**: criterion (a) requires no `OnUpdate` handler,
-and `modules/Canvas.lua:565` installs a shared 10Hz `OnUpdate` driver — `updateMouseover`, one
+and `modules/Canvas.lua:577` installs a shared 10Hz `OnUpdate` driver — `updateMouseover`, one
 `MouseIsOver` call per mouseover-tracked panel — the moment any panel has *Show on mouseover only*
 ticked, with no combat gate. Criterion (b) fails with it: a bucket around that loop would not read
 `0.000` by construction. See [`performance.md`](performance.md) for the committed sweep. Claiming
