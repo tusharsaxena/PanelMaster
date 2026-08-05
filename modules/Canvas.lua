@@ -733,6 +733,12 @@ end
 -- Registered on this module's OWN AceEvent target, never on the shared bus-as-self: CallbackHandler
 -- keys callbacks by (message, target), so two consumers sharing a target silently clobber each other
 -- (architecture-§4).
+--
+-- Every name below is the SENDER's published constant, never a literal. modules/Registry.lua loads
+-- before this file and settings/Schema.lua after it, but Enable() runs at OnEnable — long after the
+-- whole TOC has loaded — so all three resolve at call time and the load order does not bear on it.
+-- A literal here would let a sender rename its message and leave this receiver silently deaf, which
+-- is the failure the constants exist to make impossible.
 function Canvas:Enable()
   if Canvas.__ev then return end
   local ev = NS.NewBusTarget()
@@ -740,5 +746,5 @@ function Canvas:Enable()
   Canvas.__ev = ev
   ev:RegisterMessage(NS.Registry.MSG_PANELS, function() Canvas:RenderAll() end)
   ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id) Canvas:Render(id) end)
-  ev:RegisterMessage("Ka0s_PanelMaster_SettingsChanged", function() Canvas:RenderAll() end)
+  ev:RegisterMessage(NS.Schema.MSG_SETTINGS, function() Canvas:RenderAll() end)
 end
