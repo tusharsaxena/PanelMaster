@@ -441,10 +441,11 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: switching from a bar to a single piece clears the sections it no longer draws
 - Artwork composite: an anchored FIT offsets each section from the same edge
 
-### test_database.lua (20)
+### test_database.lua (21)
 
 - Database: InitDB opened both scopes
-- Database: a fresh install ships the current schema version
+- Database: InitDB runs the migration runner, so the live DB comes back stamped
+- Database.RunMigrations: a v1 SavedVariables file reaches the v1 -> v2 body
 - Database: the panel registry is per-profile, not global
 - Database: every character starts on the shared 'Default' profile
 - Database: a fresh profile ships no panels
@@ -641,7 +642,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.CopyFrom: the copy is sanitized
 - Database: profile callbacks are registered
 - Database: switching profile re-renders the panels
-- Database: switching profile re-runs migrations on the incoming profile
+- Database: an incoming profile is repaired per RECORD, not by re-running migrations
 - Database: switching profile sanitizes the incoming records
 - Database: the profile reload goes through Registry, keeping one sender
 - Panel: the Profiles subcategory is registered
@@ -706,7 +707,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (36)
+### test_libka0s.lua (41)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -740,18 +741,24 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: /pm debug on|off still flips the flag and acknowledges
 - Degraded install: /pm debug dump still answers
 - Degraded install: the fallback printer renders the same bytes as the library's
+- Parity: the Core seam's degraded surface matches the live one
+- Parity: the DebugLog seam's degraded surface matches the live one
+- Parity: the Slash seam's degraded surface matches the live one
+- Parity: the Options seam's degraded surface matches the live one
+- Degraded install: /pm config answers on EVERY invocation, not once
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 
-### test_harness.lua (13)
+### test_harness.lua (14)
 
-- Harness: every suite the runner lists exists on disk
-- Harness: every suite on disk is listed by the runner
+- Harness: the suite list and tests/test_*.lua agree in both directions
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: the runner derives the addon's load list from the TOC
+- Harness: the runner derives the vendored library's load list from LibKa0s.xml
+- Harness: every module LibKa0s.xml declares is live in the loaded environment
 - Mock frame: visibility starts shown and Show/Hide/SetShown flip it
 - Mock frame: Hide fires each OnHide hook once, and only from shown
 - Mock frame: SetPoint records both overloads and GetPoint hands them back
@@ -785,15 +792,15 @@ badge and any count quoted in the docs must agree with it.
 | test_media.lua | 83 |
 | test_accent.lua | 63 |
 | test_artwork.lua | 98 |
-| test_database.lua | 20 |
+| test_database.lua | 21 |
 | test_debuglog.lua | 26 |
 | test_schema.lua | 21 |
 | test_slash.lua | 58 |
 | test_panel.lua | 45 |
 | test_profiles.lua | 21 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 36 |
-| test_harness.lua | 13 |
+| test_libka0s.lua | 41 |
+| test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **706** |
+| **Total** | **713** |

@@ -66,10 +66,13 @@ paths — and each of the other three appends its own consequence and its own te
 | `core/CoreSetup.lua` | `"; running on reduced built-in fallbacks."` — announced once, on the first line the addon prints |
 | `core/DebugLogSetup.lua` | `", so the debug console window is unavailable."` |
 | `settings/Slash.lua` | `", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."` |
-| `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` |
+| `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` — said on **every** `/pm config`, never latched |
 
 A degraded install therefore says the same thing about **why** at every site and a different thing
-about **what** at each one. The wording is the whole Ka0s collection's and is not this addon's to
+about **what** at each one. The latching differs on purpose, and the rule is what the line rides:
+the Core and DebugLog notices ride other output, where repeating would drown the line the user
+asked for, so they are once per session; `/pm config`'s line rides nothing — it *is* the answer to a
+verb the user invoked — so latching it would make the second invocation read as a broken command. The wording is the whole Ka0s collection's and is not this addon's to
 reword — `tests/test_libka0s.lua` pins the clause on both paths.
 
 The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
@@ -81,7 +84,7 @@ The TOC order is not arbitrary. Each seam's own header states its constraints; t
   descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**
   `core/PanelMaster.lua`, whose AceConsole embed clobbers `NS.Print` and reclaims it from
   `NS.Util.print`. Publishing on both keys is what keeps that reclaim load-bearing and correct.
-  It must also precede the six files taking the printer as a `local print = NS.Print` **file-scope
+  It must also precede the five files taking the printer as a `local print = NS.Print` **file-scope
   upvalue** — `modules/Unlock.lua`, `settings/Schema.lua`, `settings/Slash.lua`,
   `settings/PanelEditor.lua`, `settings/Panel.lua` — or the swap silently no-ops while appearing to
   work.
@@ -1036,3 +1039,33 @@ location, and this is the first non-Lua source in the tree).
   per-panel class override; the flag reads `UnitClass("player")`.
 - **`/pm recover` is manual.** It never runs at login, because a panel deliberately parked mostly
   off-screen is a legitimate layout and a login-time sweep would silently rearrange it.
+
+## Documented deviations
+
+The **single home** for a ratified deviation from the Ka0s WoW Addon Standard (`documentation-§3`).
+A decision may be *reasoned* at length in [`pending/LEDGER.md`](pending/LEDGER.md) or in a frozen
+audit bundle, and the **Why** column cites that id — but a deviation that is not in this table is
+**not ratified**, and an audit that cannot find it re-files it as an open MUST failure every cycle.
+
+This is not a graveyard. A row whose cited rule the standard has since changed — so the behavior is
+now mandated or permitted outright — is **retired**, not kept for the history.
+
+**The `Perf` decline is deliberately NOT a row here.** It is recorded at `pending/LEDGER.md` ▸
+`PLAN-06`, and a ledger entry without a register row is exactly what this section says is *not*
+ratified — so an audit will keep re-filing `performance-§1` against this addon, and that is the
+correct outcome today. The obvious row to write would cite `performance-§12`'s no-combat-path
+exemption, and **this addon does not qualify for it**: criterion (a) requires no `OnUpdate` handler,
+and `modules/Canvas.lua:577` installs a shared 10Hz `OnUpdate` driver — `updateMouseover`, one
+`MouseIsOver` call per mouseover-tracked panel — the moment any panel has *Show on mouseover only*
+ticked, with no combat gate. Criterion (b) fails with it: a bucket around that loop would not read
+`0.000` by construction. See [`performance.md`](performance.md) for the committed sweep. Claiming
+the exemption anyway is a decision only the owner can make, and it needs the wiring or a different
+rule, not a row.
+
+| Rule | What differs | Why | Decided | Re-check trigger |
+|---|---|---|---|---|
+| `documentation-§1` (item 6) | `README.md` ▸ `## Screenshots` carries a placeholder line rather than images. | The section is a SHOULD that becomes a MUST **once published**, and this addon is unreleased at `0.1.0`. Reasoned at `pending/LEDGER.md` ▸ `PLAN-05` / `ISS-01`, tracked as GitHub issue #1 and bundled with the next live-client session. Screenshots of an unreleased UI would be re-taken before the first upload anyway. | 2026-08-05 | The first published release — the same change that uploads the package fills the section |
+| `toc-file-§1` | `PanelMaster.toc` carries no `## X-Curse-Project-ID:`, and the README's badge row has four badges rather than five (no published-version badge). | Both are due **only once published**. A CurseForge project id does not exist until the first upload, so the field cannot be filled with a true value and would have to be filled with a placeholder or a lie. Reasoned at `pending/LEDGER.md` ▸ `PLAN-03` / `PLAN-04`, which the audit bundle defines as one atomic change. | 2026-08-05 | The first CurseForge upload, which is what mints the project id — add the field and the badge in that same change |
+| `events-frames-taint-§8` (the pre-formatting **SHOULD**) | Roughly 25 chat and slash lines build their text with `("…"):format(…)` or `..` before handing it to `NS.Print` — `settings/Slash.lua`, `settings/PanelEditor.lua`, `settings/Schema.lua` — rather than the preferred `print("count", n)` varargs form. | **The MUST does not engage here, and this was re-graded, not waived.** §8 scopes the MUST NOT to call sites whose arguments are, or derive from, a return of a named combat-protected API. This addon reads **none** of them: a whole-repo sweep of `core/ modules/ settings/ defaults/ locales/` for the trigger set (`UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`, `UnitGetIncomingHeals`, `UnitHealth`, `UnitHealthMax`, `UnitThreatSituation`, `UnitDetailedThreatSituation`, the aura amount/`points` fields, `UNIT_AURA`) returns nothing, and the only unit/client APIs it calls at all are `UnitClass` and `C_AddOns.GetAddOnMetadata`. Every one of these lines formats values the addon owns — a panel name, a stored geometry field, a count it computed, a literal — so none can be handed a secret and the residue is the SHOULD, graded Info. Neither of §8's two unrelaxed points is touched: no site calls the global `print()` (every file takes `local print = NS.Print`), and the seam's guarantee is unconditional — `core/CoreSetup.lua` publishes the library's `IsConcatSafe` / `SafeToString` and builds the printer from `lib:New`, so every argument is stringified through the `table.concat` probe whatever a call site hands it. Converting the sites is therefore a readability change with no reachable behavior, and is declined at `0.1.0`. | 2026-08-05 | The first chat or debug line whose arguments include, or derive from, a return of any API in §8's trigger set — that site converts as a MUST, and an audit files it as one. Re-check also when §8's trigger list grows upstream. |
+| `localization-§1` | No user-facing string routes through `NS.L`: every label, tooltip, slash line and message is hardcoded English. | `0.1.0` ships **English-only** — the second of the two terminal compliant states `localization-§3` names, not an open routing gap. Both MUSTs are met unconditionally: the `NS.L` seam is exported with the key-returning metatable fallback (`locales/enUS.lua:6`) and `enUS.lua` ships, so a later pass wraps strings without touching call sites. Reasoned at `locales/enUS.lua:8-14`. Panel **names** are user data and must never route through `NS.L`; neither must the stored `point` / `strata` tokens (`localization-§4`). | 2026-08-05 | The first non-English locale file added to `locales/` — that change routes the strings and retires this row |
+| `documentation-§4` | Pending work lives in [`pending/LEDGER.md`](pending/LEDGER.md), a standing decision ledger that also functions as a backlog, rather than in a root `TODO.md`. | `documentation-§4` forbids a `TODO.md` **once released**; it does not mandate one before. The ledger is the better shape for the job — it records the *decision* and its rationale per item, with a re-surface rule, which a bare checklist cannot. The addon is pre-release, so the rule is not yet engaged. | 2026-08-05 | The first published release, which decides whether the ledger's open rows belong in GitHub issues instead |

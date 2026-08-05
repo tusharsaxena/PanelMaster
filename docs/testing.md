@@ -113,23 +113,34 @@ tests/_kit/run-automated-tests.sh --suite complexity          # a subset
 tests/_kit/run-automated-tests.sh --suite lint --suite tests --no-bundle   # the green gate; writes nothing
 ```
 
-| Suite | Command | Gates? |
-|---|---|---|
-| `lint` | `luacheck .` | **yes** |
-| `tests` | `lua tests/run.lua` | **yes** |
-| `perf` | `lua tests/perf.lua` | no — recorded only |
-| `complexity` | `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` | no — recorded only |
+There are **two** checkpoints — the commit and the tag — and a suite answers differently at each, so
+the table names both. A single "Gates?" column could only ever describe one of them.
 
-**`perf` and `complexity` never fail a run.** They are measured, recorded and diffed — a threshold
-that fails a run teaches everyone to reach for `--no-verify`, after which the gate protects nothing
-and the habit remains. They contribute `amber`, which is a signal rather than a stop. **A missing
-tool is a skip recorded with its reason**, never a pass.
+| Suite | Command | Gates the commit? | Gates the tag? |
+|---|---|---|---|
+| `lint` | `luacheck .` | **yes** | **yes** |
+| `tests` | `lua tests/run.lua` | **yes** | **yes** |
+| `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
+| `complexity` | `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` | no — recorded only | **yes** |
+
+**`perf` and `complexity` never fail a run and never block a commit** (`testing-§4`). They are
+measured, recorded and diffed — a threshold on every commit teaches everyone to reach for
+`--no-verify`, after which the gate protects nothing and the habit remains. They contribute `amber`,
+which is a signal rather than a stop.
+
+**They do gate the tag.** A release requires all four suites at `pass` plus **zero** functions above
+CCN 15 (`automated-tests-§3`, *The release gate*), evaluated by `/wow-addon:bump-version` from the
+`manifest.json` the release run writes — not by the runner, whose exit code is unchanged because the
+same script is the commit gate. **A missing tool is a skip recorded with its reason**, never a pass,
+and at the release gate a skip is **NOT EVALUATED** rather than passed: install the tool and re-run.
+This addon ships no `tests/perf.lua`, which is the one sanctioned skip that still passes the release
+gate — and `automated-tests-§3` requires the release notes to say so.
 
 The runner is **vendored** from `LibKa0s`'s `testkit/`; never edit `tests/_kit/`. A kit fix goes
 upstream and is re-vendored.
 
 **At release, not at commit.** A full bundle is produced as part of every version bump, before the
-tag, with an `ANALYSIS.md` write-up. Commits are gated on lint + tests only.
+tag, with an `ANALYSIS.md` write-up. The commit gate is lint + tests only.
 
 Results live in [`automated-tests/`](./automated-tests/): `RESULTS.md` is one row per run across all
 four suites plus the current complexity watch list — **one file, overwritten in place**, so its git
@@ -171,9 +182,12 @@ tests/
 The registry, the assertions, the `--list` renderer and the source loader are **not this addon's** —
 they are the shared kit under `tests/_kit/`, vendored whole-folder alongside `libs/LibKa0s/` and
 covered by the same vendor gate and the same never-edit-it rule. `run.lua` is a thin consumer
-(`Kit.expose` + `Kit.run`) that derives the load order from the TOC via `Loader.tocFiles` rather than
-keeping a second copy of it, and hand-lists only `libs/LibKa0s/*.lua`, which the loader skips because
-a vendored library loads through its own XML.
+(`Kit.expose` + `Kit.run`) that keeps no copy of either load order: the addon's own files come from
+the TOC via `Loader.tocFiles`, and the vendored library's come from `libs/LibKa0s/LibKa0s.xml` via
+`Loader.xmlFiles`, which is how a `libs\` line the TOC scan deliberately skips still gets loaded.
+The library half **was** hand-listed here, and it was hand-listed short — six of the eight scripts
+the XML pulls in — which nothing could see: a short load list does not raise, it leaves the missing
+modules undefined for whichever cases never reach them.
 
 `wow_mock.lua` **extends** `_kit/mock_base.lua` rather than replacing it. The base is the only source
 of a `LibStub` with a real `NewLibrary` — without which no vendored LibKa0s major registers headlessly

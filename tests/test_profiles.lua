@@ -162,11 +162,25 @@ test("Database: switching profile re-renders the panels", function()
   T.mocks.__switchProfile("Mock - Realm")
 end)
 
-test("Database: switching profile re-runs migrations on the incoming profile", function()
+test("Database: an incoming profile is repaired per RECORD, not by re-running migrations", function()
   fresh()
   T.mocks.__switchProfile("Other - Realm")
-  -- The incoming profile may predate the current schema, and this is the first moment it is read.
+
+  -- The version stamp is ACCOUNT-WIDE, so it is already current the moment InitDB ran and a second
+  -- NS:RunMigrations from the profile callback could only ever be a no-op. Asserting it here proved
+  -- nothing about the switch — it would read current with the callback removed, which it now is.
   assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION)
+
+  -- What DOES reach a profile the account-wide stamp has already declared current: R.Sanitize, via
+  -- Registry:ReloadProfile. Plant exactly what a pre-v2 profile carries — a record with no stored
+  -- frame name — and the reload must perform the same backfill the v1 -> v2 body performs.
+  local rec = R:New("Legacy Panel")
+  rec.frameName = nil
+  NS.Registry:ReloadProfile()
+  assertEqual(R:Get(rec.id).frameName, "PanelMaster_Panel_Legacy_Panel",
+    "an unstamped record survived the profile switch unrepaired")
+
+  R:DeleteAll()
   T.mocks.__switchProfile("Mock - Realm")
 end)
 

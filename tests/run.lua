@@ -16,19 +16,16 @@ Loader.addonName = "PanelMaster"
 local mocks = buildMocks()
 local NS = {}
 
--- The vendored library, loaded FIRST and by hand. Loader.tocFiles skips every `libs\` line — a
--- vendored library is pulled in through its own XML, which the loader cannot read — so the one
--- library this addon's own code resolves has to be listed here. Order matches LibKa0s.xml: Core
--- first, because DebugLog, Slash and Options each resolve LibKa0s-Core-1.0 and return WITHOUT
--- registering when it is absent.
-Loader.loadAll({
-  "libs/LibKa0s/Core.lua",
-  "libs/LibKa0s/DebugLog.lua",
-  "libs/LibKa0s/Slash.lua",
-  "libs/LibKa0s/Options.lua",
-  "libs/LibKa0s/OptionsWidgets.lua",
-  "libs/LibKa0s/OptionsScroll.lua",
-}, NS, mocks)
+-- The vendored library, loaded FIRST and DERIVED from its own XML. Loader.tocFiles skips every
+-- `libs\` line — a vendored library is pulled in through its own XML, which a TOC scan cannot see —
+-- so this list used to be re-typed here by hand. It was re-typed SHORT: six of the eight files.
+-- A short load list does not raise, it just leaves a module undefined for whichever cases never
+-- reach it, which is how the harness ran for a year without Perf.lua or PerfPanel.lua present.
+--
+-- Loader.xmlFiles reads LibKa0s.xml and returns directory-prefixed paths in XML order, which is
+-- load-order-sensitive: Core first, because DebugLog, Slash and Options each resolve
+-- LibKa0s-Core-1.0 and return WITHOUT registering when it is absent.
+Loader.loadAll(Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml"), NS, mocks)
 
 -- The addon's own files, IN TOC ORDER, derived from the TOC rather than hand-listed. The list used
 -- to be a second copy maintained here, and a second copy of a load order is a second thing that can
@@ -58,9 +55,11 @@ NS.addon:OnEnable()
 _G.PM_TEST = Kit.expose({ NS = NS, mocks = mocks })
 
 -- --- the suites ---
--- BASENAMES, not filenames: the kit appends `.lua` itself. A name with no file on disk is SKIPPED
--- rather than fatal, which is a silently-green hole — tests/test_harness.lua closes it by asserting
--- this list and `tests/test_*.lua` agree in both directions.
+-- BASENAMES, not filenames: the kit appends `.lua` itself. Because `dir` is passed explicitly below,
+-- Kit.run calls Kit.assertSuiteInventory(dir, suites) BEFORE loading anything, so this list and
+-- `tests/test_*.lua` must agree in both directions or the run dies naming every divergence.
+-- tests/test_harness.lua states the same gate as a named case, which is what puts it in
+-- docs/test-cases.md.
 local SUITES = {
   "test_util", "test_compat", "test_constants",
   "test_registry", "test_canvas", "test_unlock", "test_media",

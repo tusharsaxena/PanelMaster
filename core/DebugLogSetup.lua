@@ -134,7 +134,16 @@ if not lib then
   function D:SetEnabled(on)
     on = not not on
     if NS.State then NS.State.debug = on end
-    NS.Print("debug logging " .. (on and "|cff40ff40ON|r" or "|cffff4040OFF|r"))
+    -- The ack itself is required (debug-logging-§7): logging is a session flag the ADDON owns, so a
+    -- degraded install that flipped it silently would look like the flag was stuck off.
+    --
+    -- It is deliberately NOT the library's line. This used to hand-copy the library's ACK format
+    -- ("debug logging %s") and both of its state hexes — ON green, OFF red — which is exactly the
+    -- transcription this file exists to end (anti-pattern #47), and it is a copy that cannot be kept
+    -- true: on this path the library is ABSENT, so nothing here can read lib.STRINGS, and nothing
+    -- would notice the day the library restyles its own ack. So the stub states the same fact in its
+    -- own plain words, and explainOnce says why the window is not there to match.
+    NS.Print(on and "debug logging is on" or "debug logging is off")
     explainOnce()
   end
 

@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-706%2F706_passing-green)
+![Tests](https://img.shields.io/badge/Tests-713%2F713_passing-green)
 
 ![Logo](media/logos/panelmaster.logo.256.jpg)
 
@@ -137,6 +137,18 @@ alone. Hover the **Panel name** box in the settings window to see the current on
 
 ### Settings panel
 
+Open it with `/pm config`, or find **Ka0s Panel Master** in the game's own Settings ▸ AddOns list. It
+has a landing page and three tabs beneath it:
+
+| Tab | Covers |
+|---|---|
+| Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. |
+| General | Every addon-wide setting: the master switch, unlock and test mode, the debug console, the snap grid, and the strata and opacity new panels start with. |
+| Panels | The panels themselves — create, rename, copy, reset and delete them, and edit the selected one's size, position, background, border, accent bar and fading. |
+| Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
+
+**General** carries these:
+
 | Setting | What it does |
 |---|---|
 | Enable panels | Master switch. Off hides every panel without deleting any. |
@@ -149,15 +161,12 @@ alone. Hover the **Panel name** box in the settings window to see the current on
 | Default frame strata | The layer new panels start in. |
 | Default opacity | How see-through new panels start out. |
 
-The **Profiles** page is Ace's standard profile management: create, switch between, copy and reset
-profiles, or bind one per character, class, realm or faction. Everyone starts on the shared
-**Default** profile. Switching profiles redraws your panels immediately.
+On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
+your panels immediately.
 
-The **Panels** page is where the panels themselves live. Type a name at the top and press Enter (or
-click **Okay**), then pick any panel from the dropdown to edit it. One panel is shown at a time, so
-the page stays the same size whether you have two panels or twenty.
-
-Each panel's editor has:
+On **Panels**, type a name at the top and press Enter (or click **Okay**), then pick any panel from
+the dropdown to edit it. One panel is shown at a time, so the page stays the same size whether you
+have two panels or twenty. Each panel's editor has:
 
 | Control | What it does |
 |---|---|
@@ -375,7 +384,7 @@ conversion guide, including how to pick good sources, is in
 
 Everything this addon needs ships inside it — nothing else has to be installed. Alongside Ace3,
 LibStub, CallbackHandler-1.0 and LibSharedMedia-3.0, it
-bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.7.0 (MIT), the shared Ka0s library
+bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.0 (MIT), the shared Ka0s library
 behind the chat printer, the debug console, the slash dispatcher and schema CLI, and the settings
 panel toolkit. Each library sits in `libs/` under its own license.
 

@@ -32,10 +32,13 @@ if not lib then
   -- three layout constants are set to ZERO rather than to the library's real values: a stub that
   -- reported plausible geometry would let a caller lay something out against numbers no widget was
   -- ever built from.
-  local said = false
+  -- Answers EVERY time, and this is the one place in the addon where that is the rule rather than
+  -- the exception. The once-per-session latches elsewhere — the Core printer's notice, the
+  -- console's — sit on lines that RIDE OTHER OUTPUT, where repeating would drown the line the user
+  -- actually asked for. Nothing rides this one: `/pm config` is a verb the user invoked and this
+  -- line is its whole answer, so a latch makes the second invocation do nothing at all, which reads
+  -- as the command being broken rather than as the panel being unavailable (PM-R-07).
   local function explain()
-    if said then return end
-    said = true
     NS.Print(UNAVAILABLE)
   end
   local noop = function() end
@@ -93,9 +96,17 @@ NS.Helpers = lib:New({
   -- this once, before the page builders.
   validate = function() if NS.Schema and NS.Schema.Register then NS.Schema:Register() end end,
 
-  -- Ka0s standard §3.4: the resolved AceGUI is stashed once and re-used, rather than every page
-  -- file making its own LibStub call.
-  onAceGUI = function(AceGUI) NS.AceGUI = AceGUI end,
+  -- `onAceGUI` is DELIBERATELY NOT PASSED. It used to stash the handle as `NS.AceGUI` on the claim
+  -- that this meant "no page file makes its own LibStub call" — which was never true and had no
+  -- reader: the library already publishes the handle on the instance as `O.AceGUI`, which is what
+  -- settings/Panel.lua reads where it needs the library's own resolution, and a second addon-side
+  -- home for the same singleton is exactly the drift a stash like that invites.
+  --
+  -- The three remaining `LibStub("AceGUI-3.0", true)` calls each resolve that one singleton once and
+  -- keep it as an upvalue — settings/Panel.lua and settings/PanelEditor.lua at file scope, which is
+  -- BEFORE this descriptor's instance exists, and core/LSMPatch.lua once inside its one-shot
+  -- PLAYER_LOGIN widget fixup, which runs with no options page in play at all. None of the three can
+  -- be served from a build-time seam, so removing the stash removes a duplicate, not a consumer.
 
   -- The landing page's body. Through the forward-declared upvalue, so settings/Panel.lua can define
   -- it after this file has loaded.

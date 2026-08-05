@@ -38,6 +38,12 @@ This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — th
 re-vendor silently reverts a local edit. See `docs/ARCHITECTURE.md` ▸ *The LibKa0s seams* for the
 seam files and the load order they pin, and `docs/pending/LEDGER.md` for every adoption decision.
 
+The `Perf` decline is **not ratified**. It is reasoned at `docs/pending/LEDGER.md` ▸ `PLAN-06` and
+has no row in `docs/ARCHITECTURE.md` ▸ *Documented deviations*, which is the only place an audit
+looks — so `performance-§1` is a genuinely open MUST here, not a recorded deviation. The
+`performance-§12` no-combat-path exemption **does not apply to this addon**: `modules/Canvas.lua:577`
+runs a shared 10Hz `OnUpdate`, which fails criterion (a). `docs/performance.md` carries the sweep.
+
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever
 `../LibKa0s` has moved, the **vendor gate** — neither of the other two can see a stale vendored copy;
 `docs/testing.md` has the four diffs and what each answer means. Never auto-stage/commit/push and
