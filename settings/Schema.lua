@@ -160,15 +160,29 @@ end
 -- Boot validation (architecture-§5): every schema path must resolve against the defaults table, so a
 -- typo in a path is caught loudly at load instead of silently reading nil forever. Returns the
 -- number of unresolved paths, which is what the headless test asserts on.
+--
+-- THE ROW'S OWN `default` IS NOT AN ESCAPE HATCH, and used to be. This loop carried a third
+-- conjunct, `and row.default == nil`, so a path only counted as unresolved when the row ALSO
+-- declared no default — and every row in S.Schema declares one, which made the whole check
+-- structurally unable to fire. It reported 0 for a typo'd path exactly as it did for a correct one,
+-- and the headless case asserting `S:Register() == 0` was asserting a constant.
+--
+-- The two facts are independent. `row.default` is what the widget shows and what Defaults restores;
+-- resolving against NS.defaults.profile is what says the setting has somewhere to be WRITTEN. A row
+-- with a good default and a typo'd path is the worst case, not the exempt one: the panel renders,
+-- the widget reads its default, the write lands on a key nothing else ever reads, and nothing
+-- anywhere says so. So the default is not consulted at all — a path that does not resolve is
+-- reported, full stop (savedvariables-§2: the declaration site is defaults/, not the row).
 function S:Register()
   local p = NS.defaults and NS.defaults.profile
   if not p then return 0 end
   local unresolved = 0
   for _, row in ipairs(S.Schema) do
-    -- Session-only rows (state.*) have no db-backed default to resolve — skip them.
-    if not row.sessionOnly and S:ReadPath(p, row.path) == nil and row.default == nil then
+    -- Session-only rows (state.*) are the ONE exemption: they route through their own get/set and
+    -- are never persisted, so they have no db-backed home to resolve against by design.
+    if not row.sessionOnly and S:ReadPath(p, row.path) == nil then
       unresolved = unresolved + 1
-      print("schema path missing default: " .. tostring(row.path))
+      print("schema path does not resolve against the defaults: " .. tostring(row.path))
     end
   end
   return unresolved

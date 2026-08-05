@@ -7,6 +7,35 @@ local S = NS.Schema
 test("Schema.Register: every path resolves against the defaults (architecture-§5)", function()
   -- A typo in a path otherwise reads nil forever and fails silently. 0 unresolved is the gate.
   assertEqual(S:Register(), 0)
+
+  -- And the gate can actually FIRE. Asserting 0 alone is worth nothing if the check is incapable of
+  -- returning anything else, which is exactly what it was: a third conjunct required the row to
+  -- carry no default, and all nine rows carry one, so `S:Register() == 0` was asserting a constant.
+  -- Two probes, because the bug's whole shape was that only the second was ever reachable — a bad
+  -- path MUST report whether or not the row has a default of its own.
+  local probes = {
+    { path = "settings.snapToGird", default = true, type = "bool", widget = "CheckBox",
+      group = "Editing", label = "typo'd path, WITH a default" },
+    { path = "settings.snapToGird", type = "bool", widget = "CheckBox",
+      group = "Editing", label = "typo'd path, no default" },
+  }
+  for _, probe in ipairs(probes) do
+    S.Schema[#S.Schema + 1] = probe
+    local n = S:Register()
+    S.Schema[#S.Schema] = nil
+    assertEqual(n, 1, probe.label .. " was not reported")
+  end
+
+  -- A session-only row is the ONE exemption and stays exempt: it has no db-backed home by design.
+  S.Schema[#S.Schema + 1] = { path = "state.notAPath", sessionOnly = true, type = "bool",
+    widget = "CheckBox", group = "Master Controls", label = "session-only, unresolvable path",
+    get = function() return false end, set = function() end }
+  local sessionCount = S:Register()
+  S.Schema[#S.Schema] = nil
+  assertEqual(sessionCount, 0, "a session-only row must not be counted as unresolved")
+
+  -- Every probe is off again, so the real schema is intact for the cases below.
+  assertEqual(S:Register(), 0)
 end)
 
 test("Schema: every row declares a group, label, type and widget", function()
