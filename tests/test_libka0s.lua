@@ -568,11 +568,37 @@ end)
 test("Degraded install: /pm debug on|off still flips the flag and acknowledges", function()
   -- Logging is a session flag the ADDON owns; only the window went away. A stub that swallowed
   -- SetEnabled would make the degraded install look like the flag was stuck off.
-  local ns = loadDegraded()
+  local ns, m = loadDegraded()
+  ns.Print("warm up the notice")
+
+  local before = #m.__chat
   ns.DebugLog:SetEnabled(true)
   assertTrue(ns.State.debug, "the degraded console did not set the logging flag")
+
+  local ackOn
+  for i = before + 1, #m.__chat do
+    if m.__chat[i]:lower():find("debug logging", 1, true) then ackOn = m.__chat[i] end
+  end
+  assertTrue(ackOn ~= nil, "the degraded console flipped the flag without acknowledging it")
+
+  before = #m.__chat
   ns.DebugLog:SetEnabled(false)
   assertFalse(ns.State.debug)
+
+  local ackOff
+  for i = before + 1, #m.__chat do
+    if m.__chat[i]:lower():find("debug logging", 1, true) then ackOff = m.__chat[i] end
+  end
+  assertTrue(ackOff ~= nil, "the degraded console flipped the flag off without acknowledging it")
+  assertTrue(ackOn ~= ackOff, "the ack says the same thing on and off")
+
+  -- And the ack must be the STUB's own line, not a hand-copy of the library's. The library owns
+  -- `ACK` and the ON/OFF state hexes (libs/LibKa0s/DebugLog.lua); this path runs with the library
+  -- ABSENT, so a copy of either is a transcription that nothing can keep in step (anti-pattern #47).
+  for _, line in ipairs({ ackOn, ackOff }) do
+    assertEqual(line:find("cff40ff40", 1, true), nil, "the stub re-implements the library's ON hex")
+    assertEqual(line:find("cffff4040", 1, true), nil, "the stub re-implements the library's OFF hex")
+  end
 end)
 
 test("Degraded install: /pm debug dump still answers", function()
