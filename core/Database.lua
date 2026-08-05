@@ -65,10 +65,17 @@ end
 --
 -- The reload is delegated to NS.Registry so that the panels message keeps a single sender
 -- (architecture-§4).
+--
+-- NS:RunMigrations is deliberately NOT called from here. The stamp it gates on lives in `db.global`,
+-- which is ACCOUNT-WIDE and already written by InitDB before any profile can be switched — so a
+-- second call could only ever be a no-op, and a no-op that reads as a safety net is worse than
+-- none. What an incoming profile actually needs is the per-RECORD repair, and that is R.Sanitize's:
+-- NS.Registry:ReloadProfile sanitizes every record it finds, which includes the same frame-name
+-- backfill the v1 → v2 body performs (modules/Registry.lua:200-202). That is the path that reaches
+-- a profile the account-wide stamp has already declared current.
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
-    NS:RunMigrations()        -- the incoming profile may predate the current schema
     NS:SweepPreviewPanels()   -- a copied profile can carry someone else's preview orphans
     if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
   end

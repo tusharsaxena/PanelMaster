@@ -96,10 +96,17 @@ NS.Helpers = lib:New({
   -- this once, before the page builders.
   validate = function() if NS.Schema and NS.Schema.Register then NS.Schema:Register() end end,
 
-  -- options-ui-§1: `onAceGUI` is one of the descriptor's optional seams, and the library resolves
-  -- AceGUI through LibStub once at panel-build time. Stashing what it hands back means no page file
-  -- makes its own LibStub call.
-  onAceGUI = function(AceGUI) NS.AceGUI = AceGUI end,
+  -- `onAceGUI` is DELIBERATELY NOT PASSED. It used to stash the handle as `NS.AceGUI` on the claim
+  -- that this meant "no page file makes its own LibStub call" — which was never true and had no
+  -- reader: the library already publishes the handle on the instance as `O.AceGUI`, which is what
+  -- settings/Panel.lua reads where it needs the library's own resolution, and a second addon-side
+  -- home for the same singleton is exactly the drift a stash like that invites.
+  --
+  -- The three remaining `LibStub("AceGUI-3.0", true)` calls each resolve that one singleton once and
+  -- keep it as an upvalue — settings/Panel.lua and settings/PanelEditor.lua at file scope, which is
+  -- BEFORE this descriptor's instance exists, and core/LSMPatch.lua once inside its one-shot
+  -- PLAYER_LOGIN widget fixup, which runs with no options page in play at all. None of the three can
+  -- be served from a build-time seam, so removing the stash removes a duplicate, not a consumer.
 
   -- The landing page's body. Through the forward-declared upvalue, so settings/Panel.lua can define
   -- it after this file has loaded.

@@ -441,10 +441,11 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: switching from a bar to a single piece clears the sections it no longer draws
 - Artwork composite: an anchored FIT offsets each section from the same edge
 
-### test_database.lua (20)
+### test_database.lua (21)
 
 - Database: InitDB opened both scopes
-- Database: a fresh install ships the current schema version
+- Database: the schema stamp is WRITTEN at init, never served as a default
+- Database.RunMigrations: a v1 SavedVariables file reaches the v1 -> v2 body
 - Database: the panel registry is per-profile, not global
 - Database: every character starts on the shared 'Default' profile
 - Database: a fresh profile ships no panels
@@ -641,7 +642,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.CopyFrom: the copy is sanitized
 - Database: profile callbacks are registered
 - Database: switching profile re-renders the panels
-- Database: switching profile re-runs migrations on the incoming profile
+- Database: an incoming profile is repaired per RECORD, not by re-running migrations
 - Database: switching profile sanitizes the incoming records
 - Database: the profile reload goes through Registry, keeping one sender
 - Panel: the Profiles subcategory is registered
@@ -790,7 +791,7 @@ badge and any count quoted in the docs must agree with it.
 | test_media.lua | 83 |
 | test_accent.lua | 63 |
 | test_artwork.lua | 98 |
-| test_database.lua | 20 |
+| test_database.lua | 21 |
 | test_debuglog.lua | 26 |
 | test_schema.lua | 21 |
 | test_slash.lua | 58 |
@@ -801,4 +802,4 @@ badge and any count quoted in the docs must agree with it.
 | test_harness.lua | 13 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **711** |
+| **Total** | **712** |

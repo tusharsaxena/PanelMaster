@@ -7,12 +7,42 @@ test("Database: InitDB opened both scopes", function()
   assertTrue(type(NS.db.profile) == "table")
 end)
 
-test("Database: a fresh install ships the current schema version", function()
-  -- The shipped default and the migration runner's target both read NS.SCHEMA_VERSION, so a fresh
-  -- install must start AT the current shape rather than replaying a migration over an empty
-  -- registry.
+test("Database: the schema stamp is WRITTEN at init, never served as a default", function()
+  -- savedvariables-§1. The stamp must not be an AceDB default: a default is served for any key the
+  -- SavedVariables file does not carry, and NS:RunMigrations only WRITES the field from inside its
+  -- own `<` gate — so seeding it made the gate unopenable and every migration body behind it dead
+  -- for every account that had never been stamped, which is every account.
+  assertEqual(NS.defaults.global.schemaVersion, nil,
+    "defaults/Global.lua seeds the stamp — the migration bodies are unreachable")
+  -- It reads current here because InitDB RAN the runner, which is the only thing that writes it.
   assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION)
-  assertEqual(NS.defaults.global.schemaVersion, NS.SCHEMA_VERSION)
+end)
+
+test("Database.RunMigrations: a v1 SavedVariables file reaches the v1 -> v2 body", function()
+  local savedDB = NS.db
+
+  -- The DB AceDB hands back for a SavedVariables file written by a v1 build: `global` is whatever
+  -- the shipped defaults carry, and the profile holds panels with no `frameName`, because v1
+  -- derived the frame name on every read instead of storing it.
+  local g = {}
+  for k, v in pairs(NS.defaults.global) do g[k] = v end
+  assertEqual(g.schemaVersion, nil, "a fresh global arrived pre-stamped")
+
+  NS.db = {
+    global  = g,
+    profile = { panels = { { id = "p1", name = "Old Panel" } } },
+    GetCurrentProfile = savedDB.GetCurrentProfile,
+  }
+
+  NS:RunMigrations()
+
+  -- Derived from the name, which is exactly what v1 rendered this panel's frame as — so the upgrade
+  -- moves nobody's anchors. This is the assertion the seeded default silently made unreachable.
+  assertEqual(NS.db.profile.panels[1].frameName, "PanelMaster_Panel_Old_Panel",
+    "the v1 -> v2 body did not run for a v1 SavedVariables file")
+  assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION)
+
+  NS.db = savedDB
 end)
 
 test("Database: the panel registry is per-profile, not global", function()

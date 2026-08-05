@@ -10,6 +10,18 @@ local Util = NS.Util
 -- moving, recoloring and hiding a plain backdrop frame is all legal in combat, and gating it would
 -- mean a panel that visibly failed to follow a settings change mid-pull. Unlock mode is the one part
 -- that IS gated, and for a UX reason rather than a taint one (modules/Unlock.lua).
+--
+-- CROSS-MODULE REACH CONVENTION, recorded here because a reviewer counted the two exceptions and
+-- read the majority as the bug. Every sibling this file reaches — NS.Compat, NS.Registry, NS.State,
+-- NS.Unlock — is reached DIRECTLY and unguarded, in all thirteen places. That is correct and
+-- deliberate: the TOC loads every module before any of these functions can be called, so a nil
+-- sibling here is not a degraded build, it is a broken load order — and a guard would convert that
+-- into a panel that silently renders wrong instead of an error naming the file that failed to load.
+--
+-- The two `if NS.Unlock and NS.Unlock.X` guards (StripOverlay on the retire path, Decorate on the
+-- render path) are NOT load-order guards and are NOT the convention: they are METHOD-presence
+-- checks on the overlay surface, the one part of Unlock these two paths call into optionally — an
+-- undecorated frame is a complete, correct, locked panel, so retire and render must stay total.
 
 -- Frame pool (hard rule #14: ≥10 dynamic frames use a pool). A user with thirty panels who toggles
 -- the master switch twice would otherwise leak sixty frames — WoW frames are never garbage
