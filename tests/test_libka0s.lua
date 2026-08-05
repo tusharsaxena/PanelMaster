@@ -579,6 +579,57 @@ test("Degraded install: the fallback printer renders the same bytes as the libra
   assertEqual(ns.SafeToString(true), "true")
 end)
 
+test("Degraded install: the Slash stub answers the WHOLE member set, FormatKV included", function()
+  -- The member set was read off the degraded namespace itself and cross-checked against every
+  -- caller in this addon's own source:
+  --
+  --   grep -rn "Slash[:.]\|Sl[:.]" --include="*.lua" core/ modules/ settings/ tests/*.lua \
+  --     | grep -oE "(NS\.Slash|Sl)[:.][A-Za-z_]+" | sort -u
+  --
+  -- It is asserted as a SET, in both directions, because the defect this case exists for was a
+  -- single omission: `Sl.FormatKV` was assigned on the live path (settings/Slash.lua:381) and not
+  -- in the `if not lib then` branch, so `/pm panel <name>` — a host-owned PANEL verb the branch is
+  -- written to keep working — raised "attempt to call field 'FormatKV' (a nil value)" at
+  -- settings/Slash.lua:101 on a degraded install. A one-by-one presence check on the members
+  -- someone remembered would have missed it exactly as the branch did; only a set can.
+  --
+  -- `Text` is deliberately NOT here. It is the library descriptor's string accessor, forwarded on
+  -- the live path for this suite's `L`-trap probe, and no addon code path calls it — a stub
+  -- member with no caller is the anti-pattern, not the omission.
+  local EXPECTED = {
+    "BuildListLines", "BuildPanelLines", "BuildPanelShowLines",
+    "CliDelete", "CliGet", "CliList", "CliNew", "CliPanel", "CliPanels", "CliRecover",
+    "CliRename", "CliReset", "CliResetAll", "CliSet", "CliVersion",
+    "FormatKV", "HelpRows", "LandingRows", "OnSlash", "PrintHelp", "Register", "Version",
+  }
+  local ns = loadDegraded()
+  local Sl = ns.Slash
+  assertTrue(Sl ~= nil, "NS.Slash is nil in a degraded install")
+
+  local want = {}
+  for _, name in ipairs(EXPECTED) do
+    want[name] = true
+    assertTrue(type(Sl[name]) == "function",
+      "the degraded slash surface cannot answer " .. name ..
+      " — a host-owned verb that calls it raises instead of degrading")
+  end
+  local extra = {}
+  for name, value in pairs(Sl) do
+    if type(value) == "function" and not want[name] then extra[#extra + 1] = name end
+  end
+  table.sort(extra)
+  assertEqual(#extra, 0, "the degraded slash surface grew unlisted members (" ..
+    table.concat(extra, ", ") .. ") — add them here with the caller that needs them, or drop them")
+
+  -- The set is not enough on its own: a stub member that renders different bytes is a silent
+  -- divergence. FormatKV has no library to route to on this path, so its one line is reproduced —
+  -- and pinned here against the library's own implementation so the two cannot drift.
+  local libSlash = mocks.LibStub("LibKa0s-Slash-1.0", true)
+  assertTrue(libSlash ~= nil, "LibKa0s-Slash-1.0 did not register on the live path")
+  assertEqual(Sl.FormatKV("a.b", "7"), libSlash.FormatKV("a.b", "7"))
+  assertEqual(Sl.FormatKV("a.b", "7"), "|cFFFFFF00a.b|r = |cFFFFFFFF7|r")
+end)
+
 -- ── the `L` trap ───────────────────────────────────────────────────────────────
 --
 -- Three of the five majors take a descriptor `L` and can render raw keys if handed a table whose

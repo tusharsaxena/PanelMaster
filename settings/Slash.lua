@@ -288,6 +288,16 @@ if not lib then
   -- above are untouched by the library and keep working; a minimal dispatcher is re-implemented so
   -- they stay reachable, and every schema verb explains itself instead of drawing nothing.
   local function explain() print(UNAVAILABLE) end
+  -- FormatKV is NOT a schema verb and must not be explained away: it is the `key = value` renderer
+  -- the PANEL verbs call directly (`/pm panel <name>` at :101, `/pm panel <name> fitart`, and the
+  -- field read and write echoes), and those verbs are exactly the ones this branch exists to keep
+  -- working. Left unassigned it is nil, and `/pm panel <name>` raises "attempt to call field
+  -- 'FormatKV'" — a degraded install that hard-errors on its own host-owned verb. The one line is
+  -- reproduced rather than routed, because there is no library here to route to; it is asserted
+  -- byte-for-byte against `lib.FormatKV` by the degradation suite so the two cannot drift.
+  Sl.FormatKV       = function(path, valueStr)
+    return ("|cFFFFFF00%s|r = |cFFFFFFFF%s|r"):format(tostring(path), tostring(valueStr))
+  end
   Sl.PrintHelp      = explain
   Sl.BuildListLines = function() return { UNAVAILABLE } end
   Sl.CliList        = explain

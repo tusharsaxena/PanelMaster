@@ -706,7 +706,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (36)
+### test_libka0s.lua (37)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -740,6 +740,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: /pm debug on|off still flips the flag and acknowledges
 - Degraded install: /pm debug dump still answers
 - Degraded install: the fallback printer renders the same bytes as the library's
+- Degraded install: the Slash stub answers the WHOLE member set, FormatKV included
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
 - L trap: no seam file hands a descriptor this addon's locale table
@@ -792,8 +793,8 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 45 |
 | test_profiles.lua | 21 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 36 |
+| test_libka0s.lua | 37 |
 | test_harness.lua | 13 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **706** |
+| **Total** | **707** |
