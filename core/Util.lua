@@ -214,7 +214,7 @@ end
 -- ── Secret-safe chat printer (events-frames-taint-§8) ────────────────────────────
 -- MOVED to core/CoreSetup.lua, which builds it from LibKa0s-Core-1.0 (library-stack). NS.Print,
 -- NS.Util.print, NS.SafeToString and NS.IsConcatSafe all still answer under those exact names — the
--- six files doing `local print = NS.Print` at file scope are unchanged — and the secret-value guard
+-- five files doing `local print = NS.Print` at file scope are unchanged — and the secret-value guard
 -- is the library's identical table.concat probe rather than a seventh hand-written copy of it.
 -- CoreSetup.lua loads immediately after this file and before core/PanelMaster.lua's AceConsole
 -- reclaim; see the ordering note at the top of that file.

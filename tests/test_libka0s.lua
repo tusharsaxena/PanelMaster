@@ -87,7 +87,7 @@ end)
 -- ── Core: the printer seam ─────────────────────────────────────────────────────
 --
 -- The load-bearing assertion is IDENTITY, not behavior. The degradation stub reproduces the
--- printer's behavior deliberately (six files take it as a load-time upvalue and must keep working),
+-- printer's behavior deliberately (five files take it as a load-time upvalue and must keep working),
 -- so a behavioral assertion passes on BOTH paths and proves nothing about which one ran.
 
 test("Core seam: NS.Print is the library's printer, not the fallback", function()

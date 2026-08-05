@@ -4,7 +4,7 @@ local addonName, NS = ...   -- luacheck: ignore addonName
 --
 -- These two used to live in core/Util.lua, hand-written, in the same shape every other Ka0s addon
 -- hand-wrote them. They are now the library's (library-stack). Nothing about the CALL SITES changes:
--- `NS.Print`, `NS.Util.print`, `NS.SafeToString` and `NS.IsConcatSafe` all still answer, because six
+-- `NS.Print`, `NS.Util.print`, `NS.SafeToString` and `NS.IsConcatSafe` all still answer, because five
 -- files take the printer as a file-scope upvalue (`local print = NS.Print`) and every one of them
 -- would have to be edited otherwise.
 --
@@ -18,8 +18,10 @@ local addonName, NS = ...   -- luacheck: ignore addonName
 --     :Print and whose reclaim line restores it FROM NS.Util.print. Publishing on both keys is what
 --     keeps that reclaim load-bearing and correct — it now restores the library's printer.
 --   * BEFORE every file taking the printer as a load-time upvalue: modules/Unlock.lua,
---     modules/DebugLog.lua, settings/Schema.lua, settings/Slash.lua, settings/PanelEditor.lua and
---     settings/Panel.lua. All six load after core/, so the whole core/ block satisfies this.
+--     settings/Schema.lua, settings/Slash.lua, settings/PanelEditor.lua and settings/Panel.lua.
+--     All five load after core/, so the whole core/ block satisfies this. core/DebugLogSetup.lua is
+--     NOT on this list — it hands the descriptor a `function(line) NS.Print(line) end` closure
+--     (core/DebugLogSetup.lua) rather than an upvalue, so it carries no ordering constraint at all.
 
 -- The ONE cause clause every LibKa0s seam in this addon explains an absent library with. Defined
 -- here because this is the first of the seams the TOC loads, and set OUTSIDE the `if not lib`

@@ -12,9 +12,13 @@
 -- thing under test. Bump the line and the bytes in the same commit.
 --
 -- ONE NORMALIZATION, AND ONLY ONE: `git show` hands back the stored blob, which
--- is LF, while the working tree is CRLF because `.gitattributes` pins
--- `* text=auto eol=crlf`. CR is stripped from the working-tree side so the file
--- is compared to the blob it round-trips to. Nothing else is normalized — a real
+-- is always LF, while the working tree's line endings are whatever the CHECKOUT
+-- produced — git's `core.autocrlf`, on by default in a Windows install, hands out
+-- CRLF. This repo's `.gitattributes` does not pin the tree either way: it carries
+-- `*.sh text eol=lf` and nothing else, so every other path follows the local git
+-- config. CR is stripped from the working-tree side so the file is compared to
+-- the blob it round-trips to, rather than failing on one maintainer's machine and
+-- passing on another's. Nothing else is normalized — a real
 -- fork in content still fails. That strip lives in `tests/_kit/vendor_sync.lua`;
 -- it is carried in verbatim from AbsorbTracker/tests/test_vendor_sync.lua and it
 -- is the behavior in use. `testing-§11`'s no-normalization MUST is scoped to the

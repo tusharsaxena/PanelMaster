@@ -84,7 +84,7 @@ The TOC order is not arbitrary. Each seam's own header states its constraints; t
   descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**
   `core/PanelMaster.lua`, whose AceConsole embed clobbers `NS.Print` and reclaims it from
   `NS.Util.print`. Publishing on both keys is what keeps that reclaim load-bearing and correct.
-  It must also precede the six files taking the printer as a `local print = NS.Print` **file-scope
+  It must also precede the five files taking the printer as a `local print = NS.Print` **file-scope
   upvalue** — `modules/Unlock.lua`, `settings/Schema.lua`, `settings/Slash.lua`,
   `settings/PanelEditor.lua`, `settings/Panel.lua` — or the swap silently no-ops while appearing to
   work.
