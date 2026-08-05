@@ -748,11 +748,11 @@ badge and any count quoted in the docs must agree with it.
 
 ### test_harness.lua (13)
 
-- Harness: every suite the runner lists exists on disk
-- Harness: every suite on disk is listed by the runner
+- Harness: the suite list and tests/test_*.lua agree in both directions
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: the runner derives the addon's load list from the TOC
+- Harness: the runner derives the vendored library's load list from LibKa0s.xml
 - Mock frame: visibility starts shown and Show/Hide/SetShown flip it
 - Mock frame: Hide fires each OnHide hook once, and only from shown
 - Mock frame: SetPoint records both overloads and GetPoint hands them back

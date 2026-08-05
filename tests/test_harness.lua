@@ -3,11 +3,12 @@ local test, assertEqual, assertTrue = T.test, T.assertEqual, T.assertTrue
 
 -- Guards on the harness itself, added with the shared test kit (tests/_kit/).
 --
--- The kit's runner SKIPS a listed suite whose file is not on disk, rather than raising. That is a
--- deliberate kit decision — a suite can be listed while it is being written — but it is also a
--- silently-green hole this repo did not have before: a typo in the suite list, or a suite file
--- renamed and not re-listed, is a run that reports success while covering less than it claims.
--- These cases close it in both directions.
+-- The suite-inventory gate below is the kit's own primitive now. This repo hand-rolled it in two
+-- directional cases while the kit still SKIPPED a listed suite whose file was not on disk; kit
+-- version 8 raises on that instead, exports Kit.assertSuiteInventory, and runs it automatically
+-- whenever Kit.run is given an explicit `dir`. Two hand-rolled halves became one call: the kit
+-- reports EVERY divergence in both directions in a single message, with a different sentence per
+-- direction because the two fixes are different.
 
 local function readFile(path)
   local f = assert(io.open(path, "r"), "missing file " .. path)
@@ -24,45 +25,11 @@ local function declaredSuites()
   return out
 end
 
--- `ls tests/test_*.lua` without shelling out, so the case works wherever lua runs.
-local function suiteFilesOnDisk()
-  local out = {}
-  local pipe = io.popen("ls tests/test_*.lua 2>/dev/null")
-  if pipe then
-    for line in pipe:lines() do
-      local base = line:match("([^/]+)%.lua$")
-      if base then out[#out + 1] = base end
-    end
-    pipe:close()
-  end
-  return out
-end
-
-test("Harness: every suite the runner lists exists on disk", function()
-  -- The direction the kit's skip hides. A listed name with no file contributes zero cases and says
-  -- nothing about it.
-  local missing = {}
-  for _, suite in ipairs(declaredSuites()) do
-    if not io.open("tests/" .. suite .. ".lua", "r") then missing[#missing + 1] = suite end
-  end
-  assertEqual(#missing, 0,
-    "tests/run.lua lists suites with no file — they are SKIPPED silently: " ..
-    table.concat(missing, ", "))
-end)
-
-test("Harness: every suite on disk is listed by the runner", function()
-  -- The other direction, which no skip is involved in: a suite file that exists and is not listed
-  -- simply never runs, and nothing anywhere says so.
-  local onDisk = suiteFilesOnDisk()
-  assertTrue(#onDisk > 0, "could not enumerate tests/test_*.lua")
-  local listed = {}
-  for _, suite in ipairs(declaredSuites()) do listed[suite] = true end
-  local unlisted = {}
-  for _, base in ipairs(onDisk) do
-    if not listed[base] then unlisted[#unlisted + 1] = base end
-  end
-  assertEqual(#unlisted, 0,
-    "these suite files exist but tests/run.lua never loads them: " .. table.concat(unlisted, ", "))
+test("Harness: the suite list and tests/test_*.lua agree in both directions", function()
+  -- Named here as well as run automatically, because a named case is what docs/test-cases.md
+  -- counts — the automatic call inside Kit.run dies before any case is registered and would leave
+  -- the published inventory silent about the gate that protects it.
+  T.assertSuiteInventory("tests/", declaredSuites())
 end)
 
 test("Harness: the shared kit is present and is reached through tests/_kit", function()
@@ -117,6 +84,34 @@ test("Harness: the runner derives the addon's load list from the TOC", function(
   end
   for _, p in ipairs(files) do
     assertTrue(not p:match("^libs/"), "libs/ must not come through tocFiles: " .. p)
+  end
+end)
+
+test("Harness: the runner derives the vendored library's load list from LibKa0s.xml", function()
+  -- The other hand-maintained load order, and the one that was actually wrong: the runner listed
+  -- SIX of the eight files LibKa0s.xml pulls in. A short library list does not raise — it leaves
+  -- the missing modules undefined for whichever cases never reach them, which is how PM-A-10
+  -- survived every green run.
+  local runner = readFile("tests/run.lua")
+  assertTrue(runner:find('Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml")', 1, true) ~= nil,
+    "tests/run.lua hand-lists the vendored library's files again instead of reading its XML")
+  local Loader = dofile("tests/_kit/loader.lua")
+  local files = Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml")
+
+  -- Every entry in the XML, and nothing else. Read straight off the XML rather than re-typed, so
+  -- this case cannot become the third copy of the list it exists to abolish.
+  local declared = {}
+  for line in readFile("libs/LibKa0s/LibKa0s.xml"):gmatch("[^\r\n]+") do
+    if not line:match("^%s*<!%-%-") then
+      local f = line:match('file%s*=%s*"([^"]+%.lua)"')
+      if f then declared[#declared + 1] = "libs/LibKa0s/" .. f:gsub("\\", "/") end
+    end
+  end
+  assertTrue(#declared >= 8, "LibKa0s.xml declares only " .. #declared .. " scripts")
+  assertEqual(#files, #declared, "the derived list and LibKa0s.xml disagree on how many files there are")
+  for i = 1, #declared do
+    assertEqual(files[i], declared[i], "entry " .. i .. " is out of XML order, which is load order")
+    assertTrue(io.open(files[i], "r") ~= nil, "LibKa0s.xml names a file that is not vendored: " .. files[i])
   end
 end)
 

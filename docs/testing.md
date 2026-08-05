@@ -171,9 +171,12 @@ tests/
 The registry, the assertions, the `--list` renderer and the source loader are **not this addon's** —
 they are the shared kit under `tests/_kit/`, vendored whole-folder alongside `libs/LibKa0s/` and
 covered by the same vendor gate and the same never-edit-it rule. `run.lua` is a thin consumer
-(`Kit.expose` + `Kit.run`) that derives the load order from the TOC via `Loader.tocFiles` rather than
-keeping a second copy of it, and hand-lists only `libs/LibKa0s/*.lua`, which the loader skips because
-a vendored library loads through its own XML.
+(`Kit.expose` + `Kit.run`) that keeps no copy of either load order: the addon's own files come from
+the TOC via `Loader.tocFiles`, and the vendored library's come from `libs/LibKa0s/LibKa0s.xml` via
+`Loader.xmlFiles`, which is how a `libs\` line the TOC scan deliberately skips still gets loaded.
+The library half **was** hand-listed here, and it was hand-listed short — six of the eight scripts
+the XML pulls in — which nothing could see: a short load list does not raise, it leaves the missing
+modules undefined for whichever cases never reach them.
 
 `wow_mock.lua` **extends** `_kit/mock_base.lua` rather than replacing it. The base is the only source
 of a `LibStub` with a real `NewLibrary` — without which no vendored LibKa0s major registers headlessly

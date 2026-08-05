@@ -19,14 +19,12 @@ local function P_general() return P.general end
 local Loader = dofile("tests/_kit/loader.lua")
 local buildMocks = dofile("tests/wow_mock.lua")
 
-local LIB_FILES = {
-  "libs/LibKa0s/Core.lua",
-  "libs/LibKa0s/DebugLog.lua",
-  "libs/LibKa0s/Slash.lua",
-  "libs/LibKa0s/Options.lua",
-  "libs/LibKa0s/OptionsWidgets.lua",
-  "libs/LibKa0s/OptionsScroll.lua",
-}
+-- Derived from LibKa0s.xml, exactly as tests/run.lua derives it. This was the SECOND hand-typed
+-- copy of the vendored library's load list, and it was short by the same two files — so the case
+-- below asserted that "the vendored library" was present while never looking at Perf.lua or
+-- PerfPanel.lua. Loader.xmlFiles raises on an XML path it cannot open, so a typo here cannot
+-- degrade into an empty list that reads as a clean run.
+local LIB_FILES = Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml")
 
 local function readFile(path)
   local f = assert(io.open(path, "r"), "missing file " .. path)
