@@ -751,13 +751,14 @@ badge and any count quoted in the docs must agree with it.
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 
-### test_harness.lua (13)
+### test_harness.lua (14)
 
 - Harness: the suite list and tests/test_*.lua agree in both directions
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: the runner derives the addon's load list from the TOC
 - Harness: the runner derives the vendored library's load list from LibKa0s.xml
+- Harness: every module LibKa0s.xml declares is live in the loaded environment
 - Mock frame: visibility starts shown and Show/Hide/SetShown flip it
 - Mock frame: Hide fires each OnHide hook once, and only from shown
 - Mock frame: SetPoint records both overloads and GetPoint hands them back
@@ -799,7 +800,7 @@ badge and any count quoted in the docs must agree with it.
 | test_profiles.lua | 21 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 41 |
-| test_harness.lua | 13 |
+| test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **712** |
+| **Total** | **713** |

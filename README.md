@@ -3,7 +3,7 @@
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 [![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
-![Tests](https://img.shields.io/badge/Tests-712%2F712_passing-green)
+![Tests](https://img.shields.io/badge/Tests-713%2F713_passing-green)
 
 ![Logo](media/logos/panelmaster.logo.256.jpg)
 

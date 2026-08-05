@@ -92,9 +92,15 @@ test("Harness: the runner derives the vendored library's load list from LibKa0s.
   -- SIX of the eight files LibKa0s.xml pulls in. A short library list does not raise — it leaves
   -- the missing modules undefined for whichever cases never reach them, which is how PM-A-10
   -- survived every green run.
+  -- A LINT, deliberately spelled loosely: it asks that the runner go through Loader.xmlFiles and
+  -- that no library .lua path be typed here at all. Pinning the exact call text would redden the
+  -- moment someone hoists the XML path to a local while loading precisely the right eight files —
+  -- the behavioral half of this guarantee is the case below, which reads the loaded environment.
   local runner = readFile("tests/run.lua")
-  assertTrue(runner:find('Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml")', 1, true) ~= nil,
-    "tests/run.lua hand-lists the vendored library's files again instead of reading its XML")
+  assertTrue(runner:find("Loader.xmlFiles(", 1, true) ~= nil,
+    "tests/run.lua no longer derives the vendored library's load list through Loader.xmlFiles")
+  local typed = runner:match('"(libs/LibKa0s/[^"]+%.lua)"')
+  assertEqual(typed, nil, "tests/run.lua hand-lists a vendored library file again: " .. tostring(typed))
   local Loader = dofile("tests/_kit/loader.lua")
   local files = Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml")
 
@@ -113,6 +119,42 @@ test("Harness: the runner derives the vendored library's load list from LibKa0s.
     assertEqual(files[i], declared[i], "entry " .. i .. " is out of XML order, which is load order")
     assertTrue(io.open(files[i], "r") ~= nil, "LibKa0s.xml names a file that is not vendored: " .. files[i])
   end
+end)
+
+test("Harness: every module LibKa0s.xml declares is live in the loaded environment", function()
+  -- The case above compares one parse of the XML against another — neither half observes what the
+  -- runner actually LOADED. This one does, in the environment tests/run.lua already built: the two
+  -- files that were missing for a year (Perf.lua, PerfPanel.lua) are the last two entries in the
+  -- XML, and their absence is silent. A short load list does not raise; it just leaves the module
+  -- undefined, which is what PM-A-10 was.
+  --
+  -- PerfPanel.lua deliberately has no major of its own — it attaches to LibKa0s-Perf-1.0 (see its
+  -- header) — so it is observed through the MODULES table the pair publishes, not through LibStub.
+  local core = T.mocks.LibStub("LibKa0s-Core-1.0", true)
+  assertTrue(core ~= nil, "LibKa0s-Core-1.0 did not register — the library half of the load list is dead")
+
+  local perf = T.mocks.LibStub("LibKa0s-Perf-1.0", true)
+  assertTrue(perf ~= nil, "LibKa0s-Perf-1.0 did not register — Perf.lua was not loaded")
+  assertEqual(perf.MODULES.Perf, perf.MINOR, "Perf.lua did not publish its own minor")
+  assertTrue(type(perf.MODULES.PerfPanel) == "number",
+    "PerfPanel.lua did not attach — the last entry in LibKa0s.xml never loaded")
+
+  -- One assertion per major the XML declares, derived from the files themselves rather than a
+  -- fourth hand-typed list, so a major added to the library is observed here the day it ships.
+  local declaredMajors = {}
+  for _, path in ipairs(dofile("tests/_kit/loader.lua").xmlFiles("libs/LibKa0s/LibKa0s.xml")) do
+    local f = assert(io.open(path, "r"))
+    local src = f:read("*a")
+    f:close()
+    local major = src:match('local MAJOR[^=]*=%s*"(LibKa0s%-[%w]+%-1%.0)"')
+    if major then declaredMajors[major] = true end
+  end
+  local n = 0
+  for major in pairs(declaredMajors) do
+    n = n + 1
+    assertTrue(T.mocks.LibStub(major, true) ~= nil, major .. " did not register in the loaded environment")
+  end
+  assertTrue(n >= 4, "only " .. n .. " majors were found in the vendored files — the scan stopped working")
 end)
 
 -- ── The frame stub itself ───────────────────────────────────────────────────────
