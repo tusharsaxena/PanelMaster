@@ -1039,3 +1039,20 @@ location, and this is the first non-Lua source in the tree).
   per-panel class override; the flag reads `UnitClass("player")`.
 - **`/pm recover` is manual.** It never runs at login, because a panel deliberately parked mostly
   off-screen is a legitimate layout and a login-time sweep would silently rearrange it.
+
+## Documented deviations
+
+The **single home** for a ratified deviation from the Ka0s WoW Addon Standard (`documentation-§3`).
+A decision may be *reasoned* at length in [`pending/LEDGER.md`](pending/LEDGER.md) or in a frozen
+audit bundle, and the **Why** column cites that id — but a deviation that is not in this table is
+**not ratified**, and an audit that cannot find it re-files it as an open MUST failure every cycle.
+
+This is not a graveyard. A row whose cited rule the standard has since changed — so the behavior is
+now mandated or permitted outright — is **retired**, not kept for the history.
+
+| Rule | What differs | Why | Decided | Re-check trigger |
+|---|---|---|---|---|
+| `performance-§12` | No perf harness wired: no `core/PerfSetup.lua`, no `PanelMasterPerfDB`, no `perf` verb, no `tests/perf.lua`, no `docs/perf-runs/`. `Perf` is the one LibKa0s major this addon declines. | This addon has no in-combat code path to bracket. Reasoned at `pending/LEDGER.md` ▸ `PLAN-06`, which carried `performance-§1`–`§4` deliberately rather than by oversight. The whole-repo sweep that proves it, and which of `performance-§12`'s (b)/(c) applies, are in [`performance.md`](performance.md). | 2026-08-05 | The first `OnUpdate` handler, repeating ticker, or event handler doing more than occasional work while the player is in combat |
+| `documentation-§1` (item 6) | `README.md` ▸ `## Screenshots` carries a placeholder line rather than images. | The section is a SHOULD that becomes a MUST **once published**, and this addon is unreleased at `0.1.0`. Reasoned at `pending/LEDGER.md` ▸ `PLAN-05` / `ISS-01`, tracked as GitHub issue #1 and bundled with the next live-client session. Screenshots of an unreleased UI would be re-taken before the first upload anyway. | 2026-08-05 | The first published release — the same change that uploads the package fills the section |
+| `toc-file-§1` | `PanelMaster.toc` carries no `## X-Curse-Project-ID:`, and the README's badge row has four badges rather than five (no published-version badge). | Both are due **only once published**. A CurseForge project id does not exist until the first upload, so the field cannot be filled with a true value and would have to be filled with a placeholder or a lie. Reasoned at `pending/LEDGER.md` ▸ `PLAN-03` / `PLAN-04`, which the audit bundle defines as one atomic change. | 2026-08-05 | The first CurseForge upload, which is what mints the project id — add the field and the badge in that same change |
+| `documentation-§4` | Pending work lives in [`pending/LEDGER.md`](pending/LEDGER.md), a standing decision ledger that also functions as a backlog, rather than in a root `TODO.md`. | `documentation-§4` forbids a `TODO.md` **once released**; it does not mandate one before. The ledger is the better shape for the job — it records the *decision* and its rationale per item, with a re-surface rule, which a bare checklist cannot. The addon is pre-release, so the rule is not yet engaged. | 2026-08-05 | The first published release, which decides whether the ledger's open rows belong in GitHub issues instead |

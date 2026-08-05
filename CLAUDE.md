@@ -38,6 +38,10 @@ This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — th
 re-vendor silently reverts a local edit. See `docs/ARCHITECTURE.md` ▸ *The LibKa0s seams* for the
 seam files and the load order they pin, and `docs/pending/LEDGER.md` for every adoption decision.
 
+The `Perf` decline is **ratified** as a `performance-§12` row in `docs/ARCHITECTURE.md` ▸
+*Documented deviations* — the single home for a ratified deviation, and the only place an audit
+looks. A ledger entry declining a rule with no register row is itself the deviation.
+
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever
 `../LibKa0s` has moved, the **vendor gate** — neither of the other two can see a stale vendored copy;
 `docs/testing.md` has the four diffs and what each answer means. Never auto-stage/commit/push and
