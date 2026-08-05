@@ -7,26 +7,28 @@ test("Database: InitDB opened both scopes", function()
   assertTrue(type(NS.db.profile) == "table")
 end)
 
-test("Database: the schema stamp is WRITTEN at init, never served as a default", function()
-  -- savedvariables-§1. The stamp must not be an AceDB default: a default is served for any key the
-  -- SavedVariables file does not carry, and NS:RunMigrations only WRITES the field from inside its
-  -- own `<` gate — so seeding it made the gate unopenable and every migration body behind it dead
-  -- for every account that had never been stamped, which is every account.
-  assertEqual(NS.defaults.global.schemaVersion, nil,
-    "defaults/Global.lua seeds the stamp — the migration bodies are unreachable")
-  -- It reads current here because InitDB RAN the runner, which is the only thing that writes it.
-  assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION)
+test("Database: InitDB runs the migration runner, so the live DB comes back stamped", function()
+  -- What this case is for is the INVOCATION: NS:InitDB calls NS:RunMigrations before any panel is
+  -- read (core/Database.lua:19), and the runner is the only thing that writes the stamp. Drop that
+  -- call and an upgrading account reaches the renderer un-migrated.
+  --
+  -- It deliberately says nothing about the SHAPE of NS.defaults.global. Whether the stamp is absent
+  -- there or seeded pre-ladder is an implementation choice no user can see; what a user CAN see is
+  -- whether the v1 -> v2 body ran for their file, and that is the case below — which drives the
+  -- runner against a v1 SavedVariables file and reads the migrated frameName back.
+  assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION,
+    "the live DB is unstamped — InitDB did not run the migration runner")
 end)
 
 test("Database.RunMigrations: a v1 SavedVariables file reaches the v1 -> v2 body", function()
   local savedDB = NS.db
 
   -- The DB AceDB hands back for a SavedVariables file written by a v1 build: `global` is whatever
-  -- the shipped defaults carry, and the profile holds panels with no `frameName`, because v1
-  -- derived the frame name on every read instead of storing it.
+  -- the shipped defaults carry — copied, not hand-written, so this drives the shape that actually
+  -- ships — and the profile holds panels with no `frameName`, because v1 derived the frame name on
+  -- every read instead of storing it.
   local g = {}
   for k, v in pairs(NS.defaults.global) do g[k] = v end
-  assertEqual(g.schemaVersion, nil, "a fresh global arrived pre-stamped")
 
   NS.db = {
     global  = g,

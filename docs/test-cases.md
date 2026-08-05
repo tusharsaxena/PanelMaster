@@ -444,7 +444,7 @@ badge and any count quoted in the docs must agree with it.
 ### test_database.lua (21)
 
 - Database: InitDB opened both scopes
-- Database: the schema stamp is WRITTEN at init, never served as a default
+- Database: InitDB runs the migration runner, so the live DB comes back stamped
 - Database.RunMigrations: a v1 SavedVariables file reaches the v1 -> v2 body
 - Database: the panel registry is per-profile, not global
 - Database: every character starts on the shared 'Default' profile
