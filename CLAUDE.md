@@ -29,7 +29,7 @@ Start here, then read the docs:
 - **`docs/testing.md`** — how to verify: the headless harness, lint, and the green commit gate.
 - **`DEPENDENCIES.md`** (root) — what to install to build, run, test or release this addon, split
   runtime / development / release-and-assets, with WSL2-Ubuntu commands.
-- Topic detail in `docs/` as needed (`smoke-tests.md`, `test-cases.md`, `automated-tests/`, …).
+- Topic detail in `docs/` — **Tier 1 is always present**: `scope.md`, `module-map.md`, `schema.md`, `settings-panel.md`, `data-flow.md`, `common-tasks.md`. Conditional and addon-specific docs vary; `docs/ARCHITECTURE.md` → `## Documentation map` lists every page under `docs/` and says which conditional ones do not apply here (`documentation-§3`).
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
 — into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Four of the five majors are adopted
