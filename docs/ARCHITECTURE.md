@@ -18,10 +18,11 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and the four LibKa0s seams;
+`core/` holds the bootstrap, the Compat firewall, the AceDB layer and two of the four LibKa0s seams;
 `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer and unlock
-mode; `settings/` holds the schema, the slash seam and the four panel pages. Load order is fixed by
-the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin several steps of it.
+mode; `settings/` holds the schema, the other two seams and the four panel pages. Load order is
+fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin several
+steps of it.
 
 File-by-file table and the seam/load-order contract in **[module-map.md](module-map.md)**.
 

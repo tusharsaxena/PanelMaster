@@ -80,7 +80,7 @@ With a panel created and locked:
    immediately, tinted by its background color.
 3. Reopen the dropdown. **Expect:** it still reads the texture you picked. (If it has reverted to the
    old name while the panel visibly changed, the LSM widget's value push has regressed — see
-   `ARCHITECTURE.md` ▸ Options UI.)
+   `settings-panel.md` ▸ *Three widget workarounds*.)
 4. Open **Border texture** and pick `Blizzard Tooltip`. **Expect:** a proper decorative edge, with
    corners drawn correctly — not four flat bars.
 5. Check the closed **Border texture** dropdown is flush with the controls beside it, with no ~42px

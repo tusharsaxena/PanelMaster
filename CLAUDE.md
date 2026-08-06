@@ -35,8 +35,8 @@ This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — th
 — into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Four of the five majors are adopted
 (`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is declined. **Never edit anything under `libs/` or
 `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
-re-vendor silently reverts a local edit. See `docs/ARCHITECTURE.md` ▸ *The LibKa0s seams* for the
-seam files and the load order they pin, and this repo's GitHub issues for every adoption decision.
+re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
+order they pin, and this repo's GitHub issues for every adoption decision.
 
 Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.1 (MIT). That line is the
 **provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
@@ -60,8 +60,8 @@ never bump the version without an explicit instruction.
 At **release** — the same change that bumps the version and rolls the README forward, before the tag
 — also produce a full automated-test bundle with `tests/_kit/run-automated-tests.sh` from
 the repo root, read its diff, and refresh its watch list. This is a **release** step and **not** a
-commit gate: nothing about it may ever block a commit (`performance-§10`; `docs/testing.md` ▸ *The
-complexity report*).
+commit gate: nothing about it may ever block a commit (`performance-§10`; `docs/testing.md` ▸
+*Automated test records*).
 
 ## The `docs/` set — there is no `agent-context.md`
 
