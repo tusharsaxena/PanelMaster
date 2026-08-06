@@ -42,8 +42,11 @@ diff -r ../LibKa0s/testkit tests/_kit                          # bytes   — SHO
 | Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see `LIBKA0S-09` in [`pending/LEDGER.md`](pending/LEDGER.md)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
 | Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Four of the five majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
 
-A fifth check answers "which LibKa0s is this?" without grepping minors out of source: `README.md`'s
-`Bundles [LibKa0s] vX.Y.Z (MIT).` line, which moves with every re-vendor.
+A fifth check answers "which LibKa0s is this?" without grepping minors out of source: the
+`Bundles [LibKa0s] vX.Y.Z (MIT).` provenance line in the root **`CLAUDE.md`**, which moves with every
+re-vendor. It lived in `README.md` until test kit revision 9 (LibKa0s v1.8.1) moved it to the page
+that carries the build facts; `tests/test_vendor_sync.lua` reads it from `CLAUDE.md` only, with no
+fallback, so a repo that re-vendors without moving its line goes red naming that file.
 
 ## The artwork gate
 

@@ -38,6 +38,14 @@ This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — th
 re-vendor silently reverts a local edit. See `docs/ARCHITECTURE.md` ▸ *The LibKa0s seams* for the
 seam files and the load order they pin, and `docs/pending/LEDGER.md` for every adoption decision.
 
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.1 (MIT). That line is the
+**provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
+file for it and compares both vendored payloads — `libs/LibKa0s/` and `tests/_kit/` — against that
+tag in the sibling checkout. So it moves in the **same commit** as the vendored bytes; a line and a
+payload that disagree is the drift the gate exists to catch. It used to live in `README.md`, which
+is written for players; kit revision 9 moved it here, where the build facts already are, and there
+is no fallback to the old location.
+
 The `Perf` decline is **not ratified**. It is reasoned at `docs/pending/LEDGER.md` ▸ `PLAN-06` and
 has no row in `docs/ARCHITECTURE.md` ▸ *Documented deviations*, which is the only place an audit
 looks — so `performance-§1` is a genuinely open MUST here, not a recorded deviation. The

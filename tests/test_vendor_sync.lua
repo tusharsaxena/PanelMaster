@@ -4,9 +4,9 @@
 -- were the same bytes in eight repos, which is exactly the duplication the kit exists to end.
 --
 -- WHAT IT CHECKS: that `libs/LibKa0s/` and `tests/_kit/` in this repo are exactly
--- what the LibKa0s repo published at the tag THIS README says it bundles.
+-- what the LibKa0s repo published at the tag THIS REPO'S CLAUDE.md says it bundles.
 --
--- THE PROVENANCE LINE IS AN INPUT, NOT A CONSTANT. It is read out of README.md
+-- THE PROVENANCE LINE IS AN INPUT, NOT A CONSTANT. It is read out of CLAUDE.md
 -- rather than hardcoded: a provenance line and a vendored payload that disagree
 -- is precisely the drift this file exists to catch, so the claim has to be the
 -- thing under test. Bump the line and the bytes in the same commit.
@@ -31,12 +31,13 @@
 -- the missing checkout, and the run's exit code stays 0. It never reports PASS
 -- for a comparison that did not run.
 --
--- The case names below are this repo's, kept identical to the hand-copied gate's
--- so `docs/test-cases.md` counts do not move; the kit's defaults already spell
--- them, so no `pairs` override is needed. The default README pattern
--- `[Bb]undles %[LibKa0s%]%b() (v[%d%.]+)` matches this repo's mid-sentence,
--- lowercase provenance line at README.md:378, so no `readmePattern` override
--- is needed either.
+-- The case names are the kit's own defaults, so no `pairs` override is needed.
+-- Kit revision 9 renamed the first of the two — it now says CLAUDE.md rather
+-- than the README — which is the only part of that revision visible outside
+-- `tests/_kit/`, and `docs/test-cases.md` was regenerated in the same commit.
+-- The default provenance pattern `[Bb]undles %[LibKa0s%]%b() (v[%d%.]+)` matches
+-- this repo's line in `CLAUDE.md`, and the default `provenanceFile` is already
+-- `CLAUDE.md`, so neither opt is overridden here.
 
 local VendorSync = dofile("tests/_kit/vendor_sync.lua")
 

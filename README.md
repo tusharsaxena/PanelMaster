@@ -2,7 +2,7 @@
 
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
 ![License](https://img.shields.io/badge/License-MIT-orange)
-[![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)](https://github.com/tusharsaxena/WowAddonStandards)
+![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
 ![Tests](https://img.shields.io/badge/Tests-713%2F713_passing-green)
 
 ![Logo](media/logos/panelmaster.logo.256.jpg)
@@ -380,13 +380,7 @@ conversion guide, including how to pick good sources, is in
 | I dragged a panel and it jumped somewhere slightly different | Snap-to-grid is on. Turn it off (`/pm set settings.snapToGrid false`) or make the grid finer (`/pm set settings.gridSize 1`). |
 | Something is genuinely broken | Run `/pm debug on`, reproduce it, then `/pm debug` to open the log and **Copy** to grab the text. Attaching that to an issue makes it far easier to work out what happened. |
 
-## Credits and libraries
-
-Everything this addon needs ships inside it — nothing else has to be installed. Alongside Ace3,
-LibStub, CallbackHandler-1.0 and LibSharedMedia-3.0, it
-bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.0 (MIT), the shared Ka0s library
-behind the chat printer, the debug console, the slash dispatcher and schema CLI, and the settings
-panel toolkit. Each library sits in `libs/` under its own license.
+## Credits
 
 The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
 the sizes the client wants and redistributed under
