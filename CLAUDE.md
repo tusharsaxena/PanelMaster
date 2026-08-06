@@ -36,7 +36,7 @@ This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — th
 (`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is declined. **Never edit anything under `libs/` or
 `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
 re-vendor silently reverts a local edit. See `docs/ARCHITECTURE.md` ▸ *The LibKa0s seams* for the
-seam files and the load order they pin, and `docs/pending/LEDGER.md` for every adoption decision.
+seam files and the load order they pin, and this repo's GitHub issues for every adoption decision.
 
 Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.1 (MIT). That line is the
 **provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
@@ -46,7 +46,7 @@ payload that disagree is the drift the gate exists to catch. It used to live in 
 is written for players; kit revision 9 moved it here, where the build facts already are, and there
 is no fallback to the old location.
 
-The `Perf` decline is **not ratified**. It is reasoned at `docs/pending/LEDGER.md` ▸ `PLAN-06` and
+The `Perf` decline is **not ratified**. It is reasoned in [`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24) and
 has no row in `docs/ARCHITECTURE.md` ▸ *Documented deviations*, which is the only place an audit
 looks — so `performance-§1` is a genuinely open MUST here, not a recorded deviation. The
 `performance-§12` no-combat-path exemption **does not apply to this addon**: `modules/Canvas.lua:577`
@@ -76,6 +76,6 @@ the addon on the day it was born, forever, and because it loads as *working cont
 does not go quiet, it gets **followed** (documentation-§3). This root `CLAUDE.md` is the repo's
 only agent brief.
 
-Older audit bundles, review bundles, ledgers and plans under `docs/` predate v2.17.0 and still
+Older audit bundles, review bundles and plans under `docs/` predate v2.17.0 and still
 name the file, and some describe a four-file or a pre-v2.3.0 `agent-context.md`-based set. Those
 are **frozen history** — never treat them as a live requirement, and never "restore" the file.

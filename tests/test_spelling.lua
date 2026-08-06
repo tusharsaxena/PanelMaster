@@ -102,13 +102,13 @@ end
 -- so keep that prose US English by hand; the scan cannot tell the two apart, which is precisely why
 -- the exemption is per-file and called out here rather than added to the word list.
 --
--- docs/pending/LEDGER.md takes the narrower form of the same exemption: a table of words rather
--- than `true`, so the file IS scanned and only the one unavoidable word is waived. Row ARTWORK-11
--- records why the SunnArt exemption exists and cannot do so without naming the theme, "Grey".
--- Every other British form in that ledger is still a failure there.
+-- `docs/pending/LEDGER.md` used to carry the narrower form of the same exemption — a table of
+-- words rather than `true`, so the file was scanned and only the one unavoidable word ("Grey",
+-- the SunnArt theme name that ARTWORK-11 could not explain without naming) was waived. The ledger
+-- was retired in favour of GitHub issues (audit-review-history), so the file and its exemption
+-- are both gone; the issue text lives on GitHub and is not scanned by this suite.
 local EXEMPT = {
   ["modules/SunnArtPacks.lua"] = true,
-  ["docs/pending/LEDGER.md"] = { grey = true },
 }
 
 local function authoredFiles()
@@ -142,7 +142,7 @@ local function authoredFiles()
   -- contributors as the docs. They are not .lua, so nothing else here would ever reach them.
   for _, doc in ipairs({ "README.md", "CLAUDE.md", "docs/ARCHITECTURE.md",
                          "docs/smoke-tests.md", "docs/test-cases.md", "docs/testing.md",
-                         "docs/artwork-spec.md", "docs/pending/LEDGER.md", ".luacheckrc",
+                         "docs/artwork-spec.md", ".luacheckrc",
                          "tools/artwork/make_poster.py", "tools/artwork/artwork_cleaner.py",
                          "tools/artwork/update_catalog.py", "tools/sunn/build_manifest.py" }) do
     paths[#paths + 1] = doc
@@ -157,7 +157,7 @@ test("Spelling: the TOC and run.lua between them name every authored source", fu
   -- Spot-check one file per layer, so a broken TOC/run.lua parse fails here rather than silently
   -- scanning nothing at all.
   for _, expected in ipairs({ "core/Constants.lua", "modules/Canvas.lua", "settings/PanelEditor.lua",
-                              "tests/test_panel.lua", "README.md", "docs/pending/LEDGER.md",
+                              "tests/test_panel.lua", "README.md", "docs/artwork-spec.md",
                               ".luacheckrc" }) do
     assertTrue(seen[expected], "the spelling scan does not cover " .. expected)
   end

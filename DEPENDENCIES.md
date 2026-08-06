@@ -32,7 +32,7 @@ Read only the section you need:
   (`docs/testing.md` ▸ *Mock fidelity that is load-bearing*).
 - **Sunn - Viewport Art** is *adapted*, not required: its themes are offered when its texture folders
   are present and the feature simply offers nothing when they are not
-  (`modules/SunnArt.lua`, `ARTWORK-10` in [`docs/pending/LEDGER.md`](docs/pending/LEDGER.md)).
+  (`modules/SunnArt.lua`, closed issue [`ARTWORK-10`](https://github.com/tusharsaxena/PanelMaster/issues/41)).
 
 Libraries are vendored and committed on purpose. Listing one here does not license fetching it at
 build time — `.pkgmeta` has no `externals` block for exactly that reason (`.pkgmeta:3`).
@@ -117,8 +117,8 @@ sudo apt install -y python3 python3-pil python3-numpy
 | **numpy** | any recent (verified with 2.5.1) | `python3 -c "import numpy; print(numpy.__version__)"` |
 
 Two notes on Pillow specifically. `make_poster.py --check` compares the poster's **pixels**, not its
-bytes, so a differing Pillow or zlib does not by itself stale the poster (`ARTWORK-05`,
-`ARTWORK-06`). And it reports its own toolchain — Pillow, **FreeType** and **zlib** versions
+bytes, so a differing Pillow or zlib does not by itself stale the poster ([`ARTWORK-05`](https://github.com/tusharsaxena/PanelMaster/issues/36),
+[`ARTWORK-06`](https://github.com/tusharsaxena/PanelMaster/issues/37)). And it reports its own toolchain — Pillow, **FreeType** and **zlib** versions
 (`make_poster.py:387-389`) — into `media/poster/artwork-poster.txt`, so when the pixels *do* move you
 can see which component moved. FreeType and zlib arrive with Pillow; they are not separately
 installed.
@@ -131,7 +131,7 @@ applications, so `apt` (or a venv) is the right tool — `pipx` installs command
 `tools/artwork/bin/realesrgan-ncnn-vulkan` (~11 MB) is a **vendored binary**: committed to this
 repo, **not installed through any package manager**, and with no upstream to `apt upgrade` it from.
 It is already there after a clone — there is nothing to install and nothing to keep current. The
-reasoning is recorded as `ARTWORK-04` in [`docs/pending/LEDGER.md`](docs/pending/LEDGER.md): the
+reasoning is recorded in closed issue [`ARTWORK-04`](https://github.com/tusharsaxena/PanelMaster/issues/35): the
 import pipeline's one irreplaceable step should not be a download link that can rot, and re-deriving
 the bundled plates from a different binary would not be byte-reproducible. Its models sit beside it
 at `tools/artwork/bin/models/` (`artwork_cleaner.py:87`), and it is invoked as a subprocess at
@@ -168,7 +168,7 @@ lower quality, and **not** reproducing the committed assets byte for byte.
 ### What is deliberately NOT listed here
 
 - **Bundled assets are not dependencies.** `tools/artwork/fonts/DejaVuSans*.ttf` are committed
-  (`ARTWORK-06`) and `media/` ships the addon's own art. They are in the repo after a clone; there
+  ([`ARTWORK-06`](https://github.com/tusharsaxena/PanelMaster/issues/37)) and `media/` ships the addon's own art. They are in the repo after a clone; there
   is nothing to install. A font you must not install is the point — `make_poster.py` resolves fonts
   *only* from `tools/artwork/fonts/` and fails loudly rather than falling back to a system font.
 - **`realesrgan-ncnn-vulkan` model files** — same: committed at `tools/artwork/bin/models/`.

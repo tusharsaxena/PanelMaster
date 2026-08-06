@@ -16,7 +16,7 @@ installed.
 
 It also carries something registration never provides: the sections' MEASURED pixel dimensions.
 Most are 512x256, but not all -- five official themes are square and three are 1024 wide -- so a
-single declared aspect is wrong for some of them. See ARTWORK-07 in docs/pending/LEDGER.md.
+single declared aspect is wrong for some of them. See ARTWORK-07, closed issue #38.
 
 REPRODUCIBILITY, AND HOW THIS DIFFERS FROM tools/artwork/
 --------------------------------------------------------

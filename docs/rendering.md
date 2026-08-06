@@ -230,7 +230,7 @@ onto file space at the last moment. Because that is a row-level property, the pe
 the same crop through the ordinary single-texture path, and `Artwork.NativeSize` needs no change at
 all — which is what makes autosize shape a panel around visible art rather than padding. `TILE`
 forces the crop to zero, because a `REPEAT` wrap repeats a whole file and not a sub-range of one.
-See `ARTWORK-07`, `ARTWORK-08` and `ARTWORK-09` in [`pending/LEDGER.md`](pending/LEDGER.md) for the
+See closed issues [`ARTWORK-07`](https://github.com/tusharsaxena/PanelMaster/issues/38), [`ARTWORK-08`](https://github.com/tusharsaxena/PanelMaster/issues/39) and [`ARTWORK-09`](https://github.com/tusharsaxena/PanelMaster/issues/40) for the
 declared section size, the crop interpretation and the two merge orders.
 
 **The known-pack fallback.** Discovery from a pack's own registration needs that pack's Lua to have
@@ -264,7 +264,7 @@ SunnArt hard-codes 2:1 and 250 of the 270 section files are indeed 512×256 — 
 are square and three are 1024 wide, and SunnArt draws those squashed because its own arithmetic
 cannot express them. `sectionSize` therefore prefers the manifest for every theme it knows, however
 that theme was discovered; `S.SECTION_W`/`S.SECTION_H` remain only as the fallback for a theme
-nobody has measured. See `ARTWORK-07` and `ARTWORK-10`.
+nobody has measured. See [`ARTWORK-07`](https://github.com/tusharsaxena/PanelMaster/issues/38) and `ARTWORK-10`.
 
 Every spec therefore carries `art.quads`, and a single texture is a **one-element list** — so
 `applyArtwork` has one path and no branch that can rot. The flat `width`/`height`/`point`/`x`/`y`/`uv`

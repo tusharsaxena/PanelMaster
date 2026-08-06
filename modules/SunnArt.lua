@@ -7,7 +7,7 @@ local S = NS.SunnArt
 -- Nothing here is redistributed. The player installs SunnArt and whichever art packs they want from
 -- CurseForge; this module only DISCOVERS what is already on their disk and offers it in the artwork
 -- dropdown. That is why this route carries none of the licensing weight the bundled set does
--- (ARTWORK-01 in docs/pending/LEDGER.md): we never ship, copy or host a single pack byte.
+-- (ARTWORK-01, closed issue #34): we never ship, copy or host a single pack byte.
 --
 -- Discovery, not rendering. This file produces catalog rows and stops; modules/Artwork.lua resolves
 -- them and modules/Canvas.lua draws them, through the same seams the bundled catalog uses.
@@ -73,7 +73,7 @@ S.SECTION_H = 256
 -- size to the art a player can actually see, rather than reserving 29% of the panel for nothing.
 --
 -- That is an INTERPRETATION rather than a reproduction of SunnArt, and it is recorded as one in
--- docs/pending/LEDGER.md.
+-- ARTWORK-08, closed issue #39.
 --
 -- SunnArt's own slider is `min = 0, max = 100, step = 0.01` (SunnArt_Options.lua:799-807), so the
 -- stored number is a percentage and is normalized to a fraction here. The clamp is below 1 because

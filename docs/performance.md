@@ -18,9 +18,9 @@ cost?"* gets an answer whether or not a harness is wired.
 | `performance-§12` exemption | **not claimed, and not claimable** — see below |
 | `## Documented deviations` row | **none**, deliberately |
 
-`Perf` is the one LibKa0s major this addon declines. The decline is reasoned at
-[`pending/LEDGER.md`](pending/LEDGER.md) ▸ `PLAN-06`, which carried `performance-§1`–`§4`
-deliberately rather than by oversight. A ledger entry with no register row is **not a ratified
+`Perf` is the one LibKa0s major this addon declines. The decline is reasoned in
+[`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24), which carried `performance-§1`–`§4`
+deliberately rather than by oversight. An issue with no register row is **not a ratified
 deviation** (`documentation-§3`), so `performance-§1` is an open MUST against this addon and an
 audit is right to keep filing it.
 

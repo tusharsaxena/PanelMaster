@@ -39,7 +39,7 @@ diff -r ../LibKa0s/testkit tests/_kit                          # bytes   — SHO
 | Result | What it means | What to do |
 |---|---|---|
 | Both empty | The vendored copies are exactly what the library ships. | Nothing. |
-| Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see `LIBKA0S-09` in [`pending/LEDGER.md`](pending/LEDGER.md)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
+| Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see closed issue [`LIBKA0S-09`](https://github.com/tusharsaxena/PanelMaster/issues/33)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
 | Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Four of the five majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
 
 A fifth check answers "which LibKa0s is this?" without grepping minors out of source: the
@@ -66,7 +66,7 @@ python3 tools/artwork/make_poster.py --check      # exit 1 if the poster is miss
 a benchmark suite outside it: the gate is Lua-only by design, and hooking a Python subprocess into
 `tests/run.lua` to close this would buy staleness detection at the cost of the harness's one
 dependency. It is written down here instead,
-and the exposure is recorded as `ARTWORK-05` in [`pending/LEDGER.md`](pending/LEDGER.md).
+and the exposure is recorded in closed issue [`ARTWORK-05`](https://github.com/tusharsaxena/PanelMaster/issues/36).
 
 The two fail differently, and the difference is the reason both are listed. A stale **catalog** is
 loud — `tests/test_artwork.lua` asserts every row points at a file that exists, so a deletion goes
@@ -94,12 +94,12 @@ gate above. `update_catalog.py` reads `media/artwork/`, which is in this repo; t
 WoW installation* with the packs installed, so `--check` is only meaningful on a machine that has
 them and CI can never run it. Rerun it when a pack is updated or a new official pack appears.
 
-The exposure is genuinely smaller than `ARTWORK-05`'s, and the reason is worth knowing before
+The exposure is genuinely smaller than [`ARTWORK-05`](https://github.com/tusharsaxena/PanelMaster/issues/36)'s, and the reason is worth knowing before
 worrying about it: a manifest row is consulted **only** when live registration is absent, live
 registration overrides it per theme, and a row whose pack folder is not installed is never offered.
 So a stale manifest costs a theme that draws nothing — never a wrong picture, and never a theme
-offered to someone who does not have it. Recorded as `ARTWORK-10` in
-[`pending/LEDGER.md`](pending/LEDGER.md).
+offered to someone who does not have it. Recorded in closed issue
+[`ARTWORK-10`](https://github.com/tusharsaxena/PanelMaster/issues/41).
 
 The generator also warns, on stderr, when a pack's declared section count disagrees with the files
 on disk, or when one theme's sections differ in size. Both are worth reading rather than ignoring —

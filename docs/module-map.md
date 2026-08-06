@@ -34,7 +34,7 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `settings/Panel.lua` | `NS.Panel` | What LibKa0s-Options-1.0 does **not** own: the open-dropdown registry that closes a list on scroll, the paired-button width, the landing page's body, the Profiles page, and the four page builders. The canvas factory, the header and breadcrumb, the lazy Defaults button, the scroll frame, the scrollbar patch, section headings, spacers, tooltips, the five widget makers and the two-column flow engine are all the library's now. Two library members are wrapped **on the instance** — `RenderField` and `EnsureScroll` — because the flow engine resolves both from the instance table at call time, so a host-side helper beside them is bypassed by every page it draws. Drives the editor through `E:WireBus` / `E:BuildPage` / `E:Rebuild`. |
 
 Four of the five `LibKa0s` majors are adopted (`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is
-declined on structural grounds — see `LIBKA0S-31` in [`pending/LEDGER.md`](pending/LEDGER.md). The
+declined on structural grounds — see closed issue [`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31). The
 library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here**: a library
 problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a
 local edit and the revert reads as a regression with no cause anywhere in this repo's history.

@@ -104,7 +104,7 @@ coloring, and manual `/pm recover`. All in **[scope.md](scope.md)**.
 
 Every `.md` under `docs/` appears in exactly one table below (`documentation-§3`). Frozen and
 generated directories are named once each and never enumerated per run: `docs/audits/`,
-`docs/reviews/`, `docs/automated-tests/`, `docs/pending/`, `docs/superpowers/`.
+`docs/reviews/`, `docs/automated-tests/`, `docs/superpowers/`.
 
 ### Required (documentation-§3, Tier 1)
 
@@ -121,13 +121,13 @@ generated directories are named once each and never enumerated per run: `docs/au
 
 | Doc | Status | Trigger |
 |---|---|---|
-| `slash-dispatch.md` | Present | 17 verbs in `NS.COMMANDS` (threshold is 8) |
+| `slash-dispatch.md` | Present | 18 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
 | `debug.md` | Present | `D:Diagnose()` and `NS.DebugBuild` are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. `core/LSMPatch.lua` fixes a vendored **widget**, not a client behavior, and is documented in `module-map.md` |
 | `compat-layer.md` | Not applicable | `core/Compat.lua` normalizes metadata, screen size, UI scale, LSM and class color — no addon-specific shim beyond what the row in `module-map.md` records |
-| `perf-runs/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds (`LIBKA0S-31`); see `## Documented deviations` and `performance.md` |
+| `perf-runs/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
 
 ### Verification and record
 
@@ -152,15 +152,15 @@ generated directories are named once each and never enumerated per run: `docs/au
 ## Documented deviations
 
 The **single home** for a ratified deviation from the Ka0s WoW Addon Standard (`documentation-§3`).
-A decision may be *reasoned* at length in [`pending/LEDGER.md`](pending/LEDGER.md) or in a frozen
+A decision may be *reasoned* at length in this repo's GitHub issues or in a frozen
 audit bundle, and the **Why** column cites that id — but a deviation that is not in this table is
 **not ratified**, and an audit that cannot find it re-files it as an open MUST failure every cycle.
 
 This is not a graveyard. A row whose cited rule the standard has since changed — so the behavior is
 now mandated or permitted outright — is **retired**, not kept for the history.
 
-**The `Perf` decline is deliberately NOT a row here.** It is recorded at `pending/LEDGER.md` ▸
-`PLAN-06`, and a ledger entry without a register row is exactly what this section says is *not*
+**The `Perf` decline is deliberately NOT a row here.** It is recorded in
+[`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24), and an issue without a register row is exactly what this section says is *not*
 ratified — so an audit will keep re-filing `performance-§1` against this addon, and that is the
 correct outcome today. The obvious row to write would cite `performance-§12`'s no-combat-path
 exemption, and **this addon does not qualify for it**: criterion (a) requires no `OnUpdate` handler,
@@ -173,8 +173,8 @@ rule, not a row.
 
 | Rule | What differs | Why | Decided | Re-check trigger |
 |---|---|---|---|---|
-| `documentation-§1` (item 6) | `README.md` ▸ `## Screenshots` carries a placeholder line rather than images. | The section is a SHOULD that becomes a MUST **once published**, and this addon is unreleased at `0.1.0`. Reasoned at `pending/LEDGER.md` ▸ `PLAN-05` / `ISS-01`, tracked as GitHub issue #1 and bundled with the next live-client session. Screenshots of an unreleased UI would be re-taken before the first upload anyway. | 2026-08-05 | The first published release — the same change that uploads the package fills the section |
-| `toc-file-§1` | `PanelMaster.toc` carries no `## X-Curse-Project-ID:`, and the README's badge row has four badges rather than five (no published-version badge). | Both are due **only once published**. A CurseForge project id does not exist until the first upload, so the field cannot be filled with a true value and would have to be filled with a placeholder or a lie. Reasoned at `pending/LEDGER.md` ▸ `PLAN-03` / `PLAN-04`, which the audit bundle defines as one atomic change. | 2026-08-05 | The first CurseForge upload, which is what mints the project id — add the field and the badge in that same change |
+| `documentation-§1` (item 6) | `README.md` ▸ `## Screenshots` carries a placeholder line rather than images. | The section is a SHOULD that becomes a MUST **once published**, and this addon is unreleased at `0.1.0`. Reasoned in [`PLAN-05`](https://github.com/tusharsaxena/PanelMaster/issues/1) / [`ISS-01`](https://github.com/tusharsaxena/PanelMaster/issues/32), and bundled with the next live-client session. Screenshots of an unreleased UI would be re-taken before the first upload anyway. | 2026-08-05 | The first published release — the same change that uploads the package fills the section |
+| `toc-file-§1` | `PanelMaster.toc` carries no `## X-Curse-Project-ID:`, and the README's badge row has four badges rather than five (no published-version badge). | Both are due **only once published**. A CurseForge project id does not exist until the first upload, so the field cannot be filled with a true value and would have to be filled with a placeholder or a lie. Reasoned in [`PLAN-03`](https://github.com/tusharsaxena/PanelMaster/issues/22) / [`PLAN-04`](https://github.com/tusharsaxena/PanelMaster/issues/23), which the audit bundle defines as one atomic change. | 2026-08-05 | The first CurseForge upload, which is what mints the project id — add the field and the badge in that same change |
 | `events-frames-taint-§8` (the pre-formatting **SHOULD**) | Roughly 25 chat and slash lines build their text with `("…"):format(…)` or `..` before handing it to `NS.Print` — `settings/Slash.lua`, `settings/PanelEditor.lua`, `settings/Schema.lua` — rather than the preferred `print("count", n)` varargs form. | **The MUST does not engage here, and this was re-graded, not waived.** §8 scopes the MUST NOT to call sites whose arguments are, or derive from, a return of a named combat-protected API. This addon reads **none** of them: a whole-repo sweep of `core/ modules/ settings/ defaults/ locales/` for the trigger set (`UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`, `UnitGetIncomingHeals`, `UnitHealth`, `UnitHealthMax`, `UnitThreatSituation`, `UnitDetailedThreatSituation`, the aura amount/`points` fields, `UNIT_AURA`) returns nothing, and the only unit/client APIs it calls at all are `UnitClass` and `C_AddOns.GetAddOnMetadata`. Every one of these lines formats values the addon owns — a panel name, a stored geometry field, a count it computed, a literal — so none can be handed a secret and the residue is the SHOULD, graded Info. Neither of §8's two unrelaxed points is touched: no site calls the global `print()` (every file takes `local print = NS.Print`), and the seam's guarantee is unconditional — `core/CoreSetup.lua` publishes the library's `IsConcatSafe` / `SafeToString` and builds the printer from `lib:New`, so every argument is stringified through the `table.concat` probe whatever a call site hands it. Converting the sites is therefore a readability change with no reachable behavior, and is declined at `0.1.0`. | 2026-08-05 | The first chat or debug line whose arguments include, or derive from, a return of any API in §8's trigger set — that site converts as a MUST, and an audit files it as one. Re-check also when §8's trigger list grows upstream. |
 | `localization-§1` | No user-facing string routes through `NS.L`: every label, tooltip, slash line and message is hardcoded English. | `0.1.0` ships **English-only** — the second of the two terminal compliant states `localization-§3` names, not an open routing gap. Both MUSTs are met unconditionally: the `NS.L` seam is exported with the key-returning metatable fallback (`locales/enUS.lua:6`) and `enUS.lua` ships, so a later pass wraps strings without touching call sites. Reasoned at `locales/enUS.lua:8-14`. Panel **names** are user data and must never route through `NS.L`; neither must the stored `point` / `strata` tokens (`localization-§4`). | 2026-08-05 | The first non-English locale file added to `locales/` — that change routes the strings and retires this row |
-| `documentation-§4` | Pending work lives in [`pending/LEDGER.md`](pending/LEDGER.md), a standing decision ledger that also functions as a backlog, rather than in a root `TODO.md`. | `documentation-§4` forbids a `TODO.md` **once released**; it does not mandate one before. The ledger is the better shape for the job — it records the *decision* and its rationale per item, with a re-surface rule, which a bare checklist cannot. The addon is pre-release, so the rule is not yet engaged. | 2026-08-05 | The first published release, which decides whether the ledger's open rows belong in GitHub issues instead |
+| `documentation-§4` | Pending work lives in this repo's GitHub issues, which also function as a backlog, rather than in a root `TODO.md`. | `documentation-§4` forbids a `TODO.md` **once released**; it does not mandate one before. An issue is the better shape for the job — it records the *decision* and its rationale per item, with a re-surface rule, which a bare checklist cannot. The addon is pre-release, so the rule is not yet engaged. | 2026-08-05 | The first published release, which is when `documentation-§4` engages |

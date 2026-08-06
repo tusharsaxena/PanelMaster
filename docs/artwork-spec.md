@@ -340,8 +340,8 @@ MIT release. CC0, MIT and public domain are fine. Do not contribute anything und
 non-commercial or no-derivatives license, and do not contribute traced Blizzard art as your own
 work.
 
-The currently bundled set is a knowing exception recorded in `docs/pending/LEDGER.md`
-(`ARTWORK-01`): it is Blizzard-owned art shipped under fan-work terms rather than under a license
+The currently bundled set is a knowing exception recorded in closed issue
+[`ARTWORK-01`](https://github.com/tusharsaxena/PanelMaster/issues/34): it is Blizzard-owned art shipped under fan-work terms rather than under a license
 this project can grant onward. Attribution for it lives in `README.md`. Do not treat it as
 precedent for a contribution.
 
@@ -362,4 +362,4 @@ reaches a player.
 
 This note lived in `README.md` until 2026-08-05, when the README was rewritten for players rather
 than contributors. The related asset decisions — the vendored upscaler, the bundled poster fonts and
-the ungated poster — are `ARTWORK-04`, `ARTWORK-06` and `ARTWORK-05` in `docs/pending/LEDGER.md`.
+the ungated poster — are closed issues [`ARTWORK-04`](https://github.com/tusharsaxena/PanelMaster/issues/35), [`ARTWORK-06`](https://github.com/tusharsaxena/PanelMaster/issues/37) and [`ARTWORK-05`](https://github.com/tusharsaxena/PanelMaster/issues/36).
