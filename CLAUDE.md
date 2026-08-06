@@ -15,8 +15,11 @@ doc structure.
 silently deviate and do not silently "fix" to match. Surface it and let the user decide which of
 two things it is:
 
-1. **An accepted deviation** — this addon intentionally differs; record it as a documented
-   deviation (e.g. in the TOC/README/`docs/` and in the audit bundle), with the reason.
+1. **An accepted deviation** — this addon intentionally differs; record it as a row in
+   `docs/ARCHITECTURE.md` → `## Documented deviations`, shaped
+   `| Rule | What differs | Why | Decided | Re-check trigger |`, where Rule is the `filename-§N`
+   reference. That register is the single home: the reasoning may live in the issue-audit GitHub
+   issue or an audit bundle and the row cites it, but a deviation not in the register is not ratified.
 2. **A change to the standard itself** — the standard's definition should evolve; the update
    belongs upstream in the WowAddonStandards repo, after which this addon conforms to the new rule.
 
@@ -65,9 +68,14 @@ commit gate: nothing about it may ever block a commit (`performance-§10`; `docs
 
 ## The `docs/` set — there is no `agent-context.md`
 
-The canonical `docs/` set is exactly three files: **`ARCHITECTURE.md`** (what this addon is),
-**`testing.md`** (how to verify) and **`smoke-tests.md`** (in-game checks) — plus the generated
-`test-cases.md` and the topic-detail docs.
+The canonical `docs/` set is the trio **`ARCHITECTURE.md`** (what this addon is), **`testing.md`**
+(how to verify) and **`smoke-tests.md`** (in-game checks), plus the verification-and-record docs
+`test-cases.md`, `performance.md`, `automated-tests/README.md` and `automated-tests/RESULTS.md`
+(`perf-runs/README.md` is the conditional fifth and is not shipped here), and the six
+unconditional **Tier 1** topic-detail docs `scope.md`, `module-map.md`, `schema.md`,
+`settings-panel.md`, `data-flow.md` and `common-tasks.md` — plus whatever **Tier 2** triggers have
+fired and any **Tier 3** docs this addon ships. `docs/ARCHITECTURE.md` → `## Documentation map`
+names every one and says which conditional ones do not apply (`documentation-§3`).
 
 **`docs/agent-context.md` does not exist in this repo and MUST NOT be created.** The standard
 deleted it in **v2.17.0**; shipping it is **anti-pattern #49**. It held `NEW_ADDON_CONTEXT.md` —
