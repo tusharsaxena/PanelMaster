@@ -72,11 +72,13 @@ test("Panel.Register: the retry is SUBSCRIBED before PLAYER_LOGIN fires (F-013)"
   -- OnEnable is dead on arrival. OnInitialize runs at ADDON_LOADED, strictly before PLAYER_LOGIN,
   -- which is the bootstrap shape options-ui-§1 sanctions. The mock stores whatever handler it is
   -- given, so only the source can show which lifecycle hook made the call.
+  -- CR-stripped: this repo is CRLF-pinned (line-endings-§2), so a scan that anchors on "\nend\n"
+  -- must not depend on the checkout's representation.
   local function slurp(path)
     local f = assert(io.open(path, "r"))
     local text = f:read("*a")
     f:close()
-    return text
+    return (text:gsub("\r\n", "\n"))
   end
 
   local src = slurp("core/PanelMaster.lua")
@@ -542,11 +544,13 @@ test("Tagline: the landing page, the TOC Notes and the README say one thing (F-0
   -- read first was contradicted by the next. `ADDON_TAGLINE` in settings/Panel.lua is canonical —
   -- it is the sentence on the settings landing page — and the other two quote it. It is a
   -- file-local, so a source scan is the only way to compare the three.
+  -- CR-stripped for the same reason as the OnInitialize scan above: the blank-line anchor
+  -- ("\n\n") is a representation detail, and this repo is CRLF-pinned (line-endings-§2).
   local function slurp(path)
     local f = assert(io.open(path, "r"))
     local text = f:read("*a")
     f:close()
-    return text
+    return (text:gsub("\r\n", "\n"))
   end
 
   local panel = slurp("settings/Panel.lua")

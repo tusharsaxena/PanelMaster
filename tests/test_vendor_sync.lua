@@ -13,10 +13,12 @@
 --
 -- ONE NORMALIZATION, AND ONLY ONE: `git show` hands back the stored blob, which
 -- is always LF, while the working tree's line endings are whatever the CHECKOUT
--- produced — git's `core.autocrlf`, on by default in a Windows install, hands out
--- CRLF. This repo's `.gitattributes` does not pin the tree either way: it carries
--- `*.sh text eol=lf` and nothing else, so every other path follows the local git
--- config. CR is stripped from the working-tree side so the file is compared to
+-- produced. This repo's `.gitattributes` pins the tree CRLF — `* text=auto
+-- eol=crlf`, the client-bound pin of `line-endings-§2` — so the two sides differ
+-- by representation on every checkout, by policy rather than by accident, and the
+-- strip is load-bearing rather than defensive. It stays unconditional: a straggler
+-- written by a tool that bypassed git's filters is LF in the same tree, and the
+-- comparison must not care which. CR is stripped from the working-tree side so the file is compared to
 -- the blob it round-trips to, rather than failing on one maintainer's machine and
 -- passing on another's. Nothing else is normalized — a real
 -- fork in content still fails. That strip lives in `tests/_kit/vendor_sync.lua`;
