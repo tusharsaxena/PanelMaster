@@ -20,6 +20,7 @@ not selected, which is a different fact again.
 
 | Run | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20260807-114409`](20260807-114409/) | 0.1.0 | 0/0 | 25 | 713/713 | skip | 10997 | 1352 | 7.2 | 2.0 | 15 | 0 | **green** |
 | [`20260807-110543`](20260807-110543/) | 0.1.0 | 0/0 | 25 | 713/713 | skip | 10997 | 1352 | 7.2 | 2.0 | 15 | 0 | **green** |
 | [`20260807-023000`](20260807-023000/) | 0.1.0 | 0/0 | 25 | 713/713 | skip | 10997 | 1352 | 7.2 | 2.0 | 15 | 0 | **green** |
 | [`20260804-233329`](20260804-233329/) | 0.1.0 | 0/0 | 25 | 706/706 | skip | 10941 | 1348 | 7.1 | 2.0 | 15 | 0 | **green** |
@@ -36,10 +37,16 @@ frozen and keeps its wrong number; the trend line is corrected here. The runner 
 
 ## Test suite
 
-713 cases as of [`20260807-023000`](20260807-023000/), up seven on the run before it and up
-seventeen on the baseline. **Zero skipped** — that run's `tests.txt` closes with
-`713 passed, 0 failed, 0 skipped, 713 total`, and a skip is folded into neither the passed figure
-nor the failed one. The `Tests` column above is generated as `passed/total` and does not carry the
+713 cases as of [`20260807-114409`](20260807-114409/), and **flat across the last three runs** —
+713 at `20260807-023000`, `20260807-110543` and this one. That is not yet a coverage gap: the addon
+has not grown across those three either (10997 NLOC / 1352 functions, identical at all three), and
+the only commits between them were the LibKa0s v1.8.2 / test-kit revision 10 re-vendor and two
+`.gitattributes` edits. It becomes worth a second look the moment shipped source moves and this
+number does not. Against the baseline the suite is up seventeen.
+
+**Zero skipped**, and that figure is load-bearing. Each run's `tests.txt` closes with
+`713 passed, 0 failed, 0 skipped, 713 total`, and a skip is folded into neither the passed figure nor
+the failed one. The `Tests` column above is generated as `passed/total` and does not carry the
 skipped figure alongside them; it is lossless only while that figure is zero, and the column is the
 vendored runner's to widen (`testing-§1`), not this repo's.
 
@@ -47,7 +54,7 @@ vendored runner's to widen (`testing-§1`), not this repo's.
 concentration is why the suite is the largest file in the repo. The seven net added at
 [`20260807-023000`](20260807-023000/) are the audit-remediation branch's own cover: four seam-parity
 cases (Core, DebugLog, Options, Slash — each asserting the degraded surface matches the live one),
-three harness cases following the kit rev-9 re-vendor, three database cases pinning that a v1
+three harness cases following the kit re-vendor, three database cases pinning that a v1
 SavedVariables file actually reaches the v1 → v2 migration body, and one degraded-install case that
 `/pm config` answers on every invocation rather than once. Four older cases came off against them:
 two harness cases collapsed into one bidirectional check, and two database cases were rewritten. One
@@ -57,23 +64,30 @@ bundle is the authority on what exists at that point; the README badge tracks th
 
 ## Lint
 
-Clean over 25 files: 0 warnings, 0 errors — flat across all four runs on record.
+Clean over 25 files: 0 warnings, 0 errors — flat across all six runs on record.
 
 **What is in scope is narrower than `luacheck .` suggests, and worth stating plainly.**
 `.luacheckrc` sets `exclude_files = { "libs/", "docs/audits/", "docs/reviews/", "_dev/", "tests/" }`,
 so the 25 files are the addon's shipped source only — `core/` (10), `defaults/` (2), `locales/` (2),
-`modules/` (6) and `settings/` (5), exactly as [`lint.txt`](20260807-023000/lint.txt) enumerates
+`modules/` (6) and `settings/` (5), exactly as [`lint.txt`](20260807-114409/lint.txt) enumerates
 them. `libs/` and `tests/_kit/` are vendored and are not this repo's to fix. **`tests/` is excluded
 too**, which is the exclusion a reader would not guess: roughly 6,000 lines of harness and suites —
 more than half the repo's Lua — are never linted, and no `0/0` row can show that. The two `ignore`
 entries are narrow (`212/self`, `212/event`, both unused-argument codes), and `std` is `lua51` with
 an explicit `read_globals` list rather than a permissive default.
 
+That exclusion set also explains why the v1.8.2 re-vendor moved nothing here: the whole of the
+changed payload sits in `libs/` and `tests/`, neither of which lint reads.
+
 ## Perf
 
 This addon ships no `tests/perf.lua`, so the `perf` column is a permanent `skip` rather than a
 transient tooling gap — automated-tests-§3's **first** sanctioned skip reason, not the
 `performance-§12` no-combat-path exemption, which PanelMaster does not hold and has not applied for.
+The distinction matters to a reader: the toolchain is not the problem. `lua5.1`, `luacheck` 1.2.0 and
+`lizard` 1.23.0 are all installed and all three of the other suites ran on them at every run on
+record; there is simply nothing for this one to execute.
+
 Two things follow, and both are standing facts rather than any one run's news: the record says
 **nothing** about the addon's runtime cost, and `performance-§9`'s zero-overhead evidence — that
 bracketed instrumentation is free when capture is off — does not exist for it. It also means no tag
@@ -83,16 +97,19 @@ changes any of it; the gap is tracked as **PM-004**.
 
 ## Complexity watch list
 
-Current state as of [`20260807-023000`](20260807-023000/) — not that run's diff.
+Current state as of [`20260807-114409`](20260807-114409/) — not that run's diff.
 Every function `lizard` warned on, and every file at or above `layout-§1`'s 1000-LOC
 on-notice threshold, each with a one-line disposition.
 
 ### Functions `lizard` warned on
 
+| Function | CCN | Location | Disposition |
+|---|---|---|---|
+
 None.
 
 That is a result, not an empty section. `lizard` reports 0 warnings over 1352 functions, and has now
-at three consecutive runs; the last run that warned was the baseline
+at four consecutive runs; the last run that warned was the baseline
 [`20260804-182223`](20260804-182223/), on nine functions. Naming all nine rather than counting them:
 `Artwork.BuildArtSpec` (51), `R.Sanitize` (40), the `wow_mock` frame stub's anonymous `__index`
 (33), `R:Set` (29), `Canvas.BuildSpec` (24), `S.Themes` (22), `D:Diagnose` (21), `Sl:CliPanel` (17)
@@ -101,41 +118,42 @@ the nine came down by extraction, and every file-local helper they were split in
 on its own account rather than by being small enough to hide.
 
 The highest cyclomatic complexity left in the addon is 15, in exactly two functions —
-`R.ApplyArtSize` (`modules/Registry.lua:604-632`) and `Compat.AddOnFolders` (`core/Compat.lua:34-52`)
-— both at the cap, neither refactored for it, and neither touched since the baseline.
-`BuildArtSpec` itself now reads 13. Both 15s are **dense defaulting and guarding rather than tangled
-control flow**: `lizard` counts every `and`/`or` short-circuit as a decision, so a run of
-`t.k = rec.k or D.k` lines scores high with no visible branching, and neither function is a refactor
-candidate on its CCN alone. They are still the release gate's whole margin — a function sitting
-exactly on the cap warns the moment anybody adds one branch to it, and that blocks the **tag**, not
-the commit. They are where this table comes back from "None."
+`Compat.AddOnFolders` (`core/Compat.lua:34-52`) and `R.ApplyArtSize`
+(`modules/Registry.lua:604-632`) — both at the cap, neither refactored for it, and neither touched
+since the baseline. `BuildArtSpec` itself now reads 13. Both 15s are **dense defaulting and guarding
+rather than tangled control flow**: `lizard` counts every `and`/`or` short-circuit as a decision, so
+a run of `t.k = rec.k or D.k` lines scores high with no visible branching, and neither function is a
+refactor candidate on its CCN alone. They are still the release gate's whole margin — a function
+sitting exactly on the cap warns the moment anybody adds one branch to it, and that blocks the
+**tag**, not the commit. They are where this table comes back from "None."
 
 **On the shelf life of these dispositions.** automated-tests-§4 retires an `Accepted` carried across
 three consecutive **release** runs. No run in this record is a release run — every `manifest.json`
 here has `release: null`, and the addon is still at an untagged 0.1.0 — so that clock has not
-started for any entry below. The three file entries are on their fourth *run* and their first
-release will be their first tick.
+started for any entry below. The three file entries are on their sixth *run* and their first
+release will be their first tick. Nothing is owed a fix or a tracked deviation ID on shelf-life
+grounds today.
 
 **A `0` in the Max CCN column above is an instrument fault, not a measurement.** It affects one run
 here, [`20260804-215132`](20260804-215132/), and any run recorded before the testkit rev-6
 re-vendor. The kit read `CCN_MAX` out of `lizard`'s `!!!! Warnings` block, which is empty the moment
 an addon reaches zero warnings, so the field had no input and the manifest stored `0`. The true
 figure was always in that same bundle's own `complexity.txt` — for `20260804-215132` it is **15**,
-identical to the two runs after it. The row keeps the `0` it recorded. It is generated evidence and
+identical to the four runs after it. The row keeps the `0` it recorded. It is generated evidence and
 is not corrected in place: a table edited to read what it should have measured is indistinguishable
 from one that measured it, which is the failure `performance-§10` names when it says a hand-edited
-record is worse than a wrong one. So the trend column reads `51 -> 0 -> 15 -> 15`, and this
-paragraph is how a reader learns the second figure is an instrument fault. The whole reading is
+record is worse than a wrong one. So the trend column reads `51 -> 0 -> 15 -> 15 -> 15 -> 15`, and
+this paragraph is how a reader learns the second figure is an instrument fault. The whole reading is
 written up in [`20260804-233329/ANALYSIS.md`](20260804-233329/ANALYSIS.md).
 
 ### Files by `layout-§1` band
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** The largest suite here (98 cases) because it covers the largest, most branch-heavy module. Byte-identical across the last two runs. Split only when `modules/Artwork.lua` is, along the same seams. |
-| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** Flat for the first time — 1188 LOC / 797 NLOC at both of the last two runs, against 1087 at the baseline. One flat run is not a reversal: the file is still 312 lines off the 1500 band with nothing offsetting its growth. Split along the catalog / geometry seam before the next feature lands in it. |
-| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1064 | **Accepted.** Long but shallow — 59 functions, avg CCN 2.4, none tripping a threshold. Length is inventory, not tangle. Unchanged since the baseline. |
+| 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** 956 NLOC / 155 functions / avg CCN 1.4. The largest suite here (98 cases) because it covers the largest, most branch-heavy module. Byte-identical across the last three runs. Split only when `modules/Artwork.lua` is, along the same seams. |
+| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** 797 NLOC / 29 functions / avg CCN 4.7 — the highest average in the addon. Flat across three runs now, against 1087 LOC at the baseline. Three flat runs is not a reversal while nothing is offsetting its growth: the file is still 312 lines off the 1500 band. Split along the catalog / geometry seam before the next feature lands in it. |
+| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1064 | **Accepted.** Long but shallow — 644 NLOC / 59 functions / avg CCN 2.4, none tripping a threshold. Length is inventory, not tangle. Unchanged since the baseline. |
 
-Nothing newly crossed a band at [`20260807-023000`](20260807-023000/), no file moved between bands,
+Nothing newly crossed a band at [`20260807-114409`](20260807-114409/), no file moved between bands,
 and no file is over the 1500 cap. `tests/test_sunnart.lua` at 955 LOC is the nearest thing outside
 the table.

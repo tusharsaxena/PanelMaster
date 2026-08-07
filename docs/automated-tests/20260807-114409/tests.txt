@@ -1,0 +1,715 @@
+  PASS  Util.SplitPath: splits a dotted path
+  PASS  Util.SplitPath: a single segment is one part
+  PASS  Util.Clamp: passes a value already in range
+  PASS  Util.Clamp: clamps below and above
+  PASS  Util.Clamp: a non-number falls back, then to the low bound
+  PASS  Util.Round: rounds away from zero on both signs
+  PASS  Util.Snap: a grid of 1 or less is the identity
+  PASS  Util.Snap: rounds to the nearest multiple
+  PASS  Util.ParseBool: accepts every documented token, in any casing
+  PASS  Util.ParseBool: a boolean passes straight through
+  PASS  Util.ParseBool: an unrecognized token is nil, NOT false (F-023)
+  PASS  Util.Color: fills a missing alpha with 1
+  PASS  Util.Color: clamps out-of-range components
+  PASS  Util.Color: a non-table falls back rather than erroring
+  PASS  Util.ParseColor: reads a 0-1 triple and defaults alpha
+  PASS  Util.ParseColor: reads a 0-255 tuple and scales it
+  PASS  Util.ParseColor: the byte decision reads RGB only
+  PASS  Util.ParseColor: rejects junk and wrong-length input
+  PASS  Util.FormatColor: round-trips through ParseColor
+  PASS  Util.CleanName: trims and collapses whitespace
+  PASS  Util.CleanName: empty and whitespace-only names are nil
+  PASS  Util.DeepCopy: copies nested tables rather than aliasing
+  PASS  Util.IsPoint / IsStrata: accept valid tokens, reject the rest
+  PASS  NS.SafeToString: renders ordinary values and booleans
+  PASS  NS.IsConcatSafe: a plain value is concat-safe
+  PASS  NS.Print: prepends the cyan [PM] tag
+  PASS  NS.Print survived the AceConsole embed (architecture-§2)
+  PASS  Compat.GetAddOnMetadata: reads the TOC Version through C_AddOns
+  PASS  Compat.GetAddOnMetadata: an unknown field is nil, not an error
+  PASS  Compat.GetScreenSize: returns the UIParent dimensions
+  PASS  Compat.GetUIScale: defaults to 1 when the frame cannot answer
+  PASS  Compat.FetchMedia: degrades to the flat texture when LibSharedMedia is absent
+  PASS  Compat.FetchMedia: an unresolvable name falls back rather than rendering nothing
+  PASS  Compat.FetchMedia: 'None' is an explicit choice and resolves to nil
+  PASS  Compat.MediaList: always offers None first, then the built-in flat texture
+  PASS  Compat.MediaList: never lists a name twice
+  PASS  Compat.RegisterMedia: reports failure without LibSharedMedia rather than erroring
+  PASS  Compat.GetClassColor: reads RAID_CLASS_COLORS by classFile token
+  PASS  Compat.GetClassColor: an unknown class is nil, not white
+  PASS  Compat.MouseIsOver: answers without the frame taking mouse input
+  PASS  Compat owns the deprecated-API surface: no flavor branching in the addon
+  PASS  Constants: the strata list runs lowest to highest and starts at BACKGROUND
+  PASS  Constants: new panels default to LOW
+  PASS  Constants: new panels default to CENTER at 0,0
+  PASS  Constants: new panels default to an unscaled 1.0
+  PASS  Constants: STRATA_SET agrees with STRATA
+  PASS  Constants: nine anchor points, all in POINT_SET
+  PASS  Constants: STRATA_OPTIONS is dropdown-shaped
+  PASS  Constants: every template field has a declared type
+  PASS  Constants: every typed field appears in the display order
+  PASS  Constants: the template's own values are valid by its own rules
+  PASS  Constants: the editor's offset reach is named, symmetric and wide enough to be useful
+  PASS  Constants: no slider in the panel editor decides its own bounds
+  PASS  Constants: preview panels are valid panel overrides
+  PASS  Constants: the mono font and logo point at this addon's folder
+  PASS  Constants: the logo file named by LOGO_PATH exists
+  PASS  Constants: the logo is a Targa, which is the only format WoW loads at runtime
+  PASS  Constants: the debug console's mono font exists
+  PASS  Registry.New: creates a panel with the template's shape
+  PASS  Registry.New: rejects an empty name
+  PASS  Registry.New: rejects a duplicate name, case-insensitively
+  PASS  Registry.New: ids are never reused after a delete
+  PASS  Registry.New: applies the profile's default strata and alpha
+  PASS  Registry.New: overrides are applied but cannot set the id
+  PASS  Registry.New: does not alias the shared template
+  PASS  Registry.Delete: removes the panel and reports its name
+  PASS  Registry.Delete: an unknown panel is an error, not a silent no-op
+  PASS  Registry.DeleteAll: empties the registry and reports the count
+  PASS  Registry.DeleteAll: drops the session state keyed on the panels it removed (F-020)
+  PASS  Registry.Resolve: finds by name and by id
+  PASS  Registry.Resolve: a name wins over an id that looks like it
+  PASS  Registry.Rename: renames and reports the old name
+  PASS  Registry.Rename: re-casing a panel's own name is allowed
+  PASS  Registry.Rename: rejects a collision with a different panel
+  PASS  Registry.Sanitize: clamps size into range
+  PASS  Registry.Sanitize: repairs invalid anchor and strata tokens
+  PASS  Registry.Sanitize: a string size from a hand-edited SV becomes a number
+  PASS  Registry.Sanitize: does NOT clamp offsets to the screen
+  PASS  Registry.Sanitize: enabled defaults to true, and only explicit false disables
+  PASS  Registry.Set: writes a number field
+  PASS  Registry.Set: coerces a CLI string to the field's type
+  PASS  Registry.Set: an unreadable boolean is refused, not stored as false (F-023)
+  PASS  Registry.Set: parses a color string
+  PASS  Registry.Set: rejects an unknown field
+  PASS  Registry.Set: rejects an invalid anchor with a helpful message
+  PASS  Registry.Set: accepts a lower-case anchor and stores it upper-case
+  PASS  Registry.Set: writing `name` routes through Rename's uniqueness check
+  PASS  Registry.Set: clamps out-of-range input rather than rejecting it
+  PASS  Registry.SetPosition: writes both coordinates at once
+  PASS  Registry.FormatField: renders each field type readably
+  PASS  Registry.Reset: refuses a preview placeholder rather than stripping its marker
+  PASS  Registry.Reset: a reset placeholder is still swept, so preview leaves no litter
+  PASS  Registry: a preview placeholder cannot lose its marker through any write seam
+  PASS  Registry.CopyFrom: never spreads the preview marker onto a real panel
+  PASS  Registry.NewBatch: creates every spec and broadcasts once
+  PASS  Registry.NewBatch: skips a spec whose name is taken, keeping the rest
+  PASS  Registry.Recover: leaves an on-screen TOPLEFT panel alone
+  PASS  Registry.Recover: still rescues a genuinely off-screen TOPLEFT panel
+  PASS  Registry.Recover: survives a record whose anchor is missing or junk (F-006)
+  PASS  Registry.Recover: leaves on-screen panels alone
+  PASS  Registry.Recover: pulls an off-screen panel back into view
+  PASS  Registry: the panel messages have exactly one sender
+  PASS  Registry.New: a panel really lands on the documented defaults, not just the template
+  PASS  Registry.Reset: puts position and scale back to the defaults too
+  PASS  Canvas.BuildSpec: carries the record's geometry through
+  PASS  Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
+  PASS  Canvas.BuildSpec: shown requires BOTH the master switch and the panel's own
+  PASS  Canvas.BuildSpec: a missing settings table means shown
+  PASS  Canvas.BuildSpec: a zero border is honored, not floored to 1
+  PASS  Canvas.BuildSpec: normalizes colors to four clamped components
+  PASS  Canvas.BuildSpec: a non-table record is nil, not a crash
+  PASS  Canvas.Render: builds a frame and applies the spec's size
+  PASS  Canvas.Render: applies the anchor point and offsets
+  PASS  Canvas.Render: re-rendering does not accumulate anchor points
+  PASS  Canvas.Render: reuses the same frame for the same panel
+  PASS  Canvas.Render: a disabled panel's frame is hidden, not destroyed
+  PASS  Canvas.Render: the master switch hides every panel
+  PASS  Canvas.Render: a deleted record retires its frame
+  PASS  Canvas.RenderAll: renders every record and retires nothing else
+  PASS  Canvas: frames are pooled, not leaked (hard rule #14)
+  PASS  Canvas: a delete returns its frame to the pool
+  PASS  Canvas: a released frame is inert, not merely hidden
+  PASS  Canvas: a re-created panel gets its own frame back
+  PASS  Canvas: a DIFFERENT panel name gets a different frame
+  PASS  Canvas: a released frame is mouse-disabled again
+  PASS  Canvas: a released frame stops claiming a panel id (F-024)
+  PASS  Canvas: the bus repaints on a registry change
+  PASS  Canvas: a settings change repaints
+  PASS  Canvas: a grid-only settings write does NOT repaint (F-012)
+  PASS  Canvas: showLabels still repaints — the unlock overlay reads it (F-012)
+  PASS  Canvas: OnEnable subscribes the renderer to the bus
+  PASS  Canvas: consumers register on their own bus target (architecture-§4)
+  PASS  Canvas: each panel level gets a frame-level band of its own
+  PASS  Canvas: one level apart is enough to separate two panels completely
+  PASS  Unlock.SnapPosition: snapping off just rounds
+  PASS  Unlock.SnapPosition: snaps to the configured grid
+  PASS  Unlock.SnapPosition: snapping is symmetric across zero
+  PASS  Unlock.SnapPosition: an out-of-range grid is clamped, not obeyed
+  PASS  Unlock.SnapPosition: a missing settings table does not error
+  PASS  Unlock.SetUnlocked: flips the session flag
+  PASS  Unlock.Toggle: alternates
+  PASS  Unlock: unlocking during combat is deferred, not applied
+  PASS  Unlock: the deferred unlock is replayed when combat ends
+  PASS  Unlock: ResumePending is a no-op with nothing queued
+  PASS  Unlock: LOCKING during combat is never deferred
+  PASS  Unlock: locking clears a queued unlock
+  PASS  Unlock: an unlocked panel takes the mouse; a locked one does not
+  PASS  Unlock: a DISABLED panel is still shown while unlocked
+  PASS  Unlock: the drag handler writes the dropped position back to the record
+  PASS  Unlock: the drag handler ignores a frame whose record is gone
+  PASS  Unlock.SetPreview: adds the sample panels and turns unlock on
+  PASS  Unlock.SetPreview: off removes exactly what it added
+  PASS  Unlock.SetPreview: preview panels really render
+  PASS  Unlock.SetPreview: a name collision skips that placeholder, not the whole preview
+  PASS  Unlock.SetPreview: turning it on twice is a no-op
+  PASS  Unlock.SetPreview: every placeholder carries the preview marker
+  PASS  Unlock.SetPreview: each transition broadcasts the panel set ONCE
+  PASS  Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked
+  PASS  Unlock.SetPreview: preview during combat applies whole, it is never queued (F-014)
+  PASS  Unlock.SetPreview: previewing while already unlocked in combat queues nothing (F-014)
+  PASS  Unlock: the global combat gate still defers a plain unlock (F-014)
+  PASS  Unlock.TogglePreview: alternates
+  PASS  Unlock: the overlay outranks every rung of the panel's own ladder
+  PASS  Unlock: the overlay follows the panel's level when the panel's level changes
+  PASS  Util.Slugify: keeps alphanumerics and collapses everything else
+  PASS  Util.Slugify: trims leading and trailing separators
+  PASS  Util.Slugify: preserves case
+  PASS  Util.Slugify: a name with no alphanumerics falls back rather than slugging to empty
+  PASS  Util.Slugify: is deterministic
+  PASS  Util.FrameName: prefixes the slug
+  PASS  Registry.FrameName: matches Util.FrameName for a record
+  PASS  Registry.FrameName: is stamped onto the record at create, not derived on every read
+  PASS  Registry.FrameName: derives one for a record that predates the stored field
+  PASS  Registry.New: refuses a name whose frame name a RENAMED panel still carries
+  PASS  Canvas: the frame is created under its deterministic global name
+  PASS  Registry.New: refuses a name whose slug collides with an existing panel
+  PASS  Registry.Rename: does NOT refuse a slug collision, because renaming claims no frame name
+  PASS  Registry.Rename: a panel may still be renamed to its own slug
+  PASS  Registry.Rename: keeps the panel on the frame it already had
+  PASS  Canvas: renaming a panel N times leaves no abandoned frames
+  PASS  Constants: new panels default to the solid texture on both surfaces
+  PASS  Constants: both media fields declare their LSM media type
+  PASS  Canvas.BuildSpec: carries both texture names
+  PASS  Canvas.BuildSpec: a missing texture name falls back to the template's
+  PASS  Canvas: the background is drawn with the resolved texture path
+  PASS  Canvas: the border is drawn as a backdrop edge, at the set thickness
+  PASS  Canvas: the border color is applied AFTER the backdrop
+  PASS  Canvas: the border picks up a color change
+  PASS  Canvas: the border takes the class color too
+  PASS  Canvas: a zero border applies no backdrop at all
+  PASS  Canvas: the 'None' border texture removes the border
+  PASS  Canvas: dropping the border to zero clears an existing backdrop
+  PASS  Canvas.BuildSpec: carries the border offset
+  PASS  Canvas.BuildSpec: clamps the border offset
+  PASS  Canvas: a positive border offset pushes the border outward
+  PASS  Canvas: a negative border offset pulls the border inward
+  PASS  Canvas: a zero border offset sits exactly on the panel edge
+  PASS  Canvas: the border frame is re-anchored, not accumulated, on repaint
+  PASS  Registry.Sanitize: clamps the border offset
+  PASS  Registry.Reset: restores every appearance field to the template
+  PASS  Registry.Reset: restores position and anchor too
+  PASS  Registry.Reset: keeps the panel's id and name
+  PASS  Registry.Reset: applies the profile's New-Panel-Defaults, like New does
+  PASS  Registry.Reset: clears class-color flags
+  PASS  Registry.Reset: does not alias the shared template
+  PASS  Registry.Reset: repaints the panel
+  PASS  Registry.Reset: an unknown panel is an error, not a silent no-op
+  PASS  Registry.Reset: leaves other panels alone
+  PASS  Border: class color and a picked color produce the same backdrop
+  PASS  Border: class color preserves the picked color's ALPHA exactly
+  PASS  Border: only the RGB differs between the two modes
+  PASS  Accent bar: class color likewise preserves alpha
+  PASS  Canvas: the background color is applied to the fill texture
+  PASS  Canvas: the background picks up a color change
+  PASS  Registry.Set: a media name is matched case-insensitively against the live list
+  PASS  Registry.Set: an unknown media name is refused with the available list
+  PASS  Registry.Sanitize: does NOT rewrite an unresolvable texture name
+  PASS  Registry.Sanitize: an empty or non-string texture falls back to the default
+  PASS  Constants: every class-color flag names a real color field
+  PASS  Util.ResolveColor: returns the stored color when the flag is off
+  PASS  Util.ResolveColor: the class color replaces RGB but keeps the stored alpha
+  PASS  Util.ResolveColor: falls back to the stored color when the class is unknown
+  PASS  Util.ResolveColor: a color with no class-color companion is returned as stored
+  PASS  Canvas.BuildSpec: applies the class color to the background
+  PASS  Canvas.BuildSpec: applies the class color to the border independently
+  PASS  Registry.Set: the class-color flags coerce from the CLI
+  PASS  Registry.Sanitize: class-color flags are always booleans
+  PASS  Canvas.BuildSpec: mouseover off means the resting alpha IS the alpha
+  PASS  Canvas.BuildSpec: mouseover on carries the faded resting alpha
+  PASS  Canvas.BuildSpec: a faded alpha above the hover alpha is clamped down
+  PASS  Canvas: a mouseover panel rests at its faded alpha
+  PASS  Canvas: a mouseover panel rises to full alpha under the cursor
+  PASS  Canvas: a mouseover panel never takes mouse input
+  PASS  Canvas: only mouseover panels are tracked by the ticker
+  PASS  Canvas: turning mouseover off untracks the panel and restores its alpha
+  PASS  Canvas: a deleted mouseover panel leaves the ticker
+  PASS  Canvas: an unlocked mouseover panel is held fully visible
+  PASS  Canvas: a panel unlocked ON ITS OWN also suspends the fade
+  PASS  Unlock.IsPanelUnlocked: false by default
+  PASS  Unlock.SetPanelUnlocked: unlocks just that panel
+  PASS  Unlock.IsPanelUnlocked: the global unlock covers every panel
+  PASS  Unlock: a global lock clears the per-panel unlocks
+  PASS  Unlock: a per-panel unlock during combat is deferred
+  PASS  Unlock: a deferred per-panel unlock is replayed when combat ends
+  PASS  Unlock: a panel deleted mid-combat is not resurrected on replay
+  PASS  Registry.Delete: drops the panel's session unlock state
+  PASS  Database: per-panel unlock state is NOT persisted
+  PASS  Accent: ON by default — the accent bar is the shipped look
+  PASS  Accent: the panel's OWN border is off, so only one thing defines the edge
+  PASS  Accent: defaults to the top edge only
+  PASS  Accent: defaults to 5px thick, flush against the panel
+  PASS  Accent: the default bar texture is one LibSharedMedia always ships
+  PASS  Accent: defaults to CLASS color
+  PASS  Accent: the class-color flag is wired into the generic color map
+  PASS  Accent: the bar texture selects from the statusbar pool
+  PASS  Accent: every accent field is typed and in the dump order
+  PASS  Util.EdgeSet: keeps only real edges, normalized to true
+  PASS  Util.EdgeSet: a non-table is the empty set, not an error
+  PASS  Util.ParseEdges: reads a comma list, any casing
+  PASS  Util.ParseEdges: 'none' is the empty set
+  PASS  Util.ParseEdges: rejects an unknown edge rather than dropping it
+  PASS  Util.FormatEdges: always renders in the declared order
+  PASS  Util.FormatEdges: the empty set prints (none)
+  PASS  Util.FormatEdges: round-trips through ParseEdges
+  PASS  Registry.Set: parses an edge list from the CLI
+  PASS  Registry.Set: an unknown edge is refused with the valid list
+  PASS  Registry.Set: an edge set is copied, not aliased
+  PASS  Registry.Sanitize: an EMPTY edge set is preserved, not repopulated
+  PASS  Registry.Sanitize: a non-table edge set falls back to the template's
+  PASS  Registry.Sanitize: clamps thickness and offset
+  PASS  Registry.Sanitize: thickness has a floor of 1, not 0
+  PASS  Registry.FormatField: renders an edge set readably
+  PASS  Registry.Reset: puts the accent bar back to the shipped defaults
+  PASS  Canvas.BuildSpec: carries the accent settings
+  PASS  Canvas.BuildSpec: clamps accent thickness and offset
+  PASS  Canvas.BuildSpec: the accent color goes through the shared resolver
+  PASS  Canvas.BuildSpec: accent class color is independent of the others
+  PASS  Canvas: no accent bar is shown when the feature is off
+  PASS  Canvas: enabling shows only the chosen edges
+  PASS  Canvas: all four edges at once is legal
+  PASS  Canvas: an empty edge set draws nothing even when enabled
+  PASS  Canvas: the top bar spans the full edge and is offset outward
+  PASS  Canvas: the bottom bar is offset downward
+  PASS  Canvas: the left bar is vertical and offset leftward
+  PASS  Canvas: the right bar is offset rightward
+  PASS  Canvas: a negative offset pulls the bar over the panel
+  PASS  Canvas: the bar is painted with the resolved color
+  PASS  Canvas: the bar takes the class color by default
+  PASS  Canvas: the bar is re-anchored, not accumulated, on repaint
+  PASS  Canvas: toggling accents off hides the bars again
+  PASS  Canvas: the accent bar draws ABOVE the border
+  PASS  Canvas: the accent/border stacking survives a frame-level change
+  PASS  Canvas: the accent bars live on their own child frame
+  PASS  Accent border: a 1px BLACK hairline by default
+  PASS  Accent border: its class-color flag is wired into the generic color map
+  PASS  Accent border: selects from the BORDER media pool, not statusbar
+  PASS  Canvas.BuildSpec: carries the accent border settings
+  PASS  Canvas.BuildSpec: clamps the accent border to the panel border's bounds
+  PASS  Canvas: no border frame is built when the bar has no border
+  PASS  Canvas: the bar border is a backdrop edge at the set thickness
+  PASS  Canvas: the bar border color is applied AFTER the backdrop
+  PASS  Canvas: the bar border takes the class color
+  PASS  Canvas: the bar border is offset from the bar
+  PASS  Canvas: dropping the bar border to zero clears it
+  PASS  Canvas: a 'None' bar border texture removes it
+  PASS  Registry.Reset: puts the bar border back to the shipped hairline
+  PASS  Canvas: a released frame hides its accent bars
+  PASS  Canvas: a vertical bar rotates its texture 90 degrees
+  PASS  Canvas: a horizontal bar draws its texture as authored
+  PASS  Canvas: the orientation is re-applied on every repaint, not just the first
+  PASS  Artwork: every catalog id is unique
+  PASS  Artwork: no catalog row claims one of the two reserved ids
+  PASS  Artwork: every catalog row carries a non-empty category
+  PASS  Artwork: every catalog row declares the fields the fill math needs
+  PASS  Artwork: every catalog row's derived path points at a file that exists
+  PASS  Artwork: every catalog row is square and a power of two
+  PASS  Artwork.Entry: finds a row by id and forgives its case
+  PASS  Artwork.List: brackets the catalog with None first and Custom last
+  PASS  Artwork.List: a catalog label carries its category as a prefix
+  PASS  Artwork.List: orders the catalog by category, then by label
+  PASS  Artwork FIT: the whole image lands inside the panel at every aspect pairing
+  PASS  Artwork FIT: never crops — the texture coordinates stay the full image
+  PASS  Artwork FIT: scale multiplies the fitted size and nothing else
+  PASS  Artwork FIT: scale is clamped to the artwork bounds, not applied raw
+  PASS  Artwork FILL: covers the panel exactly, at every panel and art aspect
+  PASS  Artwork FILL: the crop preserves the art's aspect
+  PASS  Artwork FILL: crops the binding axis not at all, and centers what it does crop
+  PASS  Artwork FILL: a wide panel crops vertically and a tall panel crops horizontally
+  PASS  Artwork FILL: scale tightens both surviving ranges, so a bigger scale zooms in
+  PASS  Artwork STATIC: draws at the authored pixel size and ignores the panel entirely
+  PASS  Artwork STATIC: scale multiplies the authored size
+  PASS  Artwork STRETCH: matches the panel exactly, at every panel and art aspect
+  PASS  Artwork STRETCH: deliberately ignores scale
+  PASS  Artwork TILE: the uv range is how many copies fit across the panel
+  PASS  Artwork TILE: the copy count scales linearly with the panel
+  PASS  Artwork TILE: scale sizes the tile, so a bigger scale means fewer copies
+  PASS  Artwork: only TILE asks the renderer to wrap
+  PASS  Artwork: all five fills behave as the panel is resized
+  PASS  Artwork: position is honored by STATIC and FIT, which leave room to move
+  PASS  Artwork: STRETCH, FILL and TILE force center, since they already cover the panel
+  PASS  Artwork: a nonsense art anchor falls back to the template's own
+  PASS  Artwork: an unturned, unflipped quad is the identity texture coordinate
+  PASS  Artwork: one quarter turn reproduces C.ACCENT_TEXCOORD_ROT90 exactly
+  PASS  Artwork: half a turn is the identity quad reversed
+  PASS  Artwork: three quarter turns are the quarter turn applied three times
+  PASS  Artwork: a horizontal flip swaps the left and right columns
+  PASS  Artwork: a vertical flip swaps the top and bottom rows
+  PASS  Artwork: flipping both ways is the same as turning it half way round
+  PASS  Artwork: flips are applied BEFORE the turn, and the order is part of the contract
+  PASS  Artwork: a quarter turn transposes a FILL crop rather than discarding it
+  PASS  Artwork FILL: every quarter turn preserves the art's aspect
+  PASS  Artwork FIT: every quarter turn preserves the art's aspect
+  PASS  Artwork STATIC: every quarter turn preserves the art's aspect
+  PASS  Artwork TILE: every quarter turn preserves the art's aspect
+  PASS  Artwork: a rotation that is not a quarter turn falls back to the template's
+  PASS  Artwork: the tint carries the stored color through
+  PASS  Artwork: artAlpha multiplies the tint's own alpha rather than replacing it
+  PASS  Artwork: artClassColor overrides the RGB and keeps the computed alpha
+  PASS  Artwork: the class-color row is wired up in C.COLOR_FIELDS
+  PASS  Artwork: the tint reaches every piece, full-color included
+  PASS  Artwork: class color reaches full-color art too
+  PASS  Artwork: desaturate and blend mode are resolved into the spec
+  PASS  Artwork: a custom path takes the tint like anything else
+  PASS  Artwork.BuildArtSpec: no artwork selected is nil, the cheapest possible answer
+  PASS  Artwork.BuildArtSpec: an id that no longer exists draws nothing, not an error
+  PASS  Artwork.BuildArtSpec: Custom with nothing typed yet draws nothing
+  PASS  Artwork.BuildArtSpec: a zero-sized panel is nil rather than a division by zero
+  PASS  Artwork.BuildArtSpec: a catalog row with a broken native size draws nothing
+  PASS  Artwork.BuildArtSpec: a catalog row with NO declared size falls back to the nominal one
+  PASS  Artwork.BuildArtSpec: a non-table record is nil, not a crash
+  PASS  Artwork.BuildArtSpec: an unknown fill or layer falls back to the template
+  PASS  Artwork.BuildArtSpec: the layer resolves to the frame level the renderer must use
+  PASS  Artwork: a panel straight from the template renders no artwork at all
+  PASS  Artwork: a record that predates the feature entirely renders no artwork
+  PASS  Artwork: Canvas.BuildSpec fits the art to the CLAMPED panel size
+  PASS  Artwork: Sanitize leaves a fully-specified artwork record alone
+  PASS  Artwork: every art field is in the template, the type map and the dump order
+  PASS  Artwork: Registry.CopyFrom carries every art field across
+  PASS  Artwork: a copy deep-copies the art color rather than sharing it
+  PASS  Artwork: a profile round-trip keeps every art field intact
+  PASS  Artwork: R:Set stores an art field through the normal write seam
+  PASS  Canvas: a panel with artwork shows its art frame and applies the resolved path
+  PASS  Canvas: the art frame takes the level its layer names, for all three layers
+  PASS  Canvas: there is ONE art frame, whose level is reassigned per render
+  PASS  Canvas: the artwork ladder interleaves with the fill, the border and the accent
+  PASS  Canvas: the fill lives on its own child frame, so BELOW_BG is reachable
+  PASS  Canvas: the art frame clips its children, so offset art stays inside the panel
+  PASS  Canvas: the art texture takes the spec's size, anchor and texture coordinates
+  PASS  Canvas: tiled artwork asks SetTexture to wrap; nothing else does
+  PASS  Canvas: the artwork tint and blend mode reach the texture
+  PASS  Canvas: turning artwork off clears the texture as well as hiding the frame
+  PASS  Canvas: a released frame keeps no artwork for the next panel to inherit
+  PASS  Canvas: a reused frame draws the new panel's artwork, not the old panel's
+  PASS  Canvas: a panel with no artwork never shows its art frame
+  PASS  Artwork composite: a bar splits into one quad per section
+  PASS  Artwork composite: the sections tile the bar rect with no gap and no double-cover
+  PASS  Artwork composite: each section samples its whole file
+  PASS  Artwork composite: a FILL crop drops the sections it pushed off the panel
+  PASS  Artwork composite: a quarter turn stacks the sections instead of ranging them
+  PASS  Artwork composite: a horizontal flip reverses the section order
+  PASS  Artwork composite: a tiled bar repeats the whole bar, not each section
+  PASS  Artwork composite: a tiled bar is clamped rather than allowed to cost hundreds of textures
+  PASS  Artwork composite: the overlap crop moves the sampled window off the transparent band
+  PASS  Artwork composite: a tiled bar drops the overlap crop rather than applying it wrongly
+  PASS  Artwork: a single texture is a one-quad spec that matches the flat rect
+  PASS  Canvas: a composed bar draws one texture per section
+  PASS  Canvas: switching from a bar to a single piece clears the sections it no longer draws
+  PASS  Artwork composite: an anchored FIT offsets each section from the same edge
+  PASS  Database: InitDB opened both scopes
+  PASS  Database: InitDB runs the migration runner, so the live DB comes back stamped
+  PASS  Database.RunMigrations: a v1 SavedVariables file reaches the v1 -> v2 body
+  PASS  Database: the panel registry is per-profile, not global
+  PASS  Database: every character starts on the shared 'Default' profile
+  PASS  Database: a fresh profile ships no panels
+  PASS  Database: the debug flag is NOT persisted (debug-logging-§5)
+  PASS  Database: unlock state is NOT persisted
+  PASS  Database.RunMigrations: is idempotent
+  PASS  Database.RunMigrations: stamps a version onto an unstamped DB
+  PASS  Database.RunMigrations: upgrades an older DB to the current version
+  PASS  Database.RunMigrations: v2 stamps a frame name onto every unstamped panel
+  PASS  Database.RunMigrations: v2 leaves an already-stamped frame name alone
+  PASS  Database.RunMigrations: survives being called before the DB exists
+  PASS  Database.MigrationSummary: is a pure, readable line
+  PASS  Database.InitSummary: names the addon, version, schema, profile and count
+  PASS  Database.SweepPreviewPanels: removes the marked records and nothing else
+  PASS  Database.SweepPreviewPanels: is idempotent
+  PASS  Database.SweepPreviewPanels: survives being called before the DB exists
+  PASS  Database: InitDB sweeps preview orphans before anything can read the panels
+  PASS  Database.InitSummary: survives a missing DB
+  PASS  DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
+  PASS  DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
+  PASS  DebugLog.FormatColored: colors the timestamp and the tag
+  PASS  DebugLog.FormatColored / FormatPlain: the two carry the same content
+  PASS  DebugLog.Add: appends to the copy buffer
+  PASS  DebugLog.Clear: empties the buffer
+  PASS  NS.Debug: is a no-op when logging is off (zero-alloc gate)
+  PASS  NS.Debug: writes when logging is on
+  PASS  NS.Debug: formats varargs through the secret-safe stringifier
+  PASS  NS.Debug: a boolean arg survives (booleans are never secret)
+  PASS  DebugLog.SetEnabled: flips the session flag and brackets the log
+  PASS  DebugLog.SetEnabled: the disable line lands AFTER the flag flips off
+  PASS  DebugLog.SetEnabled: emits no [Init] summary on disable
+  PASS  DebugLog.SetEnabled: the chat ack is color-coded ON green / OFF red
+  PASS  DebugLog: the title-bar toggle drives the same seam
+  PASS  DebugLog: window visibility is independent of the logging flag
+  PASS  DebugLog.Toggle: alternates window visibility
+  PASS  DebugLog.Diagnose: reports the registry and the renderer together
+  PASS  DebugLog.Diagnose: counts active, pooled and orphaned frames
+  PASS  DebugLog.Diagnose: works with logging off
+  PASS  NS.Debug: call sites do not restate the gate
+  PASS  NS.Debug: the ungated call sites still log when logging is on
+  PASS  NS.Debug: the ungated call sites stay silent when logging is off
+  PASS  NS.DebugBuild: does not call its builder when logging is off
+  PASS  NS.DebugBuild: calls the builder and logs when logging is on
+  PASS  NS.DebugBuild: passes the builder's arguments through unbound
+  PASS  Schema.Register: every path resolves against the defaults (architecture-§5)
+  PASS  Schema: every row declares a group, label, type and widget
+  PASS  Schema: every row has a tooltip
+  PASS  Schema: paths are unique
+  PASS  Schema: session-only rows supply their own get and set
+  PASS  Schema.FindRow: finds a real path and rejects a bogus one
+  PASS  Schema.Get / Set: round-trip a boolean
+  PASS  Schema.Set: rejects an unknown path
+  PASS  Schema.Set: a failing validate blocks the write
+  PASS  Schema.Set: validates the strata dropdown
+  PASS  Schema.Set: a session-only row never touches the DB
+  PASS  Schema.Set: a session-only row reads back through its own get
+  PASS  Schema.Set: fires onChange
+  PASS  Schema.Set: a table value is deep-copied, not aliased
+  PASS  Schema.Default: returns the row's default, deep-copied
+  PASS  Schema: the defaults match the shipped profile
+  PASS  Schema: the master switch reaches the renderer
+  PASS  Schema: a gridSize write still changes where the next drag lands (F-012)
+  PASS  Schema: the settings message has exactly one sender
+  PASS  Schema: the numeric rows declare min and max
+  PASS  Schema: defaultAlpha stays a fraction
+  PASS  Slash.Register: registers both the short verb and the full-name alias
+  PASS  Slash.Version: prefers the TOC metadata over the in-code fallback
+  PASS  Slash.PrintHelp: one row per command, plus a header
+  PASS  Slash.PrintHelp: no line ends in a colon (slash-commands-§4)
+  PASS  Slash.OnSlash: a bare command prints help
+  PASS  Slash.OnSlash: dispatches from the COMMANDS table
+  PASS  Slash.OnSlash: the verb is case-insensitive
+  PASS  Slash.OnSlash: an unknown verb reports it and prints help
+  PASS  Slash.BuildListLines: the header, then group headers, then rows
+  PASS  Slash.BuildListLines: indentation is two spaces for groups, four for rows
+  PASS  Slash.BuildListLines: lists every schema row exactly once
+  PASS  Slash.BuildListLines: groups appear in schema DECLARATION order
+  PASS  Slash.BuildListLines: every group in the schema reaches the listing
+  PASS  Slash value rendering: a row's fmt still reaches the number
+  PASS  Slash value rendering: booleans render true/false
+  PASS  Slash.FormatKV: gold key, white value, no trailing colon
+  PASS  Slash.CliGet: prints the key = value line
+  PASS  Slash.CliGet: an unknown path is reported
+  PASS  Slash.CliGet: with no argument, prints usage
+  PASS  Slash.CliSet: writes and echoes the STORED value
+  PASS  Slash.CliSet: coerces booleans from words
+  PASS  Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)
+  PASS  Slash.CliSet: accepts a lower-case dropdown token
+  PASS  Slash.CliSet: a non-number for a number row is refused
+  PASS  Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)
+  PASS  Slash.CliReset: restores one setting's default
+  PASS  Slash.CliResetAll: restores every setting and leaves panels alone
+  PASS  Slash.CliVersion: prints v<version>
+  PASS  Slash.CliNew: creates a panel and confirms
+  PASS  Slash.CliNew: with no name, prints usage
+  PASS  Slash.CliNew: a duplicate is reported as an error
+  PASS  Slash.CliDelete: removes the panel
+  PASS  Slash.CliRename: renames and reports both names
+  PASS  Slash.CliRename: with one word, prints usage
+  PASS  Slash.BuildPanelLines: an empty registry says so and suggests the next step
+  PASS  Slash.BuildPanelLines: one row per panel, plus a header
+  PASS  Slash.BuildPanelLines: a disabled panel is dimmed, not hidden
+  PASS  Slash.CliPanel: with no field, dumps every field in the declared order
+  PASS  Slash.CliPanel: with a field, prints just that field
+  PASS  Slash.CliPanel: with a value, sets it and echoes the stored result
+  PASS  Slash.CliPanel: the echo reflects clamping, not what was typed
+  PASS  Slash.CliPanel: sets a color from a string
+  PASS  Slash.CliPanel: an unknown panel is reported
+  PASS  Slash.CliPanel: an unknown field lists the valid ones
+  PASS  Slash.CliPanel deleteall: goes through the confirm popup
+  PASS  Slash.CliPanel: a panel genuinely named 'deleteall' is still reachable (F-022)
+  PASS  Slash.CliRecover: reports when nothing needed moving
+  PASS  Slash.CliRecover: reports how many it moved
+  PASS  Slash: every printed line carries the shared cyan tag
+  PASS  COMMANDS: the table is defined beside its dispatcher
+  PASS  COMMANDS: every entry is a { name, description, handler } triple
+  PASS  COMMANDS: names are unique and lower-case
+  PASS  COMMANDS: the standard's required verbs are present (slash-commands-§3)
+  PASS  COMMANDS: the descs name the sub-verbs their handlers accept (F-011)
+  PASS  PrintHelp: the generated rows carry the sub-verbs too
+  PASS  Slash.CliPanel: fitart is an action in the field slot, and reshapes the panel
+  PASS  Slash.CliPanel: fitart explains itself when there is nothing to fit to
+  PASS  Slash.CliPanel: artAutosize is no longer a field anyone can set
+  PASS  PanelEditor: the editor is its own module (architecture-§3)
+  PASS  PanelEditor: the bus is wired at registration, not at first paint
+  PASS  Panel: all four categories survive the peel and still build on OnShow (options-ui-§5)
+  PASS  Panel.Register: the category is registered EAGERLY at load (options-ui-§1)
+  PASS  Panel.Register: both subcategories are registered
+  PASS  Panel.Register: is idempotent
+  PASS  Panel.Register: a second attempt is made on PLAYER_LOGIN (F-013)
+  PASS  Panel.Register: the retry is SUBSCRIBED before PLAYER_LOGIN fires (F-013)
+  PASS  PanelEditor: a slider REACHES an out-of-range value rather than clamping it (F-003)
+  PASS  Panel: every registered frame carries the framework contract (options-ui-§1)
+  PASS  Panel: the body is built lazily — each page has an OnShow
+  PASS  Panel: the Defaults button is NOT created at registration (anti-pattern #42)
+  PASS  Panel: the pages that want a Defaults button declare the intent and park a callback
+  PASS  Panel: the header Defaults action and Blizzard's OnDefault reach ONE implementation
+  PASS  Panel: the landing page is the parent category, not a subcategory
+  PASS  Panel.Open: refuses during combat and does NOT open (options-ui-§2)
+  PASS  Panel.Open: the combat refusal is gray
+  PASS  Panel.Open: does NOT defer-and-replay on leaving combat
+  PASS  Panel.Open: opens out of combat
+  PASS  Panel.Open: says so when there is no category to open (F-013)
+  PASS  Panel.Refresh: a hidden page is not refreshed
+  PASS  Panel.RestoreDefaults: resets settings and leaves panels alone
+  PASS  Panel: every render context owns its own dropdown registry
+  PASS  Panel: one page's rebuild does not deregister another page's dropdowns
+  PASS  Panel: closing dropdowns dispatches on widget TYPE, not on field presence
+  PASS  Panel: closing an unopened dropdown is a no-op, not an error
+  PASS  Panel: an unknown widget type is skipped rather than guessed at
+  PASS  Panel: the tracking registry is emptied between rebuilds
+  PASS  Panel: deleting from the page rebuilds it exactly once (F-002)
+  PASS  Panel: renaming from the page rebuilds it exactly once
+  PASS  Panel: a rejected rename puts the old name back and does not rebuild
+  PASS  Panel: creating from the page rebuilds once and lands on the NEW panel
+  PASS  Panel: a refused create leaves the typed name alone and does not rebuild
+  PASS  Panel: deleting the LAST panel reaches the empty-state branch cleanly
+  PASS  Panel: a field change on the SELECTED panel refreshes in place and never rebuilds
+  PASS  Panel: a field change on a DIFFERENT panel neither refreshes nor rebuilds
+  PASS  Panel: a hidden page is only marked dirty by a field change, never refreshed
+  PASS  Panel: a rebuild drops the old refreshers before it releases their widgets
+  PASS  Panel: the Panels page's Defaults action is confirm-gated
+  PASS  Tagline: the landing page, the TOC Notes and the README say one thing (F-019)
+  PASS  PanelEditor: the panel dropdowns are ordered by name, not by creation
+  PASS  Panel scale: defaults to 1, which is the identity
+  PASS  Panel scale: is clamped to its own bounds, not the artwork's
+  PASS  Panel scale: reaches the frame, and does not change the stored size
+  PASS  Panel scale: a junk value falls back rather than reaching SetScale
+  PASS  Registry.CopyFrom: copies appearance across
+  PASS  Registry.CopyFrom: does NOT copy position
+  PASS  Registry.CopyFrom: does NOT copy identity
+  PASS  Registry.CopyFrom: DOES copy size
+  PASS  Registry.CopyFrom: colors are deep-copied, not shared
+  PASS  Registry.CopyFrom: edge sets are deep-copied too
+  PASS  Registry.CopyFrom: refuses to copy from itself
+  PASS  Registry.CopyFrom: an unknown panel on either side is an error
+  PASS  Registry.CopyFrom: reports the source's name on success
+  PASS  Registry.CopyFrom: repaints the target
+  PASS  Registry.CopyFrom: the copy is sanitized
+  PASS  Database: profile callbacks are registered
+  PASS  Database: switching profile re-renders the panels
+  PASS  Database: an incoming profile is repaired per RECORD, not by re-running migrations
+  PASS  Database: switching profile sanitizes the incoming records
+  PASS  Database: the profile reload goes through Registry, keeping one sender
+  PASS  Panel: the Profiles subcategory is registered
+  PASS  Panel: Profiles registers AceDB's own options table
+  PASS  Panel: the Profiles page carries the framework contract like every other
+  PASS  Panel: the Profiles page has NO Defaults button
+  PASS  Panel: the Profiles page builds lazily on OnShow
+  PASS  SunnArt: nothing is installed — the adapter is completely silent
+  PASS  SunnArt: an official pack is discovered through SunnArt's options table
+  PASS  SunnArt: a community pack is discovered with NO SunnArt addon present
+  PASS  SunnArt: both kinds of pack are merged into one list
+  PASS  SunnArt: a theme with no declared section count defaults to 3, as SunnArt does
+  PASS  SunnArt: a declared section count is honored
+  PASS  SunnArt: a nonsense section count is clamped rather than trusted
+  PASS  SunnArt: a multi-section theme yields ONE row -- the whole bar
+  PASS  SunnArt: no row anywhere points at a single section of a multi-section theme
+  PASS  SunnArt: a one-section theme yields exactly one row, not a duplicate pair
+  PASS  SunnArt: the texture path is extensionless and rooted at Interface\Addons
+  PASS  SunnArt: rows are grouped under a readable pack category
+  PASS  SunnArt: the order is stable across scans
+  PASS  SunnArt: injected rows resolve through the normal artwork seam
+  PASS  SunnArt: Inject is idempotent — a re-scan replaces rather than duplicates
+  PASS  SunnArt: injection never disturbs the bundled catalog
+  PASS  SunnArt: an uninstalled pack degrades to drawing nothing, and recovers
+  PASS  SunnArt: a theme is labeled by its own name, whatever its section count
+  PASS  SunnArt: the dropdown renders as Sunn -> <Pack>: <Texture>
+  PASS  Fit: nothing is reshaped until it is asked for
+  PASS  Fit: there is no artAutosize field left to set
+  PASS  Fit: the panel takes the artwork's exact pixel size, on BOTH axes
+  PASS  Fit: a composed bar takes the VIRTUAL bar's size, not one section's
+  PASS  Fit: an overlap crop is fitted to the VISIBLE art, and lands on a whole pixel
+  PASS  Fit: a custom path falls back to the nominal square
+  PASS  Fit: a resized panel returns to the artwork's size when it is pressed again
+  PASS  Fit: a size set by hand afterwards stays put
+  PASS  Fit: pressing it twice changes nothing the second time
+  PASS  Fit: a panel with no artwork is told so rather than reshaped
+  PASS  Fit: an unknown panel is refused by name
+  PASS  Fit: the adopted size is clamped like any stored size
+  PASS  SunnArt: a pack's section count beats a stale entry in the player's saved globals
+  PASS  SunnArt: a hand-edited SunnCustomPanels is honored, which SunnArt itself never does
+  PASS  SunnArt: overlap becomes a content crop, not a wider bar
+  PASS  SunnArt: a theme with no overlap carries no crop at all
+  PASS  SunnArt: a broken or extreme overlap value cannot crop the art out of existence
+  PASS  SunnArt: autosize shapes a panel around the visible art, not the transparent band
+  PASS  SunnArt: the packs manifest loaded and is keyed by unescaped theme paths
+  PASS  SunnArt: with no Sunn globals at all, an installed pack folder still yields its themes
+  PASS  SunnArt: a pack that is NOT installed is never offered
+  PASS  SunnArt: live registration beats the manifest for a theme they both name
+  PASS  SunnArt: a theme the manifest measured is drawn at its real shape, not the declared 2:1
+  PASS  SunnArt: an unreadable addon roster does not silently disable a working install
+  PASS  SunnArt: a theme left in saved variables by an UNINSTALLED pack is not offered
+  PASS  SunnArt: a hand-edited custom theme naming a missing folder is not offered
+  PASS  SunnArt: Installed() agrees with the dropdown rather than with the globals
+  PASS  SunnArt: Inject offers only what is installed, across both discovery paths
+  PASS  Fit: a quarter turn transposes the fitted size
+  PASS  Fit: the artwork scale multiplies the fitted size
+  PASS  Fit: scale and rotation compose, and the result is a whole pixel
+  PASS  Fit: after fitting, STATIC draws the art at exactly the panel's size
+  PASS  Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
+  PASS  Fit: a junk rotation or scale fits to what will actually be drawn
+  PASS  LibKa0s: the vendored library registered for real
+  PASS  LibKa0s: NS.Core is the live Core library, not a stub
+  PASS  Core seam: NS.Print is the library's printer, not the fallback
+  PASS  Core seam: NS.Print survived the AceConsole embed and both keys are one object
+  PASS  Core seam: the rendered line is byte-identical to the printer this replaced
+  PASS  Core seam: the secret guard survived the swap
+  PASS  DebugLog seam: the console is the library's instance, not a host re-implementation
+  PASS  DebugLog seam: the survivors kept their names and their shapes
+  PASS  DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
+  PASS  DebugLog seam: the console wears the LIBRARY's close button, not this addon's
+  PASS  L trap (DebugLog): every rendered console string resolves to prose, not to its own key
+  PASS  Slash seam: the dispatcher is the library's, not a host re-implementation
+  PASS  Convergence #2: the landing page and the chat help render the SAME rows
+  PASS  Convergence #2: settings/Panel.lua no longer carries a second row formatter
+  PASS  Convergence #1: /pm reset takes a PATH and /pm resetall is the global form
+  PASS  L trap (Slash): the ONE overridden string lands, and nothing renders as its own key
+  PASS  Options seam: NS.Helpers IS the library instance, not a wrapper around one
+  PASS  Options seam: all four pages built, and each is registered with Blizzard
+  PASS  Options: the General page renders one widget per schema row, by type
+  PASS  Options: a widget's OnValueChanged reaches the addon's single write seam
+  PASS  Options: a slider commits on release and snaps to the row's step
+  PASS  Options: the enum row's dropdown is populated from the schema's `values`
+  PASS  Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry
+  PASS  Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
+  PASS  L trap (Options tripwire): Options reads no descriptor L
+  PASS  Degraded install: the addon loads with no LibKa0s at all
+  PASS  Degraded install: the shared cause clause is set on BOTH paths
+  PASS  Degraded install: the notice is announced exactly ONCE, before the first line
+  PASS  Degraded install: the console explains itself once and every member still answers
+  PASS  Degraded install: /pm debug on|off still flips the flag and acknowledges
+  PASS  Degraded install: /pm debug dump still answers
+  PASS  Degraded install: the fallback printer renders the same bytes as the library's
+  PASS  Parity: the Core seam's degraded surface matches the live one
+  PASS  Parity: the DebugLog seam's degraded surface matches the live one
+  PASS  Parity: the Slash seam's degraded surface matches the live one
+  PASS  Parity: the Options seam's degraded surface matches the live one
+  PASS  Degraded install: /pm config answers on EVERY invocation, not once
+  PASS  L trap (Core tripwire): Core cannot express the trap
+  PASS  L trap (matcher): the guard catches every offending spelling, not one
+  PASS  L trap: no seam file hands a descriptor this addon's locale table
+  PASS  L trap: the seam-file list covers every file that calls lib:New
+  PASS  Harness: the suite list and tests/test_*.lua agree in both directions
+  PASS  Harness: the shared kit is present and is reached through tests/_kit
+  PASS  Harness: wow_mock extends the kit's mock_base rather than replacing it
+  PASS  Harness: the runner derives the addon's load list from the TOC
+  PASS  Harness: the runner derives the vendored library's load list from LibKa0s.xml
+  PASS  Harness: every module LibKa0s.xml declares is live in the loaded environment
+  PASS  Mock frame: visibility starts shown and Show/Hide/SetShown flip it
+  PASS  Mock frame: Hide fires each OnHide hook once, and only from shown
+  PASS  Mock frame: SetPoint records both overloads and GetPoint hands them back
+  PASS  Mock frame: a recorded 0 survives and GetScale defaults to 1
+  PASS  Mock frame: a lowercase or custom key misses through to nil
+  PASS  Mock frame: child regions are fresh stubs, never the parent
+  PASS  Mock frame: SetTexture keeps the wrap arguments and SetTexCoord the flat list
+  PASS  Mock frame: the recorded odds and ends round-trip
+  PASS  Spelling: the TOC and run.lua between them name every authored source
+  PASS  Spelling: the matcher catches the British verb and spares the US noun
+  PASS  Spelling: authored English is US English
+  PASS  libs/LibKa0s is the LibKa0s release CLAUDE.md says this addon bundles
+  PASS  tests/_kit is the test kit that shipped with that release
+
+713 passed, 0 failed, 0 skipped, 713 total
