@@ -303,21 +303,18 @@ function P:Refresh()
   for i, fn in ipairs(ctx.refreshers) do safeRun(fn, "General refresher " .. i) end
 end
 
--- NOT O.RefreshScalars, and the difference is the reason both survive. The library's version sweeps
--- EVERY registered ctx, which is right for a write that could be showing anywhere; these two are
--- called by name from one page's own code — the console checkbox mirroring the debug window, and
--- the editor re-syncing one panel's controls — and sweeping every page for those would refresh
--- three pages to repaint one. Each library widget maker already calls O.RefreshScalars from its own
--- set(), so the fan-out IS wired; these are the targeted path beside it.
-
--- The same contract for the Panels page's editor: run each control's updater against the live
--- record, and never rebuild. A hidden page is skipped — its `dirty` flag already has it queued for a
--- rebuild on the next OnShow.
-function P:RefreshPanels(ctx)
-  ctx = ctx or P.panels
-  if not (ctx and ctx.refreshers) then return end
-  for i, fn in ipairs(ctx.refreshers) do safeRun(fn, "Panel refresher " .. i) end
-end
+-- NOT O.RefreshScalars, and the difference is the reason it survives. The library's version sweeps
+-- EVERY registered ctx, which is right for a write that could be showing anywhere; this one is
+-- called by name from one page's own code — the console checkbox mirroring the debug window — and
+-- sweeping every page for that would refresh three pages to repaint one. Each library widget maker
+-- already calls O.RefreshScalars from its own set(), so the fan-out IS wired; this is the targeted
+-- path beside it.
+--
+-- There WAS a second of these, P:RefreshPanels, doing the same for the Panels page's editor. It is
+-- gone: its one caller was settings/PanelEditor.lua's MSG_PANEL handler, which now calls the
+-- library's O.RefreshPanel(ctx, false) instead — same refresher run, but the shown/hidden decision
+-- and the dirty flag belong to the library rather than being hand-rolled here. Nothing else ever
+-- called it.
 
 function P:RestoreDefaults()
   if NS.Slash and NS.Slash.CliResetAll then NS.Slash:CliResetAll() end
