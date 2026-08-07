@@ -25,8 +25,7 @@ lock`. Everything else lives in the settings panel or under `/pm config`.
 
 **_Panel Master in action_**
 
-![Panel Master in action](https://media.forgecdn.net/attachments/1849/188/panelmaster-screenshot-04-jpg.jpg
-)
+![Panel Master in action](https://media.forgecdn.net/attachments/1849/188/panelmaster-screenshot-04-jpg.jpg)
 
 **_Basic panel_**
 
