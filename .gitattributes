@@ -64,6 +64,11 @@
 *.bin binary
 *.param binary
 
+# Extensionless binaries — marked by PATH, because no extension rule can
+# reach them. This block is a ratified deviation from line-endings-§5's
+# byte-for-byte rule; see docs/ARCHITECTURE.md ▸ ## Documented deviations.
+tools/artwork/bin/realesrgan-ncnn-vulkan binary
+
 # Renormalizing after this file is added or changed. The attributes only take
 # effect for content as it passes through git, so an existing checkout must be
 # rewritten once, in this order:
