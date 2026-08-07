@@ -1,11 +1,12 @@
 # Ka0s Panel Master
 
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
+![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-713%2F713_passing-green)
+![Tests](https://img.shields.io/badge/Tests-717%2F717_passing-green)
 
-![Logo](media/logos/panelmaster.logo.256.jpg)
+![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so a screen full of separate frames
 reads as a few deliberate groups.
@@ -20,44 +21,24 @@ If you have used kgPanels, or the panels built into ElvUI, this will feel famili
 Make one with `/pm new`, unlock the screen with `/pm unlock`, drag it where you want it, then `/pm
 lock`. Everything else lives in the settings panel or under `/pm config`.
 
-## What's new in 0.1.0
-
-- First release.
-- Create as many backdrop panels as you like, each with its own size, position, textures, colors,
-  border and frame strata.
-- Scale a whole panel — its border, its accent bars and its artwork with it — the way the game's own
-  UI scale does.
-- Pick any background and border texture you have installed — anything that uses LibSharedMedia
-  shares its textures with Panel Master.
-- Class-color a panel's background or border with one tick, and it follows whoever you log in as.
-- Show a panel only when your cursor is over it, faded to whatever opacity you like the rest of the
-  time — without it ever swallowing a click.
-- Offset the border away from the panel's edge for a halo, or inward for an inset frame.
-- **Accent bars** — a thin strip along any edge of a panel, in the style of BenikUI's panels. On
-  out of the box, class-colored, with any status-bar texture you have installed.
-- **Panel artwork** — a picture drawn inside a panel's bounds, either one of the pieces bundled with
-  the addon or a texture file of your own, with its own color, opacity, fill mode, position, scale,
-  quarter-turn rotation, flip, desaturate, blend mode and draw layer. **Fit to artwork** resizes the
-  panel to the art's own pixel size in one click. Nothing is drawn until you pick something, so
-  panels you already have are unchanged.
-- Themes from **Sunn - Viewport Art** packs you already have installed show up in the artwork list
-  too, one entry per theme as the whole bar — and they work whether or not Sunn itself is switched
-  on. Nothing is bundled: it reads what is on your disk. A panel can also take its shape from
-  whatever art it draws.
-- Unlock everything at once, or just the one panel you are editing, with a gold outline, a name
-  label, a drag handle and optional snap-to-grid.
-- Every panel gets a fixed frame name like `PanelMaster_Panel_Chat_BG`, so other addons can anchor
-  to it. It is fixed for the panel's whole life — renaming the panel does not break the anchor.
-- Test mode drops three sample panels on screen, so you can see what a panel looks like before
-  making one of your own.
-- Full command-line control: create, rename, delete and edit any field of any panel from `/pm`.
-- Copy one panel's whole look onto another in a single click — everything except where it sits.
-- Every character shares one layout out of the box, with a **Profiles** page for giving a character
-  its own — create, switch, copy and reset profiles.
-
 ## Screenshots
 
-*Screenshots are added with the first published release.*
+**_Panel Master in action_**
+
+![Panel Master in action](https://media.forgecdn.net/attachments/1849/188/panelmaster-screenshot-04-jpg.jpg
+)
+
+**_Basic panel_**
+
+![Basic panel](https://media.forgecdn.net/attachments/1849/185/panelmaster-screenshot-01-png.png)
+
+**_Panels with bundled artwork_**
+
+![Panels with bundled artwork](https://media.forgecdn.net/attachments/1849/186/panelmaster-screenshot-02-png.png)
+
+**_Panels with SunnArt artwork_**
+
+![Panels with SunnArt artwork](https://media.forgecdn.net/attachments/1849/187/panelmaster-screenshot-03-png.png)
 
 ## Usage
 
@@ -251,7 +232,7 @@ Here is every piece that ships. The poster groups them under their category head
 in-game is a flat list that carries each category as a label prefix instead, in this same order.
 
 <!-- GENERATED — regenerate with `python3 tools/artwork/make_poster.py`, never by hand. -->
-![Bundled artwork](media/poster/artwork-poster.png)
+![Bundled artwork](https://media.forgecdn.net/attachments/1849/100/artwork-poster-jpg.jpg)
 
 Every piece started life on [warcraft.wiki.gg](https://warcraft.wiki.gg/) and was AI-upscaled to the
 sizes the client wants. The originals are published under

@@ -52,7 +52,7 @@ if not lib then
     RegisterOptionsPage = noop, CreateOptionsPanel = noop,
     OpenOptionsPanel = explain,
     RestoreDefaults = noop, RestoreAllDefaults = noop,
-    RefreshAllPanels = noop, RefreshScalars = noop, SetRenderer = noop,
+    RefreshAllPanels = noop, RefreshScalars = noop, RefreshPanel = noop, SetRenderer = noop,
     PatchAlwaysShowScrollbar = noop,
     __pages = function() return {} end, __panels = function() return {} end,
     __panelFor = function() return nil end,

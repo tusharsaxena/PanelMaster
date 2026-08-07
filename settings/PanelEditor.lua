@@ -48,7 +48,6 @@ local function runRebuilders(ctx)
   -- into something else entirely.
   for i = #ctx.refreshers, 1, -1 do ctx.refreshers[i] = nil end
   for i, fn in ipairs(ctx.rebuilders) do safeRun(fn, "Panels rebuilder " .. i) end
-  ctx.dirty = false
 end
 
 -- The panel currently being edited, as an id. The Panels page shows ONE editor at a time, chosen
@@ -62,6 +61,19 @@ local selectedID
 -- be able to read it and to put the page on a chosen panel.
 function E.__getSelectedID() return selectedID end
 function E.__setSelectedID(id) selectedID = id end
+
+-- Forget the selection, so the next rebuild falls back to the first panel by name.
+--
+-- Called on a profile switch, and only there. Everywhere else a surviving selection is exactly what
+-- is wanted — the id is stable across a rename, a field write and a create. A profile switch is the
+-- one event that invalidates it, because ids are allocated per profile: the check the rebuilder
+-- makes is `NS.Registry:Get(selectedID)`, which after a switch happily resolves to whatever
+-- DIFFERENT panel the incoming profile has under that id. So the editor would open on an arbitrary
+-- panel rather than on the first, with no way for the user to tell it had been chosen for them.
+--
+-- Nil rather than "clamp to the first" here: choosing the fallback is the rebuilder's job and it
+-- already does it, and duplicating the choice is how the two get to disagree.
+function E:ForgetSelection() selectedID = nil end
 
 -- ── The page's mutation actions ─────────────────────────────────────────────────
 -- Every control that changes the SET of panels routes through one of these, and every one has the
@@ -1024,6 +1036,21 @@ end
 -- Both are scoped to the on-screen page: an off-screen page is only flagged dirty, so a `/pm new`
 -- with the options window closed costs nothing and is picked up by the next OnShow.
 --
+-- THAT SCOPING IS THE LIBRARY'S, not this file's, and it is why both handlers are one call to
+-- O.RefreshPanel. This file used to hand-roll the branch — `if ctx.panel:IsShown() then rebuild else
+-- ctx.dirty = true end` — and the flag was WRONG: the gate in LibKa0s's SetRenderer OnShow reads
+-- `ctx._dirty`, with the underscore, so `ctx.dirty` was written in four places and read in none. The
+-- deferral silently never happened. A profile switch fires MSG_PANELS from Registry:ReloadProfile
+-- while this page is hidden (the user is on the Profiles page to make the switch), so the page kept
+-- the widget tree it had built for the OLD profile: its panel dropdown, its copy-from list and its
+-- editor still showed panels that were no longer in the registry, while Canvas — which is not a
+-- settings page and never consulted the flag — had correctly cleared the screen.
+--
+-- The fix is not a corrected flag name. A private field the host has to guess is the defect; the
+-- library now publishes O.RefreshPanel(ctx, structural), which owns the shown/hidden decision, the
+-- flag and both tiers. Nothing here writes `_dirty`, and there is no second copy of the rule to get
+-- out of step. Needs LibKa0s Options minor >= 8.
+--
 -- Wired at REGISTRATION rather than from the page build, because the build is lazy: a page that has
 -- never been shown would otherwise miss every change made before its first OnShow.
 local function wirePanelsBus(ctx)
@@ -1039,12 +1066,12 @@ local function wirePanelsBus(ctx)
       ctx.pendingSelect = nil
       if rec then selectedID = rec.id end
     end
-    if ctx.panel:IsShown() then runRebuilders(ctx) else ctx.dirty = true end
+    NS.Helpers.RefreshPanel(ctx, true)
   end)
 
   ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id)
     if id ~= selectedID then return end   -- some other panel changed; this editor is not showing it
-    if ctx.panel:IsShown() then NS.Panel:RefreshPanels(ctx) else ctx.dirty = true end
+    NS.Helpers.RefreshPanel(ctx, false)
   end)
 
   E.__evPanels = ev

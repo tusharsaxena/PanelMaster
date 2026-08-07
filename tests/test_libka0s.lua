@@ -338,9 +338,34 @@ local function showPage(ctx)
   onShow(ctx.panel)
 end
 
-local function widgetsOfType(ctx, wtype)
+-- The widgets ONE page's render produced, by type.
+--
+-- The mock's `__created` is a single cumulative list for the whole run, so a bare type count over it
+-- answers "every widget any page has ever built" rather than "every widget THIS page built". That
+-- read the same for as long as the Panels page never actually built itself in the harness — its
+-- rebuilders only ran through settings/PanelEditor.lua's own hand-rolled refresh, which never
+-- reached BuildPage because BuildPage runs from the library's renderer and nothing here fires that
+-- page's OnShow. The moment the editor started routing structural refreshes through
+-- O.RefreshPanel — which is the profile-switch fix — the Panels page began building its own
+-- dropdown and checkboxes into the same list, and the counts below silently became wrong.
+--
+-- So the window is captured around the render rather than inferred afterwards. Memoized because the
+-- render only happens ONCE: SetRenderer's OnShow gate returns early on every later show, so a second
+-- capture would be empty and every case after the first would find nothing.
+local generalCapture
+local function generalWidgets()
+  if generalCapture then return generalCapture end
+  local created = mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  showPage(P_general())
+  generalCapture = {}
+  for i = from, #created do generalCapture[#generalCapture + 1] = created[i] end
+  return generalCapture
+end
+
+local function widgetsOfType(_ctx, wtype)
   local out = {}
-  for _, w in ipairs(mocks.LibStub("AceGUI-3.0", true).__created) do
+  for _, w in ipairs(generalWidgets()) do
     if w.type == wtype then out[#out + 1] = w end
   end
   return out
@@ -382,9 +407,7 @@ end)
 test("Options: the General page renders one widget per schema row, by type", function()
   -- The schema -> widget translation, driven for real. This is the path the old AceGUI mock made
   -- unreachable: Create() answered nil, so every maker returned early and nothing was ever built.
-  local before = #mocks.LibStub("AceGUI-3.0", true).__created
-  showPage(P_general())
-  assertTrue(#mocks.LibStub("AceGUI-3.0", true).__created > before, "the page built no widgets")
+  assertTrue(#generalWidgets() > 0, "the page built no widgets")
 
   local wanted = { bool = 0, number = 0, string = 0 }
   for _, row in ipairs(NS.Schema.Schema) do wanted[row.type] = (wanted[row.type] or 0) + 1 end
@@ -398,7 +421,6 @@ test("Options: the General page renders one widget per schema row, by type", fun
 end)
 
 test("Options: a widget's OnValueChanged reaches the addon's single write seam", function()
-  showPage(P_general())
   local ctx = P_general()
   -- Find the checkbox the library built for a known row, by the label it was given.
   local row = NS.Schema:FindRow("settings.showLabels")
@@ -418,7 +440,6 @@ test("Options: a widget's OnValueChanged reaches the addon's single write seam",
 end)
 
 test("Options: a slider commits on release and snaps to the row's step", function()
-  showPage(P_general())
   local row = NS.Schema:FindRow("settings.gridSize")
   local target
   for _, w in ipairs(widgetsOfType(P_general(), "Slider")) do
@@ -433,7 +454,6 @@ test("Options: a slider commits on release and snaps to the row's step", functio
 end)
 
 test("Options: the enum row's dropdown is populated from the schema's `values`", function()
-  showPage(P_general())
   local row = NS.Schema:FindRow("settings.defaultStrata")
   local dd = widgetsOfType(P_general(), "Dropdown")[1]
   assertTrue(dd ~= nil, "the enum row rendered no dropdown")

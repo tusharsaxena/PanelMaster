@@ -242,6 +242,19 @@ function U:Toggle()
   return U:SetUnlocked(not NS.State.unlocked)
 end
 
+-- Discard every combat-deferred PER-PANEL unlock without replaying it. Called by
+-- NS.Registry:ReloadProfile, which is the one moment the ids in this table stop meaning anything:
+-- panel ids are allocated per profile, so replaying them after a switch would unlock whichever
+-- panels of the INCOMING profile happen to hold those ids. `pendingUnlock` — the global request — is
+-- left alone on purpose: it names no panel, so a switch does not invalidate it and the user still
+-- gets the unlock they asked for when they leave combat.
+--
+-- A named entry point rather than the registry reaching into this file's local: `pendingPanels` is
+-- private to the unlock module and stays that way.
+function U:ForgetPending()
+  for id in pairs(pendingPanels) do pendingPanels[id] = nil end
+end
+
 -- Replay every combat-deferred unlock. Called from PLAYER_REGEN_ENABLED (core/PanelMaster.lua).
 function U:ResumePending()
   local resumed = false

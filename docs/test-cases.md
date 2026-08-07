@@ -579,7 +579,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (45)
+### test_panel.lua (47)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -618,6 +618,8 @@ badge and any count quoted in the docs must agree with it.
 - Panel: a field change on the SELECTED panel refreshes in place and never rebuilds
 - Panel: a field change on a DIFFERENT panel neither refreshes nor rebuilds
 - Panel: a hidden page is only marked dirty by a field change, never refreshed
+- Panel: the deferred repaint actually lands on the next show
+- Panel: a profile switch drops the editor's selection
 - Panel: a rebuild drops the old refreshers before it releases their widgets
 - Panel: the Panels page's Defaults action is confirm-gated
 - Tagline: the landing page, the TOC Notes and the README say one thing (F-019)
@@ -627,7 +629,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel scale: reaches the frame, and does not change the stored size
 - Panel scale: a junk value falls back rather than reaching SetScale
 
-### test_profiles.lua (21)
+### test_profiles.lua (23)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -644,6 +646,8 @@ badge and any count quoted in the docs must agree with it.
 - Database: switching profile re-renders the panels
 - Database: an incoming profile is repaired per RECORD, not by re-running migrations
 - Database: switching profile sanitizes the incoming records
+- Database: a profile switch drops preview's tracked ids BEFORE they can delete a real panel
+- Database: a profile switch drops per-panel unlocks rather than reissuing them
 - Database: the profile reload goes through Registry, keeping one sender
 - Panel: the Profiles subcategory is registered
 - Panel: Profiles registers AceDB's own options table
@@ -796,11 +800,11 @@ badge and any count quoted in the docs must agree with it.
 | test_debuglog.lua | 26 |
 | test_schema.lua | 21 |
 | test_slash.lua | 58 |
-| test_panel.lua | 45 |
-| test_profiles.lua | 21 |
+| test_panel.lua | 47 |
+| test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 41 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **713** |
+| **Total** | **717** |

@@ -10,6 +10,7 @@
 ## Category-enUS: UI
 ## X-License: MIT
 ## X-Standard: https://github.com/tusharsaxena/WowAddonStandards
+## X-Curse-Project-ID: 1642836
 
 # Libraries (vendored in libs/ — load first)
 libs\LibStub\LibStub.lua

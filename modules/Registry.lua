@@ -512,7 +512,42 @@ end
 --
 -- Every record is re-sanitized on the way in: a profile created by an older build, or copied from
 -- one, can be missing fields this build expects, and this is the first moment it is looked at.
+-- EVERY SESSION TABLE KEYED BY PANEL ID IS DROPPED FIRST, and this is the load-bearing half.
+--
+-- Panel ids are allocated per PROFILE — `nextID` lives in `db.profile` and a fresh profile starts at
+-- 1 — so the same id names a different panel in every profile, and any id held in session state is
+-- not stale-but-harmless after a switch, it is a live reference to somebody else's panel. Three
+-- tables held one:
+--
+--   NS.State.previewIDs   — the destructive one. `/pm preview` on, switch profile, `/pm preview` off
+--                           called DeleteBatch with the OLD profile's ids, which resolved against
+--                           the NEW profile and destroyed real user panels. Cleared with the
+--                           `preview` flag itself, because a flag left true makes SetPreview(true)
+--                           return early and the user cannot even restart preview to clear it.
+--   NS.State.unlockedPanels — a panel in the incoming profile came up individually unlocked, with a
+--                           drag handle the user never asked for, because it happened to inherit an
+--                           id someone unlocked in the profile they left.
+--   NS.Unlock's pendingPanels — the same, for unlocks deferred by combat.
+--
+-- This is exactly the sweep R:DeleteAll already does, and for the same reason: an incoming profile
+-- shares no identity with the outgoing one, so nothing keyed on the outgoing one survives. Done
+-- BEFORE Sanitize and the broadcast, so no consumer can observe the half-swapped state.
+--
+-- The global unlock flag is deliberately NOT cleared. It is a mode the user put the SCREEN in, not a
+-- claim about any particular panel, and a profile switch mid-edit that silently re-locked everything
+-- would be its own surprise.
+local function dropSessionIDs()
+  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
+  for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
+  NS.State.preview = false
+  if NS.Unlock and NS.Unlock.ForgetPending then NS.Unlock:ForgetPending() end
+  -- The Panels page's open editor is the fourth holder of an id, for the same reason and with the
+  -- same consequence: it would resolve to whichever panel the incoming profile has under that id.
+  if NS.PanelEditor and NS.PanelEditor.ForgetSelection then NS.PanelEditor:ForgetSelection() end
+end
+
 function R:ReloadProfile()
+  dropSessionIDs()
   for _, rec in ipairs(R:All()) do R.Sanitize(rec) end
   NS.Debug("Profile", "switched to '%s', %s panels",
     (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?", R:Count())

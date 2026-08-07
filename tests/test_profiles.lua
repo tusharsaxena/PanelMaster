@@ -196,6 +196,53 @@ test("Database: switching profile sanitizes the incoming records", function()
   T.mocks.__switchProfile("Mock - Realm")
 end)
 
+test("Database: a profile switch drops preview's tracked ids BEFORE they can delete a real panel",
+  function()
+  -- THE DESTRUCTIVE ONE. `nextID` lives in db.profile, so every profile allocates ids from 1: the
+  -- ids preview parked in session state name DIFFERENT panels in the profile you switch to. Turning
+  -- preview off then called DeleteBatch with them, and DeleteBatch resolves against the CURRENT
+  -- profile — so `/pm preview on`, switch profile, `/pm preview off` deleted the panels the user
+  -- had made in the profile they switched to.
+  fresh()
+  NS.State.previewIDs = { 1, 2 }
+  NS.State.preview = true
+
+  T.mocks.__switchProfile("Other - Realm")
+  local mine = R:New("Real panel of the incoming profile")
+  assertEqual(mine.id, 1, "the incoming profile really does reissue id 1 — the premise of this case")
+
+  NS.Registry:ReloadProfile()
+  assertEqual(#NS.State.previewIDs, 0, "preview still holds the outgoing profile's ids")
+  -- The flag goes with them: left true, SetPreview(true) returns early and the user cannot even
+  -- restart preview to clear the stale list.
+  assertFalse(NS.State.preview, "preview still claims to be on with nothing tracking it")
+
+  NS.Unlock:SetPreview(false)
+  assertTrue(R:Get(mine.id) ~= nil, "turning preview off destroyed a real panel of this profile")
+
+  R:DeleteAll()
+  T.mocks.__switchProfile("Mock - Realm")
+end)
+
+test("Database: a profile switch drops per-panel unlocks rather than reissuing them", function()
+  -- Same id-reuse premise, non-destructive consequence: a panel of the incoming profile came up
+  -- individually unlocked, wearing a drag handle nobody asked for, because it inherited an id
+  -- someone had unlocked in the profile they left.
+  fresh()
+  NS.State.unlockedPanels[1] = true
+
+  T.mocks.__switchProfile("Other - Realm")
+  local mine = R:New("Innocent")
+  NS.Registry:ReloadProfile()
+
+  assertEqual(NS.State.unlockedPanels[mine.id], nil,
+    "a panel of the incoming profile inherited someone else's unlock")
+  assertEqual(next(NS.State.unlockedPanels), nil, "and the table is empty, not merely repaired")
+
+  R:DeleteAll()
+  T.mocks.__switchProfile("Mock - Realm")
+end)
+
 test("Database: the profile reload goes through Registry, keeping one sender", function()
   -- architecture-§4: `PanelsChanged` must have exactly one sender. The reload lives in Registry
   -- rather than Database precisely so that stays true.

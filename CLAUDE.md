@@ -41,7 +41,7 @@ This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — th
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.2 (MIT). That line is the
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.8.3 (MIT). That line is the
 **provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
 file for it and compares both vendored payloads — `libs/LibKa0s/` and `tests/_kit/` — against that
 tag in the sibling checkout. So it moves in the **same commit** as the vendored bytes; a line and a

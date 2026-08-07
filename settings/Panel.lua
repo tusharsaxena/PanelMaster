@@ -356,7 +356,7 @@ function P:Register()
     })
     -- This addon's own per-page state, added onto the ctx the library hands back: the open-dropdown
     -- registry (see the top of this file), and the two flags the Panels page's editor drives.
-    ctx.dropdowns, ctx.rebuilders, ctx.dirty = {}, {}, false
+    ctx.dropdowns, ctx.rebuilders = {}, {}
     P.general = ctx
 
     -- Non-destructive: this resets settings only and never touches the user's panels, so it is safe
@@ -395,7 +395,7 @@ function P:Register()
       defaultsButton = true,
       defaultsTooltip = "Delete every panel. This cannot be undone.",
     })
-    pctx.dropdowns, pctx.rebuilders, pctx.dirty = {}, {}, false
+    pctx.dropdowns, pctx.rebuilders = {}, {}
     P.panels = pctx
     NS.PanelEditor:WireBus(pctx)
 
@@ -412,8 +412,11 @@ function P:Register()
 
     -- The editor's own two-phase build: BuildPage lays down the chrome that never changes, Rebuild
     -- repaints the list. SetRenderer re-runs this whole closure when the page is marked dirty while
-    -- hidden, which is what the hand-rolled `pctx.dirty` check used to do — the flag itself stays,
-    -- because settings/PanelEditor.lua sets it.
+    -- hidden — and marking it is the library's job now, through O.RefreshPanel. The host-owned
+    -- `pctx.dirty` flag this file used to seed here is GONE: it sat one underscore away from the
+    -- library's own `_dirty`, settings/PanelEditor.lua wrote it, the gate read the other one, and a
+    -- profile switch left this page showing the previous profile's panels for the rest of the
+    -- session. See the bus-policy comment in settings/PanelEditor.lua.
     local built = false
     O.SetRenderer(pctx, function(c)
       if not built then
@@ -447,7 +450,7 @@ function P:Register()
     -- No Defaults button: profile management carries its own destructive controls, and a second
     -- "reset" meaning something different from the page's own Reset Profile would be a trap.
     local prctx = O.CreatePanel(nil, "Profiles", { pageKey = "profiles" })
-    prctx.dropdowns, prctx.rebuilders, prctx.dirty = {}, {}, false
+    prctx.dropdowns, prctx.rebuilders = {}, {}
     P.profiles = prctx
 
     -- AceConfigDialog renders into any AceGUI container, so it is pointed at a group parented to

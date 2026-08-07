@@ -499,18 +499,60 @@ test("Panel: a field change on a DIFFERENT panel neither refreshes nor rebuilds"
 end)
 
 test("Panel: a hidden page is only marked dirty by a field change, never refreshed", function()
+  -- THE FLAG IS THE LIBRARY'S — `_dirty`, with the underscore — and asserting the name is the whole
+  -- point of this case. It used to assert `pctx.dirty`, a host-owned field settings/PanelEditor.lua
+  -- wrote and NOTHING read: LibKa0s's SetRenderer OnShow gate reads `_dirty`, so every deferred
+  -- repaint was dropped on the floor and this case passed anyway. That is how a profile switch could
+  -- leave the Panels page listing the previous profile's panels for the rest of the session with a
+  -- green suite. A test that checks the flag was WRITTEN rather than that the repaint HAPPENS is a
+  -- test of the wrong thing, so the case below this one closes the loop on the show.
   NS.Registry:DeleteAll()
   local rec = NS.Registry:New("Hidden")
   E.__setSelectedID(rec.id)
   pctx.panel:Hide()
   local n = watch()
-  pctx.dirty = false
+  pctx._dirty = false
 
   NS.Registry:Set(rec.id, "width", 321)
 
   assertEqual(n.refreshes, 0, "an off-screen page ran its refreshers (options-ui-§11)")
-  assertTrue(pctx.dirty, "the off-screen change was not flagged for the next OnShow")
+  assertTrue(pctx._dirty, "the off-screen change was not flagged for the next OnShow")
   unwatch()
+end)
+
+test("Panel: the deferred repaint actually lands on the next show", function()
+  -- The half the old dirty case never checked. A flag is only correct if something acts on it.
+  NS.Registry:DeleteAll()
+  NS.Registry:New("Deferred")
+  local onShow = pctx.panel:GetScript("OnShow")
+  assertTrue(onShow ~= nil, "the page has no OnShow — SetRenderer never ran")
+  pctx.panel:Show(); onShow(pctx.panel)            -- render once, so the gate is armed
+  pctx.panel:Hide()
+
+  local n = watch()
+  NS.Registry:New("AddedWhileHidden")
+  assertEqual(n.rebuilds, 0, "a hidden page must not rebuild in place")
+  assertTrue(pctx._dirty, "and it must be flagged")
+
+  pctx.panel:Show(); onShow(pctx.panel)
+  assertFalse(pctx._dirty, "the show consumed the flag")
+  assertTrue(#E.__panelsByName() == 2, "both panels are in the registry")
+  unwatch()
+end)
+
+test("Panel: a profile switch drops the editor's selection", function()
+  -- Panel ids are allocated PER PROFILE, so an id held across a switch resolves to a different
+  -- panel in the incoming profile — and the rebuilder's `Registry:Get(selectedID)` check cannot
+  -- tell the difference. The editor would silently open on a panel nobody chose.
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Selected")
+  E.__setSelectedID(rec.id)
+  assertEqual(E.__getSelectedID(), rec.id)
+
+  NS.Registry:ReloadProfile()
+
+  assertTrue(E.__getSelectedID() == nil,
+    "the selection survived a profile switch and now names someone else's panel")
 end)
 
 test("Panel: a rebuild drops the old refreshers before it releases their widgets", function()

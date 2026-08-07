@@ -23,8 +23,23 @@ are `OptionalDeps`, so their absence means no Profiles page rather than a broken
 Switching profile swaps `db.profile` wholesale, so `core/Database.lua` registers AceDB's
 `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks and delegates to
 `Registry:ReloadProfile` — in the registry rather than the database so `PanelsChanged` keeps exactly
-one sender. The reload re-runs migrations and re-sanitizes every record, since an incoming profile
-may predate the current build. Without it the previous profile's panels would simply stay on screen.
+one sender. Without it the previous profile's panels would simply stay on screen.
+
+The reload does **not** re-run migrations, and `core/Database.lua` says why: the schema stamp lives
+in `db.global`, which is account-wide and already written by `InitDB` before any switch can happen,
+so a second call could only be a no-op. What an incoming profile actually needs is the per-record
+repair, and the reload re-sanitizes every record it finds — an incoming profile may predate the
+current build, or have been copied from one that did.
+
+**It also drops every session table keyed by panel id, before it sanitizes or broadcasts.** Ids are
+allocated per profile (`nextID` lives in `db.profile` and a fresh profile starts at 1), so an id held
+across a switch is not stale-but-harmless — it is a live reference to a *different* panel. Four
+things held one: `NS.State.previewIDs` (the destructive case — `/pm preview` off called
+`DeleteBatch` with the outgoing profile's ids, which resolve against the incoming one and destroyed
+real panels), `NS.State.preview` itself, `NS.State.unlockedPanels`, `NS.Unlock`'s deferred
+`pendingPanels` (via `Unlock:ForgetPending`), and the Panels editor's own selection (via
+`PanelEditor:ForgetSelection`). The global unlock flag is deliberately kept: it is a mode the user
+put the screen in, not a claim about any particular panel.
 
 The Panels page shows **one** panel's editor at a time, chosen from a dropdown. Stacking every
 panel's editor grew past a screen at three panels and past a scrollbar's usefulness at ten, and
@@ -133,8 +148,18 @@ It has exactly **two** triggers, both on the bus, and no widget callback rebuild
 
 | Message | Meaning | Response |
 |---|---|---|
-| `MSG_PANELS` | the SET of panels changed (create, delete, rename) | one `runRebuilders` |
-| `MSG_PANEL` | one field of one panel changed (CLI, drag, `Reset`, `CopyFrom`) | `P:RefreshPanels` — the open editor's per-control `refreshers`, in place; never a rebuild (anti-pattern #39) |
+| `MSG_PANELS` | the SET of panels changed (create, delete, rename, profile switch) | `O.RefreshPanel(ctx, true)` — structural, so one rebuild |
+| `MSG_PANEL` | one field of one panel changed (CLI, drag, `Reset`, `CopyFrom`) | `O.RefreshPanel(ctx, false)` — the open editor's per-control `refreshers`, in place; never a rebuild (anti-pattern #39) |
+
+Both go through the **library's** per-page refresh (LibKa0s `Options` minor 8), which owns the
+shown/hidden decision: an on-screen page repaints now, a hidden one is flagged and repaints on its
+next `OnShow`. This file used to hand-roll that branch and marked `ctx.dirty` — one underscore away
+from the `ctx._dirty` the library's `OnShow` gate actually reads, so the flag was written in four
+places and read in none. A profile switch happens while the user is on the *Profiles* page, i.e.
+with the Panels page hidden, so the deferred repaint never landed and the page kept the widget tree
+it had built for the previous profile: its dropdown, its copy-from list and its editor all listed
+panels that were no longer in the registry, while the panels themselves had correctly left the
+screen. Nothing here writes `_dirty` any more.
 
 `MSG_PANEL` returns early unless the id is the one the editor is showing. A mutating control sets the
 selection *before* it mutates, so the single rebuild lands on the right panel; the create box, whose
