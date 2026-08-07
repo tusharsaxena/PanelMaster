@@ -43,10 +43,28 @@ from `update_catalog.py`'s scan rather than its own walk, so it cannot show a se
 have; and it renders from fonts vendored at `tools/artwork/fonts/` with no system fallback, so the
 same tree renders the same picture on any machine. Its identity is that picture — `--check` compares
 a fingerprint of the decoded pixels, not of the file, because PNG bytes are deflate's output and can
-differ between zlib builds for pixels that are identical. `media/poster/artwork-poster.txt` records
+differ between zlib builds for pixels that are identical. It has a `artwork-poster.jpg` twin for the
+CurseForge 2 MB upload cap — see the screenshots note below; the `--check` fingerprint is the PNG's,
+since that is the generated master and the JPEG is a lossy derivative of it.
+`media/poster/artwork-poster.txt` records
 the fingerprint and the toolchain that produced it, so a mismatch can be attributed rather than
 guessed at. Nothing in the addon reads any of it, which is exactly why staleness is undetectable by
 either green-gate command — hence the `--check` mode and `docs/testing.md` ▸ *The artwork gate*.
+
+`media/screenshots/` holds the four project-page captures the README's `## Screenshots` section
+embeds. Like every non-runtime asset above they are committed but excluded wholesale by `.pkgmeta`,
+and the README points at the **CurseForge CDN** copies rather than at these paths: CurseForge serves
+the project page from its own CDN, so a repo-relative path renders on GitHub and nowhere else. These
+are the sources those uploads were made from.
+
+**PNG is the repo default, and the two JPEGs are not a half-finished conversion.** `.png` is what a
+capture and a render are kept as, because it is lossless and re-derivable. **CurseForge caps an
+uploaded image at 2 MB**, and exactly two assets exceed it — the 3439×1439 hero capture
+(`panelmaster.screenshot.04.png`, 8.1 MB) and the artwork poster (`artwork-poster.png`, 2.1 MB). Each
+therefore carries a JPEG twin beside its PNG master, compressed only to clear that limit, and it is
+the twin the README links. `01` to `03` are under the cap and stay PNG on both sides, which is why
+the set looks mixed: the format follows the file size, not a migration in progress. A new capture
+under 2 MB needs no JPEG; one over it gets one, and the PNG stays as the master.
 
 Both the asset requirements and the contribution rules are in
 [artwork-spec.md](artwork-spec.md) and the README; `tools/` is an **accepted, documented deviation**
