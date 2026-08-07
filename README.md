@@ -14,7 +14,7 @@ reads as a few deliberate groups.
 That is all a panel is: a rectangle with a color, a border and a position. It sits **behind**
 everything, it holds nothing, and it never moves or touches any of your other frames. Your action
 bars, your chat window and your unit frames stay exactly where their own addons put them — the panel
-is just the backdrop they sit on.
+is just the backdrop they sit on. 
 
 If you have used kgPanels, or the panels built into ElvUI, this will feel familiar.
 
@@ -188,12 +188,12 @@ fades *up* to.
 
 ## How panels work
 
-1. You create a panel and give it a name. It starts as a mid-sized dark rectangle in the middle of
+1. Create a panel and give it a name. It starts as a mid-sized dark rectangle in the middle of
    the screen.
-2. You unlock the screen. Every panel puts on a gold outline and its name, and becomes draggable.
-3. You drag it where you want it, and resize and recolor it from the settings panel or the command
+2. Unlock the screen. Every panel puts on a gold outline and its name, and becomes draggable.
+3. Drag it where you want it, and resize and recolor it from the settings panel or the command
    line.
-4. You lock the screen again. The outline and the label go away, the panel stops taking mouse clicks
+4. Lock the screen again. The outline and the label go away, the panel stops taking mouse clicks
    entirely, and it settles into the background layer — behind your bars, your chat and your unit
    frames.
 
@@ -206,7 +206,7 @@ above will cover normal UI, which is occasionally what you want and usually not.
 A panel never takes your mouse, whatever layer it is in. That stays true even with **Show on
 mouseover only** turned on — the panel watches where your cursor is without claiming the click.
 
-Most of a panel's look is the **accent bar** — a thin colored strip running the full length of an
+A key part of a panel's look is the **accent bar** — a thin colored strip running the full length of an
 edge, the look BenikUI's panels are known for. It is on out of the box, so a new panel arrives as a
 dark block with a class-colored strip along its top, and the panel's own border starts off so one
 thing defines the edge rather than two. Tick whichever edges you want, pick a thickness, and push the
@@ -227,18 +227,7 @@ so art that is offset or scaled up cannot spill out over the rest of your UI.
 Every panel starts with no artwork at all (`artTexture` is `None`), so nothing you already have
 changes until you choose something.
 
-Here is every piece that ships. The poster groups them under their category headings; the dropdown
-in-game is a flat list that carries each category as a label prefix instead, in this same order.
-
-<!-- GENERATED — regenerate with `python3 tools/artwork/make_poster.py`, never by hand. -->
-![Bundled artwork](https://media.forgecdn.net/attachments/1849/100/artwork-poster-jpg.jpg)
-
-Every piece started life on [warcraft.wiki.gg](https://warcraft.wiki.gg/) and was AI-upscaled to the
-sizes the client wants. The originals are published under
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) and the upscales ship under that
-same license, so if you reuse them, credit the source and keep them under CC BY-SA 4.0.
-
-What you can set per panel:
+### What you can set per panel:
 
 | Setting | What it does |
 |---|---|
@@ -255,9 +244,17 @@ What you can set per panel:
 | Layer | Behind the background, above the background (the default), or above the border and accent bar. |
 | Fit to artwork | A button, next to the custom path box. Press it and the panel is resized to the artwork's **exact pixel size**, taking **Scale** and **Rotation** into account — a bundled piece is 1024×1024 and gives a square panel that big; the same piece at scale 0.5 gives 512×512, and a three-section Sunn bar turned 90° gives 256×1536. Large art gives a large panel, so drag it back to the size you want afterwards; press this again any time to return to the artwork's own size. A panel with no artwork, or whose art is not installed, says so and is left alone. |
 
+### Bundled Artwork
+
+The addon ships with a bundle of 100+ images. All the images were sourced from [warcraft.wiki.gg](https://warcraft.wiki.gg/) and were upscaled and enhanced
+by the author. The WarcraftWiki originals are published under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) and the upscales ship under that same license - so if you reuse them, credit the source and keep them under CC BY-SA 4.0.
+
+![Bundled artwork](https://media.forgecdn.net/attachments/1849/100/artwork-poster-jpg.jpg)
+
 ### Sunn — Viewport Art packs
 
-If you have [Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) and any
+If you have [Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) or any
 of its [official art packs](https://www.curseforge.com/members/sunn6/projects) installed, their
 themes appear in the artwork dropdown too, grouped under **Sunn ->**. Nothing is bundled or copied —
 the addon reads what is already on your disk.
@@ -270,13 +267,13 @@ can be added later as an enhancement; say so on the issue tracker.
 login, even if Sunn's own saved settings still remember it — so nothing in the dropdown is an entry
 that would draw a blank panel.
 
-**You do not need Sunn itself switched on.** The art packs are ordinary texture folders, and Panel
+**You do not need Sunn itself loaded.** The art packs are ordinary texture folders, and Panel
 Master can draw them whether or not the addon that came with them is running — it knows what the
 twelve official packs contain, and offers a theme only when that pack's folder is really installed.
 So you can leave Sunn - Viewport Art disabled. Sadly the original addon has not been updated in a
-while and is incompatible with WoW 12.x.x — but its art packs work with Panel Master regardless.
+while and is incompatible with WoW 12.x.x, so it will show up as incompatible — but its art packs work with Panel Master regardless.
 
-A Sunn theme is several files laid side by side into one wide bar, and that whole bar is what you
+A **Sunn theme** is several files laid side by side into one wide bar, and that whole bar is what you
 get: one dropdown entry per theme, under the theme's own name. Every setting above works on it
 exactly as it works on a single piece — it is treated as one wide image and cut up only at the last
 moment. So **Fit** fits the entire bar, **Fill (crop)**
@@ -285,7 +282,7 @@ vertically, and a horizontal flip reverses their order. **Fit to artwork** is wo
 gives you the bar at its authored size — 1536×256 for a typical three-section theme — which is the
 shape it was drawn for.
 
-Two things to know:
+**Two things to know:**
 
 - Packs whose art has a transparent strip along the top declare how much (Sunn uses it to hang that
   strip over the game world). A panel has nothing to hang it over, so that strip is **trimmed**
@@ -377,4 +374,4 @@ lives. A debug log (see above) helps a great deal for anything that looks like a
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 0.1.0 | — | First release: create, place and style as many backdrop panels as you like<br>LibSharedMedia background and border textures, with a class-color option for both<br>Accent bars along any edge, with their own texture, border and class color<br>Per-panel scale, mouseover-only fade, and all eight frame strata<br>Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>Full command-line control and AceDB profiles |
+| 1.0.0 | 2026-08-07 | First release: create, place and style as many backdrop panels as you like<br>LibSharedMedia background and border textures, with a class-color option for both<br>Accent bars along any edge, with their own texture, border and class color<br>Per-panel scale, mouseover-only fade, and all eight frame strata<br>Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>Full command-line control and AceDB profiles<br>*Verified against lint, tests and complexity. This addon ships no `tests/perf.lua`, so the perf suite was skipped rather than measured — the release gate covered three suites, not four.* |

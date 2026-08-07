@@ -4,7 +4,7 @@ local test, assertEqual, assertTrue, assertFalse =
   T.test, T.assertEqual, T.assertTrue, T.assertFalse
 
 test("Compat.GetAddOnMetadata: reads the TOC Version through C_AddOns", function()
-  assertEqual(NS.Compat.GetAddOnMetadata("PanelMaster", "Version"), "0.1.0")
+  assertEqual(NS.Compat.GetAddOnMetadata("PanelMaster", "Version"), "1.0.0")
 end)
 
 test("Compat.GetAddOnMetadata: an unknown field is nil, not an error", function()

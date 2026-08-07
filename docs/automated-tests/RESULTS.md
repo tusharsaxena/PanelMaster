@@ -20,6 +20,7 @@ not selected, which is a different fact again.
 
 | Run | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20260807-160022`](20260807-160022/) | 0.1.0 | 0/0 | 25 | 717/717 | skip | 11061 | 1357 | 7.2 | 2.0 | 15 | 0 | **green** |
 | [`20260807-114409`](20260807-114409/) | 0.1.0 | 0/0 | 25 | 713/713 | skip | 10997 | 1352 | 7.2 | 2.0 | 15 | 0 | **green** |
 | [`20260807-110543`](20260807-110543/) | 0.1.0 | 0/0 | 25 | 713/713 | skip | 10997 | 1352 | 7.2 | 2.0 | 15 | 0 | **green** |
 | [`20260807-023000`](20260807-023000/) | 0.1.0 | 0/0 | 25 | 713/713 | skip | 10997 | 1352 | 7.2 | 2.0 | 15 | 0 | **green** |
@@ -152,8 +153,24 @@ written up in [`20260804-233329/ANALYSIS.md`](20260804-233329/ANALYSIS.md).
 |---|---|---|---|
 | 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** 956 NLOC / 155 functions / avg CCN 1.4. The largest suite here (98 cases) because it covers the largest, most branch-heavy module. Byte-identical across the last three runs. Split only when `modules/Artwork.lua` is, along the same seams. |
 | 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** 797 NLOC / 29 functions / avg CCN 4.7 — the highest average in the addon. Flat across three runs now, against 1087 LOC at the baseline. Three flat runs is not a reversal while nothing is offsetting its growth: the file is still 312 lines off the 1500 band. Split along the catalog / geometry seam before the next feature lands in it. |
-| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1064 | **Accepted.** Long but shallow — 644 NLOC / 59 functions / avg CCN 2.4, none tripping a threshold. Length is inventory, not tangle. Unchanged since the baseline. |
+| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1091 | **Accepted — and it MOVED at `20260807-160022`.** 1064 → 1091 (+27), from the profile-switch fix's `ForgetSelection` seam and the bus-policy comment recording why the page never re-rendered. Still long but shallow, and still the smallest of the three. First movement across four runs; if the next change also grows it, execute the split rather than re-accept. |
 
-Nothing newly crossed a band at [`20260807-114409`](20260807-114409/), no file moved between bands,
-and no file is over the 1500 cap. `tests/test_sunnart.lua` at 955 LOC is the nearest thing outside
-the table.
+Nothing newly crossed a band at [`20260807-160022`](20260807-160022/) — the **v1.0.0 release run** —
+no file moved between bands, and no file is over the 1500 cap. One entry did move within its band:
+`settings/PanelEditor.lua`, above. `tests/test_sunnart.lua` at 955 LOC is the nearest thing outside
+the table; `tests/test_panel.lua` grew to 700 with the release's new cases and is not close.
+
+**The `automated-tests-§4` shelf-life clock starts at v1.0.0 for all three entries.** None has yet
+been carried as *Accepted* across three consecutive RELEASE runs, because 1.0.0 is the first release
+this addon has had — the ordinary runs they were carried through do not count against it
+(anti-pattern #53). At the third release still reading *Accepted*, each is owed a fix or a tracked
+deviation ID with an owner.
+
+### Functions `lizard` warned on
+
+**None**, at every run recorded above. Worth one line beyond that, because the margin is not what a
+clean column suggests: **max CCN has been exactly 15 for four consecutive runs**, and the release
+gate is *above* 15. Two functions sit on the line — `R.ApplyArtSize` (`modules/Registry.lua:639`)
+and `Compat.AddOnFolders` (`core/Compat.lua:34`) — and both are the kind that grow: the first with
+each artwork fill mode, the second with each client quirk. A single added branch in either turns a
+green release into a refused one.

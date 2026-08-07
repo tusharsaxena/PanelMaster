@@ -9,7 +9,7 @@ renaming one later means moving every key and every call site in a single change
 `locales/PostLoad.lua` loads after every locale file and holds derived-key aliases — strings whose
 translation always matches another key's — so a translator never does the same work twice.
 
-**Both files are deliberately empty of keys in 0.1.0.** No user-facing string routes through `NS.L`
+**Both files are deliberately empty of keys in 1.0.0.** No user-facing string routes through `NS.L`
 yet; every label, tooltip and message is hardcoded English. That is a scope decision for the first
 release rather than an oversight, and it is precisely what made the US-English sweep cheap to do —
 there were no keys to move alongside the strings. The seam is kept so a later pass can wrap strings

@@ -129,7 +129,7 @@ end
 
 -- Pure [Init] session summary for the SetEnabled seam (debug-logging-§5/§8): addon name + version,
 -- schema version, active profile, and panel count — e.g.
--- "PanelMaster v0.1.0, schema v1, profile 'Mock - Realm', 3 panels".
+-- "PanelMaster v1.0.0, schema v1, profile 'Mock - Realm', 3 panels".
 -- Guarded so it can't error before the DB is ready. All values are plain constants/counts, so a raw
 -- tostring is secret-safe here.
 function NS.InitSummary()

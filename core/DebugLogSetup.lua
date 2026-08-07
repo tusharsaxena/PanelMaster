@@ -206,7 +206,7 @@ NS.DebugLog = lib:New({
   --                "X" this file used to draw. DebugLog minor 6 narrowed this field to a close
   --                control that is different in KIND; ours was merely our own.
   --   L          — this addon translates nothing (locales/enUS.lua ships English-only by an
-  --                explicit 0.1.0 scope decision), so there is no override to pass. Passing NS.L
+  --                explicit 1.0.0 scope decision), so there is no override to pass. Passing NS.L
   --                would be the `L` trap: its metatable answers every key with the key itself, so
   --                the console would render DEBUG_ON, COPY_TITLE and LINES as literal text.
   --   safeToString — the library's default is Core's, which is already exactly NS.SafeToString.

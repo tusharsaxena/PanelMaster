@@ -24,13 +24,13 @@ test("Slash.Register: registers both the short verb and the full-name alias", fu
 end)
 
 test("Slash.Version: prefers the TOC metadata over the in-code fallback", function()
-  assertEqual(Sl:Version(), "0.1.0")
+  assertEqual(Sl:Version(), "1.0.0")
 end)
 
 test("Slash.PrintHelp: one row per command, plus a header", function()
   local lines = capture(function() Sl:PrintHelp() end)
   assertEqual(#lines, #NS.COMMANDS + 1)
-  assertTrue(lines[1]:find("v0.1.0", 1, true) ~= nil)
+  assertTrue(lines[1]:find("v1.0.0", 1, true) ~= nil)
 end)
 
 test("Slash.PrintHelp: no line ends in a colon (slash-commands-§4)", function()
@@ -257,7 +257,7 @@ end)
 
 test("Slash.CliVersion: prints v<version>", function()
   local lines = capture(function() Sl:CliVersion() end)
-  assertTrue(lines[1]:find("v0.1.0", 1, true) ~= nil)
+  assertTrue(lines[1]:find("v1.0.0", 1, true) ~= nil)
 end)
 
 -- ── Panel CLI ───────────────────────────────────────────────────────────────────

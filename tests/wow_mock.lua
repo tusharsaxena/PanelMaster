@@ -286,7 +286,7 @@ return function()
   M.__addons = {}
   M.C_AddOns = {
     GetAddOnMetadata = function(_, field)
-      if field == "Version" then return "0.1.0" end
+      if field == "Version" then return "1.0.0" end
       return nil
     end,
     -- nil rather than 0 when the roster is unset: Compat.AddOnFolders guards on `tonumber(count())`

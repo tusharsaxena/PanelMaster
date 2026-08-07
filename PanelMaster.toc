@@ -2,7 +2,7 @@
 ## Title: Ka0s Panel Master
 ## Notes: Draws plain backdrop panels behind your UI, so separate frames read as deliberate groups.
 ## Author: add1kted2ka0s
-## Version: 0.1.0
+## Version: 1.0.0
 ## IconTexture: Interface\Icons\pvp_rune_random
 ## SavedVariables: PanelMasterDB
 ## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets

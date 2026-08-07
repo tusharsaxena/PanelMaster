@@ -17,7 +17,7 @@ Start each run from a clean state: `/reload`, then `/pm resetall` and `/pm panel
 1. Log in. **Expect:** no Lua error, and nothing at all on screen — a fresh install draws no panels.
 2. `/pm` → **Expect:** the help index, every line prefixed with a cyan `[PM]`, one row per command,
    no trailing colons.
-3. `/pm version` → **Expect:** `[PM] v0.1.0`, matching the TOC.
+3. `/pm version` → **Expect:** `[PM] v1.0.0`, matching the TOC.
 4. `/pm panels` → **Expect:** "No panels yet", suggesting `/pm new`.
 
 ## 2. Preview mode
@@ -588,7 +588,7 @@ that looks different is the finding.
 2. **Its close control is the library's ×**, 18×18, gray, turning **red** on hover — not the old
    flat `X` that turned gold. `Copy` and `Clear` sit to its left with a 6px gap, unmoved.
 3. **`/pm help` rows are indented two spaces** under the header, and the header now carries an em
-   dash: `v0.1.0 — slash commands (/panelmaster is an alias for /pm)`.
+   dash: `v1.0.0 — slash commands (/panelmaster is an alias for /pm)`.
 4. **The settings landing page's command list** lost its double spacing: `/pm config — Open
    settings`, one space either side of the dash, the dash gold-to-white rather than white-wrapped.
    It should now look **identical** to `/pm help`'s rows minus their indent — compare them directly.
