@@ -469,7 +469,33 @@ The addon's public contract, and the one thing no unit test can prove works in a
 5. Press **Reset Profile**. **Expect:** every panel on this profile goes.
 6. Switch to a profile, `/reload`, and confirm you are still on it with the right panels.
 7. Open the **Panels** page, then switch profile from the Profiles page and come back. **Expect:**
-   the panel dropdown lists the new profile's panels, not the old ones.
+   the panel dropdown lists the new profile's panels, not the old ones — **and so does Copy settings
+   from panel**, and the editor below is showing one of them rather than a panel you never chose.
+   This check is older than the bug it now catches, and it went unrun: the page kept the widget tree
+   it had built for the previous profile, because the deferred repaint was marked on a flag nothing
+   read. Everything on this page is one rebuild, so if the dropdown is right the rest is too.
+
+### 12b-2. Session state does not cross a profile switch
+
+Panel ids are handed out **per profile** — a fresh profile starts at 1 — so anything the session
+remembers by id names a *different* panel after a switch. These are the checks that it is dropped
+rather than carried, and the first is the one that could destroy a layout.
+
+1. `/pm preview on` → **Expect:** the three sample panels appear, unlocked.
+2. Without turning preview off, switch to another profile from the **Profiles** page, and make a
+   real panel there if it has none.
+3. `/pm preview off`. **Expect:** **your real panel is still there.** It used to be deleted: preview
+   held the previous profile's ids, and turning it off resolved them against the profile you had
+   switched to.
+4. `/pm preview on` again. **Expect:** it starts — preview is genuinely off, not merely claiming to
+   be. A stale "on" flag made this a no-op with nothing on screen.
+5. Unlock a single panel with the per-panel control, switch profile, and look at the incoming
+   profile's panels. **Expect:** none of them is unlocked. No stray drag handle or gold outline on a
+   panel you never touched.
+6. Do the same while a per-panel unlock is **queued by combat** (unlock during a fight, then switch
+   profile before it drops). **Expect:** on leaving combat nothing unlocks. The queued request named
+   a panel that no longer exists; the *global* `/pm unlock` request is deliberately kept and does
+   still fire.
 
 ## 12c. Copy settings from another panel
 
