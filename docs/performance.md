@@ -14,7 +14,7 @@ cost?"* gets an answer whether or not a harness is wired.
 | `PanelMasterPerfDB` | not declared — the TOC declares one SavedVariables global, `PanelMasterDB` |
 | `perf` slash verb | not registered. The verb stays **reserved** (`slash-commands-§2`) so it can never mean anything else here |
 | `tests/perf.lua` | not present — every automated-test bundle records `perf: skip` |
-| `docs/perf-runs/` | not present |
+| `docs/perf-analysis/` | not present |
 | `performance-§12` exemption | **not claimed, and not claimable** — see below |
 | `## Documented deviations` row | **none**, deliberately |
 

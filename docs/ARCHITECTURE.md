@@ -128,7 +128,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. `core/LSMPatch.lua` fixes a vendored **widget**, not a client behavior, and is documented in `module-map.md` |
 | `compat-layer.md` | Not applicable | `core/Compat.lua` normalizes metadata, screen size, UI scale, LSM and class color — no addon-specific shim beyond what the row in `module-map.md` records |
-| `perf-runs/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
+| `perf-analysis/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
 
 ### Verification and record
 

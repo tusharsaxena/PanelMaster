@@ -71,7 +71,7 @@ commit gate: nothing about it may ever block a commit (`performance-§10`; `docs
 The canonical `docs/` set is the trio **`ARCHITECTURE.md`** (what this addon is), **`testing.md`**
 (how to verify) and **`smoke-tests.md`** (in-game checks), plus the verification-and-record docs
 `test-cases.md`, `performance.md`, `automated-tests/README.md` and `automated-tests/RESULTS.md`
-(`perf-runs/README.md` is the conditional fifth and is not shipped here), and the six
+(`perf-analysis/README.md` is the conditional fifth and is not shipped here), and the six
 unconditional **Tier 1** topic-detail docs `scope.md`, `module-map.md`, `schema.md`,
 `settings-panel.md`, `data-flow.md` and `common-tasks.md` — plus whatever **Tier 2** triggers have
 fired and any **Tier 3** docs this addon ships. `docs/ARCHITECTURE.md` → `## Documentation map`
