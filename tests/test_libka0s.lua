@@ -177,18 +177,55 @@ test("DebugLog seam: the frame globals are byte-for-byte the ones this addon shi
   NS.DebugLog:Hide()
 end)
 
-test("DebugLog seam: the console wears the LIBRARY's close button, not this addon's", function()
+test("DebugLog seam: the console's title bar is three marks, at the icon pitch", function()
   -- `makeCloseButton` is deliberately not passed (the Ka0s window edge and its close control are
-  -- the library's — standalone-windows). The title-bar offsets are DERIVED from the button's width,
-  -- so they are the one readable evidence that Core's 18-wide x is what got built: an anchor cannot
-  -- be read back through the frame API.
+  -- the library's — standalone-windows). The title-bar offsets are DERIVED from what was actually
+  -- built, so they are the one readable evidence of WHICH controls got built: an anchor cannot be
+  -- read back through the frame API and a texture path cannot be read back at all.
+  --
+  -- 6 / 30 / 54 is the ICON pitch — three 18-wide controls at 6px padding, which is what the
+  -- library draws once it has been told the addon FOLDER name and can resolve `clear` and `copy`
+  -- out of LibKa0s-Media. The old numbers were 6 / 30 / 78, where Clear was a 42-wide text button
+  -- reading the word. So this case is the headless half of the smoke test: a -78 here means
+  -- `addonName` stopped reaching the descriptor and the console went back to words and a
+  -- multiplication sign, silently, because a texture path that resolves to nothing draws nothing
+  -- and raises nothing.
   NS.DebugLog:Show()
   local offsets = NS.DebugLog._frameForTest.titleBarOffsets
   assertTrue(offsets ~= nil, "the library records no title-bar offsets")
   assertEqual(offsets.close, -6)
   assertEqual(offsets.clear, -30, "Clear is not at Core's 18-wide close-button offset")
-  assertEqual(offsets.copy, -78, "Copy is not at Core's 18-wide close-button offset")
+  assertEqual(offsets.copy, -54,
+    "Copy is at the text-button pitch — the descriptor is no longer passing addonName")
   NS.DebugLog:Hide()
+end)
+
+test("DebugLog seam: the library is told the FOLDER name, not just the frame name", function()
+  -- Two fields, two questions, one string in this addon: `name` seeds PanelMasterDebugWindow and
+  -- its siblings, `addonName` is what the library builds a texture path from so its own close, copy
+  -- and clear draw this collection's art. A host where the two diverge would hand the library a
+  -- path into nowhere, so this is passed EXPLICITLY rather than inferred from `name`.
+  -- red under: dropping `addonName` and letting the console keep its glyph and its two words.
+  local src = readFile("core/DebugLogSetup.lua"):gsub("%-%-[^\r\n]*", "")
+  assertTrue(src:match("addonName%s*=%s*addonName") ~= nil,
+    "the descriptor does not pass addonName, so the console draws the minor-8 title bar")
+end)
+
+test("Core seam: MakeCloseButton is wrapped to say which addon folder is asking", function()
+  -- The one Core member this addon WRAPS rather than republishes, and the wrapper exists for its
+  -- third argument alone. `lib.MakeCloseButton(parent, onClick, addonName)` — a two-argument
+  -- passthrough is the forwarder anti-pattern, and it is invisible in game: the library falls back
+  -- to a multiplication sign and nothing raises.
+  -- red under: NS.MakeCloseButton = lib.MakeCloseButton.
+  local seen
+  local lib = mocks.LibStub("LibKa0s-Core-1.0", true)
+  local real = lib.MakeCloseButton
+  lib.MakeCloseButton = function(_, _, name) seen = name; return nil end
+  NS.MakeCloseButton(mocks.CreateFrame("Frame"), function() end)
+  lib.MakeCloseButton = real
+
+  assertEqual(seen, "PanelMaster",
+    "the library was not told which addon folder to build the close mark's path from")
 end)
 
 test("L trap (DebugLog): every rendered console string resolves to prose, not to its own key",
@@ -663,7 +700,7 @@ test("Parity: the Core seam's degraded surface matches the live one", function()
   -- Core publishes onto NS itself rather than onto one table, so both arms are PROJECTED over the
   -- names the seam assigns. Keys from the source, values from the two loads:
   --   grep -nE "^NS\.[A-Za-z]+ *=|^  function NS\.[A-Za-z]+" core/CoreSetup.lua
-  local PUBLISHED = { "Core", "IsConcatSafe", "SafeToString", "Print" }
+  local PUBLISHED = { "Core", "IsConcatSafe", "SafeToString", "Print", "MakeCloseButton" }
   local degradedNS = loadPartial({ Core = true })
   local live, degraded = {}, {}
   for _, name in ipairs(PUBLISHED) do
@@ -675,6 +712,10 @@ test("Parity: the Core seam's degraded surface matches the live one", function()
     -- The library instance itself. Its absence IS the degraded state; a stub standing in for it
     -- would be a second LibKa0s.
     "Core",
+    -- The close-button wrapper. Its whole body is a call into the library that is not there, and
+    -- nothing in this addon calls it yet — a stub answering it would be a frame factory that
+    -- cannot make a frame.
+    "MakeCloseButton",
   })
   -- NS.Util.print is the real name NS.Print is reclaimed from after the AceConsole embed, and it
   -- has to survive on both paths or the reclaim in core/PanelMaster.lua restores nil.
@@ -853,6 +894,7 @@ end)
 -- with no guard, so the list is asserted against the filesystem rather than trusted.
 local SEAM_FILES = {
   "core/CoreSetup.lua",
+  "core/MediaSetup.lua",
   "core/DebugLogSetup.lua",
   "settings/Slash.lua",
   "settings/OptionsSetup.lua",

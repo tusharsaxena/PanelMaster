@@ -73,6 +73,13 @@ With a panel created and locked:
 
 ## 5b. Textures (LibSharedMedia)
 
+0. **New as of the LibKa0s-Media adoption, and expected:** the addon now registers the collection's
+   shared media with LibSharedMedia at load, so the **font** dropdowns gain `JetBrains Mono` and the
+   **Accent bar texture** dropdown gains seven `Ka0s …` entries (`Ka0s Gradient`, `Ka0s Underline 1`
+   / `2` / `4`, `Ka0s Overline 1` / `2` / `4`). Nothing you had already chosen moves — registration
+   only adds names — and the shipped default is still a texture LSM itself always ships.
+   **A regression looks like** those names being absent on a complete install, which means
+   `core/MediaSetup.lua` never reached `Media.RegisterLSM`.
 1. In **Panels ▸ Edit**, open the **Background texture** dropdown. **Expect:** a list with a preview
    swatch per entry, `Solid` among them, plus anything other addons have registered (ElvUI,
    WeakAuras, Details all contribute).
@@ -408,6 +415,20 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 
 1. `/pm debug` → **Expect:** the console opens: monospace, timestamped, a `Debug: OFF` toggle in red
    at the left of the title bar, a scrollbar on the right, `0 / 500 lines` bottom-right.
+1b. **Look at the right end of the title bar.** **Expect:** three small square controls of the same
+   size, evenly pitched — a copy mark, a clear mark and a close mark, gray, each turning white (the
+   close one red) as the pointer crosses it. **No words, and no tooltips**: a label anchored under a
+   control on a window that is 700px of text lands on the first line of the log, which is the thing
+   the window exists to show.
+   **What a regression looks like:** the words *Clear* and *Copy* and a **multiplication sign** where
+   the close mark should be, with the strip visibly wider. That is the shape the library falls back
+   to when it cannot build a texture path, and it means the addon folder name stopped reaching
+   `core/DebugLogSetup.lua`'s descriptor — or that `libs/LibKa0s/media/icons/` did not survive a
+   re-vendor. Nothing raises either way: a texture that does not load draws nothing.
+1c. Look at the log text itself. **Expect:** fixed-width columns — the `<HH:MM:SS> | [Tag]` prefixes
+   line up down the window. **A regression looks like** proportional text with ragged columns, which
+   means `NS.MediaFont` answered nil and `C.FONT_MONO` fell back to the client's own face. That is
+   the correct behavior for a missing library and a bug on a complete install.
 2. `/pm debug on` → **Expect:** a cyan-tagged chat ack with **ON in green**; the console shows
    `[Debug] logging enabled` followed by an `[Init]` line naming the addon, version, schema and
    profile.
@@ -416,8 +437,9 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 4. Change a setting → **Expect:** exactly **one** `[Set]` line (not one per reactor).
 5. **Drag the scrollbar** → **Expect:** the log scrolls. **Wheel-scroll the log** → **Expect:** the
    thumb follows. No Lua error either way.
-6. Click **Copy** → **Expect:** a selectable window with the same lines, no color codes. Ctrl+C, Esc.
-7. Click **Clear** → **Expect:** an empty log and `0 / 500 lines`.
+6. Click the **copy mark** → **Expect:** a selectable window with the same lines, no color codes, and
+   a close mark of its own in its title bar — the same art, not a multiplication sign. Ctrl+C, Esc.
+7. Click the **clear mark** → **Expect:** an empty log and `0 / 500 lines`.
 8. Click the `Debug: ON` toggle → **Expect:** it flips to red `OFF` and prints the matching chat ack.
 9. `/pm debug dump` → **Expect:** a `[Dump]` block listing each panel with `frame=yes`, and
    `0 orphaned`. Any `frame=NO` or a non-zero orphan count is a rendering bug.
@@ -544,6 +566,11 @@ addon still *works*.
    Said **once**; a second `/pm debug` repeats nothing.
 9. `/pm debug on` → still acknowledges `debug logging ON` in green, because logging is a session
    flag this addon owns and only the *window* went away.
+9b. The **font and texture dropdowns lose their Ka0s entries** — `JetBrains Mono` and the seven
+    `Ka0s …` bars are inside the payload that is not there, so there is nothing to register. A panel
+    whose profile still names one of them renders **plain**, exactly as it does when any other
+    addon's texture goes away (§5b step 10). Nothing raises, and nothing is overwritten: reinstate
+    `libs/LibKa0s` and the names come straight back.
 10. `/pm debug dump` → still answers with the state dump.
 11. `/pm list` → `…, so the slash help index and the settings CLI (list/get/set/reset) are
     unavailable.`

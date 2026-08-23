@@ -36,6 +36,11 @@ locales\PostLoad.lua
 # Core (Compat loads first)
 core\Compat.lua
 core\LSMPatch.lua
+# MediaSetup BEFORE Constants, and that position is load-bearing rather than conventional:
+# core/Constants.lua resolves C.FONT_MONO from NS.MediaFont at FILE LOAD, so a seam published
+# later would leave the constant holding nil forever. It needs nothing but its own addonName
+# vararg and LibStub, both of which are already here.
+core\MediaSetup.lua
 core\Constants.lua
 core\Namespace.lua
 core\State.lua

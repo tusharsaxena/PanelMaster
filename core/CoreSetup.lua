@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local addonName, NS = ...
 
 -- LibKa0s-Core-1.0 seam: the secret-safe stringifier and the prefixed chat printer.
 --
@@ -97,8 +97,24 @@ NS.Print = printer.Print
 NS.Util = NS.Util or {}
 NS.Util.print = NS.Print
 
--- DELIBERATELY NOT ADOPTED: Core's window-chrome half (`SKIN`, `ApplySkin`, `MakeCloseButton`).
--- PanelMaster has exactly one standalone window — the debug console — and that window is
--- LibKa0s-DebugLog-1.0's to draw, so it reaches Core's chrome from inside the library rather than
--- through this addon. A host-side re-export would have no caller. NS.Core above is the seam if one
--- ever appears.
+-- DELIBERATELY NOT ADOPTED: Core's skin half (`SKIN`, `ApplySkin`). PanelMaster has exactly one
+-- standalone window — the debug console — and that window is LibKa0s-DebugLog-1.0's to draw, so it
+-- reaches the Ka0s window edge from inside the library rather than through this addon. A host-side
+-- re-export of the backdrop values would have no caller today, and restating them here is what
+-- standalone-windows exists to stop.
+
+-- WRAPPED, TO SAY WHO IS ASKING, and wrapped even though the addon has no call site yet. The
+-- library draws this collection's own `close` mark when it is told which addon folder to build a
+-- texture path from, and it cannot work that out for itself: LibKa0s is vendored, so there is no
+-- one path to it and a copy cannot know which folder it was copied into. `addonName` is that
+-- answer and this file has it as its first vararg.
+--
+-- THREE ARGUMENTS, not two. `lib.MakeCloseButton(parent, onClick, addonName)` is the signature, and
+-- a forwarder that carries fewer arguments than its target is the anti-pattern that put a
+-- multiplication sign on a sibling addon's console with every suite green — silently, because a
+-- texture path that resolves to nothing draws nothing and raises nothing. The wrapper exists so the
+-- first standalone window this addon ever builds cannot be the place that mistake is made again;
+-- until then it is the seam, not dead weight, and tests/test_coresetup.lua pins the third argument.
+NS.MakeCloseButton = function(parent, onClick)
+  return lib.MakeCloseButton(parent, onClick, addonName)
+end

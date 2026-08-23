@@ -1,8 +1,15 @@
 # Debug
 
-`debug-logging`: a 700×344 `DIALOG`-strata window in the vendored JetBrains Mono at 10pt, with
-timestamped color-coded `<HH:MM:SS> | [Tag] <content>` lines, a right-edge scrollbar and an
-`N / MAX lines` counter (`debug-logging-§11`), Clear, Copy, and `UISpecialFrames` for ESC.
+`debug-logging`: a 700×344 `DIALOG`-strata window in JetBrains Mono at 10pt — the face now arrives
+inside the LibKa0s payload rather than in this addon's own `media/` — with timestamped color-coded
+`<HH:MM:SS> | [Tag] <content>` lines, a right-edge scrollbar and an `N / MAX lines` counter
+(`debug-logging-§11`), a clear and a copy control, and `UISpecialFrames` for ESC.
+
+The three title-bar controls are **marks, not words**. `core/DebugLogSetup.lua` passes `addonName`
+in the descriptor, which is what lets the library build a texture path into the shared icon set and
+draw the collection's own close, clear and copy art; without it the library falls back to a
+multiplication sign and the words "Clear" and "Copy". They carry no tooltips, deliberately: a label
+anchored under a control on a window that is 700px of text covers the first line of the log.
 
 Logging state is **session-only** (`NS.State.debug`, never in SavedVariables) and **independent of
 the window**: capture runs with the console closed, so a bug can be reproduced first and the log read

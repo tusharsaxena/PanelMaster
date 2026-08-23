@@ -562,10 +562,25 @@ C.UNLOCK_LABEL_RGB   = { 1.00, 0.82, 0.00 }
 C.UNLOCK_OUTLINE_PX  = 2
 
 -- ── Media ───────────────────────────────────────────────────────────────────────
--- Vendored monospace font (JetBrains Mono, OFL) used by the debug console and its copy box. A
--- sanctioned styling exception — WoW ships no monospace font object, and the console's aligned
+-- Monospace font (JetBrains Mono, OFL) used by the debug console and its copy box. A sanctioned
+-- styling exception — WoW ships no monospace font object, and the console's aligned
 -- `<HH:MM:SS> | [tag]` columns require a fixed-width one (debug-logging-§2).
-C.FONT_MONO = "Interface\\AddOns\\PanelMaster\\media\\fonts\\JetBrainsMono-Regular.ttf"
+--
+-- The face is the COLLECTION's now, not this addon's: it arrives inside the LibKa0s payload and is
+-- reached through core/MediaSetup.lua, which is why that file is TOC-listed ahead of this one. The
+-- local media/fonts/ copy is gone, along with the second copy of its license.
+--
+-- FONT_MONO_NAME is the LibSharedMedia key core/MediaSetup.lua registers the face under, and the
+-- only string that has to agree with the library; the path below is derived from it rather than
+-- restated beside it.
+C.FONT_MONO_NAME = "JetBrains Mono"
+
+-- THE FALLBACK IS A REAL CLIENT FONT, and that is the whole point of the ladder. SetFont accepts a
+-- path to a file that is not there, fails to load it, and the text simply does not draw — so a
+-- degraded install (no LibKa0s, hence no payload and no face) has to land on something the client
+-- itself guarantees. Proportional digits in the console are a cosmetic loss; an empty console is
+-- not.
+C.FONT_MONO = NS.MediaFont and NS.MediaFont(C.FONT_MONO_NAME) or _G.STANDARD_TEXT_FONT
 
 -- Addon logo, shown on the settings landing page (options-ui-§5). WoW cannot load .jpg/.png at
 -- runtime, so the shipped runtime asset must be a power-of-two .tga. A missing file renders nothing

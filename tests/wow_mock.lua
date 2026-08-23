@@ -302,6 +302,16 @@ return function()
     end,
   }
 
+  -- The client's own default face, and the one real global this mock has to plant in _G rather than
+  -- answer from the mock table. core/Constants.lua spells it `_G.STANDARD_TEXT_FONT` — the form the
+  -- collection uses for a global it reads once at load — and `_G` inside a sandboxed chunk is the
+  -- real global table, which the mock's __index never sees. It is the fallback the whole font ladder
+  -- rests on: a degraded install has no payload and therefore no JetBrains Mono, and SetFont given a
+  -- path to a file that is not there draws nothing at all. Guarded so a host that already defines it
+  -- keeps its own value.
+  _G.STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+  M.STANDARD_TEXT_FONT = _G.STANDARD_TEXT_FONT
+
   -- UI. UIParent carries a REAL size: the off-screen recovery measures against it, and a 0×0 screen
   -- would make Compat.GetScreenSize return nil and silently skip every recovery test.
   M.UIParent = stubFrame()

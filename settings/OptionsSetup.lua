@@ -84,9 +84,15 @@ NS.Helpers = lib:New({
   allRows      = function() return NS.Schema.Schema end,
 
   -- ADAPTER. This addon's schema has no `page` field: every settings row belongs to the one General
-  -- page, and the groups within it are section headings rather than pages. `filter` is ctx.unit,
-  -- which this addon never sets — it has no per-unit pages — so it is ignored rather than passed on.
-  rowsForPage = function(pageKey)
+  -- page, and the groups within it are section headings rather than pages.
+  --
+  -- BOTH ARGUMENTS ARE NAMED even though only the first is read. The library calls this as
+  -- `rowsForPage(pageKey, ctx.unit)`, and a callback declared one argument short of the seam that
+  -- calls it is the forwarder anti-pattern in its quietest form: nothing raises, the second value is
+  -- simply gone, and the day a per-unit page appears the filter is dropped by a signature nobody
+  -- would think to look at. `filter` is ctx.unit, which this addon never sets — it has no per-unit
+  -- pages — so it is ignored HERE, visibly, rather than never arriving.
+  rowsForPage = function(pageKey, filter)   -- luacheck: ignore filter
     if pageKey ~= "general" then return {} end
     return NS.Schema.Schema
   end,

@@ -112,7 +112,10 @@ test("Constants: preview panels are valid panel overrides", function()
 end)
 
 test("Constants: the mono font and logo point at this addon's folder", function()
-  -- A path copied from a sibling addon renders nothing and raises no error, so it is worth pinning.
+  -- Both paths are absolute from Interface\AddOns\, so both have to name THIS folder — the font's
+  -- by way of the vendored payload underneath it (libs/LibKa0s/media/fonts/), the logo's directly.
+  -- A path naming a sibling addon, or a payload that is not there, renders nothing and raises no
+  -- error, which is why it is worth pinning at all.
   assertTrue(C.FONT_MONO:find("PanelMaster", 1, true) ~= nil)
   assertTrue(C.LOGO_PATH:find("PanelMaster", 1, true) ~= nil)
 end)
@@ -140,6 +143,9 @@ test("Constants: the logo is a Targa, which is the only format WoW loads at runt
   assertTrue(C.LOGO_PATH:lower():find("%.tga$") ~= nil)
 end)
 
+-- The face is the LIBRARY's now, so this maps into libs/LibKa0s/media/fonts/ rather than into this
+-- addon's own media/. That is the point of the case: a re-vendor that dropped the font leaves
+-- C.FONT_MONO naming a file nobody ships, and SetFont answers a missing file by drawing nothing.
 test("Constants: the debug console's mono font exists", function()
   local path = repoPathFor(C.FONT_MONO)
   local f = io.open(path, "rb")

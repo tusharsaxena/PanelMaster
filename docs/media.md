@@ -16,7 +16,11 @@ renders, so a player's download does not carry megabytes of files their client p
 The failure mode here is silent: a missing or wrongly-named texture renders **nothing** and raises
 **no error**, so it surfaces as a blank settings page that reads like a layout bug. A test therefore
 asserts that the file `C.LOGO_PATH` names exists on disk, and the same for the debug console's
-vendored font.
+monospace face — which is no longer this addon's to ship. JetBrains Mono lives in the LibKa0s
+payload (`libs/LibKa0s/media/fonts/`) and is reached through `NS.MediaFont`; `media/fonts/` here is
+gone, along with the second copy of its license. The shared icon set the console's title bar draws
+from arrives the same way. What stays under `media/` is this addon's own product — the artwork
+catalog, the logo, the project-page plates — not chrome.
 
 Bundled artwork lives under `media/artwork/`, one 1024×1024 32-bit TGA per catalog row — 101 of them
 as it ships, with the catalog's declared `w`/`h` matching to the pixel — addressed at runtime through

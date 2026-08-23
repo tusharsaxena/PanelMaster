@@ -73,6 +73,19 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
 - Constants: the debug console's mono font exists
 
+### test_mediasetup.lua (10)
+
+- MediaSetup: NS.Icon answers the vendored path, extensionless
+- MediaSetup: an icon the library does not ship answers nil
+- MediaSetup: NS.MediaFont answers the vendored face, extension and all
+- MediaSetup: the font this addon names is the face the library registers
+- MediaSetup: the console's font is the payload's, not a copy of it
+- MediaSetup: every mark this addon's console draws is one the library ships
+- MediaSetup: every name the library ships has a file in the vendored copy
+- MediaSetup: the face the seam names exists in the vendored copy
+- MediaSetup: the TOC loads it before the file that resolves the font path
+- MediaSetup: with no library there is no art and no face, and that is not an error
+
 ### test_registry.lua (46)
 
 - Registry.New: creates a panel with the template's shape
@@ -711,7 +724,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (41)
+### test_libka0s.lua (43)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -722,7 +735,9 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog seam: the console is the library's instance, not a host re-implementation
 - DebugLog seam: the survivors kept their names and their shapes
 - DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
-- DebugLog seam: the console wears the LIBRARY's close button, not this addon's
+- DebugLog seam: the console's title bar is three marks, at the icon pitch
+- DebugLog seam: the library is told the FOLDER name, not just the frame name
+- Core seam: MakeCloseButton is wrapped to say which addon folder is asking
 - L trap (DebugLog): every rendered console string resolves to prose, not to its own key
 - Slash seam: the dispatcher is the library's, not a host re-implementation
 - Convergence #2: the landing page and the chat help render the SAME rows
@@ -790,6 +805,7 @@ badge and any count quoted in the docs must agree with it.
 | test_util.lua | 27 |
 | test_compat.lua | 14 |
 | test_constants.lua | 17 |
+| test_mediasetup.lua | 10 |
 | test_registry.lua | 46 |
 | test_canvas.lua | 30 |
 | test_unlock.lua | 30 |
@@ -803,8 +819,8 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 47 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 41 |
+| test_libka0s.lua | 43 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **717** |
+| **Total** | **729** |

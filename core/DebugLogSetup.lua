@@ -161,6 +161,14 @@ NS.DebugLog = lib:New({
   -- first two are byte-for-byte the globals modules/DebugLog.lua hardcoded, so anything anchored to
   -- them — /framestack, a user macro, UISpecialFrames — is unaffected.
   name  = addonName,
+  -- THE FOLDER NAME, which is a different question from the one above even though this addon
+  -- answers both with the same string. `name` seeds frame globals; `addonName` is what the library
+  -- builds a texture path from, so its own close, copy and clear controls draw this collection's
+  -- art instead of a multiplication sign and two words. A vendored library cannot work that out for
+  -- itself — there is no one path to it — and a host where the two strings diverge would hand it a
+  -- path into nowhere, which draws nothing and raises nothing. Passed explicitly for that reason
+  -- rather than left to the library to infer from `name`.
+  addonName = addonName,
   -- The library appends its own " — Debug", giving "Panel Master — Debug": the exact title this
   -- console has always carried.
   title = "Panel Master",
@@ -202,9 +210,12 @@ NS.DebugLog = lib:New({
   --                the hook to keep this addon's older look is the thing that release exists to
   --                undo.
   --   makeCloseButton — same reasoning, one field along. These are the library's windows, so they
-  --                wear the library's × (Core's 18x18, gray, red on hover) rather than the flat
-  --                "X" this file used to draw. DebugLog minor 6 narrowed this field to a close
-  --                control that is different in KIND; ours was merely our own.
+  --                wear the library's own close control rather than the flat "X" this file used to
+  --                draw — and since `addonName` is passed above, that control is now the shared
+  --                Ka0s close MARK on both the console and its copy window, not the multiplication
+  --                sign the library falls back to when it cannot build a texture path. DebugLog
+  --                minor 6 narrowed this field to a close control that is different in KIND; ours
+  --                was merely our own.
   --   L          — this addon translates nothing (locales/enUS.lua ships English-only by an
   --                explicit 1.0.0 scope decision), so there is no override to pass. Passing NS.L
   --                would be the `L` trap: its metatable answers every key with the key itself, so
