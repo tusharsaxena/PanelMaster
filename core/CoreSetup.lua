@@ -114,7 +114,7 @@ NS.Util.print = NS.Print
 -- multiplication sign on a sibling addon's console with every suite green — silently, because a
 -- texture path that resolves to nothing draws nothing and raises nothing. The wrapper exists so the
 -- first standalone window this addon ever builds cannot be the place that mistake is made again;
--- until then it is the seam, not dead weight, and tests/test_coresetup.lua pins the third argument.
+-- until then it is the seam, not dead weight, and tests/test_libka0s.lua pins the third argument.
 NS.MakeCloseButton = function(parent, onClick)
   return lib.MakeCloseButton(parent, onClick, addonName)
 end
