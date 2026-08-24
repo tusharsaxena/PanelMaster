@@ -894,6 +894,7 @@ end)
 -- with no guard, so the list is asserted against the filesystem rather than trusted.
 local SEAM_FILES = {
   "core/CoreSetup.lua",
+  "core/EnvSetup.lua",
   "core/MediaSetup.lua",
   "core/DebugLogSetup.lua",
   "settings/Slash.lua",

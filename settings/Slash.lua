@@ -26,11 +26,11 @@ end
 
 -- `/pm version` → the canonical single-line answer every Ka0s addon shares (slash-commands-§3). Read
 -- from the TOC metadata so it can't drift from the packaged manifest, with the in-code constant as
--- the fallback. `/pm version` and the help header both come through here, so they cannot report
+-- the fallback — both of which now live in core/EnvSetup.lua, over LibKa0s-Env-1.0. This wrapper
+-- stays because `/pm version` and the help header both come through it, so they cannot report
 -- different numbers.
 function Sl:Version()
-  return (NS.Compat and NS.Compat.GetAddOnMetadata
-    and NS.Compat.GetAddOnMetadata(NS.name, "Version")) or NS.version or "?"
+  return NS.Version()
 end
 
 -- ── Panel CLI ───────────────────────────────────────────────────────────────────

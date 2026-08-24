@@ -6,19 +6,12 @@ local Compat = NS.Compat
 -- direct C_*/global presence check here, so a shim degrades to nil/false when its API is absent —
 -- never by reading a game-flavor project id. Feature modules call NS.Compat.X, never the raw API.
 
--- ── Addon metadata ──────────────────────────────────────────────────────────────
+-- ── Addon roster ────────────────────────────────────────────────────────────────
 
--- TOC metadata field (e.g. "Version"), read from the packaged manifest so `/pm version` can't drift
--- from the TOC. Retail moved the getter to C_AddOns; falls back to the bare global, then nil.
-function Compat.GetAddOnMetadata(name, field)
-  if C_AddOns and C_AddOns.GetAddOnMetadata then
-    return C_AddOns.GetAddOnMetadata(name, field)
-  end
-  if type(GetAddOnMetadata) == "function" then
-    return GetAddOnMetadata(name, field)
-  end
-  return nil
-end
+-- NOTE: the TOC-metadata reader that used to head this file is gone. It now lives in
+-- core/EnvSetup.lua as NS.Meta / NS.Version, over LibKa0s-Env-1.0 — it was the same eleven-times
+-- duplicated ladder in every addon of this collection, which is what made it the library's rather
+-- than ours. The readers below stay: they are PanelMaster's own.
 
 -- Every addon folder present on disk, as a set of folder names, or nil when the roster cannot be
 -- read at all.

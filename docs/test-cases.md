@@ -36,10 +36,8 @@ badge and any count quoted in the docs must agree with it.
 - NS.Print: prepends the cyan [PM] tag
 - NS.Print survived the AceConsole embed (architecture-§2)
 
-### test_compat.lua (14)
+### test_compat.lua (12)
 
-- Compat.GetAddOnMetadata: reads the TOC Version through C_AddOns
-- Compat.GetAddOnMetadata: an unknown field is nil, not an error
 - Compat.GetScreenSize: returns the UIParent dimensions
 - Compat.GetUIScale: defaults to 1 when the frame cannot answer
 - Compat.FetchMedia: degrades to the flat texture when LibSharedMedia is absent
@@ -85,6 +83,13 @@ badge and any count quoted in the docs must agree with it.
 - MediaSetup: the face the seam names exists in the vendored copy
 - MediaSetup: the TOC loads it before the file that resolves the font path
 - MediaSetup: with no library there is no art and no face, and that is not an error
+
+### test_envsetup.lua (4)
+
+- EnvSetup: NS.Meta reads this addon's TOC, asking about the FOLDER name
+- EnvSetup: NS.Version answers the TOC version, preferring it over the constant
+- EnvSetup: NS.Version falls back to this addon's own constant
+- EnvSetup: the deleted shim is gone from Compat
 
 ### test_registry.lua (46)
 
@@ -803,9 +808,10 @@ badge and any count quoted in the docs must agree with it.
 | Suite | Cases |
 |-------|------:|
 | test_util.lua | 27 |
-| test_compat.lua | 14 |
+| test_compat.lua | 12 |
 | test_constants.lua | 17 |
 | test_mediasetup.lua | 10 |
+| test_envsetup.lua | 4 |
 | test_registry.lua | 46 |
 | test_canvas.lua | 30 |
 | test_unlock.lua | 30 |
@@ -823,4 +829,4 @@ badge and any count quoted in the docs must agree with it.
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **729** |
+| **Total** | **731** |

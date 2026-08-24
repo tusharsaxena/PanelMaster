@@ -3,13 +3,9 @@ local NS = T.NS
 local test, assertEqual, assertTrue, assertFalse =
   T.test, T.assertEqual, T.assertTrue, T.assertFalse
 
-test("Compat.GetAddOnMetadata: reads the TOC Version through C_AddOns", function()
-  assertEqual(NS.Compat.GetAddOnMetadata("PanelMaster", "Version"), "1.0.0")
-end)
-
-test("Compat.GetAddOnMetadata: an unknown field is nil, not an error", function()
-  assertEqual(NS.Compat.GetAddOnMetadata("PanelMaster", "Nonsense"), nil)
-end)
+-- NOTE: the two Compat.GetAddOnMetadata cases that used to open this file are gone with the shim.
+-- The reader is now NS.Meta / NS.Version over LibKa0s-Env-1.0; tests/test_envsetup.lua covers the
+-- seam, and the library's own suite covers the ladder inside it (testing-§8).
 
 test("Compat.GetScreenSize: returns the UIParent dimensions", function()
   local w, h = NS.Compat.GetScreenSize()
