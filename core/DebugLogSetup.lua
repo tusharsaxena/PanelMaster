@@ -6,7 +6,7 @@ local addonName, NS = ...
 -- specifies down to the hex codes — the seventh hand-transcribed copy of it in the collection. Both
 -- formatters were already byte-identical to the library's, and the frame globals the descriptor
 -- generates from `name` are exactly the two this addon hardcoded, so the console a user sees is the
--- same window with the same buffer, the same 500-line cap and the same title.
+-- same window with the same buffer, the same 1500-line cap and the same title.
 --
 -- WHERE THIS FILE SITS: after core/CoreSetup.lua (NS.LIBKA0S_MISSING) and after core/Constants.lua
 -- (C.FONT_MONO). Nothing else pins it. Every other thing the descriptor touches — NS.State,

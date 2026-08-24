@@ -414,7 +414,7 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 ## 11. Debug console
 
 1. `/pm debug` → **Expect:** the console opens: monospace, timestamped, a `Debug: OFF` toggle in red
-   at the left of the title bar, a scrollbar on the right, `0 / 500 lines` bottom-right.
+   at the left of the title bar, a scrollbar on the right, `0 / 1500 lines` bottom-right.
 1b. **Look at the right end of the title bar.** **Expect:** three small square controls of the same
    size, evenly pitched — a copy mark, a clear mark and a close mark, gray, each turning white (the
    close one red) as the pointer crosses it. **No words, and no tooltips**: a label anchored under a
@@ -439,7 +439,7 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    thumb follows. No Lua error either way.
 6. Click the **copy mark** → **Expect:** a selectable window with the same lines, no color codes, and
    a close mark of its own in its title bar — the same art, not a multiplication sign. Ctrl+C, Esc.
-7. Click the **clear mark** → **Expect:** an empty log and `0 / 500 lines`.
+7. Click the **clear mark** → **Expect:** an empty log and `0 / 1500 lines`.
 8. Click the `Debug: ON` toggle → **Expect:** it flips to red `OFF` and prints the matching chat ack.
 9. `/pm debug dump` → **Expect:** a `[Dump]` block listing each panel with `frame=yes`, and
    `0 orphaned`. Any `frame=NO` or a non-zero orphan count is a rendering bug.
@@ -594,7 +594,7 @@ Walk **every** surface and confirm not one `SCREAMING_SNAKE_CASE` string is on s
 1. `/pm config` → the landing page, then **General**, **Panels** and **Profiles**. Every label,
    every tooltip, every section heading, the breadcrumb, and the **Defaults** button.
 2. `/pm debug` → the console. Title bar (`Panel Master — Debug`), the `Debug: OFF` toggle, `Copy`,
-   `Clear`, and the `N / 500 lines` counter. Click **Copy** and read that window's title too
+   `Clear`, and the `N / 1500 lines` counter. Click **Copy** and read that window's title too
    (`Copy log — Ctrl+C, then Esc`).
 3. `/pm help`, `/pm list`, `/pm version` in chat.
 
