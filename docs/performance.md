@@ -3,9 +3,17 @@
 `documentation-§3` requires this page unconditionally — the question *"how much does this addon
 cost?"* gets an answer whether or not a harness is wired.
 
-**Today the answer is: nobody has measured, and this addon is not entitled to skip measuring.**
+**The answer is: the one in-combat path is two API calls per tracked panel at 10Hz, the panel
+count is set by the player and defaults to none, and wiring a harness to bracket that is a cost the
+measurement could not repay. That is a ratified deviation from `performance-§1`, decided
+2026-08-25 — not a `performance-§12` exemption, which this addon does not qualify for.**
 
-## State: no harness, no exemption
+Until 2026-08-25 this page said "nobody has measured, and this addon is not entitled to skip
+measuring", and no register row existed, so an audit re-filed `performance-§1` every cycle. That
+was correct while the choice was unmade. It is recorded rather than deleted because the reasoning
+below — why `§12` does not apply — is unchanged and still load-bearing.
+
+## State: no harness, a ratified `§1` deviation, and still no `§12` exemption
 
 | | |
 |---|---|
@@ -15,14 +23,14 @@ cost?"* gets an answer whether or not a harness is wired.
 | `perf` slash verb | not registered. The verb stays **reserved** (`slash-commands-§2`) so it can never mean anything else here |
 | `tests/perf.lua` | not present — every automated-test bundle records `perf: skip` |
 | `docs/perf-analysis/` | not present |
-| `performance-§12` exemption | **not claimed, and not claimable** — see below |
-| `## Documented deviations` row | **none**, deliberately |
+| `performance-§12` exemption | **not claimed, and not claimable** — see below. The deviation below does not rest on it |
+| `## Documented deviations` row | **present** since 2026-08-25, citing `performance-§1` directly |
 
 `Perf` is the one LibKa0s major this addon declines. The decline is reasoned in
 [`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24), which carried `performance-§1`–`§4`
-deliberately rather than by oversight. An issue with no register row is **not a ratified
-deviation** (`documentation-§3`), so `performance-§1` is an open MUST against this addon and an
-audit is right to keep filing it.
+deliberately rather than by oversight. It now also carries a row in
+[`ARCHITECTURE.md`](ARCHITECTURE.md)'s `## Documented deviations`, which is what makes it ratified
+(`documentation-§3`) — an issue alone never was.
 
 ## Why `performance-§12` does not apply
 
@@ -56,8 +64,40 @@ user-reachable hot path, not dead code, so:
   is exactly the number nobody has.
 - **(c) does not apply.** This addon records nothing that `suspend` could suppress.
 
-Claiming the exemption anyway would put a false row in the register. The honest choices are to wire
-`performance-§1`'s harness and bracket that loop, or to change the rule — not to write the row.
+Claiming the exemption anyway would put a false row in the register, and none was written for as
+long as the choice was open.
+
+## What was decided instead, and why it is not the same claim
+
+The register's job is ratified deviations from the standard, and `§12` is only one route to one. A
+row that cites **`performance-§1` directly** says something different and true: this addon is
+required to wire the harness, it does not, and here is the owner's reason.
+
+The reason is the shape of the one path, not a claim that the path does not exist:
+
+- **The body is two calls per tracked panel.** `updateMouseover` does one
+  `NS.Compat.MouseIsOver(f)` and one `SetAlpha(...)` for each panel in the tracked set. There is no
+  per-record work, no allocation, no string building, and no scan that grows with saved data.
+- **The set is bounded by a number the player sets.** A panel joins it only with *Show on mouseover
+  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:306`). With none ticked
+  `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the
+  driver accumulates `delta` and returns.
+- **Nothing a raid does changes it.** Group size, combat log volume and saved-data size are all
+  irrelevant to this loop, which is what separates it from the paths `performance-§1` exists for.
+
+Against that: a `core/PerfSetup.lua` with a full degradation stub, a second SavedVariables global,
+a slash verb, a `suspend`/`resume` contract that must make the host inert without `/reload`, an
+offline `tests/perf.lua`, and a `docs/perf-analysis/` tree — to bracket two API calls at 10Hz.
+
+**This is a judgment, and it is recorded as one.** It is not a proof that the cost is zero; nobody
+has a number, and the row does not claim one. What it claims is that the number cannot be large
+enough to repay the wiring, given a body that cannot grow without the re-check trigger firing.
+
+The re-check trigger is in the register row and is deliberately narrow: a second `OnUpdate` or
+repeating ticker, `updateMouseover` growing work that is not O(tracked panels) of two API calls, a
+panel count that stops being player-bounded, or `performance-§12` gaining a bounded-cost clause
+upstream — at which point the exemption becomes claimable and the `§1` row is replaced by one that
+cites it.
 
 ## The committed sweep
 
