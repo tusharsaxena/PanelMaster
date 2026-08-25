@@ -105,7 +105,7 @@ coloring, and manual `/pm recover`. All in **[scope.md](scope.md)**.
 
 Every `.md` under `docs/` appears in exactly one table below (`documentation-§3`). Frozen and
 generated directories are named once each and never enumerated per run: `docs/audits/`,
-`docs/reviews/`, `docs/automated-tests/`, `docs/superpowers/`.
+`docs/reviews/`, `docs/automated-tests/`, `docs/revendor/`, `docs/superpowers/`.
 
 ### Required (documentation-§3, Tier 1)
 

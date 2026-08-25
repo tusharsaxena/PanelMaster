@@ -49,11 +49,14 @@ payload that disagree is the drift the gate exists to catch. It used to live in 
 is written for players; kit revision 9 moved it here, where the build facts already are, and there
 is no fallback to the old location.
 
-The `Perf` decline is **not ratified**. It is reasoned in [`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24) and
-has no row in `docs/ARCHITECTURE.md` ▸ *Documented deviations*, which is the only place an audit
-looks — so `performance-§1` is a genuinely open MUST here, not a recorded deviation. The
-`performance-§12` no-combat-path exemption **does not apply to this addon**: `modules/Canvas.lua:577`
-runs a shared 10Hz `OnUpdate`, which fails criterion (a). `docs/performance.md` carries the sweep.
+The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/ARCHITECTURE.md`
+▸ *Documented deviations* citing `performance-§1` directly, on the bounded-cost argument reasoned in
+[`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24) and settled over
+[#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and
+[#44](https://github.com/tusharsaxena/PanelMaster/issues/44). It is a deviation from `§1` itself and
+**not** a `performance-§12` exemption — `§12` is neither claimed nor claimable here, because its
+no-combat-path criterion (a) fails: `modules/Canvas.lua:577` runs a shared 10Hz `OnUpdate`.
+`docs/performance.md` carries the sweep and the cost argument.
 
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever
 `../LibKa0s` has moved, the **vendor gate** — neither of the other two can see a stale vendored copy;

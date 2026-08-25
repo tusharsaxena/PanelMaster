@@ -25,7 +25,7 @@ Read only the section you need:
   `PanelMaster.toc:1-13`.
 - `## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets`
   (`PanelMaster.toc:8`) lists libraries that are **already vendored** under `libs/` and loaded from
-  there (`PanelMaster.toc:15-29`). The line only lets the client load a standalone copy first if one
+  there (`PanelMaster.toc:15-30`). The line only lets the client load a standalone copy first if one
   is installed; a player installs none of it.
 - `LibSharedMedia-3.0` is genuinely optional at runtime — the addon has a tested soft-fallback path
   for its absence, which is why the headless mock deliberately omits it
@@ -52,11 +52,11 @@ sudo apt install -y pipx && pipx ensurepath && pipx install lizard
 
 | Tool | Version | Why — evidence | Verify |
 |---|---|---|---|
-| **Lua 5.1** | **5.1 exactly — a hard requirement** | The headless harness loads every source with `loadfile` + **`setfenv`** (`tests/_kit/loader.lua:31`, `:50`). `setfenv` was **removed in Lua 5.2**, so 5.2/5.3/5.4 do not merely warn — they fail. This is also the interpreter WoW itself runs, so it is the version the addon is written against. `.luacheckrc:1` pins `std = "lua51"` for the same reason. | `lua -v` → `Lua 5.1.5` |
+| **Lua 5.1** | **5.1 exactly — a hard requirement** | The headless harness loads every source with `loadfile` + **`setfenv`** (`tests/_kit/loader.lua:68`, `:72`). `setfenv` was **removed in Lua 5.2**, so 5.2/5.3/5.4 do not merely warn — they fail. This is also the interpreter WoW itself runs, so it is the version the addon is written against. `.luacheckrc:1` pins `std = "lua51"` for the same reason. | `lua -v` → `Lua 5.1.5` |
 | **luacheck** | any recent (verified with 1.2.0) | Half the green gate. Config at `.luacheckrc`; run per `docs/testing.md` ▸ *The green gate*. Pinning a version would be false precision — no rule in `.luacheckrc` depends on one. | `luacheck --version` |
 | **lizard** | any recent (verified with 1.23.0) | Drives the `complexity` suite of the automated-test run at release, per `performance-§10`. Optional day to day: without it the report is simply **stale**, which is a visible state, not a compliance failure. | `lizard --version` |
-| **git** | any recent | Beyond version control, one suite shells out to it: `tests/_kit/vendor_sync.lua:154` runs `git -C <sibling> …` to read the LibKa0s tag the vendored payload claims. Absent git, that case degrades rather than errors (`:153` guards on `io.popen`). The shell-out moved into the vendored kit when `tests/test_vendor_sync.lua` became registration-only; the requirement did not move with it. | `git --version` |
-| **A POSIX shell with `ls`** | — | `tests/_kit/framework.lua:202` enumerates the suite files behind `T.assertSuiteInventory` (`ls -A`, with a `dir /b` fallback for cmd.exe), and `tests/_kit/vendor_sync.lua:104` lists vendored folders the same way (Lua 5.1 has no directory API and this repo declines a LuaFileSystem dependency — see the comment at `framework.lua:197-201`). Any WSL2/Ubuntu shell has this; it is listed because it is a real, invisible assumption. | `ls --version` |
+| **git** | any recent | Beyond version control, one suite shells out to it: `tests/_kit/vendor_sync.lua:184` runs `git -C <sibling> …` to read the LibKa0s tag the vendored payload claims. Absent git, that case degrades rather than errors (`:183` guards on `io.popen`). The shell-out moved into the vendored kit when `tests/test_vendor_sync.lua` became registration-only; the requirement did not move with it. | `git --version` |
+| **A POSIX shell with `ls` and `find`** | — | `tests/_kit/framework.lua:214` enumerates the suite files behind `T.assertSuiteInventory` (`ls -A`, with a `dir /b` fallback for cmd.exe), and `tests/_kit/vendor_sync.lua:122` lists the vendored trees the same way but recursively (`find . -type f`, with `dir /b /s` as the cmd.exe fallback). Lua 5.1 has no directory API and this repo declines a LuaFileSystem dependency — see the comment at `framework.lua:197-201`. Any WSL2/Ubuntu shell has this; it is listed because it is a real, invisible assumption. | `ls --version` |
 | **The sibling `../LibKa0s` checkout** | matching tag | Not a package — a **checked-out repo next to this one**, needed only to run the vendor gate's four `diff -r` commands (`docs/testing.md` ▸ *The vendor gate*) or to re-vendor. The addon builds, runs and tests without it; `tests/test_vendor_sync.lua` skips what it cannot reach. | `ls ../LibKa0s/LibKa0s` |
 
 **`pip install lizard` does not work on Ubuntu 24.04.** Its Python is marked
