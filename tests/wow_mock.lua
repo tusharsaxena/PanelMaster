@@ -432,7 +432,7 @@ return function()
 
   -- LibSharedMedia is deliberately ABSENT from this table. It is an OptionalDep, and the addon must
   -- run without it (library-stack-§6) — so the default headless environment is the one where it is
-  -- missing, which is what makes Compat.FetchTexture's nil path the tested path.
+  -- missing, which is what makes Compat.FetchMedia's nil path the tested path.
 
   -- Message bus modeled on CallbackHandler: callbacks keyed by (message, target). Registering the
   -- same message twice on ONE target overwrites (only the last survives); SendMessage fires to every
