@@ -585,7 +585,7 @@ addon still *works*.
 
 ## 15. LibKa0s — the `L` trap
 
-Three of the five majors take a locale override, and a descriptor handed this addon's `NS.L` would
+Three of the ten majors take a locale override, and a descriptor handed this addon's `NS.L` would
 render every user-visible string as its own key. The source guard and the rendered assertions in
 `tests/test_libka0s.lua` are both blind to what the client actually draws.
 

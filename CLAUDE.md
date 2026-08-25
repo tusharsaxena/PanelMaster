@@ -35,9 +35,9 @@ Start here, then read the docs:
 - Topic detail in `docs/` — **Tier 1 is always present**: `scope.md`, `module-map.md`, `schema.md`, `settings-panel.md`, `data-flow.md`, `common-tasks.md`. Conditional and addon-specific docs vary; `docs/ARCHITECTURE.md` → `## Documentation map` lists every page under `docs/` and says which conditional ones do not apply here (`documentation-§3`).
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Four of the five majors are adopted
-(`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is declined. **Never edit anything under `libs/` or
-`tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Six of the ten majors are adopted
+(`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`); `Perf` is declined. **Never edit anything
+under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 

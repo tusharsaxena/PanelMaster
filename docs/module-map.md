@@ -7,7 +7,8 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 
 | File | Publishes | Role |
 |---|---|---|
-| `core/Compat.lua` | `NS.Compat` | The only caller of deprecated / varying APIs. Addon metadata, screen size, UI scale, LibSharedMedia registration and lookup, class color, cursor test. |
+| `core/Compat.lua` | `NS.Compat` | The only caller of deprecated / varying APIs. Addon roster, screen size, UI scale, LibSharedMedia registration and lookup, class color, cursor test. |
+| `core/EnvSetup.lua` | `NS.Meta`, `NS.Version` | The `LibKa0s-Env-1.0` seam: this addon's TOC-metadata reader, which used to head `core/Compat.lua`. Both helpers write their pre-library ladder out as the fallback, so an install without LibKa0s still reads its own TOC. `NS.Version` prefers the TOC over `NS.version` and reads it at CALL time rather than capturing it as an upvalue, because `core/Namespace.lua` publishes it and loads later. Nothing here resolves at load beyond the LibStub lookup, so **this file's TOC position is conventional, not load-bearing** — unlike `core/MediaSetup.lua`'s. `tests/test_envsetup.lua` pins that the seam changes no answer. |
 | `core/LSMPatch.lua` | — | Upstream fixup for the vendored `LSM30_Border` widget's misaligned preview tile. Lives in `core/`, not `libs/`, so a lib refresh cannot blow it away. |
 | `core/MediaSetup.lua` | `NS.Icon`, `NS.MediaFont` | The `LibKa0s-Media-1.0` seam: the collection's shared icon set and its monospace face, both of which arrive inside the vendored payload rather than in this addon's `media/`. Two one-line lookups plus `Media.RegisterLSM(addonName)` at file load, which is what puts `JetBrains Mono` and the seven `Ka0s …` bar textures into LibSharedMedia's dropdowns. The library is vendored and cannot know which folder it was copied into, so every call carries `addonName` — the FOLDER name, this file's first vararg, never the `## Title` and never a frame-name prefix. **Loads before `core/Constants.lua`**, which resolves `C.FONT_MONO` from `NS.MediaFont` at load. Both seams answer **nil** with no library, which is a value callers branch on: `C.FONT_MONO` falls back to the client's own `STANDARD_TEXT_FONT`, and the console's title bar falls back to the library's own words. |
 | `core/Constants.lua` | `NS.Constants` | Strata, anchor-point, edge and artwork enums (with their derived membership sets and option lists), geometry and scale bounds, the frame ladder, the panel record template, the field type/order/media/enum/color maps, preview specs, media paths. |
@@ -34,7 +35,8 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `settings/OptionsSetup.lua` | `NS.Helpers`, `NS.SetBuildMain` | The `LibKa0s-Options-1.0` seam. `NS.Helpers` **is** the library instance rather than a wrapper (options-ui-§1), which is what lets `settings/Panel.lua` decorate it in place. Holds the descriptor: the write seam (`NS.Schema:Set`, already the two-argument shape the library calls with), `rowsForPage`, the boot validation, the AceGUI stash and the drag throttle. `buildMain` reaches the landing page through a forward declaration `settings/Panel.lua` fills in, because that file loads after this one. |
 | `settings/Panel.lua` | `NS.Panel` | What LibKa0s-Options-1.0 does **not** own: the open-dropdown registry that closes a list on scroll, the paired-button width, the landing page's body, the Profiles page, and the four page builders. The canvas factory, the header and breadcrumb, the lazy Defaults button, the scroll frame, the scrollbar patch, section headings, spacers, tooltips, the five widget makers and the two-column flow engine are all the library's now. Two library members are wrapped **on the instance** — `RenderField` and `EnsureScroll` — because the flow engine resolves both from the instance table at call time, so a host-side helper beside them is bypassed by every page it draws. Drives the editor through `E:WireBus` / `E:BuildPage` / `E:Rebuild`. |
 
-Four of the five `LibKa0s` majors are adopted (`Core`, `DebugLog`, `Slash`, `Options`); `Perf` is
+Six of the ten `LibKa0s` majors are adopted (`Core`, `Env`, `Media`, `DebugLog`, `Slash`,
+`Options`); `Pool`, `Item` and `Widgets` are vendored but not consumed here, and `Perf` is
 declined on structural grounds — see closed issue [`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31). The
 library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here**: a library
 problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a
@@ -61,7 +63,7 @@ reword — `tests/test_libka0s.lua` pins the clause on both paths.
 The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
 
 - `libs\LibKa0s\LibKa0s.xml` sits **after** LibStub and Ace3. `Core` resolves LibStub; the other
-  four resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
+  nine resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
   too old, so the major is simply never registered.
 - `core/CoreSetup.lua` after `core/Namespace.lua` (which defines `NS.PREFIX`, passed to the printer
   descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**

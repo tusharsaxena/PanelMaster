@@ -18,7 +18,7 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and two of the four LibKa0s seams;
+`core/` holds the bootstrap, the Compat firewall, the AceDB layer and four of the six LibKa0s seams;
 `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer and unlock
 mode; `settings/` holds the schema, the other two seams and the four panel pages. Load order is
 fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin several
@@ -127,7 +127,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `debug.md` | Present | `D:Diagnose()` and `NS.DebugBuild` are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. `core/LSMPatch.lua` fixes a vendored **widget**, not a client behavior, and is documented in `module-map.md` |
-| `compat-layer.md` | Not applicable | `core/Compat.lua` normalizes metadata, screen size, UI scale, LSM and class color — no addon-specific shim beyond what the row in `module-map.md` records |
+| `compat-layer.md` | Not applicable | `core/Compat.lua` normalizes the addon roster, screen size, UI scale, LSM and class color — no addon-specific shim beyond what the row in `module-map.md` records |
 | `perf-analysis/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
 
 ### Verification and record
