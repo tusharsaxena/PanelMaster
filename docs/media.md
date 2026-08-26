@@ -5,12 +5,12 @@ Four logo assets, one of which the game can actually load:
 | File | Size | Ships to players | Purpose |
 |---|---|---|---|
 | `panelmaster.logo.tga` | 512×512, 24-bit RLE | **yes** | The runtime asset — `C.LOGO_PATH`, drawn on the settings landing page |
-| `panelmaster.logo.png` | 1254×1254 | no | Master art; the source the others are rendered from |
-| `panelmaster.logo.jpg` | 1024×1024 | no | Project page / CDN |
+| `panelmaster.logo.png` | 2000×2000 | no | Master art; the source the `.tga` and the 256 avatar are rendered from |
+| `panelmaster.logo.jpg` | 2000×2000 | no | Project page / CDN. Supplied alongside the master at full size, not downscaled from it |
 | `panelmaster.logo.256.jpg` | 256×256 | no | README, thumbnails |
 
 WoW cannot load `.png` or `.jpg` at runtime **at all**, and rescales any texture that is not a power
-of two — hence a 512 TGA rather than the 1254 master. `.pkgmeta` excludes the three non-runtime
+of two — hence a 512 TGA rather than the 2000 master. `.pkgmeta` excludes the three non-runtime
 renders, so a player's download does not carry megabytes of files their client physically cannot use.
 
 The failure mode here is silent: a missing or wrongly-named texture renders **nothing** and raises
