@@ -342,11 +342,22 @@ test("L trap (Slash): the ONE overridden string lands, and nothing renders as it
     local SCREAMING = "^[A-Z][A-Z0-9_]+$"
     -- This addon passes a PLAIN table holding exactly one key. The override must actually win —
     -- a descriptor L that silently did nothing is the other half of the trap.
-    local lines = capture(function() NS.Slash:CliResetAll() end)
-    assertEqual(lines[#lines], NS.PREFIX .. " all settings reset to defaults (your panels are " ..
-      "untouched)", "the RESET_ALL override did not reach the rendered line")
-    assertEqual(NS.Slash:Text("RESET_ALL"),
-      "all settings reset to defaults (your panels are untouched)")
+    --
+    -- Read through Text() rather than by driving CliResetAll: since options-ui-§12 the global reset
+    -- is a PROFILE reset that this addon owns (Sl:DoResetAll) rather than the library's row walk,
+    -- so the library no longer prints this line — but it still RESOLVES the key, and this addon
+    -- still hands it the string, which is what the trap is about.
+    assertEqual(NS.Slash:Text("RESET_ALL"), NS.Slash.RESET_ALL_TEXT,
+      "the RESET_ALL override did not reach the library's string table")
+    assertEqual(NS.Slash.RESET_ALL_TEXT, "this profile reset to defaults")
+
+    -- And the addon's own reset prints that same string, so the two cannot drift. Driven through
+    -- the popup's OnAccept, because CliResetAll only ASKS now -- the act is behind the confirm.
+    local lines = capture(function()
+      T.mocks.StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"].OnAccept()
+    end)
+    assertEqual(lines[#lines], NS.PREFIX .. " " .. NS.Slash.RESET_ALL_TEXT,
+      "the reset printed something other than the string it publishes")
     -- And the library's own strings still resolve for every key this addon does NOT override.
     for _, key in ipairs({ "HELP_HEADER", "LIST_HEADER", "LIST_EMPTY", "NOT_FOUND", "INVALID",
                            "ERR_BOOL", "ERR_NUMBER", "ERR_COLOR", "NONE", "USAGE_GET" }) do

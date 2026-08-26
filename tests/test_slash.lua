@@ -244,14 +244,36 @@ test("Slash.CliReset: restores one setting's default", function()
   assertEqual(NS.Schema:Get("settings.gridSize"), 4)
 end)
 
-test("Slash.CliResetAll: restores every setting and leaves panels alone", function()
+test("Slash.CliResetAll: CONFIRMS first, and never resets on the call itself", function()
+  -- The reset deletes the player's panels now (options-ui-§12), so the standard puts a
+  -- confirmation on the control and the act does not run on the click. This addon puts the typed
+  -- verb behind the same door -- there is no reason for `/pm resetall` to be the one with no lock.
+  -- red under: CliResetAll calling DoResetAll directly.
   fresh()
   R:New("Survivor")
   Sl:CliSet("settings.gridSize 16")
+
   Sl:CliResetAll()
+
+  assertEqual(T.mocks.__popupsShown[#T.mocks.__popupsShown], "KA0S_PANELMASTER_RESETALL")
+  assertEqual(NS.Schema:Get("settings.gridSize"), 16, "the reset ran before anyone confirmed it")
+  assertEqual(R:Count(), 1, "the reset ran before anyone confirmed it")
+  fresh()
+end)
+
+test("Slash: accepting the reset empties the PROFILE, panels included", function()
+  -- It used to walk the schema and print "your panels are untouched". It is a profile reset now,
+  -- `db.profile.panels` is in the profile, and what comes back is indistinguishable from a profile
+  -- the player had just created -- which is what the standard asks a global reset to be.
+  -- red under: DoResetAll going back to a row walk.
+  fresh()
+  R:New("Survivor")
+  Sl:CliSet("settings.gridSize 16")
+
+  T.mocks.StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"].OnAccept()
+
   assertEqual(NS.Schema:Get("settings.gridSize"), 4)
-  -- "Reset my settings" and "delete my work" are different requests.
-  assertEqual(R:Count(), 1, "resetall deleted the user's panels")
+  assertEqual(R:Count(), 0, "a profile reset keeps the panels the player added")
   fresh()
 end)
 
@@ -551,3 +573,4 @@ test("Slash.CliPanel: artAutosize is no longer a field anyone can set", function
   assertTrue(lines[1]:find("unknown field", 1, true) ~= nil,
     "artAutosize was still accepted: " .. tostring(lines[1]))
 end)
+

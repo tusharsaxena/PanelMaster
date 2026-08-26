@@ -73,7 +73,9 @@ test harness hid it by calling `Canvas:Enable()` itself; it now drives the real 
 `settings/Slash.lua`, so the help index, the settings landing page's command list and the README
 table are generated from one table and cannot drift.
 
-Schema-driven verbs: `config version get set list reset resetall debug help`. Panel verbs: `new
+Schema-driven verbs: `config version get set list reset resetall debug help` — `resetall` is a
+**profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it
+takes the player's panels with it because `db.profile.panels` is in the profile. Panel verbs: `new
 delete rename panels panel unlock lock preview recover`. Verb detail and the host/library split in
 **[slash-dispatch.md](slash-dispatch.md)**.
 

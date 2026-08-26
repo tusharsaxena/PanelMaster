@@ -245,13 +245,21 @@ test("Panel.Refresh: a hidden page is not refreshed", function()
   assertFalse(ran, "a hidden page ran its refreshers")
 end)
 
-test("Panel.RestoreDefaults: resets settings and leaves panels alone", function()
+test("Panel.RestoreDefaults: CONFIRMS, because the reset now deletes panels", function()
+  -- The header Defaults button IS the global reset here, one implementation shared with
+  -- `/pm resetall`. Since options-ui-§12 made that a PROFILE reset it is destructive, so the button
+  -- asks first: a single click that emptied a screen full of panels is exactly what the standard's
+  -- fixed confirmation wording exists to prevent.
+  -- red under: RestoreDefaults calling CliResetAll's act instead of ConfirmResetAll.
   NS.Registry:DeleteAll()
   NS.Registry:New("Survivor")
   NS.Schema:Set("settings.gridSize", 16)
+
   P:RestoreDefaults()
-  assertEqual(NS.Schema:Get("settings.gridSize"), 4)
-  assertEqual(NS.Registry:Count(), 1, "RestoreDefaults deleted the user's panels")
+
+  assertEqual(T.mocks.__popupsShown[#T.mocks.__popupsShown], "KA0S_PANELMASTER_RESETALL")
+  assertEqual(NS.Schema:Get("settings.gridSize"), 16, "the button reset before anyone confirmed")
+  assertEqual(NS.Registry:Count(), 1)
   NS.Registry:DeleteAll()
 end)
 

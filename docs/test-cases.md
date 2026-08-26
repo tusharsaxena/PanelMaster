@@ -536,7 +536,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the numeric rows declare min and max
 - Schema: defaultAlpha stays a fraction
 
-### test_slash.lua (58)
+### test_slash.lua (59)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -564,7 +564,8 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliSet: a non-number for a number row is refused
 - Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)
 - Slash.CliReset: restores one setting's default
-- Slash.CliResetAll: restores every setting and leaves panels alone
+- Slash.CliResetAll: CONFIRMS first, and never resets on the call itself
+- Slash: accepting the reset empties the PROFILE, panels included
 - Slash.CliVersion: prints v<version>
 - Slash.CliNew: creates a panel and confirms
 - Slash.CliNew: with no name, prints usage
@@ -620,7 +621,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel.Open: opens out of combat
 - Panel.Open: says so when there is no category to open (F-013)
 - Panel.Refresh: a hidden page is not refreshed
-- Panel.RestoreDefaults: resets settings and leaves panels alone
+- Panel.RestoreDefaults: CONFIRMS, because the reset now deletes panels
 - Panel: every render context owns its own dropdown registry
 - Panel: one page's rebuild does not deregister another page's dropdowns
 - Panel: closing dropdowns dispatches on widget TYPE, not on field presence
@@ -821,7 +822,7 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 26 |
 | test_schema.lua | 21 |
-| test_slash.lua | 58 |
+| test_slash.lua | 59 |
 | test_panel.lua | 47 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -829,4 +830,4 @@ badge and any count quoted in the docs must agree with it.
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **731** |
+| **Total** | **732** |

@@ -8,7 +8,8 @@ and whenever the `## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 
-Start each run from a clean state: `/reload`, then `/pm resetall` and `/pm panel deleteall`.
+Start each run from a clean state: `/reload`, then `/pm resetall` (confirm it) — which is a **profile
+reset** and takes the panels with it, so `/pm panel deleteall` is no longer needed alongside it.
 
 ---
 
@@ -574,7 +575,9 @@ addon still *works*.
 10. `/pm debug dump` → still answers with the state dump.
 11. `/pm list` → `…, so the slash help index and the settings CLI (list/get/set/reset) are
     unavailable.`
-12. `/pm resetall` → **still works**: it is the one schema verb with no library dependency.
+12. `/pm resetall` → **still works**, popup and all: it is the one schema verb with no library
+    dependency, and since `options-ui-§12` its body is `db:ResetProfile()`, which needs the db
+    rather than the library.
 13. `/pm config` → `…, so the settings panel is unavailable.` Run it **three times**: it must answer
     every time. Unlike step 8's console notice, which rides other output, this line *is* the verb's
     whole answer, and a second invocation that printed nothing would read as a broken command.
@@ -658,9 +661,13 @@ proves nothing about the verb.
 3. `/pm config` → **Panels** → **Defaults** → the **same** popup appears. Choose **No**. Both
    panels survive.
 4. Now choose **Yes** from either. Both panels are gone, and chat says `deleted 2 panels.`
-5. `/pm resetall` → `all settings reset to defaults (your panels are untouched)` — this wording is
-   preserved through the library's locale override and is the reassurance the message exists for.
-   Confirm it is **not** the library's own `All settings reset to defaults`.
+5. `/pm resetall` → the **confirm popup** appears first, carrying the collection's one wording
+   (`options-ui-§12`), verbatim: *"Reset this profile to the addon's defaults? Everything you have
+   configured or added in it is discarded — your other profiles are not affected."* Choose **No**:
+   nothing changes. Choose **Yes**: every setting is back to shipped **and the panels are gone**, and
+   chat says `this profile reset to defaults` — not the library's own `All settings reset to
+   defaults`, and no longer the old *"your panels are untouched"*, which a profile reset does not
+   keep. **Config → Panels → Defaults** shows the same popup and does the same thing.
 
 ## 18. Sunn — Viewport Art packs, and the composite renderer
 

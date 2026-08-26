@@ -4,8 +4,67 @@ local Sl = NS.Slash
 local C = NS.Constants
 local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-frames-taint-§8)
 
+-- The acknowledgment, named once and handed to the library as its RESET_ALL override below. It no
+-- longer says "your panels are untouched", because they are not: the reset is a PROFILE reset now
+-- and `db.profile.panels` is in the profile. A reassurance that has stopped being true is worse
+-- than no reassurance.
+Sl.RESET_ALL_TEXT = "this profile reset to defaults"
+
+--- The global reset, and it is a PROFILE reset (options-ui-§12).
+---
+--- `Reset all settings` and the Profiles page's `Reset Profile` are the same act across the whole
+--- collection: `db:ResetProfile()` on the ACTIVE profile, never a second walk of the schema, and
+--- never a touch on another profile or on the profile list.
+---
+--- WHAT CHANGED FOR THIS ADDON: it used to walk `NS.Schema.Schema` writing each row's default and
+--- print *"your panels are untouched"*. It is a profile reset now, and `db.profile.panels` is IN
+--- the profile — so the panels go with it and what comes back is a profile indistinguishable from
+--- one the player had just created. That is what the rule asks for, and it is why this verb grew a
+--- confirmation it did not have before: a schema sweep that spared your panels and a profile reset
+--- that deletes them are not the same act, whatever the verb is called.
+---
+--- The rebuild is the one every profile switch already takes: `OnProfileReset` reaches the `reload`
+--- closure NS:RegisterProfileCallbacks installed (core/Database.lua), which sweeps preview orphans
+--- and calls Registry:ReloadProfile.
+---
+--- Shared by the popup's OnAccept and by the headless fallback, so the two cannot diverge.
+function Sl:DoResetAll()
+  local db = NS.db
+  if db and db.ResetProfile then db:ResetProfile() end
+  print(Sl.RESET_ALL_TEXT)
+end
+
+--- The confirm-gated entry point, and the one every CONTROL uses.
+---
+--- options-ui-§12 puts the confirmation on the control, not on the act: a reset that deletes the
+--- player's panels must ask first. The typed verb goes through it too -- this addon has no reason
+--- to make `/pm resetall` the one door with no lock on it.
+---
+--- The StaticPopup fallback is what lets the headless suite drive the act without a popup, the same
+--- bargain doDeleteAll strikes.
+function Sl:ConfirmResetAll()
+  if type(StaticPopup_Show) == "function" then
+    StaticPopup_Show("KA0S_PANELMASTER_RESETALL")
+  else
+    Sl:DoResetAll()
+  end
+end
+
 -- Confirm dialogs for the destructive actions. Registered once; in-game only.
 if type(StaticPopupDialogs) == "table" then
+  -- THE COLLECTION'S ONE WORDING (options-ui-§12), verbatim. Addon-agnostic on purpose -- no addon
+  -- enumerates its own nouns -- and explicit about the destruction, which for this addon means the
+  -- player's panels. `/pm resetall` used to spare them and say so; a profile reset does not, and a
+  -- verb that silently deleted a screen full of panels because its wording stayed the same is the
+  -- exact failure the standard's fixed text exists to prevent.
+  StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"] = {
+    text = "Reset this profile to the addon's defaults? Everything you have configured or added in it is discarded \226\128\148 your other profiles are not affected.",
+    button1 = YES or "Yes",
+    button2 = NO or "No",
+    OnAccept = function() NS.Slash:DoResetAll() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
+    preferredIndex = 3,
+  }
   StaticPopupDialogs["KA0S_PANELMASTER_DELETEALL"] = {
     text = "Delete ALL Ka0s Panel Master panels on this character? This cannot be undone.",
     button1 = YES or "Yes",
@@ -243,7 +302,7 @@ NS.COMMANDS = {
   { "set",      "Set a setting value", function(a) NS.Slash:CliSet(a) end },
   { "list",     "List all settings", function() NS.Slash:CliList() end },
   { "reset",    "Reset one setting", function(a) NS.Slash:CliReset(a) end },
-  { "resetall", "Reset all settings", function() NS.Slash:CliResetAll() end },
+  { "resetall", "Reset this profile to defaults", function() NS.Slash:ConfirmResetAll() end },
   -- Every sub-verb a handler below accepts is named in its own `desc`, because the generated help
   -- index, the settings landing page and the README's command table all read these strings and
   -- nothing else. A sub-verb missing here is a sub-verb nobody can discover (slash-commands-§4).
@@ -309,10 +368,7 @@ if not lib then
   function Sl:CliVersion() print("v" .. tostring(Sl:Version())) end
   -- Kept WORKING rather than explained away: it is the one schema verb with no library dependency —
   -- it is a loop over the schema through this addon's own write seam.
-  function Sl:CliResetAll()
-    for _, row in ipairs(NS.Schema.Schema) do NS.Schema:Set(row.path, row.default) end
-    print("all settings reset to defaults (your panels are untouched)")
-  end
+  function Sl:CliResetAll() Sl:ConfirmResetAll() end
   function Sl:OnSlash(input)
     if input == nil or input:match("^%s*$") then return explain() end
     local verb, rest = input:match("^(%S+)%s*(.-)$")
@@ -363,10 +419,11 @@ local dispatcher = lib:New({
 
   -- A PLAIN table of the one string this addon actually overrides — never NS.L, whose metatable
   -- answers every key with the key itself (the `L` trap). The library's own RESET_ALL is "All
-  -- settings reset to defaults"; this addon's says what it deliberately does NOT touch, and that
-  -- reassurance is the whole reason the message is worded the way it is. Deleting panels is the
-  -- confirm-gated `/pm panel deleteall`, which is a different request.
-  L = { RESET_ALL = "all settings reset to defaults (your panels are untouched)" },
+  -- settings reset to defaults"; this addon's names the PROFILE, because that is the blast radius
+  -- (options-ui-§12) and because the old wording promised the panels were safe, which a profile
+  -- reset does not keep. Named once at the top of this file, so the acknowledgment the library
+  -- prints and the one the headless fallback prints cannot drift.
+  L = { RESET_ALL = Sl.RESET_ALL_TEXT },
 })
 
 -- Republished under the method names this addon's own callers already use, as forwarders, so
@@ -380,7 +437,9 @@ function Sl:CliList()            return dispatcher:CliList()        end
 function Sl:CliGet(a)            return dispatcher:CliGet(a)        end
 function Sl:CliSet(a)            return dispatcher:CliSet(a)        end
 function Sl:CliReset(a)          return dispatcher:CliReset(a)      end
-function Sl:CliResetAll()        return dispatcher:CliResetAll()    end
+-- NOT the dispatcher's: the library's CliResetAll is a row walk, and a global reset is a PROFILE
+-- reset (options-ui-§12). Every other verb here still delegates.
+function Sl:CliResetAll()        return Sl:ConfirmResetAll()        end
 function Sl:CliVersion()         return dispatcher:CliVersion()     end
 function Sl:Text(key)            return dispatcher:Text(key)        end
 

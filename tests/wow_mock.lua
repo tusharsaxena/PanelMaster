@@ -397,6 +397,23 @@ return function()
           for target, fn in pairs(callbacks[event] or {}) do fn(target, ...) end
         end,
       }
+      -- RESET, the way AceDB does it, and it is a different motion from the swap below.
+      --
+      -- The profile table keeps its IDENTITY across a reset -- the real library wipes it in place --
+      -- so anything holding `db.profile` from load keeps pointing at the live table. Replacing it
+      -- would leave every holder on a stale one, and that bug is invisible to a suite that re-reads
+      -- `db.profile` on every access.
+      --
+      -- Modeled rather than stubbed for the reason the callbacks are: since options-ui-§12 the
+      -- global reset IS this call, so a fake that omitted it would let the suite pass a reset that
+      -- never ran.
+      db.ResetProfile = function()
+        local p = db.profile
+        for k in pairs(p) do p[k] = nil end
+        for k, v in pairs(deepcopy(defaults and defaults.profile or {})) do p[k] = v end
+        db.__fire("OnProfileReset", db, M.__profileName)
+      end
+
       -- Swap to a named profile the way AceDB does: a fresh defaults-shaped table, then the event.
       M.__switchProfile = function(name)
         M.__profileName = name

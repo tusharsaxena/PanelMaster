@@ -316,8 +316,13 @@ end
 -- and the dirty flag belong to the library rather than being hand-rolled here. Nothing else ever
 -- called it.
 
+-- The header Defaults button. It IS the global reset here -- one implementation shared with
+-- `/pm resetall` (options-ui-§1) -- and since options-ui-§12 made that a PROFILE reset it is now
+-- destructive: the player's panels go with it. So it goes through the CONFIRM entry point, not the
+-- act: the standard puts the confirmation on the control, and a button that deleted a screen full
+-- of panels on a single click would be the exact failure the fixed popup wording exists to prevent.
 function P:RestoreDefaults()
-  if NS.Slash and NS.Slash.CliResetAll then NS.Slash:CliResetAll() end
+  if NS.Slash and NS.Slash.ConfirmResetAll then NS.Slash:ConfirmResetAll() end
   P:Refresh()
 end
 
