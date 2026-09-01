@@ -10,7 +10,7 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
 
   -- And the gate can actually FIRE. Asserting 0 alone is worth nothing if the check is incapable of
   -- returning anything else, which is exactly what it was: a third conjunct required the row to
-  -- carry no default, and all nine rows carry one, so `S:Register() == 0` was asserting a constant.
+  -- carry no default, and every row carries one, so `S:Register() == 0` was asserting a constant.
   -- Two probes, because the bug's whole shape was that only the second was ever reachable — a bad
   -- path MUST report whether or not the row has a default of its own.
   local probes = {
@@ -28,7 +28,7 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
 
   -- A session-only row is the ONE exemption and stays exempt: it has no db-backed home by design.
   S.Schema[#S.Schema + 1] = { path = "state.notAPath", sessionOnly = true, type = "bool",
-    widget = "CheckBox", group = "Master Controls", label = "session-only, unresolvable path",
+    widget = "CheckBox", group = "Master controls", label = "session-only, unresolvable path",
     get = function() return false end, set = function() end }
   local sessionCount = S:Register()
   S.Schema[#S.Schema] = nil
@@ -211,4 +211,67 @@ end)
 test("Schema: defaultAlpha stays a fraction", function()
   assertNear(S:Default("settings.defaultAlpha"), 1.0)
   assertFalse((S:Set("settings.defaultAlpha", 255)))
+end)
+
+test("Schema: the General page's tabs are the designed partition, in strip order", function()
+  -- THE PARTITION CASE (options-ui-§13). RenderTabbedSchema draws one tab per distinct `group`, in
+  -- DECLARATION ORDER, so this array's order is the strip a player sees and the group boundaries
+  -- are where one tab ends and the next begins.
+  --
+  -- Written out as the DESIGNED table rather than derived from the schema, which is the whole
+  -- point: a derived expectation agrees with any arrangement of rows, including the one where a row
+  -- has quietly drifted into the wrong tab. Adding a row means adding it here too, deliberately.
+  local EXPECTED = {
+    { tab = "Master controls", count = 3 },
+    { tab = "Editing",         count = 5 },
+    { tab = "New panels",      count = 4 },
+  }
+
+  local order, counts = {}, {}
+  for _, row in ipairs(S.Schema) do
+    if counts[row.group] == nil then
+      counts[row.group] = 0
+      order[#order + 1] = row.group
+    end
+    counts[row.group] = counts[row.group] + 1
+  end
+
+  assertEqual(#order, #EXPECTED, "the General page has a different number of tabs than designed")
+  for i, want in ipairs(EXPECTED) do
+    assertEqual(order[i], want.tab, ("tab %d is '%s', not '%s'"):format(i, tostring(order[i]), want.tab))
+    assertEqual(counts[want.tab], want.count, want.tab .. " holds a different number of rows")
+  end
+end)
+
+test("Schema: a group's rows are contiguous, so no tab's heading prints twice", function()
+  -- RenderTabbedSchema partitions in declaration order and RenderRows opens a group when the group
+  -- CHANGES. A row filed under a group the array has already left therefore reopens it -- on a
+  -- tabbed page that means the tab draws a second, disconnected block; on an untabbed one it prints
+  -- the heading twice. Cheap to assert, invisible without a client.
+  local seen, current = {}, nil
+  for _, row in ipairs(S.Schema) do
+    if row.group ~= current then
+      assertFalse(seen[row.group] == true,
+        row.path .. " reopens the '" .. tostring(row.group) .. "' group after the array left it")
+      seen[row.group] = true
+      current = row.group
+    end
+  end
+end)
+
+test("Schema: the Panels page's tab strip is the designed one, in strip order", function()
+  -- The Panels page is BESPOKE -- a panel is a registry record, not a schema row -- so its strip is
+  -- hand-drawn from settings/PanelEditor.lua's own ordered list rather than partitioned out of this
+  -- file. It is pinned here anyway, because "which tabs does the settings panel have" is one
+  -- question and answering half of it in a different suite is how the other half goes stale.
+  local EXPECTED = {
+    "General", "Position and size", "Background and border", "Accent bar", "Artwork",
+    "Opacity and fade",
+  }
+  local actual = NS.PanelEditor.TABS
+  assertEqual(type(actual), "table", "the editor publishes no tab order")
+  assertEqual(#actual, #EXPECTED, "the Panels page has a different number of tabs than designed")
+  for i, want in ipairs(EXPECTED) do
+    assertEqual(actual[i], want, ("Panels tab %d is '%s', not '%s'"):format(i, tostring(actual[i]), want))
+  end
 end)

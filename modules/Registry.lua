@@ -298,11 +298,31 @@ end
 
 -- ── Create / delete / rename ────────────────────────────────────────────────────
 
+-- The four "new panel" settings, applied over C.PANEL_TEMPLATE.
+--
+-- ONE function with two callers, because the two callers must not be able to disagree: R:Reset's
+-- own comment is that "reset this panel" and "make a new one" land on the same state, and that was
+-- true only for as long as both were two hand-written lines. Size joined strata and opacity as a
+-- setting in the tabbed-panel pass, and two more hand-written lines in each place is exactly how
+-- the drift the comment forbids gets in.
+--
+-- A field falls back to whatever C.PANEL_TEMPLATE already put there, so a profile written before
+-- these settings existed (or one hand-edited to nonsense) still creates the panel this addon has
+-- always created rather than one with a nil width. Sanitize clamps afterwards either way.
+local function applyNewPanelDefaults(rec, p)
+  local s = p.settings or {}
+  rec.width  = tonumber(s.defaultWidth)  or rec.width
+  rec.height = tonumber(s.defaultHeight) or rec.height
+  rec.strata = s.defaultStrata or rec.strata
+  rec.alpha  = tonumber(s.defaultAlpha)  or rec.alpha
+end
+
 -- Create a panel. Returns (record) on success, or (nil, reason) — never a bare nil, so every caller
 -- has something to print.
 --
 -- `overrides` is an optional partial record (preview mode and the CLI both pass one). New panels
--- pick up the profile's default strata/alpha, which is what makes those settings meaningful.
+-- pick up the profile's four new-panel defaults (size, strata, opacity), which is what makes those
+-- settings meaningful; an override still wins, because it is applied afterwards.
 -- The create itself, WITHOUT the broadcast. Split out so a batch (preview mode stands up three
 -- placeholders at once) can make every record and then announce the new set exactly once, rather
 -- than making every consumer rebuild itself once per record.
@@ -325,8 +345,7 @@ local function create(name, overrides)
 
   local rec = Util.DeepCopy(C.PANEL_TEMPLATE)
   rec.name = name
-  rec.strata = p.settings.defaultStrata
-  rec.alpha  = p.settings.defaultAlpha
+  applyNewPanelDefaults(rec, p)
 
   if type(overrides) == "table" then
     for k, v in pairs(overrides) do
@@ -450,8 +469,7 @@ function R:Reset(key)
   for k in pairs(rec) do rec[k] = nil end
   for k, v in pairs(C.PANEL_TEMPLATE) do rec[k] = Util.DeepCopy(v) end
   rec.id, rec.name, rec.frameName = id, name, frameName
-  rec.strata = p.settings.defaultStrata
-  rec.alpha  = p.settings.defaultAlpha
+  applyNewPanelDefaults(rec, p)
   R.Sanitize(rec)
 
   NS.Debug("Panel", "reset '%s' (id %s)", rec.name, rec.id)

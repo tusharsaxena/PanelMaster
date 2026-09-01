@@ -54,9 +54,31 @@ if not lib then
     RestoreDefaults = noop, RestoreAllDefaults = noop,
     RefreshAllPanels = noop, RefreshScalars = noop, RefreshPanel = noop, SetRenderer = noop,
     PatchAlwaysShowScrollbar = noop,
+    -- The tabbed page (options-ui-§13) and the page banner (options-ui-§14). Both of this addon's
+    -- tabbed pages call these at render time, so the stub answers them for the same reason it
+    -- answers RenderSchema: a missing member is a raise inside a page build rather than a page
+    -- that quietly draws nothing.
+    SetChromeHeight = noop, TabStrip = noop, PageBanner = noop,
+    -- RenderTabbedSchema answers a LIST on the live path (the group names, in tab order), so the
+    -- stub answers an empty one rather than nil: a host that iterates the result gets a page with
+    -- no tabs, which is exactly what a degraded install has, instead of an error.
+    RenderTabbedSchema = function() return {} end,
     __pages = function() return {} end, __panels = function() return {} end,
     __panelFor = function() return nil end,
+    -- The library's chrome-band arithmetic. Internal (`__`) and called by nothing in this addon —
+    -- they are here because the parity case reads the WHOLE live surface, and an internal the stub
+    -- omits is indistinguishable from one it forgot. Each answers the SHAPE its live counterpart
+    -- does, so a future caller finds a number where a number belongs.
+    __scrollTopInset = function() return 0 end,
+    __bannerBand = function() return 0 end,
+    __tabBand = function() return 0 end,
+    __tabPlacement = function() return {}, 0 end,
+    __layoutTabs = noop, __releaseChrome = noop,
     ROW_VSPACER = 0, SECTION_HEADING_H = 0, BUTTON_PAIR_REL = 0,
+    -- The three chrome heights, ZERO for exactly the reason the three above are: a stub reporting
+    -- the library's real band geometry would let a caller lay something out against numbers no
+    -- widget was ever built from.
+    CHROME_GAP = 0, TAB_H = 0, BANNER_H = 0,
     AceGUI = nil,
   }
   function NS.SetBuildMain() end

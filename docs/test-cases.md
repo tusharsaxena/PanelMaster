@@ -91,7 +91,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (46)
+### test_registry.lua (48)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -139,6 +139,8 @@ badge and any count quoted in the docs must agree with it.
 - Registry: the panel messages have exactly one sender
 - Registry.New: a panel really lands on the documented defaults, not just the template
 - Registry.Reset: puts position and scale back to the defaults too
+- Registry: a new panel is born at the profile's default size
+- Registry.Reset: lands on the same state a new panel is born in
 
 ### test_canvas.lua (30)
 
@@ -173,7 +175,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: each panel level gets a frame-level band of its own
 - Canvas: one level apart is enough to separate two panels completely
 
-### test_unlock.lua (30)
+### test_unlock.lua (32)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
@@ -205,6 +207,8 @@ badge and any count quoted in the docs must agree with it.
 - Unlock.TogglePreview: alternates
 - Unlock: the overlay outranks every rung of the panel's own ladder
 - Unlock: the overlay follows the panel's level when the panel's level changes
+- Unlock: the outline thickness comes from the setting, and ships at the old literal
+- Unlock: a hand-edited outline thickness is clamped, not drawn
 
 ### test_media.lua (83)
 
@@ -512,7 +516,7 @@ badge and any count quoted in the docs must agree with it.
 - NS.DebugBuild: calls the builder and logs when logging is on
 - NS.DebugBuild: passes the builder's arguments through unbound
 
-### test_schema.lua (21)
+### test_schema.lua (24)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: every row declares a group, label, type and widget
@@ -535,6 +539,9 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the settings message has exactly one sender
 - Schema: the numeric rows declare min and max
 - Schema: defaultAlpha stays a fraction
+- Schema: the General page's tabs are the designed partition, in strip order
+- Schema: a group's rows are contiguous, so no tab's heading prints twice
+- Schema: the Panels page's tab strip is the designed one, in strip order
 
 ### test_slash.lua (59)
 
@@ -598,7 +605,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (47)
+### test_panel.lua (50)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -647,6 +654,9 @@ badge and any count quoted in the docs must agree with it.
 - Panel scale: is clamped to its own bounds, not the artwork's
 - Panel scale: reaches the frame, and does not change the stored size
 - Panel scale: a junk value falls back rather than reaching SetScale
+- Panels page: only the active tab's controls are built
+- Panels page: an unknown active tab heals to the first one rather than drawing nothing
+- Panels page: Create and Edit are NOT tabs — they stay above the strip
 
 ### test_profiles.lua (23)
 
@@ -730,7 +740,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (43)
+### test_libka0s.lua (44)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -753,6 +763,7 @@ badge and any count quoted in the docs must agree with it.
 - Options seam: NS.Helpers IS the library instance, not a wrapper around one
 - Options seam: all four pages built, and each is registered with Blizzard
 - Options: the General page renders one widget per schema row, by type
+- Options: the Editing tab's afterGroup button is drawn, and only on that tab
 - Options: a widget's OnValueChanged reaches the addon's single write seam
 - Options: a slider commits on release and snaps to the row's step
 - Options: the enum row's dropdown is populated from the schema's `values`
@@ -813,21 +824,21 @@ badge and any count quoted in the docs must agree with it.
 | test_constants.lua | 17 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 46 |
+| test_registry.lua | 48 |
 | test_canvas.lua | 30 |
-| test_unlock.lua | 30 |
+| test_unlock.lua | 32 |
 | test_media.lua | 83 |
 | test_accent.lua | 63 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 26 |
-| test_schema.lua | 21 |
+| test_schema.lua | 24 |
 | test_slash.lua | 59 |
-| test_panel.lua | 47 |
+| test_panel.lua | 50 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 43 |
+| test_libka0s.lua | 44 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **732** |
+| **Total** | **743** |

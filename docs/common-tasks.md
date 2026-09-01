@@ -11,13 +11,19 @@ path that already has a row.
 
 1. Add the shipped value to `defaults/Profile.lua`'s settings block (or `defaults/Global.lua` if it
    describes the saved file rather than the character's UI — today only `schemaVersion` qualifies).
-2. Add the row to `settings/Schema.lua` at the position you want it rendered.
-3. **Decide deliberately whether it broadcasts.** A row gets an `onChange` sending
+2. Add the row to `settings/Schema.lua` at the position you want it rendered. **The position is the
+   layout.** `group` is the TAB it lands on (`options-ui-§13`), the array's order is the tab order,
+   and consecutive rows are paired two per line — so a row filed under a group the array has already
+   left reopens that tab's block further down, which is what the contiguity case in
+   `tests/test_schema.lua` exists to catch.
+3. Update the **partition case** in `tests/test_schema.lua`: it is the designed page-tab-count table,
+   written out by hand rather than derived, so that a row drifting into the wrong tab fails it.
+4. **Decide deliberately whether it broadcasts.** A row gets an `onChange` sending
    `Ka0s_PanelMaster_SettingsChanged` only when the change is one **a panel can show**.
    `settings.snapToGrid` and `settings.gridSize` carry none on purpose: `Unlock.SnapPosition` reads
    them live at drag-stop and nothing renders from them, so announcing would repaint every panel on
    each tick of the Grid size slider for no visible difference.
-4. Every write goes through `NS.Schema:Set` — already the two-argument shape the library calls with,
+5. Every write goes through `NS.Schema:Set` — already the two-argument shape the library calls with,
    so the panel widget and the slash line take exactly one path.
 
 ## Add a field to the panel record

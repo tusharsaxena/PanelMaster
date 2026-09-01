@@ -16,7 +16,10 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 --     with the same gold header every subcategory uses.
 --   * Each settings group is a canvas SUBCATEGORY with a breadcrumb header
 --     ("Ka0s Panel Master ▸ General"), a Defaults button, and a gold divider.
---   * Bodies render schema rows into a TWO-COLUMN grid; AceGUI Headings group them into sections.
+--   * Bodies render schema rows into a TWO-COLUMN grid, partitioned into a TAB STRIP pinned in the
+--     page's chrome band: one tab per schema `group` on a schema page (General), and a hand-drawn
+--     strip over the editor's six subjects on the bespoke one (Panels). The Profiles page has no
+--     strip at all -- it is AceDBOptions' own scrolling page and is not this addon's to re-shape.
 -- The category is registered EAGERLY at load so the entry is always in the options list; each body
 -- is built LAZILY on its first OnShow, because AceGUI lays out against the panel's current width,
 -- which is 0 before the panel is first shown.
@@ -374,14 +377,30 @@ function P:Register()
       -- descriptor's `rowsForPage`, which is what makes that field load-bearing rather than
       -- decorative. Handing the flow engine NS.Schema.Schema directly worked identically and left
       -- `rowsForPage` dead — a mutation that emptied it changed nothing and failed no case.
-      O.RenderSchema(c, "general", nil, {
-        -- "Recover panels" sits to the right of Grid size: it is the other thing you reach for when
-        -- a layout has gone wrong. `pairWith` is the library's name for what this file called
-        -- `companions` — a non-schema widget attached as the RIGHT half of a named path's row.
-        ["settings.gridSize"] = function(_, parentRow)
-          parentRow:AddChild(makePairButton("Recover panels", function()
-            if NS.Slash then NS.Slash:CliRecover() end
-          end))
+      -- RenderTabbedSchema, not RenderSchema: this page's three groups are TABS now
+      -- (options-ui-§13), partitioned out of the row array in declaration order. It still routes
+      -- through the descriptor's `rowsForPage`, so that field stays load-bearing.
+      --
+      -- "Recover panels" is drawn by the Editing tab's afterGroup hook rather than riding the right
+      -- half of the Grid size row. The old pairing's argument — it is the other thing you reach for
+      -- when a layout has gone wrong — has not expired, and is why the button is still ON the
+      -- Editing tab; what changed is that `Snap to grid` now sits beside `Grid size`, pairing the
+      -- mode with the thing it modes, and a two-column line has no third cell. `afterGroup` fires
+      -- after the group's last row with the pending line already flushed, which is where the flow
+      -- engine puts a group's buttons anyway.
+      O.RenderTabbedSchema(c, "general", {
+        ["Editing"] = function(cc)
+          -- Through EnsureScroll rather than off `cc.scroll`, which is the library's own field and
+          -- not a contract this file is entitled to read: the hook fires inside the render, and
+          -- asking for the scroll is how a host is meant to reach it.
+          local scroll = O.EnsureScroll(cc)
+          if scroll then O.AddSpacer(scroll, ROW_VSPACER) end
+          O.InlineButtonPair(cc, {
+            text = "Recover panels",
+            tooltip = "Bring any panel whose anchor has ended up beyond a screen edge back into "
+              .. "view. Panels that are already on screen are left exactly where they are.",
+            onClick = function() if NS.Slash then NS.Slash:CliRecover() end end,
+          })
         end,
       })
     end)

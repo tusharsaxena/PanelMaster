@@ -58,6 +58,30 @@ reset** and takes the panels with it, so `/pm panel deleteall` is no longer need
 4. `/pm set settings.snapToGrid false`, drag again → **Expect:** it lands wherever you dropped it.
 5. Reset with `/pm reset settings.gridSize`.
 
+## 4b. The three settings promoted out of the code
+
+All three are new rows in the tabbed-panel pass — `settings.unlockOutlineSize` on **Editing**, and
+`settings.defaultWidth` / `settings.defaultHeight` on **New panels** — and each ships at exactly the
+number it replaced, so the first half of every check is that **nothing moved**.
+
+1. On a fresh profile, `/pm get settings.unlockOutlineSize` → **Expect:** `2 px`. `/pm unlock` and
+   look at a panel's gold outline: it is the same hairline it has always been.
+2. `/pm set settings.unlockOutlineSize 8` **while unlocked** → **Expect:** every unlocked panel's
+   outline thickens immediately, with no `/reload` and no re-unlock.
+3. `/pm set settings.unlockOutlineSize 0` → **Expect:** refused (`Invalid value`), because an
+   outline nobody can see reads as unlock mode being broken. Same for `400`.
+4. Hand-edit `unlockOutlineSize = 0` into `PanelMaster.lua` in `WTF/.../SavedVariables`, reload, and
+   `/pm unlock` → **Expect:** the outline is drawn at **1**, not at 0. The value is clamped on the
+   way out as well as on the way in.
+5. `/pm reset settings.unlockOutlineSize` puts it back to `2 px`.
+6. `/pm get settings.defaultWidth` / `settings.defaultHeight` → **Expect:** `240 px` and `120 px`,
+   which is the size a new panel has always been. Make a panel and confirm it.
+7. `/pm set settings.defaultWidth 500`, `/pm set settings.defaultHeight 60`, then `/pm new Wide` →
+   **Expect:** a 500x60 panel. **Every existing panel is untouched** — check one you made earlier.
+8. `/pm panel Wide reset` → **Expect:** it comes back at **500x60**, not 240x120: "reset this panel"
+   and "make a new one" land on the same state, which is what the shared code path is for.
+9. Put both back with `/pm reset settings.defaultWidth` and `/pm reset settings.defaultHeight`.
+
 ## 5. Appearance
 
 With a panel created and locked:
@@ -121,7 +145,8 @@ stubs AceGUI out entirely, so **nothing below is covered by a unit test.**
    previous color.
 6. Change a color, `/reload`. **Expect:** the color persisted.
 7. Now change a color **and** drag the opacity slider. **Expect:** both apply, and the panel's
-   opacity is the picker's alpha multiplied by the **Panel opacity** slider (under Visibility).
+   opacity is the picker's alpha multiplied by the **Panel opacity** slider (under **Opacity and
+   fade**).
 
 ## 5b-3. Border offset
 
@@ -345,31 +370,41 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 
 1. `/pm config` → **Expect:** the landing page with the logo, the tagline and the slash-command list,
    which matches `/pm help` exactly.
-2. Click **General** → **Expect:** a two-column grid of settings, section headings, a **Defaults**
-   button top-right in the standard dark/gold style — **not** Blizzard's red stone button. (A red
-   button means it was created too early; see `options-ui-§5`.)
+2. Click **General** → **Expect:** a **tab strip** pinned at the top reading **Master controls |
+   Editing | New panels**, the first tab active (drawn as a disabled button, which is how a Ka0s
+   strip marks selection), a two-column grid of settings under it with **no** section headings — the
+   tab is the heading — and a **Defaults** button top-right in the standard dark/gold style, **not**
+   Blizzard's red stone button. (A red button means it was created too early; see `options-ui-§5`.)
+2b. **Click each tab.** **Expect:** only that tab's controls are on the page, the strip stays put,
+   and clicking the tab you are already on does nothing at all (the active tab is drawn disabled).
+   Master controls has 3 rows, Editing 5 plus a **Recover panels** button under them, New panels 4.
 3. Confirm the scrollbar is **present but grayed out** on a page that fits, and that the body does not
    jump width when you tab between pages.
 4. Toggle **Unlock panels** and **Test mode** → **Expect:** they do exactly what the slash
    commands do.
-5. Click **Panels** → **Expect:** a **Create** section (name box + Create button) and an **Edit**
-   section (a panel dropdown + one editor).
+5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
+   border | Accent bar | Artwork | Opacity and fade** — and, under it, a **Create** section (name
+   box + Create button) and an **Edit** section (a panel dropdown + the active tab's editor).
+   **Create and Edit are not tabs**: they stay on the page whichever tab is selected. With **no
+   panels at all** there is no strip either — the band is given back rather than left standing over
+   the "No panels yet" line.
 5b. **Layout check.** The panel dropdown spans the **full width** with **no "Panel" label** above it,
    and there is **no heading naming the selected panel** between it and the editor box. The gap
    below `Create` and the gap below `Edit` must look **identical** — the dropdown carries no label,
-   so a compensating spacer keeps the two headings evenly spaced. Inside the editor, `Name`,
-   `Position and size`, `Background`, `Border` and `Visibility` each have a divider-flanked heading
-   with breathing room, and no two unrelated controls share a line. Under `Visibility`, **Panel
-   opacity** is alone on its row, with **Faded opacity** and **Show on mouseover only** paired on the
-   next. Compare against KickCD's Icons page for the house rhythm.
+   so a compensating spacer keeps the two headings evenly spaced. Inside the editor there are **no
+   divider-flanked subsection headings any more** — the strip says which subject you are on — and no
+   two unrelated controls share a line. On **Opacity and fade**, **Panel opacity** is alone on its
+   row, with **Faded opacity** and **Show on mouseover only** paired on the next. Compare against
+   KickCD's Icons page for the house rhythm.
 5b-2. **Dropdown vs scrolling.** Open any dropdown on the Panels page (the panel selector, Anchor,
    Frame strata, or either texture picker) and — without closing it — **scroll the page**, first with
    the mouse wheel and then by dragging the scrollbar. **Expect:** the open list closes immediately
    in both cases. It must never be left floating over, or outside, the settings window while the
    control it belongs to scrolls away. Re-open it afterwards to confirm one click still opens it
    (rather than the click being eaten as a toggle-shut).
-5c. **Top action row.** **Reset** and **Delete** sit directly under **Enabled** and **Unlock**, at
-   the top of the editor — not at the bottom. The frame name is **not** a label of its own: it lives
+5c. **Top action row.** On the **General** tab, **Reset** and **Delete** sit directly under
+   **Enabled** and **Unlock**, at the top of the editor — not at the bottom, and not on any other
+   tab. The frame name is **not** a label of its own: it lives
    on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
 5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry updates and
    the **Frame name** on the tooltip does **not** — it is fixed at create, so anchors survive. Try
@@ -637,18 +672,21 @@ that looks different is the finding.
 
 **Parity — "nothing moved". Anything that looks different here is a defect:**
 
-10. Open `/pm config` → **General**. The two-column grid, the section headings
-    (`Master Controls`, `Editing`, `New Panel Defaults`), the row spacing, the header, the gold
-    divider and the breadcrumb `Ka0s Panel Master ▸ General` are all **unchanged**.
-11. **Recover panels** still sits to the immediate right of **Grid size**, on the same line.
-12. The **Panels** page — create box, selector, the whole editor — is untouched.
+10. Open `/pm config` → **General**. The two-column grid, the row spacing, the header, the gold
+    divider and the breadcrumb `Ka0s Panel Master ▸ General` are all **unchanged**. The three
+    sections are the three **tabs** now (`Master controls`, `Editing`, `New panels`) rather than
+    headings down one scrolling page — that change is the tabbed-panel pass, not a defect.
+11. **Recover panels** is a button **under** the Editing tab's last row now, rather than to the
+    right of **Grid size** — which pairs with **Snap to grid** instead. It does the same thing.
+12. The **Panels** page's create box and selector are untouched; the editor below them is one tab at
+    a time.
 13. The scrollbar is **always visible** on every page and grays out when the page fits, so the body
     width does not jump as you tab between pages.
 14. Open the **Default frame strata** dropdown, then **scroll the page**: the list closes. Do it
     again with the scrollbar **drag** rather than the wheel. This is the one behavior the library's
     widget makers know nothing about, and it is re-attached by hand.
-15. `/pm list` — the green header, the azure `[group]` headings in schema order, four-space indented
-    rows, `4 px` on grid size. Only the gold/white escapes changed case, which is invisible.
+15. `/pm list` — the green header, the azure `[group]` headings in schema order (which is tab order
+    now: `Master controls`, `Editing`, `New panels`), four-space indented rows, `4 px` on grid size. Only the gold/white escapes changed case, which is invisible.
 
 ## 17. LibKa0s — the destructive path still has its guard
 

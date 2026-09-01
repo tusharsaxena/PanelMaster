@@ -453,3 +453,57 @@ test("Registry.Reset: puts position and scale back to the defaults too", functio
   assertEqual(live.y, 0)
   assertEqual(live.scale, 1.0, "reset left the panel scaled")
 end)
+
+test("Registry: a new panel is born at the profile's default size", function()
+  -- Width and height joined strata and opacity as new-panel settings in the tabbed-panel pass. Both
+  -- ship at C.PANEL_TEMPLATE's own numbers, so this also pins that the promotion moved nothing.
+  R:DeleteAll()
+  assertEqual(NS.Schema:Default("settings.defaultWidth"), C.PANEL_TEMPLATE.width)
+  assertEqual(NS.Schema:Default("settings.defaultHeight"), C.PANEL_TEMPLATE.height)
+
+  local shipped = R:New("Shipped")
+  assertEqual(shipped.width, C.PANEL_TEMPLATE.width)
+  assertEqual(shipped.height, C.PANEL_TEMPLATE.height)
+
+  NS.Schema:Set("settings.defaultWidth", 500)
+  NS.Schema:Set("settings.defaultHeight", 60)
+  local sized = R:New("Sized")
+  assertEqual(sized.width, 500, "a new panel ignored the default width")
+  assertEqual(sized.height, 60, "a new panel ignored the default height")
+
+  -- An explicit override still wins: preview placeholders and the CLI both pass one.
+  local overridden = R:New("Overridden", { width = 111 })
+  assertEqual(overridden.width, 111, "an override lost to the default")
+
+  -- Existing panels are never retroactively resized.
+  assertEqual(shipped.width, C.PANEL_TEMPLATE.width, "an existing panel was resized by the setting")
+
+  NS.Slash:CliReset("settings.defaultWidth")
+  NS.Slash:CliReset("settings.defaultHeight")
+  R:DeleteAll()
+end)
+
+test("Registry.Reset: lands on the same state a new panel is born in", function()
+  -- R:Reset's own comment is that the two must not drift. They share one function now, which is the
+  -- only reason a third new-panel setting cannot land on one of them and not the other.
+  R:DeleteAll()
+  NS.Schema:Set("settings.defaultWidth", 320)
+  NS.Schema:Set("settings.defaultHeight", 90)
+  NS.Schema:Set("settings.defaultAlpha", 0.5)
+
+  local born = R:New("Born")
+  local edited = R:New("Edited")
+  R:Set(edited.id, "width", 1000)
+  R:Set(edited.id, "height", 1000)
+  R:Reset(edited.id)
+
+  assertEqual(edited.width, born.width, "reset and create disagree about width")
+  assertEqual(edited.height, born.height, "reset and create disagree about height")
+  assertNear(edited.alpha, born.alpha)
+  assertEqual(edited.strata, born.strata)
+
+  NS.Slash:CliReset("settings.defaultWidth")
+  NS.Slash:CliReset("settings.defaultHeight")
+  NS.Slash:CliReset("settings.defaultAlpha")
+  R:DeleteAll()
+end)

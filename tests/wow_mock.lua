@@ -366,6 +366,29 @@ return function()
   -- because the base's LibStub closes over that table — and the base's LibStub is the one thing
   -- here that cannot be replaced: it carries the real NewLibrary the vendored LibKa0s modules
   -- register through. A private table would leave them registered nowhere.
+  -- AceGUI: two recorders the base does not carry, added here rather than in the kit because they
+  -- are the two the PANEL EDITOR needs and no other Ka0s addon builds that page.
+  --
+  -- Without SetTitle the editor's InlineGroup raised on its first line, every rebuild was swallowed
+  -- by the page's pcall, and the whole of settings/PanelEditor.lua below buildPanelEditor's first
+  -- statement was unreachable in this suite -- which is why "the real rebuilder never runs
+  -- headlessly" used to be written down as a fact about the page rather than about the mock.
+  local aceGUI = M.__libs["AceGUI-3.0"]
+  local baseCreate = aceGUI.Create
+  function aceGUI:Create(wtype)
+    local w = baseCreate(self, wtype)
+    if w then
+      if not w.SetTitle then function w:SetTitle(v) self.title = v; return self end end
+      -- The artwork path box asks its underlying editbox whether it has focus before overwriting
+      -- what the user is typing. A widget with no `editbox` answers nil, which the addon handles;
+      -- one that HAS to answer is the case the harness could not reach.
+      if wtype == "EditBox" and not w.editbox then
+        w.editbox = { HasFocus = function() return false end }
+      end
+    end
+    return w
+  end
+
   local libs = M.__libs
   -- AceDB, including its CALLBACK surface. The callbacks are modeled rather than stubbed because
   -- switching profiles swaps `db.profile` wholesale — if the addon does not react, the previous

@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-732%2F732_passing-green)
+![Tests](https://img.shields.io/badge/Tests-743%2F743_passing-green)
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
@@ -118,35 +118,41 @@ alone. Hover the **Panel name** box in the settings window to see the current on
 ### Settings panel
 
 Open it with `/pm config`, or find **Ka0s Panel Master** in the game's own Settings ▸ AddOns list. It
-has a landing page and three tabs beneath it:
+has a landing page and three pages beneath it:
 
-| Tab | Covers |
+| Page | Covers |
 |---|---|
 | Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. |
-| General | Every addon-wide setting: the master switch, unlock and test mode, the debug console, the snap grid, and the strata and opacity new panels start with. |
-| Panels | The panels themselves — create, rename, copy, reset and delete them, and edit the selected one's size, position, background, border, accent bar and fading. |
+| General | Every addon-wide setting, under three tabs: **Master controls**, **Editing** and **New panels**. |
+| Panels | The panels themselves — create, rename, copy, reset and delete them, and edit the selected one under six tabs: **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
 | Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
 
-**General** carries these:
+**General** carries these, a tab at a time:
 
-| Setting | What it does |
-|---|---|
-| Enable panels | Master switch. Off hides every panel without deleting any. |
-| Unlock panels | Show every panel with a drag handle and a name label. Resets when you reload. |
-| Test mode | Put three sample panels on screen. |
-| Debug console | Show the debug window. Resets when you reload. |
-| Show names while unlocked | Print each panel's name across it while unlocked. |
-| Snap to grid | Round a dragged panel's position to the grid size below. |
-| Grid size | How coarse that grid is, in screen units. |
-| Default frame strata | The layer new panels start in. |
-| Default opacity | How see-through new panels start out. |
+| Tab | Setting | What it does |
+|---|---|---|
+| Master controls | Enable panels | Master switch. Off hides every panel without deleting any. |
+| Master controls | Test mode | Put three sample panels on screen. |
+| Master controls | Debug console | Show the debug window. Resets when you reload. |
+| Editing | Unlock panels | Show every panel with a drag handle and a name label. Resets when you reload. |
+| Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
+| Editing | Snap to grid | Round a dragged panel's position to the grid size below. |
+| Editing | Grid size | How coarse that grid is, in screen units. |
+| Editing | Unlock outline thickness | How thick the gold outline around an unlocked panel is. Raise it if you are hunting for a small panel on a busy screen. |
+| Editing | Recover panels | A button under the tab rather than a setting: brings any panel whose anchor has ended up beyond a screen edge back into view. The same thing `/pm recover` does. |
+| New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
+| New panels | Default frame strata | The layer new panels start in. |
+| New panels | Default opacity | How see-through new panels start out. |
 
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
 your panels immediately.
 
 On **Panels**, type a name at the top and press Enter (or click **Okay**), then pick any panel from
 the dropdown to edit it. One panel is shown at a time, so the page stays the same size whether you
-have two panels or twenty. Each panel's editor has:
+have two panels or twenty. The create box and the panel picker stay at the top whichever tab you are
+on; everything below is one tab at a time — **General** (identity, on/off, reset and delete),
+**Position and size**, **Background and border**, **Accent bar**, **Artwork**, and **Opacity and
+fade**. Each panel's editor has:
 
 | Control | What it does |
 |---|---|

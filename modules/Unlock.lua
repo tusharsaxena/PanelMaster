@@ -72,6 +72,22 @@ local function ensureOverlay(f)
   return o
 end
 
+-- The outline's thickness, in UI units: the player's `settings.unlockOutlineSize`, clamped, with
+-- C.UNLOCK_OUTLINE_PX standing in when there is no db to read yet.
+--
+-- CLAMPED HERE and not only in the schema's validate. The slider cannot produce anything outside
+-- the bounds, but SavedVariables can: this value is read straight off disk, and a hand-edited 0
+-- would draw an outline nobody can see, which reads as unlock mode being broken rather than as a
+-- setting being wrong. Published on the module so the headless suite can assert on the arithmetic
+-- without a frame (there are no textures in the harness).
+function U.OutlineSize()
+  local px = tonumber(NS.db and NS.db.profile and NS.db.profile.settings
+    and NS.db.profile.settings.unlockOutlineSize) or C.UNLOCK_OUTLINE_PX
+  if px < C.MIN_UNLOCK_OUTLINE then return C.MIN_UNLOCK_OUTLINE end
+  if px > C.MAX_UNLOCK_OUTLINE then return C.MAX_UNLOCK_OUTLINE end
+  return px
+end
+
 local function layoutOutline(f, o, px)
   local e = o.edges
   e.TOP:ClearAllPoints()
@@ -139,7 +155,7 @@ function U:Decorate(f, rec)
   o.frame:SetFrameLevel((f:GetFrameLevel() or 0) + C.UNLOCK_FRAME_LEVEL)
 
   local rgba = C.UNLOCK_OUTLINE_RGB
-  layoutOutline(f, o, C.UNLOCK_OUTLINE_PX)
+  layoutOutline(f, o, U.OutlineSize())
   for _, tex in pairs(o.edges) do
     tex:SetColorTexture(rgba[1], rgba[2], rgba[3], rgba[4])
     tex:Show()

@@ -352,3 +352,40 @@ test("Unlock: the overlay follows the panel's level when the panel's level chang
     f:GetFrameLevel() + NS.Constants.UNLOCK_FRAME_LEVEL)
   U:SetUnlocked(false)
 end)
+
+test("Unlock: the outline thickness comes from the setting, and ships at the old literal", function()
+  -- Promoted from the hardcoded C.UNLOCK_OUTLINE_PX in the tabbed-panel pass. The DEFAULT is the
+  -- literal it replaced, which is the whole safety property: an install that never touches the
+  -- slider draws exactly the outline it always drew.
+  local C = NS.Constants
+  assertEqual(NS.Schema:Default("settings.unlockOutlineSize"), C.UNLOCK_OUTLINE_PX,
+    "the shipped default no longer matches the literal it replaced, so every install just moved")
+
+  NS.Schema:Set("settings.unlockOutlineSize", 5)
+  assertEqual(U.OutlineSize(), 5, "the overlay does not read the setting")
+
+  NS.Schema:Set("settings.unlockOutlineSize", C.UNLOCK_OUTLINE_PX)
+  assertEqual(U.OutlineSize(), C.UNLOCK_OUTLINE_PX)
+end)
+
+test("Unlock: a hand-edited outline thickness is clamped, not drawn", function()
+  -- The slider cannot produce these; SavedVariables can, and an outline of 0 is a panel that cannot
+  -- be found in unlock mode rather than an error anybody would see.
+  local C = NS.Constants
+  local settings = NS.db.profile.settings
+  local before = settings.unlockOutlineSize
+
+  settings.unlockOutlineSize = 0
+  assertEqual(U.OutlineSize(), C.MIN_UNLOCK_OUTLINE, "a zero outline was drawn as zero")
+  settings.unlockOutlineSize = 4000
+  assertEqual(U.OutlineSize(), C.MAX_UNLOCK_OUTLINE, "an absurd outline was drawn at full size")
+  settings.unlockOutlineSize = "thick"
+  assertEqual(U.OutlineSize(), C.UNLOCK_OUTLINE_PX, "a non-number did not fall back to the shipped value")
+  settings.unlockOutlineSize = nil
+  assertEqual(U.OutlineSize(), C.UNLOCK_OUTLINE_PX, "a missing value did not fall back")
+
+  settings.unlockOutlineSize = before
+  -- And the schema refuses the same values the clamp exists for.
+  assertFalse((NS.Schema:Set("settings.unlockOutlineSize", 0)))
+  assertFalse((NS.Schema:Set("settings.unlockOutlineSize", 4000)))
+end)

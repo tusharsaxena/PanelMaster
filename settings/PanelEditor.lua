@@ -7,9 +7,10 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 
 -- ── The Panels subcategory's body ───────────────────────────────────────────────
--- One editor block per panel, plus the create control. This is the structural page: its content
--- depends on how many panels exist, so it lives behind `rebuilders` and is repainted only when the
--- SET of panels changes (options-ui-§11), never on every OnShow.
+-- The create control, the panel selector, and one panel's editor under a six-tab strip. This is the
+-- structural page: its content depends on how many panels exist, so it lives behind `rebuilders`
+-- and is repainted only when the SET of panels changes (options-ui-§11) or when a tab is clicked,
+-- never on every OnShow.
 --
 -- It lives in its own file rather than in settings/Panel.lua because the editor is the largest thing
 -- on the page by a wide margin and has nothing to do with the page's chrome (layout-§1 permits an
@@ -138,12 +139,57 @@ function pageAction.copyFrom(widget, rec, sourceID)
   print(("copied settings from '%s'"):format(tostring(result)))
 end
 
+-- ── The editor's tabs (options-ui-§13) ──────────────────────────────────────────
+-- The six subjects one panel is edited under, in strip order. This page's content is BESPOKE --
+-- a panel is a registry record, not a set of schema rows with paths -- so H.RenderTabbedSchema has
+-- nothing here to partition and the strip is drawn directly with H.TabStrip, exactly as the
+-- reference implementation draws its own two bespoke pages.
+--
+-- The strip is only the EDITOR's. "Create" and "Edit" stay untabbed at the top of the scroll,
+-- above whichever tab is showing: making a panel and choosing which panel to work on are not one
+-- of the six subjects, and a tab you have to leave to pick a different panel would be one.
+--
+-- Named constants rather than repeated literals, because each one is used three times -- the tab
+-- button, the section it dispatches to, and the strip's order array -- and a typo in any of the
+-- three is a tab that draws an empty editor.
+--
+-- "Background" and "Border" used to be two subsections of two and four controls. They are one tab:
+-- the fill and the edge are two halves of one question, and a two-control tab is not a subject.
+-- "Visibility" is now "Opacity and fade", which is what its three controls actually are -- the old
+-- name promised the where/when rules of a visibility engine this addon does not have.
+local TAB_GENERAL  = "General"
+local TAB_POSITION = "Position and size"
+local TAB_SURFACE  = "Background and border"
+local TAB_ACCENT   = "Accent bar"
+local TAB_ARTWORK  = "Artwork"
+local TAB_FADE     = "Opacity and fade"
+
+-- Strip order: what you reach for first (which panel, is it on), then where it sits, then the three
+-- appearance tabs read together, then the one you set once.
+local EDITOR_TABS = {
+  TAB_GENERAL, TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
+}
+
+-- Published for the partition case in tests/test_schema.lua, which is the only reader outside this
+-- file: AceGUI is stubbed in the harness, so the strip itself is not observable and the ORDER is
+-- the part a test can hold onto.
+E.TABS = EDITOR_TABS
+
+-- Membership, so a stale `ctx.activeTab` -- one left over from a build before a tab was renamed --
+-- heals to the first tab instead of drawing an editor with nothing in it.
+local IS_EDITOR_TAB = {}
+for _, name in ipairs(EDITOR_TABS) do IS_EDITOR_TAB[name] = true end
+
 -- ── Editor layout constants ─────────────────────────────────────────────────────
 -- Vertical rhythm inside the panel editor. Named, never inlined (options-ui-§8), and deliberately
--- three distinct sizes so the spacing itself communicates structure: a big gap means "new part of
--- the page", a medium one "new group of settings", a small one "still the same thought".
+-- two distinct sizes so the spacing itself communicates structure: a big gap means "new part of
+-- the page", a small one "still the same thought".
+--
+-- The middle size is gone with the subsection headings it spaced. The editor's six subsections are
+-- TABS now, and a tab is announced by the strip rather than by a divider-flanked heading 14px down
+-- the page -- so `editorHeading` and the EDITOR_SECTION_GAP it was the only caller of both went
+-- with them.
 local EDITOR_SELECT_GAP  = 20   -- panel dropdown → the editor box
-local EDITOR_SECTION_GAP = 14   -- between subsections inside the editor
 local EDITOR_ROW_GAP     = 6    -- between rows within one subsection
 -- The height an AceGUI control's label row occupies (a labeled Dropdown is 40 tall, an unlabeled
 -- one 26). A section heading is followed by a fixed gap, so a control with NO label starts 14px
@@ -197,17 +243,6 @@ local function editorSpacer(parent, height)
   sp:SetFullWidth(true)
   sp:SetHeight(height)
   parent:AddChild(sp)
-end
-
--- A subsection heading inside the editor: the same divider-flanked Heading the page-level sections
--- use, at the DEFAULT font rather than the larger one, so it reads as a level below them.
-local function editorHeading(parent, text)
-  editorSpacer(parent, EDITOR_SECTION_GAP)
-  local h = AceGUI:Create("Heading")
-  h:SetText(text)
-  h:SetFullWidth(true)
-  parent:AddChild(h)
-  editorSpacer(parent, EDITOR_ROW_GAP)
 end
 
 -- ── Per-editor scalar refreshers (options-ui-§11) ───────────────────────────────
@@ -477,448 +512,497 @@ local function buildPanelEditor(ctx, parent, rec)
     return cb
   end
 
-  -- ── General ──
+  -- ── The tabs ──
+  -- One function per tab, dispatched on ctx.activeTab below. The strip IS the heading, so
+  -- no section draws one of its own any more; and only the active tab is built, which is
+  -- why every control registers its refresher from inside its own section rather than
+  -- from the top of this function.
+  local sections = {}
+
   -- Identity first, then the switches, then the two whole-panel actions. Reading order matches
   -- decision order: which panel is this, is it on, and am I done with it.
-  editorHeading(group, "General")
+  sections[TAB_GENERAL] = function()
+    -- Identity first, then the switches, then the two whole-panel actions. Reading order matches
+    -- decision order: which panel is this, is it on, and am I done with it.
 
-  local nameRow = editorRow(group)
+    local nameRow = editorRow(group)
 
-  local nameBox = AceGUI:Create("EditBox")
-  nameBox:SetLabel("Panel name")
-  nameBox:SetRelativeWidth(0.5)
-  nameBox:SetText(rec.name)
-  -- Renaming changes the selector entry and every label the panel appears under, so it is
-  -- structural (the frame name is NOT affected — it is stamped at create): MSG_PANELS rebuilds
-  -- the page once, and this box is one of the widgets that rebuild releases. Nothing below the call
-  -- may touch `widget` on the success path.
-  --
-  -- No refresher either — the box is the one control the user may be mid-edit in, and a MSG_PANEL
-  -- arriving while they type would overwrite what they had typed.
-  nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
-    pageAction.rename(widget, rec, text)
-  end)
-  -- The frame name lives in the TOOLTIP rather than as a second label beside the box. It is
-  -- reference information you need once, when wiring something else up to this panel — not
-  -- something worth a permanent line of chrome in the editor.
-  attachTooltip(nameBox, "Panel name",
-    ("Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor to this frame by name. "
-     .. "It is fixed when the panel is created and does not change when you rename the panel, so "
-     .. "anything anchored to it keeps working.")
-      :format(NS.Registry.FrameName(rec)))
-  nameRow:AddChild(nameBox)
+    local nameBox = AceGUI:Create("EditBox")
+    nameBox:SetLabel("Panel name")
+    nameBox:SetRelativeWidth(0.5)
+    nameBox:SetText(rec.name)
+    -- Renaming changes the selector entry and every label the panel appears under, so it is
+    -- structural (the frame name is NOT affected — it is stamped at create): MSG_PANELS rebuilds
+    -- the page once, and this box is one of the widgets that rebuild releases. Nothing below the call
+    -- may touch `widget` on the success path.
+    --
+    -- No refresher either — the box is the one control the user may be mid-edit in, and a MSG_PANEL
+    -- arriving while they type would overwrite what they had typed.
+    nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
+      pageAction.rename(widget, rec, text)
+    end)
+    -- The frame name lives in the TOOLTIP rather than as a second label beside the box. It is
+    -- reference information you need once, when wiring something else up to this panel — not
+    -- something worth a permanent line of chrome in the editor.
+    attachTooltip(nameBox, "Panel name",
+      ("Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor to this frame by name. "
+       .. "It is fixed when the panel is created and does not change when you rename the panel, so "
+       .. "anything anchored to it keeps working.")
+        :format(NS.Registry.FrameName(rec)))
+    nameRow:AddChild(nameBox)
 
-  -- Copy every appearance setting from another panel. Position is deliberately not copied — see
-  -- Registry.CopyFrom — so the panel takes on the other's look without moving on top of it.
-  local others, order = {}, {}
-  for _, other in ipairs(panelsByName()) do
-    if other.id ~= rec.id then
-      others[other.id] = other.name
-      order[#order + 1] = other.id
+    -- Copy every appearance setting from another panel. Position is deliberately not copied — see
+    -- Registry.CopyFrom — so the panel takes on the other's look without moving on top of it.
+    local others, order = {}, {}
+    for _, other in ipairs(panelsByName()) do
+      if other.id ~= rec.id then
+        others[other.id] = other.name
+        order[#order + 1] = other.id
+      end
     end
-  end
 
-  local copyFrom = AceGUI:Create("Dropdown")
-  trackDropdown(ctx, copyFrom)
-  copyFrom:SetLabel("Copy settings from panel")
-  copyFrom:SetRelativeWidth(0.5)
-  copyFrom:SetList(others, order)
-  -- Deliberately valueless: this is an ACTION, not a stored setting. Showing a "current" entry would
-  -- imply an ongoing link between the two panels, when the copy is a one-off.
-  copyFrom:SetValue(nil)
-  if #order == 0 then
-    copyFrom:SetDisabled(true)
-  end
-  -- Every control in this editor now holds a stale value — but CopyFrom broadcasts MSG_PANEL, and
-  -- the page answers that with an in-place refresh, so no widget is released and this callback can
-  -- go on to reset its own dropdown afterwards.
-  copyFrom:SetCallback("OnValueChanged", function(widget, _, sourceID)
-    pageAction.copyFrom(widget, rec, sourceID)
-  end)
-  attachTooltip(copyFrom, "Copy settings from panel",
-    #order == 0
-      and "Make another panel first, then you can copy its settings onto this one."
-      or ("Take on another panel's appearance \226\128\148 size, textures, colors, border and "
-          .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
-  nameRow:AddChild(copyFrom)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local switches = editorRow(group)
-
-  local enabled = AceGUI:Create("CheckBox")
-  enabled:SetLabel("Enabled")
-  enabled:SetRelativeWidth(0.5)
-  enabled:SetValue(rec.enabled ~= false)
-  enabled:SetCallback("OnValueChanged", function(_, _, v)
-    NS.Registry:Set(rec.id, "enabled", v and true or false)
-  end)
-  attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
-  switches:AddChild(enabled)
-  -- `~= false`, not truthiness: a record that predates the field is enabled, which is what the
-  -- initial SetValue above says too.
-  addRefresher(ctx, rec, function(live) enabled:SetValue(live.enabled ~= false) end)
-
-  -- Per-panel unlock, alongside Enabled. The global unlock is all-or-nothing; this one puts a drag
-  -- handle on just the panel being edited, which is what you want with a dozen of them on screen.
-  local unlocked = AceGUI:Create("CheckBox")
-  unlocked:SetLabel("Unlock")
-  unlocked:SetRelativeWidth(0.5)
-  unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id))
-  unlocked:SetCallback("OnValueChanged", function(widget, _, v)
-    local result = NS.Unlock:SetPanelUnlocked(rec.id, v and true or false)
-    -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
-    -- rather than claiming a state the panel is not in.
-    if result == nil then widget:SetValue(false) end
-  end)
-  attachTooltip(unlocked, "Unlock",
-    "Give just this panel a drag handle and a name label, so it can be moved. "
-    .. "Session-only \226\128\148 always locked again after a reload.")
-  switches:AddChild(unlocked)
-  -- No refresher: per-panel unlock is session state (NS.State.unlockedPanels), not a record field,
-  -- so no MSG_PANEL ever describes it.
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local actions = editorRow(group)
-
-  local resetBtn = makePairButton("Reset", function() pageAction.reset(rec) end)
-  attachTooltip(resetBtn, "Reset",
-    "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors and "
-    .. "all. Its name is kept, so anything anchored to it stays anchored.")
-  actions:AddChild(resetBtn)
-
-  local deleteBtn = makePairButton("Delete", function() pageAction.delete(rec) end)
-  attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
-  actions:AddChild(deleteBtn)
-
-  -- ── Position and size ──
-  editorHeading(group, "Position and size")
-
-  local sizeRow = editorRow(group)
-  numberField(sizeRow, "Width", "width", C.MIN_SIZE, C.MAX_SIZE)
-  numberField(sizeRow, "Height", "height", C.MIN_SIZE, C.MAX_SIZE)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local offsetRow = editorRow(group)
-  numberField(offsetRow, "X offset", "x", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
-  numberField(offsetRow, "Y offset", "y", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local anchorRow = editorRow(group)
-  tokenDropdown(anchorRow, "Anchor", "point", C.POINTS,
-    "Which corner or edge of the screen the offsets are measured from.")
-  tokenDropdown(anchorRow, "Frame strata", "strata", C.STRATA,
-    "Which layer the panel sits in. LOW keeps it under essentially all interface frames, which is "
-    .. "what a backdrop usually wants. DIALOG and above will cover normal UI.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  -- Full width, spanning both columns. Scale is the one control on this page that acts on
-  -- EVERYTHING above it at once — width, height, border, accent bars and artwork together — so it
-  -- reads as a footer to the section rather than as one of a pair, and pairing it with any single
-  -- neighbor would imply a relationship it does not have.
-  local scaleRow = editorRow(group)
-  numberField(scaleRow, "Panel scale", "scale",
-    C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, 0.05,
-    "Scales the whole panel \226\128\148 its size, its border, its accent bars and its artwork "
-    .. "\226\128\148 as one piece.\n\nThis is not the same as changing Width and Height: those "
-    .. "resize the panel and leave the border and bars at the thickness you set, while this "
-    .. "magnifies all of it together, the way the game's own UI scale does.\n\nWidth and Height "
-    .. "keep reading the numbers you typed; what changes is how big those turn out on screen. The "
-    .. "panel is anchored in its own scaled units, so a scaled panel also moves relative to its "
-    .. "anchor \226\128\148 nudge the offsets afterwards if it matters.", 1.0)
-
-  -- ── Background ──
-  editorHeading(group, "Background")
-
-  local bgRow = editorRow(group)
-  makeMediaDropdown(ctx, bgRow, rec, "bgTexture", "Background texture",
-    "The texture the panel is filled with. 'Solid' is a flat color; 'None' draws no fill.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local bgColorRow = editorRow(group)
-  -- The fill's own opacity lives in this color's alpha. Panel opacity (under Visibility) is a
-  -- separate, panel-wide multiplier — see the note there.
-  makeColorPair(ctx, bgColorRow, rec, "bgColor", "Background color")
-
-  -- ── Border ──
-  editorHeading(group, "Border")
-
-  local borderRow = editorRow(group)
-  makeMediaDropdown(ctx, borderRow, rec, "borderTexture", "Border texture",
-    "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it.")
-  numberField(borderRow, "Border size", "borderSize", C.MIN_BORDER, C.MAX_BORDER, 1,
-    "Border thickness. 0 removes the border entirely.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local borderOffsetRow = editorRow(group)
-  numberField(borderOffsetRow, "Border offset", "borderOffset",
-    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-    "How far the border sits from the panel's edge. Positive pushes it outward, "
-    .. "negative pulls it inward.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local borderColorRow = editorRow(group)
-  makeColorPair(ctx, borderColorRow, rec, "borderColor", "Border color")
-
-  -- ── Accent bar ──
-  editorHeading(group, "Accent bar")
-
-  local accentRow = editorRow(group)
-  boolField(accentRow, "Enable accent bar", "accentEnabled",
-    "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels. "
-    .. "Off by default.")
-
-  makeMediaDropdown(ctx, accentRow, rec, "accentTexture", "Accent bar texture",
-    "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
-    .. "'Solid' is a flat color.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local edgeLabel = AceGUI:Create("Label")
-  edgeLabel:SetFullWidth(true)
-  edgeLabel:SetText("|cffffd100Edges|r")
-  group:AddChild(edgeLabel)
-  local edgeRow = editorRow(group)
-  makeEdgeChecks(ctx, edgeRow, rec)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentSizeRow = editorRow(group)
-  numberField(accentSizeRow, "Accent bar thickness", "accentThickness",
-    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
-    "How thick the accent bar is, in screen units.")
-  numberField(accentSizeRow, "Accent bar offset", "accentOffset",
-    C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
-    "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
-    .. "which is the look this is modeled on; 0 sits flush; negative overlaps the panel.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentColorRow = editorRow(group)
-  makeColorPair(ctx, accentColorRow, rec, "accentColor", "Accent bar color")
-
-  -- The bar's own border. Same four controls as the panel's, in the same order, so the two read
-  -- alike — the only difference is what they outline.
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentBorderRow = editorRow(group)
-  makeMediaDropdown(ctx, accentBorderRow, rec, "accentBorderTexture", "Accent bar border texture",
-    "The edge style drawn around the accent bar. 'None' removes it, as does a size of 0.")
-  numberField(accentBorderRow, "Accent bar border size", "accentBorderSize",
-    C.MIN_BORDER, C.MAX_BORDER, 1,
-    "Thickness of the accent bar's own border. 0 removes it entirely, which is the default.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentBorderOffsetRow = editorRow(group)
-  numberField(accentBorderOffsetRow, "Accent bar border offset", "accentBorderOffset",
-    C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-    "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local accentBorderColorRow = editorRow(group)
-  makeColorPair(ctx, accentBorderColorRow, rec, "accentBorderColor", "Accent bar border color")
-
-  -- ── Artwork ──
-  -- Last of the appearance sections, and deliberately so: artwork is drawn INTO the panel the three
-  -- sections above describe, so it reads as a decision you make once the panel itself looks right.
-  --
-  -- The dropdowns are all label-carrying option lists rather than raw tokens — see optionDropdown.
-  editorHeading(group, "Artwork")
-
-  -- Full width. Catalog labels carry their whole derived category, so a row reads
-  -- "Faction -> Expansion -> 12 Midnight: Harati" — half a row truncates that to uselessness.
-  local artRow = editorRow(group)
-
-  -- Built from Artwork.List() rather than from the catalog, because that function already places
-  -- the two reserved entries where they were agreed to go ("None" first, "Custom path" last) and
-  -- prefixes each catalog row with its category. Rebuilt per editor build for the same reason the
-  -- media lists are: an art pack appending to the catalog may well have loaded after this addon.
-  local artOptions = {}
-  for i, entry in ipairs(NS.Artwork.List()) do
-    artOptions[i] = { value = entry.id, label = entry.label }
-  end
-  optionDropdown(artRow, "Artwork", "artTexture", artOptions,
-    "The image drawn inside this panel. 'None' draws nothing at all, which is what every panel "
-    .. "starts as. 'Custom path\226\128\166' uses the file you name below instead of a bundled "
-    .. "piece.", 1.0)
-
-  editorSpacer(group, EDITOR_ROW_GAP)
-  -- Half a row each, sharing the line with Fit to artwork. The path box was full width once, on the
-  -- reasoning that a texture path is long — which is true, and it still scrolls horizontally when it
-  -- has to. Pairing them costs the box some visible characters and buys the button a home beside the
-  -- other artwork controls rather than a row of its own with empty space next to it.
-  local artPathRow = editorRow(group)
-  local pathBox = AceGUI:Create("EditBox")
-  pathBox:SetLabel("Custom texture path")
-  pathBox:SetRelativeWidth(BUTTON_PAIR_REL)
-  local function applyArtPath(live)
-    -- The disabled state is pushed unconditionally: it tracks artTexture, and a stale one would let
-    -- you type into a box whose contents nothing reads.
-    pathBox:SetDisabled(live.artTexture ~= C.ARTWORK_CUSTOM)
-    -- The TEXT is not, while the box has focus. This is the one control in the editor holding a
-    -- half-typed value, and a MSG_PANEL from somewhere else entirely — a drag, a `/pm panel set`,
-    -- another field in this very editor — would otherwise wipe the path mid-keystroke. The rename
-    -- box solves the same problem by having no refresher at all; this one cannot, because it has a
-    -- disabled state to keep honest.
-    local eb = pathBox.editbox
-    if eb and eb.HasFocus and eb:HasFocus() then return end
-    pathBox:SetText(live.artCustomPath or "")
-  end
-  applyArtPath(rec)
-  pathBox:SetCallback("OnEnterPressed", function(_, _, text)
-    NS.Registry:Set(rec.id, "artCustomPath", text)
-  end)
-  attachTooltip(pathBox, "Custom texture path",
-    "A texture file of your own, given as a full path \226\128\148 either one of the game's own, "
-    .. "like |cffffff00Interface\\DialogFrame\\UI-DialogBox-Gold-Dragon|r, or your own, like "
-    .. "|cffffff00Interface\\AddOns\\MyAddon\\art\\logo.tga|r. Only used while Artwork is set "
-    .. "to 'Custom path\226\128\166'.\n\nWoW loads TGA and BLP files whose width and height are "
-    .. "both powers of two. Anything else draws as a green square or as nothing, with no error.")
-  artPathRow:AddChild(pathBox)
-  addRefresher(ctx, rec, applyArtPath)
-
-  -- A BUTTON rather than a checkbox, because fitting a panel to its art is something you do once,
-  -- not a mode you leave running. As a stored flag it reshaped the panel on every width change and
-  -- overwrote a height typed by hand, which is why it shipped off by default and why `height` needed
-  -- an explicit carve-out to stop the two fighting. Pressed once, the height is an ordinary field
-  -- again and stays where it is put.
-  local fitBtn = makePairButton("Fit to artwork", function()
-    local ok, w, h = NS.Registry:FitToArtwork(rec.id)
-    -- Said out loud either way. The two failures — no artwork, or art that is not installed — look
-    -- identical to a silent no-op, and a button that does nothing without saying why reads as
-    -- broken. On failure the second return is the reason, not a width.
-    if ok then
-      print(("fitted '%s' to its artwork (%dx%d)."):format(rec.name, w, h))
-    else
-      print(w)
+    local copyFrom = AceGUI:Create("Dropdown")
+    trackDropdown(ctx, copyFrom)
+    copyFrom:SetLabel("Copy settings from panel")
+    copyFrom:SetRelativeWidth(0.5)
+    copyFrom:SetList(others, order)
+    -- Deliberately valueless: this is an ACTION, not a stored setting. Showing a "current" entry would
+    -- imply an ongoing link between the two panels, when the copy is a one-off.
+    copyFrom:SetValue(nil)
+    if #order == 0 then
+      copyFrom:SetDisabled(true)
     end
-  end)
-  attachTooltip(fitBtn, "Fit to artwork",
-    "Resizes this panel to the artwork's |cffffff00exact pixel size|r.\n\nA bundled piece is "
-    .. "1024x1024 and gives a square panel that big; a three-section Sunn bar is 1536x256 and gives "
-    .. "a long thin one. A composed bar uses the size of the WHOLE bar, not one section.\n\nOnly "
-    .. "when you press this \226\128\148 nothing resizes on its own. Very large art gives a very "
-    .. "large panel, so drag it back to a size you want afterwards; press this again any time to "
-    .. "return to the artwork's own size.")
-  artPathRow:AddChild(fitBtn)
+    -- Every control in this editor now holds a stale value — but CopyFrom broadcasts MSG_PANEL, and
+    -- the page answers that with an in-place refresh, so no widget is released and this callback can
+    -- go on to reset its own dropdown afterwards.
+    copyFrom:SetCallback("OnValueChanged", function(widget, _, sourceID)
+      pageAction.copyFrom(widget, rec, sourceID)
+    end)
+    attachTooltip(copyFrom, "Copy settings from panel",
+      #order == 0
+        and "Make another panel first, then you can copy its settings onto this one."
+        or ("Take on another panel's appearance \226\128\148 size, textures, colors, border and "
+            .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
+    nameRow:AddChild(copyFrom)
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artFillRow = editorRow(group)
-  optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
-    "How the image is sized inside the panel.\n\n"
-    .. "|cffffff00Native size|r draws it at its authored pixel size, aspect intact.\n"
-    .. "|cffffff00Stretch|r matches the panel exactly and distorts the aspect to do it.\n"
-    .. "|cffffff00Fill (crop)|r covers the panel with the aspect intact, cropping whatever "
-    .. "overflows.\n"
-    .. "|cffffff00Fit (contain)|r shows the whole image with the aspect intact, leaving space on "
-    .. "two sides.\n"
-    .. "|cffffff00Tile|r repeats it at native size across the panel.\n\n"
-    .. "Stretch ignores Scale \226\128\148 a scaled stretch is really Fill or Native size.")
-  tokenDropdown(artFillRow, "Artwork position", "artPoint", C.POINTS,
-    "Which part of the panel the artwork is anchored to, and what the offsets below are measured "
-    .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
-    .. "is nowhere for the art to move to.")
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local switches = editorRow(group)
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artScaleRow = editorRow(group)
-  numberField(artScaleRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
-    "Size multiplier for the artwork.\n\nIgnored entirely by Stretch, which always matches the "
-    .. "panel exactly. Under Fill and Tile the art still covers the panel, so this changes what you "
-    .. "SEE rather than how big the art is drawn: above 1 Fill crops tighter (it zooms in) and Tile "
-    .. "lays down fewer, larger copies.")
-  optionDropdown(artScaleRow, "Rotation", "artRotation", C.ART_ROTATION_OPTIONS,
-    "Turn the artwork. Quarter turns only: those are an exact swap of the texture's corners, with "
-    .. "no blurring and no smeared edges. An arbitrary angle cannot be drawn that cleanly on a "
-    .. "cropped image, so it is not offered.")
+    local enabled = AceGUI:Create("CheckBox")
+    enabled:SetLabel("Enabled")
+    enabled:SetRelativeWidth(0.5)
+    enabled:SetValue(rec.enabled ~= false)
+    enabled:SetCallback("OnValueChanged", function(_, _, v)
+      NS.Registry:Set(rec.id, "enabled", v and true or false)
+    end)
+    attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
+    switches:AddChild(enabled)
+    -- `~= false`, not truthiness: a record that predates the field is enabled, which is what the
+    -- initial SetValue above says too.
+    addRefresher(ctx, rec, function(live) enabled:SetValue(live.enabled ~= false) end)
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artFlipRow = editorRow(group)
-  boolField(artFlipRow, "Flip horizontal", "artFlipH",
-    "Mirror the artwork left to right. Applied BEFORE the rotation, so flipping and then turning "
-    .. "is not the same result as turning and then flipping.")
-  boolField(artFlipRow, "Flip vertical", "artFlipV",
-    "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
+    -- Per-panel unlock, alongside Enabled. The global unlock is all-or-nothing; this one puts a drag
+    -- handle on just the panel being edited, which is what you want with a dozen of them on screen.
+    local unlocked = AceGUI:Create("CheckBox")
+    unlocked:SetLabel("Unlock")
+    unlocked:SetRelativeWidth(0.5)
+    unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id))
+    unlocked:SetCallback("OnValueChanged", function(widget, _, v)
+      local result = NS.Unlock:SetPanelUnlocked(rec.id, v and true or false)
+      -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
+      -- rather than claiming a state the panel is not in.
+      if result == nil then widget:SetValue(false) end
+    end)
+    attachTooltip(unlocked, "Unlock",
+      "Give just this panel a drag handle and a name label, so it can be moved. "
+      .. "Session-only \226\128\148 always locked again after a reload.")
+    switches:AddChild(unlocked)
+    -- No refresher: per-panel unlock is session state (NS.State.unlockedPanels), not a record field,
+    -- so no MSG_PANEL ever describes it.
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artOpacityRow = editorRow(group)
-  numberField(artOpacityRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
-    "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
-    .. "panel's own opacity, so a faded panel fades its art with it.")
-  optionDropdown(artOpacityRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
-    "Where the artwork sits in the panel's stack.\n\n"
-    .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
-    .. "background that is transparent or partly so \226\128\148 with a solid background it is "
-    .. "invisible.\n"
-    .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
-    .. "bar.\n"
-    .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local actions = editorRow(group)
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  -- The color pair gets a row to ITSELF, because makeColorPair emits TWO half-width widgets — the
-  -- swatch and its Class color companion. Sharing the row with anything else puts three half-width
-  -- controls on one line and the third wraps under, which is exactly how it looked in game.
-  --
-  -- The pair is also unconditional now. It used to exist only while the selected art was "tintable",
-  -- so it appeared and vanished as you paged the dropdown and shoved every row below it up and down.
-  -- Every piece takes a tint, and the default tint is white, so the control is always honest.
-  local artColorRow = editorRow(group)
-  makeColorPair(ctx, artColorRow, rec, "artColor", "Artwork color")
+    local resetBtn = makePairButton("Reset", function() pageAction.reset(rec) end)
+    attachTooltip(resetBtn, "Reset",
+      "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors and "
+      .. "all. Its name is kept, so anything anchored to it stays anchored.")
+    actions:AddChild(resetBtn)
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artToneRow = editorRow(group)
-  boolField(artToneRow, "Desaturate", "artDesaturate",
-    "Drains the color out of the artwork before the tint is applied.\n\nThis is what makes "
-    .. "|cffffff00Artwork color|r work properly on full-color art: tinting a gold-and-crimson crest "
-    .. "blue only drags every hue toward blue and muddies it, but draining it to grayscale first "
-    .. "means the tint comes back as a clean blue.")
-  optionDropdown(artToneRow, "Blend mode", "artBlend", C.ART_BLEND_OPTIONS,
-    "How the artwork's pixels combine with what is behind them.\n\n"
-    .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
-    .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
-    .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
+    local deleteBtn = makePairButton("Delete", function() pageAction.delete(rec) end)
+    attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
+    actions:AddChild(deleteBtn)
+  end
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local artOffsetRow = editorRow(group)
-  -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
-  -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
-  numberField(artOffsetRow, "Artwork X offset", "artX",
-    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
-    "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
-    .. "have no room to move in.")
-  numberField(artOffsetRow, "Artwork Y offset", "artY",
-    -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
-    "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
-    .. "have no room to move in.")
+  -- Where the panel is and how big it is, ending on the scale that acts on all of it at once.
+  sections[TAB_POSITION] = function()
+    local sizeRow = editorRow(group)
+    numberField(sizeRow, "Width", "width", C.MIN_SIZE, C.MAX_SIZE)
+    numberField(sizeRow, "Height", "height", C.MIN_SIZE, C.MAX_SIZE)
 
-  editorSpacer(group, EDITOR_ROW_GAP)
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local offsetRow = editorRow(group)
+    numberField(offsetRow, "X offset", "x", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
+    numberField(offsetRow, "Y offset", "y", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
 
-  -- ── Visibility ──
-  editorHeading(group, "Visibility")
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local anchorRow = editorRow(group)
+    tokenDropdown(anchorRow, "Anchor", "point", C.POINTS,
+      "Which corner or edge of the screen the offsets are measured from.")
+    tokenDropdown(anchorRow, "Frame strata", "strata", C.STRATA,
+      "Which layer the panel sits in. LOW keeps it under essentially all interface frames, which is "
+      .. "what a backdrop usually wants. DIALOG and above will cover normal UI.")
 
-  -- Panel opacity gets its own row: it applies whatever else is set, whereas the two controls below
-  -- are a pair that only mean anything together. Putting the checkbox up here beside it implied the
-  -- opposite grouping.
-  --
-  -- "Panel opacity", not "Background opacity". It is the FRAME's alpha, so it fades the border as
-  -- well as the fill, and it multiplies with the alpha already carried by each color. It is also
-  -- the value the mouseover fade rises to — which is why it cannot simply be folded into the
-  -- background color's alpha, however much the two look alike.
-  local opacityRow = editorRow(group)
-  numberField(opacityRow, "Panel opacity", "alpha", 0, 1, 0.05,
-    "How visible the whole panel is \226\128\148 background and border together. Multiplies with "
-    .. "the opacity set in each color. This is also the opacity a mouseover panel fades up to.")
+    editorSpacer(group, EDITOR_ROW_GAP)
+    -- Full width, spanning both columns. Scale is the one control on this page that acts on
+    -- EVERYTHING above it at once — width, height, border, accent bars and artwork together — so it
+    -- reads as a footer to the section rather than as one of a pair, and pairing it with any single
+    -- neighbor would imply a relationship it does not have.
+    local scaleRow = editorRow(group)
+    numberField(scaleRow, "Panel scale", "scale",
+      C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, 0.05,
+      "Scales the whole panel \226\128\148 its size, its border, its accent bars and its artwork "
+      .. "\226\128\148 as one piece.\n\nThis is not the same as changing Width and Height: those "
+      .. "resize the panel and leave the border and bars at the thickness you set, while this "
+      .. "magnifies all of it together, the way the game's own UI scale does.\n\nWidth and Height "
+      .. "keep reading the numbers you typed; what changes is how big those turn out on screen. The "
+      .. "panel is anchored in its own scaled units, so a scaled panel also moves relative to its "
+      .. "anchor \226\128\148 nudge the offsets afterwards if it matters.", 1.0)
+  end
 
-  editorSpacer(group, EDITOR_ROW_GAP)
-  local mouseoverRow = editorRow(group)
-  numberField(mouseoverRow, "Faded opacity", "mouseoverAlpha", 0, 1, 0.05,
-    "How visible the panel is while the cursor is elsewhere. 0 hides it completely. "
-    .. "Only used when 'Show on mouseover only' is ticked.")
+  -- The panel's own surface: the fill inside it and the edge around it.
+  sections[TAB_SURFACE] = function()
+    local bgRow = editorRow(group)
+    makeMediaDropdown(ctx, bgRow, rec, "bgTexture", "Background texture",
+      "The texture the panel is filled with. 'Solid' is a flat color; 'None' draws no fill.")
 
-  boolField(mouseoverRow, "Show on mouseover only", "mouseover",
-    "Keep the panel faded until the cursor is over it. The panel still never takes your clicks.")
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local bgColorRow = editorRow(group)
+    -- The fill's own opacity lives in this color's alpha. Panel opacity (on the Opacity and fade
+    -- tab) is a separate, panel-wide multiplier — see the note there.
+    makeColorPair(ctx, bgColorRow, rec, "bgColor", "Background color")
 
-  -- Delete and Reset are not repeated down here: they have their own actions row up in General, just
-  -- below the Enabled/Unlock switches, so the two irreversible buttons sit together and nowhere near
-  -- the styling controls you scroll past on the way down.
-  editorSpacer(group, EDITOR_ROW_GAP)
+    -- The panel's edge, under the same tab as its fill: two halves of one question -- what the
+    -- panel itself is made of -- and two controls was never a subject of its own.
+    local borderRow = editorRow(group)
+    makeMediaDropdown(ctx, borderRow, rec, "borderTexture", "Border texture",
+      "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it.")
+    numberField(borderRow, "Border size", "borderSize", C.MIN_BORDER, C.MAX_BORDER, 1,
+      "Border thickness. 0 removes the border entirely.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local borderOffsetRow = editorRow(group)
+    numberField(borderOffsetRow, "Border offset", "borderOffset",
+      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
+      "How far the border sits from the panel's edge. Positive pushes it outward, "
+      .. "negative pulls it inward.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local borderColorRow = editorRow(group)
+    makeColorPair(ctx, borderColorRow, rec, "borderColor", "Border color")
+  end
+
+  -- The BenikUI-style strip along a panel's edges, and the strip's own border.
+  sections[TAB_ACCENT] = function()
+    local accentRow = editorRow(group)
+    boolField(accentRow, "Enable accent bar", "accentEnabled",
+      "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels. "
+      .. "Off by default.")
+
+    makeMediaDropdown(ctx, accentRow, rec, "accentTexture", "Accent bar texture",
+      "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
+      .. "'Solid' is a flat color.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local edgeLabel = AceGUI:Create("Label")
+    edgeLabel:SetFullWidth(true)
+    edgeLabel:SetText("|cffffd100Edges|r")
+    group:AddChild(edgeLabel)
+    local edgeRow = editorRow(group)
+    makeEdgeChecks(ctx, edgeRow, rec)
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local accentSizeRow = editorRow(group)
+    numberField(accentSizeRow, "Accent bar thickness", "accentThickness",
+      C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
+      "How thick the accent bar is, in screen units.")
+    numberField(accentSizeRow, "Accent bar offset", "accentOffset",
+      C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
+      "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
+      .. "which is the look this is modeled on; 0 sits flush; negative overlaps the panel.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local accentColorRow = editorRow(group)
+    makeColorPair(ctx, accentColorRow, rec, "accentColor", "Accent bar color")
+
+    -- The bar's own border. Same four controls as the panel's, in the same order, so the two read
+    -- alike — the only difference is what they outline.
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local accentBorderRow = editorRow(group)
+    makeMediaDropdown(ctx, accentBorderRow, rec, "accentBorderTexture", "Accent bar border texture",
+      "The edge style drawn around the accent bar. 'None' removes it, as does a size of 0.")
+    numberField(accentBorderRow, "Accent bar border size", "accentBorderSize",
+      C.MIN_BORDER, C.MAX_BORDER, 1,
+      "Thickness of the accent bar's own border. 0 removes it entirely, which is the default.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local accentBorderOffsetRow = editorRow(group)
+    numberField(accentBorderOffsetRow, "Accent bar border offset", "accentBorderOffset",
+      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
+      "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local accentBorderColorRow = editorRow(group)
+    makeColorPair(ctx, accentBorderColorRow, rec, "accentBorderColor", "Accent bar border color")
+  end
+
+  -- Artwork is drawn INTO the panel the three tabs before it describe, which is why it sits
+  -- after them: it is the decision you make once the panel itself looks right.
+  sections[TAB_ARTWORK] = function()
+    -- The dropdowns are all label-carrying option lists rather than raw tokens — see optionDropdown.
+
+    -- Full width. Catalog labels carry their whole derived category, so a row reads
+    -- "Faction -> Expansion -> 12 Midnight: Harati" — half a row truncates that to uselessness.
+    local artRow = editorRow(group)
+
+    -- Built from Artwork.List() rather than from the catalog, because that function already places
+    -- the two reserved entries where they were agreed to go ("None" first, "Custom path" last) and
+    -- prefixes each catalog row with its category. Rebuilt per editor build for the same reason the
+    -- media lists are: an art pack appending to the catalog may well have loaded after this addon.
+    local artOptions = {}
+    for i, entry in ipairs(NS.Artwork.List()) do
+      artOptions[i] = { value = entry.id, label = entry.label }
+    end
+    optionDropdown(artRow, "Artwork", "artTexture", artOptions,
+      "The image drawn inside this panel. 'None' draws nothing at all, which is what every panel "
+      .. "starts as. 'Custom path\226\128\166' uses the file you name below instead of a bundled "
+      .. "piece.", 1.0)
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    -- Half a row each, sharing the line with Fit to artwork. The path box was full width once, on the
+    -- reasoning that a texture path is long — which is true, and it still scrolls horizontally when it
+    -- has to. Pairing them costs the box some visible characters and buys the button a home beside the
+    -- other artwork controls rather than a row of its own with empty space next to it.
+    local artPathRow = editorRow(group)
+    local pathBox = AceGUI:Create("EditBox")
+    pathBox:SetLabel("Custom texture path")
+    pathBox:SetRelativeWidth(BUTTON_PAIR_REL)
+    local function applyArtPath(live)
+      -- The disabled state is pushed unconditionally: it tracks artTexture, and a stale one would let
+      -- you type into a box whose contents nothing reads.
+      pathBox:SetDisabled(live.artTexture ~= C.ARTWORK_CUSTOM)
+      -- The TEXT is not, while the box has focus. This is the one control in the editor holding a
+      -- half-typed value, and a MSG_PANEL from somewhere else entirely — a drag, a `/pm panel set`,
+      -- another field in this very editor — would otherwise wipe the path mid-keystroke. The rename
+      -- box solves the same problem by having no refresher at all; this one cannot, because it has a
+      -- disabled state to keep honest.
+      local eb = pathBox.editbox
+      if eb and eb.HasFocus and eb:HasFocus() then return end
+      pathBox:SetText(live.artCustomPath or "")
+    end
+    applyArtPath(rec)
+    pathBox:SetCallback("OnEnterPressed", function(_, _, text)
+      NS.Registry:Set(rec.id, "artCustomPath", text)
+    end)
+    attachTooltip(pathBox, "Custom texture path",
+      "A texture file of your own, given as a full path \226\128\148 either one of the game's own, "
+      .. "like |cffffff00Interface\\DialogFrame\\UI-DialogBox-Gold-Dragon|r, or your own, like "
+      .. "|cffffff00Interface\\AddOns\\MyAddon\\art\\logo.tga|r. Only used while Artwork is set "
+      .. "to 'Custom path\226\128\166'.\n\nWoW loads TGA and BLP files whose width and height are "
+      .. "both powers of two. Anything else draws as a green square or as nothing, with no error.")
+    artPathRow:AddChild(pathBox)
+    addRefresher(ctx, rec, applyArtPath)
+
+    -- A BUTTON rather than a checkbox, because fitting a panel to its art is something you do once,
+    -- not a mode you leave running. As a stored flag it reshaped the panel on every width change and
+    -- overwrote a height typed by hand, which is why it shipped off by default and why `height` needed
+    -- an explicit carve-out to stop the two fighting. Pressed once, the height is an ordinary field
+    -- again and stays where it is put.
+    local fitBtn = makePairButton("Fit to artwork", function()
+      local ok, w, h = NS.Registry:FitToArtwork(rec.id)
+      -- Said out loud either way. The two failures — no artwork, or art that is not installed — look
+      -- identical to a silent no-op, and a button that does nothing without saying why reads as
+      -- broken. On failure the second return is the reason, not a width.
+      if ok then
+        print(("fitted '%s' to its artwork (%dx%d)."):format(rec.name, w, h))
+      else
+        print(w)
+      end
+    end)
+    attachTooltip(fitBtn, "Fit to artwork",
+      "Resizes this panel to the artwork's |cffffff00exact pixel size|r.\n\nA bundled piece is "
+      .. "1024x1024 and gives a square panel that big; a three-section Sunn bar is 1536x256 and gives "
+      .. "a long thin one. A composed bar uses the size of the WHOLE bar, not one section.\n\nOnly "
+      .. "when you press this \226\128\148 nothing resizes on its own. Very large art gives a very "
+      .. "large panel, so drag it back to a size you want afterwards; press this again any time to "
+      .. "return to the artwork's own size.")
+    artPathRow:AddChild(fitBtn)
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artFillRow = editorRow(group)
+    optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
+      "How the image is sized inside the panel.\n\n"
+      .. "|cffffff00Native size|r draws it at its authored pixel size, aspect intact.\n"
+      .. "|cffffff00Stretch|r matches the panel exactly and distorts the aspect to do it.\n"
+      .. "|cffffff00Fill (crop)|r covers the panel with the aspect intact, cropping whatever "
+      .. "overflows.\n"
+      .. "|cffffff00Fit (contain)|r shows the whole image with the aspect intact, leaving space on "
+      .. "two sides.\n"
+      .. "|cffffff00Tile|r repeats it at native size across the panel.\n\n"
+      .. "Stretch ignores Scale \226\128\148 a scaled stretch is really Fill or Native size.")
+    tokenDropdown(artFillRow, "Artwork position", "artPoint", C.POINTS,
+      "Which part of the panel the artwork is anchored to, and what the offsets below are measured "
+      .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
+      .. "is nowhere for the art to move to.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artScaleRow = editorRow(group)
+    numberField(artScaleRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
+      "Size multiplier for the artwork.\n\nIgnored entirely by Stretch, which always matches the "
+      .. "panel exactly. Under Fill and Tile the art still covers the panel, so this changes what you "
+      .. "SEE rather than how big the art is drawn: above 1 Fill crops tighter (it zooms in) and Tile "
+      .. "lays down fewer, larger copies.")
+    optionDropdown(artScaleRow, "Rotation", "artRotation", C.ART_ROTATION_OPTIONS,
+      "Turn the artwork. Quarter turns only: those are an exact swap of the texture's corners, with "
+      .. "no blurring and no smeared edges. An arbitrary angle cannot be drawn that cleanly on a "
+      .. "cropped image, so it is not offered.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artFlipRow = editorRow(group)
+    boolField(artFlipRow, "Flip horizontal", "artFlipH",
+      "Mirror the artwork left to right. Applied BEFORE the rotation, so flipping and then turning "
+      .. "is not the same result as turning and then flipping.")
+    boolField(artFlipRow, "Flip vertical", "artFlipV",
+      "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artOpacityRow = editorRow(group)
+    numberField(artOpacityRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
+      "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
+      .. "panel's own opacity, so a faded panel fades its art with it.")
+    optionDropdown(artOpacityRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
+      "Where the artwork sits in the panel's stack.\n\n"
+      .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
+      .. "background that is transparent or partly so \226\128\148 with a solid background it is "
+      .. "invisible.\n"
+      .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
+      .. "bar.\n"
+      .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    -- The color pair gets a row to ITSELF, because makeColorPair emits TWO half-width widgets — the
+    -- swatch and its Class color companion. Sharing the row with anything else puts three half-width
+    -- controls on one line and the third wraps under, which is exactly how it looked in game.
+    --
+    -- The pair is also unconditional now. It used to exist only while the selected art was "tintable",
+    -- so it appeared and vanished as you paged the dropdown and shoved every row below it up and down.
+    -- Every piece takes a tint, and the default tint is white, so the control is always honest.
+    local artColorRow = editorRow(group)
+    makeColorPair(ctx, artColorRow, rec, "artColor", "Artwork color")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artToneRow = editorRow(group)
+    boolField(artToneRow, "Desaturate", "artDesaturate",
+      "Drains the color out of the artwork before the tint is applied.\n\nThis is what makes "
+      .. "|cffffff00Artwork color|r work properly on full-color art: tinting a gold-and-crimson crest "
+      .. "blue only drags every hue toward blue and muddies it, but draining it to grayscale first "
+      .. "means the tint comes back as a clean blue.")
+    optionDropdown(artToneRow, "Blend mode", "artBlend", C.ART_BLEND_OPTIONS,
+      "How the artwork's pixels combine with what is behind them.\n\n"
+      .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
+      .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
+      .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artOffsetRow = editorRow(group)
+    -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
+    -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
+    numberField(artOffsetRow, "Artwork X offset", "artX",
+      -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+      "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
+      .. "have no room to move in.")
+    numberField(artOffsetRow, "Artwork Y offset", "artY",
+      -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+      "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
+      .. "have no room to move in.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+  end
+
+  -- Last, because it is the tab you set once: the panel's own opacity and the mouseover fade.
+  sections[TAB_FADE] = function()
+    -- Panel opacity gets its own row: it applies whatever else is set, whereas the two controls below
+    -- are a pair that only mean anything together. Putting the checkbox up here beside it implied the
+    -- opposite grouping.
+    --
+    -- "Panel opacity", not "Background opacity". It is the FRAME's alpha, so it fades the border as
+    -- well as the fill, and it multiplies with the alpha already carried by each color. It is also
+    -- the value the mouseover fade rises to — which is why it cannot simply be folded into the
+    -- background color's alpha, however much the two look alike.
+    local opacityRow = editorRow(group)
+    numberField(opacityRow, "Panel opacity", "alpha", 0, 1, 0.05,
+      "How visible the whole panel is \226\128\148 background and border together. Multiplies with "
+      .. "the opacity set in each color. This is also the opacity a mouseover panel fades up to.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local mouseoverRow = editorRow(group)
+    numberField(mouseoverRow, "Faded opacity", "mouseoverAlpha", 0, 1, 0.05,
+      "How visible the panel is while the cursor is elsewhere. 0 hides it completely. "
+      .. "Only used when 'Show on mouseover only' is ticked.")
+
+    boolField(mouseoverRow, "Show on mouseover only", "mouseover",
+      "Keep the panel faded until the cursor is over it. The panel still never takes your clicks.")
+
+    -- Delete and Reset are not repeated here: they have their own actions row on the General tab,
+    -- just below the Enabled/Unlock switches, so the two irreversible buttons sit together and on
+    -- the tab that is about the panel's identity rather than among the styling controls.
+    editorSpacer(group, EDITOR_ROW_GAP)
+  end
+
+  -- A stale pointer heals to the first tab rather than leaving the editor blank, the same
+  -- way the library's own RenderTabbedSchema heals one. Cheap on every build, and the
+  -- alternative is a page that shows nothing until the user clicks something.
+  local build = sections[ctx.activeTab] or sections[TAB_GENERAL]
+  build()
 
   parent:AddChild(group)
+end
+
+-- ── The editor's tab strip ──────────────────────────────────────────────────────
+-- Drawn straight onto the page's chrome band with H.TabStrip. `ctx.activeTab` is the one piece of
+-- state it needs, and buildPanelEditor dispatches on the same field, so the strip and the editor
+-- cannot disagree about which tab is showing.
+--
+-- A click re-runs the page's rebuilders rather than re-rendering the whole page: the Create box and
+-- the selector above are untouched by a tab change, and releasing them to build the same two
+-- widgets again would drop whatever the user had typed into the create box.
+local function drawTabStrip(ctx)
+  if not (NS.Helpers and NS.Helpers.TabStrip) then return end
+  if not IS_EDITOR_TAB[ctx.activeTab] then ctx.activeTab = EDITOR_TABS[1] end
+
+  local tabs = {}
+  for i, name in ipairs(EDITOR_TABS) do tabs[i] = { key = name, label = name } end
+
+  NS.Helpers.TabStrip(ctx, {
+    tabs  = tabs,
+    value = ctx.activeTab,
+    onSelect = function(key)
+      if key == ctx.activeTab then return end
+      ctx.activeTab = key
+      runRebuilders(ctx)
+    end,
+  })
+end
+
+-- Give the band back when there is no editor under it. Both of the library's chrome ledgers, and
+-- the reserved height with them: releasing the buttons alone would leave the scroll frame starting
+-- a strip's height down the page with nothing in the gap.
+local function releaseTabStrip(ctx)
+  local H = NS.Helpers
+  if not H then return end
+  if H.__releaseChrome then H.__releaseChrome(ctx) end
+  if H.SetChromeHeight then H.SetChromeHeight(ctx, 0) end
 end
 
 local function buildPanelsPage(ctx)
@@ -976,6 +1060,10 @@ local function buildPanelsPage(ctx)
 
     local records = panelsByName()
     if #records == 0 then
+      -- No panel means no editor, and a tab strip over nothing is chrome for its own sake — so the
+      -- band is released and its height given back, rather than left standing over the empty-state
+      -- line. The strip is rebuilt by the very next rebuild, which is what a create fires.
+      releaseTabStrip(ctx)
       local empty = AceGUI:Create("Label")
       empty:SetFullWidth(true)
       empty:SetText("No panels yet. Type a name above and press Create.")
@@ -983,6 +1071,12 @@ local function buildPanelsPage(ctx)
       if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
       return
     end
+
+    -- The strip, redrawn on every rebuild rather than once at BuildPage: H.TabStrip owns its own
+    -- ledger and drains it, and the ACTIVE tab is drawn as a disabled button, so the highlight can
+    -- only move by rebuilding the buttons. A rebuild is also exactly when the band's height can
+    -- change (a strip that wrapped to two rows on a narrow panel).
+    drawTabStrip(ctx)
 
     -- Keep the selection if it still exists, otherwise fall back to the first panel. A deleted
     -- selection must not leave the page blank with a dropdown pointing at nothing.
@@ -1083,7 +1177,9 @@ end
 function E:WireBus(ctx) wirePanelsBus(ctx) end
 
 -- Emit the page's static furniture (the create box, the two section headings, the selector's
--- container) and install the rebuilder that draws the editor itself. First OnShow only.
+-- container) and install the rebuilder that draws the tab strip and the editor itself. First OnShow
+-- only: the strip and the editor belong to the rebuilder, because both change with the panel list
+-- and with the selected tab, while Create and Edit never do.
 function E:BuildPage(ctx) buildPanelsPage(ctx) end
 
 -- Repaint the selector and the open editor. The one structural entry point: first paint, a page that

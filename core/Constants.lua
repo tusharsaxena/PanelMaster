@@ -559,7 +559,15 @@ C.FRAME_NAME_PREFIX = "PanelMaster_Panel_"
 -- is otherwise near-invisible (low alpha, dark color) can still be found and grabbed.
 C.UNLOCK_OUTLINE_RGB = { 1.00, 0.82, 0.00, 0.90 }
 C.UNLOCK_LABEL_RGB   = { 1.00, 0.82, 0.00 }
+-- The SHIPPED outline thickness, and the fallback modules/Unlock.lua reads when the db is not up
+-- yet. It is no longer the only answer: `settings.unlockOutlineSize` is the setting a player sets,
+-- and it ships at this exact number, so an install that touches nothing is drawn as it always was.
 C.UNLOCK_OUTLINE_PX  = 2
+-- The bounds that thickness is clamped to, on the slider AND on the way out of SavedVariables. A
+-- floor of 1 rather than 0 for the same reason the accent bar's is: "no outline" is not a thing
+-- unlock mode may offer, because the outline is how a near-invisible panel is found at all.
+C.MIN_UNLOCK_OUTLINE = 1
+C.MAX_UNLOCK_OUTLINE = 12
 
 -- ── Media ───────────────────────────────────────────────────────────────────────
 -- Monospace font (JetBrains Mono, OFL) used by the debug console and its copy box. A sanctioned

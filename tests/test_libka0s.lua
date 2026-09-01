@@ -397,17 +397,51 @@ end
 -- O.RefreshPanel — which is the profile-switch fix — the Panels page began building its own
 -- dropdown and checkboxes into the same list, and the counts below silently became wrong.
 --
--- So the window is captured around the render rather than inferred afterwards. Memoized because the
--- render only happens ONCE: SetRenderer's OnShow gate returns early on every later show, so a second
--- capture would be empty and every case after the first would find nothing.
+-- So the window is captured around the render rather than inferred afterwards.
+--
+-- ONE TAB AT A TIME, since the General page became a tab strip (options-ui-§13): a render draws the
+-- ACTIVE group's rows and nothing else, so a single capture answers for one third of the schema.
+-- Each tab is selected and the page re-rendered through the same door a tab click uses -- mark the
+-- ctx dirty, fire OnShow -- and the captures are concatenated. A test that wants one tab's widgets
+-- calls tabWidgets; a test that wants the page's whole vocabulary calls generalWidgets.
+local function generalTabs()
+  local names, seen = {}, {}
+  for _, row in ipairs(NS.Schema.Schema) do
+    if row.group and not seen[row.group] then
+      seen[row.group] = true
+      names[#names + 1] = row.group
+    end
+  end
+  return names
+end
+
+-- The tab a given path is edited on. Used by the cases that reach for one named row's widget.
+local function tabOf(path)
+  local row = NS.Schema:FindRow(path)
+  return row and row.group
+end
+
+local function tabWidgets(tab)
+  local ctx = P_general()
+  local created = mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  ctx.activeTab = tab
+  -- The dirty flag is what SetRenderer's OnShow gate reads; without it the second show returns
+  -- early and the capture below is empty, which is exactly the trap the old memo existed to avoid.
+  ctx._dirty = true
+  showPage(ctx)
+  local out = {}
+  for i = from, #created do out[#out + 1] = created[i] end
+  return out
+end
+
 local generalCapture
 local function generalWidgets()
   if generalCapture then return generalCapture end
-  local created = mocks.LibStub("AceGUI-3.0", true).__created
-  local from = #created + 1
-  showPage(P_general())
   generalCapture = {}
-  for i = from, #created do generalCapture[#generalCapture + 1] = created[i] end
+  for _, tab in ipairs(generalTabs()) do
+    for _, w in ipairs(tabWidgets(tab)) do generalCapture[#generalCapture + 1] = w end
+  end
   return generalCapture
 end
 
@@ -457,15 +491,63 @@ test("Options: the General page renders one widget per schema row, by type", fun
   -- unreachable: Create() answered nil, so every maker returned early and nothing was ever built.
   assertTrue(#generalWidgets() > 0, "the page built no widgets")
 
-  local wanted = { bool = 0, number = 0, string = 0 }
-  for _, row in ipairs(NS.Schema.Schema) do wanted[row.type] = (wanted[row.type] or 0) + 1 end
+  -- PER TAB, not per page, since the strip arrived. The page-wide totals below still have to add
+  -- up, but they add up for the wrong reason if a row lands on the wrong tab -- a row that drifted
+  -- from Editing to New panels moves no total at all. So each tab is asserted against the rows
+  -- ITS OWN group declares, which is the assertion that actually pins the partition.
+  --
   -- `bool` -> CheckBox, a `number` with min/max -> Slider, a `string` with `values` -> Dropdown.
   -- If the schema vocabulary ever drifts back to "boolean", RenderField returns nil for the type it
   -- does not know and the row VANISHES from the page — silently, and only in game.
-  assertEqual(#widgetsOfType(P_general(), "CheckBox"), wanted.bool,
+  local WIDGET = { bool = "CheckBox", number = "Slider", string = "Dropdown" }
+  local totals = { CheckBox = 0, Slider = 0, Dropdown = 0 }
+
+  for _, tab in ipairs(generalTabs()) do
+    local wanted = { CheckBox = 0, Slider = 0, Dropdown = 0 }
+    for _, row in ipairs(NS.Schema.Schema) do
+      if row.group == tab then
+        local widget = WIDGET[row.type]
+        assertTrue(widget ~= nil, row.path .. " has a type no widget maker knows: " .. row.type)
+        wanted[widget] = wanted[widget] + 1
+      end
+    end
+
+    local built = { CheckBox = 0, Slider = 0, Dropdown = 0 }
+    for _, w in ipairs(tabWidgets(tab)) do
+      if built[w.type] then built[w.type] = built[w.type] + 1 end
+    end
+
+    for widget, n in pairs(wanted) do
+      assertEqual(built[widget], n,
+        ("the '%s' tab built %d %s widgets for %d rows of that group")
+          :format(tab, built[widget], widget, n))
+      totals[widget] = totals[widget] + n
+    end
+  end
+
+  -- And the page as a whole still accounts for every row, so a group nobody drew is caught too.
+  assertEqual(#widgetsOfType(P_general(), "CheckBox"), totals.CheckBox,
     "a bool row did not render as a checkbox — check settings/Schema.lua's `type`")
-  assertEqual(#widgetsOfType(P_general(), "Slider"), wanted.number)
-  assertEqual(#widgetsOfType(P_general(), "Dropdown"), wanted.string)
+  assertEqual(#widgetsOfType(P_general(), "Slider"), totals.Slider)
+  assertEqual(#widgetsOfType(P_general(), "Dropdown"), totals.Dropdown)
+end)
+
+test("Options: the Editing tab's afterGroup button is drawn, and only on that tab", function()
+  -- "Recover panels" stopped being the right half of the Grid size row when Snap to grid took that
+  -- half. `afterGroup` fires after the group's LAST row, so on a tabbed page it lands under the tab
+  -- it is keyed to and nowhere else -- which is the property worth pinning, because a hook keyed to
+  -- a group that no longer exists simply never fires and nothing says so.
+  local function hasRecover(tab)
+    for _, w in ipairs(tabWidgets(tab)) do
+      if w.type == "Button" and w.text == "Recover panels" then return true end
+    end
+    return false
+  end
+
+  assertTrue(hasRecover(tabOf("settings.gridSize")),
+    "the Editing tab drew no Recover panels button — check the afterGroup key in settings/Panel.lua")
+  assertFalse(hasRecover(tabOf("settings.enabled")),
+    "Recover panels was drawn under a tab it is not keyed to")
 end)
 
 test("Options: a widget's OnValueChanged reaches the addon's single write seam", function()
@@ -518,7 +600,13 @@ test("Options ADAPTER: a library-built dropdown lands in this addon's open-dropd
     -- invention, born of a real bug, and no other host has one. settings/Panel.lua wraps
     -- O.RenderField on the instance to catch every dropdown the library builds. Without the wrap
     -- the strata dropdown stays open and floating when the page is scrolled.
+    -- Rendered with the dropdown's OWN tab selected, and named through the schema rather than
+    -- written down here: the registry is emptied at the top of every render, so a page showing a
+    -- tab with no dropdown on it holds none -- which is correct behavior and would read as this
+    -- adapter being gone.
     local ctx = P_general()
+    ctx.activeTab = tabOf("settings.defaultStrata")
+    ctx._dirty = true
     showPage(ctx)
     assertTrue(P.__openDropdownCount(ctx) > 0,
       "no dropdown was tracked — the RenderField wrapper in settings/Panel.lua is not reached")

@@ -706,3 +706,102 @@ test("Panel scale: a junk value falls back rather than reaching SetScale", funct
   R:Get(rec.id).scale = "banana"
   assertEqual(Canvas.BuildSpec(R:Get(rec.id), {}).scale, 1.0)
 end)
+
+-- ── The Panels page's tab strip (options-ui-§13) ────────────────────────────────
+-- The editor's six subjects are TABS now, and only the active one is built. These cases drive the
+-- real builder -- E:BuildPage, the real rebuilder, the real AceGUI mock -- rather than the counting
+-- stand-ins above, because "which controls exist right now" is exactly what a stand-in cannot say.
+--
+-- Into a page context of their OWN, not P.panels. The repaint-policy block above empties that
+-- page's rebuilder list wholesale, the real rebuilder included, and BuildPage runs once per session
+-- so nothing puts it back; building a second context is also what keeps these cases from leaving a
+-- built page and a live selection behind for whatever runs next.
+local function freshPanelsCtx()
+  local ctx = NS.Helpers.CreatePanel(nil, "Panels", { pageKey = "panels" })
+  ctx.dropdowns, ctx.rebuilders = {}, {}
+  ctx.refreshers = ctx.refreshers or {}
+  E:BuildPage(ctx)
+  return ctx
+end
+
+-- Every AceGUI widget created while `fn` runs, by the label it was given.
+local function labelsBuiltBy(fn)
+  local created = T.mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  fn()
+  local labels = {}
+  for i = from, #created do
+    local w = created[i]
+    if w.labelText then labels[w.labelText] = true end
+  end
+  return labels
+end
+
+-- Render one named tab of a freshly built Panels page, and answer the labels it drew.
+local function labelsOfTab(ctx, tab)
+  return labelsBuiltBy(function()
+    ctx.activeTab = tab
+    E:Rebuild(ctx)
+  end)
+end
+
+test("Panels page: only the active tab's controls are built", function()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Tabbed")
+  E.__setSelectedID(rec.id)
+  local ctx = freshPanelsCtx()
+
+  local general = labelsOfTab(ctx, "General")
+  assertTrue(general["Panel name"], "the General tab did not build the name box")
+  assertFalse(general["Width"] == true, "the General tab built a Position and size control")
+  assertFalse(general["Background texture"] == true, "the General tab built a surface control")
+
+  local position = labelsOfTab(ctx, "Position and size")
+  assertTrue(position["Width"], "the Position and size tab did not build Width")
+  assertTrue(position["Panel scale"], "the Position and size tab did not build Panel scale")
+  assertFalse(position["Panel name"] == true, "the Position tab rebuilt the General tab's name box")
+
+  -- The merged tab: the fill AND the edge, which were two subsections of two and four controls.
+  local surface = labelsOfTab(ctx, "Background and border")
+  assertTrue(surface["Background texture"], "the merged tab lost the background")
+  assertTrue(surface["Border texture"], "the merged tab lost the border")
+
+  local fade = labelsOfTab(ctx, "Opacity and fade")
+  assertTrue(fade["Panel opacity"], "the Opacity and fade tab did not build Panel opacity")
+  assertTrue(fade["Show on mouseover only"], "the Opacity and fade tab lost the mouseover switch")
+
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+end)
+
+test("Panels page: an unknown active tab heals to the first one rather than drawing nothing",
+  function()
+    NS.Registry:DeleteAll()
+    local rec = NS.Registry:New("Healed")
+    E.__setSelectedID(rec.id)
+    local ctx = freshPanelsCtx()
+
+    -- The shape a renamed tab leaves behind in a context that outlives the rename.
+    local labels = labelsOfTab(ctx, "Visibility")
+    assertTrue(labels["Panel name"],
+      "a stale tab pointer drew an empty editor instead of falling back to the first tab")
+    assertEqual(ctx.activeTab, E.TABS[1], "the stale pointer was not healed")
+
+    NS.Registry:DeleteAll()
+    E.__setSelectedID(nil)
+  end)
+
+test("Panels page: Create and Edit are NOT tabs — they stay above the strip", function()
+  -- The strip is the EDITOR's alone. Making a panel and choosing which panel to edit are not two of
+  -- the six subjects, and a tab you have to leave to pick a different panel would be one.
+  for _, name in ipairs(E.TABS) do
+    assertFalse(name == "Create", "Create was folded into the tab strip")
+    assertFalse(name == "Edit", "Edit was folded into the tab strip")
+  end
+  -- And the page still emits both section headings, which is what keeps them above the editor.
+  local src = assert(io.open("settings/PanelEditor.lua", "r"))
+  local body = src:read("*a")
+  src:close()
+  assertTrue(body:find('section(ctx, "Create")', 1, true) ~= nil, "the Create section is gone")
+  assertTrue(body:find('section(ctx, "Edit")', 1, true) ~= nil, "the Edit section is gone")
+end)

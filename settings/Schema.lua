@@ -8,8 +8,11 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 -- slash get/set/list/reset dispatch (architecture-§5) — add a setting here and all three surfaces
 -- pick it up with no other edit. Paths resolve against NS.db.profile (per-character).
 --
--- `group` names the panel section header, and row order within a group drives the two-column
--- pairing. `wide` forces a full-width row.
+-- `group` names the TAB (options-ui-§13): the General page draws itself with
+-- H.RenderTabbedSchema, which partitions these rows by `group` in DECLARATION ORDER and draws one
+-- tab per distinct group. So this array's order IS the tab order, and a group's rows must stay
+-- contiguous -- a row filed under a group the array has already left prints that heading twice.
+-- Row order within a group drives the two-column pairing. `wide` forces a full-width row.
 --
 -- NOTE: these are the addon's settings. The PANELS themselves are not rows here — each is a
 -- variable-length user-created object with no fixed widget, so the registry owns them
@@ -25,23 +28,21 @@ local function announce(what)
 end
 
 S.Schema = {
-  -- ── Master Controls ──
+  -- ── Master controls ──
+  -- Tab 1, and first because it is what a player reaches for on opening the page: is the addon on,
+  -- show me what a panel looks like, show me the log. All three act on the whole addon RIGHT NOW,
+  -- which is the subject; two of the three are session-only.
+  --
+  -- "Unlock panels" used to live here and has moved to Editing. It is a master toggle whose whole
+  -- job is governing the four rows under it (the names, the snap, the grid and the outline), and
+  -- a master toggle leads the thing it governs rather than sitting one tab away from it.
   { path = "settings.enabled", default = true, type = "bool", widget = "CheckBox",
-    group = "Master Controls", label = "Enable panels",
+    group = "Master controls", label = "Enable panels",
     tooltip = "Master switch. Turning this off hides every panel without deleting any of them.",
     onChange = function() announce("enabled") end },
 
-  -- A session-only row (never persisted): unlock is an editing state, not a preference. get/set
-  -- route to NS.Unlock, and Schema:Set skips the db write for sessionOnly rows. Mirrors `/pm unlock`.
-  { path = "state.unlocked", sessionOnly = true, default = false, type = "bool",
-    widget = "CheckBox", group = "Master Controls", label = "Unlock panels",
-    tooltip = "Show every panel with a drag handle and a name label so it can be moved. "
-      .. "Session-only \226\128\148 always locked again after a reload.",
-    get = function() return NS.State.unlocked end,
-    set = function(v) if NS.Unlock then NS.Unlock:SetUnlocked(v) end end },
-
   { path = "state.preview", sessionOnly = true, default = false, type = "bool",
-    widget = "CheckBox", group = "Master Controls", label = "Test mode",
+    widget = "CheckBox", group = "Master controls", label = "Test mode",
     tooltip = "Put three sample panels on screen so you can see what a panel looks like. "
       .. "They are removed again when you turn this off.",
     get = function() return NS.State.preview end,
@@ -50,7 +51,7 @@ S.Schema = {
   -- Session-only: the value is the debug console WINDOW's visibility, not the NS.State.debug
   -- logging flag. Mirrors `/pm debug` with no argument.
   { path = "state.debugConsole", sessionOnly = true, default = false, type = "bool",
-    widget = "CheckBox", group = "Master Controls", label = "Debug console",
+    widget = "CheckBox", group = "Master controls", label = "Debug console",
     tooltip = "Show or hide the on-screen debug console. Session-only \226\128\148 resets on reload.",
     get = function() return NS.DebugLog ~= nil and NS.DebugLog:IsShown() end,
     set = function(v)
@@ -59,6 +60,19 @@ S.Schema = {
     end },
 
   -- ── Editing ──
+  -- Tab 2: everything about moving a panel around, in the order the flow engine pairs it —
+  -- [unlock] [names], [snap] [grid size], then the outline thickness. The unlock switch leads,
+  -- because the four rows under it only mean anything while it is on.
+  --
+  -- A session-only row (never persisted): unlock is an editing state, not a preference. get/set
+  -- route to NS.Unlock, and Schema:Set skips the db write for sessionOnly rows. Mirrors `/pm unlock`.
+  { path = "state.unlocked", sessionOnly = true, default = false, type = "bool",
+    widget = "CheckBox", group = "Editing", label = "Unlock panels",
+    tooltip = "Show every panel with a drag handle and a name label so it can be moved. "
+      .. "Session-only \226\128\148 always locked again after a reload.",
+    get = function() return NS.State.unlocked end,
+    set = function(v) if NS.Unlock then NS.Unlock:SetUnlocked(v) end end },
+
   -- How dragging behaves while unlocked.
   { path = "settings.showLabels", default = true, type = "bool", widget = "CheckBox",
     group = "Editing", label = "Show names while unlocked",
@@ -73,6 +87,14 @@ S.Schema = {
     group = "Editing", label = "Snap to grid",
     tooltip = "Round a dragged panel's position to the grid size below." },
 
+  -- Declared immediately after the switch that modes it, so the flow engine puts the two on ONE
+  -- line and the reader sets the mode and its size without moving down a row.
+  --
+  -- "Recover panels" no longer rides this row's right half. It was there on the argument that it is
+  -- the other thing you reach for when a layout has gone wrong, which still holds — but pairing the
+  -- snap switch with its own slider is the stronger claim, and a button cannot be the right half of
+  -- a line whose left half is already taken. It is drawn as this tab's afterGroup footer instead
+  -- (settings/Panel.lua), which is where the flow engine puts a group's buttons.
   { path = "settings.gridSize", default = 4, type = "number",
     min = C.MIN_GRID, max = 64, step = 1, widget = "Slider",
     fmt = "%d px",   -- grid → "4 px" in the slash list/get output (slash-commands-§5)
@@ -80,11 +102,50 @@ S.Schema = {
     tooltip = "The grid a dragged panel snaps to, in UI units. Ignored when snapping is off.",
     validate = function(v) return type(v) == "number" and v >= C.MIN_GRID and v <= C.MAX_GRID end },
 
-  -- ── New Panel Defaults ──
+  -- Promoted from the hardcoded C.UNLOCK_OUTLINE_PX, which was 2 and still is: the default IS the
+  -- literal it replaced, so every existing install draws its unlock outline exactly as it did.
+  -- The constant stays as the fallback modules/Unlock.lua reads when the db is not up yet, and as
+  -- the one place the shipped number is written down.
+  --
+  -- Clamped on the way in as well as on the way out: this arrives from SavedVariables, and an
+  -- outline of 0 (or of 400) is not an error, it is a panel that cannot be found in unlock mode.
+  { path = "settings.unlockOutlineSize", default = 2, type = "number",
+    min = C.MIN_UNLOCK_OUTLINE, max = C.MAX_UNLOCK_OUTLINE, step = 1, widget = "Slider",
+    fmt = "%d px",
+    group = "Editing", label = "Unlock outline thickness",
+    tooltip = "How thick the gold outline around an unlocked panel is, in UI units. Raise it if "
+      .. "you are hunting for a small panel on a busy screen.",
+    validate = function(v)
+      return type(v) == "number" and v >= C.MIN_UNLOCK_OUTLINE and v <= C.MAX_UNLOCK_OUTLINE
+    end,
+    onChange = function() announce("unlockOutlineSize") end },
+
+  -- ── New panels ──
+  -- Tab 3, and last because it is the one you set once and leave: it changes nothing on screen
+  -- until the next time you make a panel.
+  --
   -- Applied to panels created AFTER a change here; existing panels are never retroactively altered,
-  -- which is why these are separate settings rather than a global override.
+  -- which is why these are separate settings rather than a global override. `/pm panel X reset`
+  -- lands on the same four values, so "reset this panel" and "make a new one" cannot drift.
+  --
+  -- Size first: it is the thing a player notices about a new panel, and the two read across as one
+  -- line. Then the layer and the opacity.
+  { path = "settings.defaultWidth", default = 240, type = "number",
+    min = C.MIN_SIZE, max = C.MAX_SIZE, step = 1, widget = "Slider",
+    fmt = "%d px",
+    group = "New panels", label = "Default width",
+    tooltip = "How wide a newly created panel starts. Existing panels are not touched.",
+    validate = function(v) return type(v) == "number" and v >= C.MIN_SIZE and v <= C.MAX_SIZE end },
+
+  { path = "settings.defaultHeight", default = 120, type = "number",
+    min = C.MIN_SIZE, max = C.MAX_SIZE, step = 1, widget = "Slider",
+    fmt = "%d px",
+    group = "New panels", label = "Default height",
+    tooltip = "How tall a newly created panel starts. Existing panels are not touched.",
+    validate = function(v) return type(v) == "number" and v >= C.MIN_SIZE and v <= C.MAX_SIZE end },
+
   { path = "settings.defaultStrata", default = "LOW", type = "string", widget = "Dropdown",
-    group = "New Panel Defaults", label = "Default frame strata", values = C.STRATA_OPTIONS,
+    group = "New panels", label = "Default frame strata", values = C.STRATA_OPTIONS,
     tooltip = "The layer a newly created panel sits in. LOW keeps it under essentially all "
       .. "interface frames, which is what a backdrop usually wants. DIALOG and above cover normal UI.",
     validate = function(v) return NS.Util.IsStrata(v) end },
@@ -92,7 +153,7 @@ S.Schema = {
   { path = "settings.defaultAlpha", default = 1.0, type = "number", min = 0, max = 1, step = 0.05,
     widget = "Slider",
     fmt = "%.2f",
-    group = "New Panel Defaults", label = "Default opacity",
+    group = "New panels", label = "Default opacity",
     tooltip = "The opacity a newly created panel starts at.",
     validate = function(v) return type(v) == "number" and v >= 0 and v <= 1 end },
 }

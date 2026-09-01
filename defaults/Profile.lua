@@ -28,12 +28,20 @@ NS.defaults.profile = {
     snapToGrid  = true,
     gridSize    = 4,
 
+    -- How thick the gold outline around an unlocked panel is. Ships at C.UNLOCK_OUTLINE_PX, the
+    -- number that used to be the only answer, so nothing an existing install draws moves.
+    unlockOutlineSize = 2,
+
     -- Show each panel's name in the middle of it while unlocked. On by default: with several
     -- similar dark rectangles on screen, the label is what tells you which one you have hold of.
     showLabels  = true,
 
     -- Applied to newly created panels, so a user who has settled on a house style does not re-set
-    -- the same two fields on every panel. Existing panels are never touched by a change here.
+    -- the same four fields on every panel. Existing panels are never touched by a change here.
+    -- Width and height ship at C.PANEL_TEMPLATE's own 240x120, so a panel made by someone who
+    -- never opens this tab is exactly the panel this addon always made.
+    defaultWidth  = 240,
+    defaultHeight = 120,
     defaultStrata = "LOW",
     defaultAlpha  = 1.0,
   },

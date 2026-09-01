@@ -7,10 +7,58 @@ Blizzard `Settings.RegisterCanvasLayoutCategory` + raw AceGUI (`options-ui`). A 
 three subcategories:
 
 - **Ka0s Panel Master** (parent) — logo, tagline, the generated slash-command list.
-- **General** — the schema rows, in a two-column grid.
-- **Panels** — create, edit and delete the panels themselves.
+- **General** — the schema rows, in a two-column grid under a three-tab strip.
+- **Panels** — create, edit and delete the panels themselves; the editor sits under a six-tab strip.
 - **Profiles** — AceDBOptions' own options table, rendered by AceConfigDialog into a container
-  parented to our canvas.
+  parented to our canvas. The one page with **no** strip, deliberately: it is the library's own
+  page, it is the same in every Ka0s addon, and tabbing it is out of scope.
+
+## The tab strip
+
+Both of this addon's own pages are **tabbed** (`options-ui-§13`). A tab is pinned in the page's
+chrome band, above the scroll, and only the active tab's controls are built — so a page is one
+subject at a time rather than a column you scroll.
+
+The two pages get there by different routes, because their content is not the same kind of thing:
+
+- **General** is schema-driven, so `H.RenderTabbedSchema` does the work: it partitions
+  `settings/Schema.lua`'s rows by `group`, **in declaration order**, and draws one tab per distinct
+  group. The array's order *is* the strip's order, and a group's rows must stay contiguous.
+- **Panels** is bespoke — a panel is a registry record, not a row with a path — so there is nothing
+  for `RenderTabbedSchema` to partition. `settings/PanelEditor.lua` draws the strip directly with
+  `H.TabStrip` over its own ordered `EDITOR_TABS` list, and dispatches on `ctx.activeTab` to one
+  section builder per tab.
+
+**Create and Edit are not tabs.** They stay above the editor, untabbed, on every tab: making a panel
+and choosing which panel to work on are not two of the six subjects, and a tab you would have to
+leave to pick a different panel would be one. That is also why this page draws no `H.PageBanner` —
+`§14`'s banner *replaces* a picker, and this page's picker is deliberately staying where it is.
+
+| Page | Tabs | Rows per tab |
+|---|---|---|
+| General | **Master controls**, **Editing**, **New panels** | 3, 5, 4 — 12 schema rows |
+| Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 10, 16, 3 — bespoke controls, not schema rows |
+| Profiles | none | AceDBOptions' own page |
+
+A **color** is one control in those counts even though it emits two widgets (the swatch and its
+*Class color* companion), and the accent bar's **Edges** is one control holding four checkboxes.
+
+Counts come from `settings/Schema.lua` and `settings/PanelEditor.lua`, and are pinned by the
+partition cases in `tests/test_schema.lua` — which are written out as the *designed* table rather
+than derived from the schema, because an expectation derived from the schema agrees with any
+arrangement of rows, including one where a row has drifted into the wrong tab.
+
+Three names changed with the strip, and all three for the same rule — a tab is named for its
+subject, not for its drawer:
+
+- **New Panel Defaults → New panels.** Every row on it already says "Default".
+- **Background + Border → Background and border.** Two subsections of two and four controls; the
+  fill and the edge are two halves of one question, and a two-control tab is not a subject.
+- **Visibility → Opacity and fade.** Its three controls are two opacity sliders and a mouseover
+  switch. The old name promised the where/when rules of a visibility engine this addon has not got.
+
+**Unlock panels** moved from Master controls to Editing in the same pass: it is a master toggle whose
+whole job is governing the four rows under it, and a master toggle leads the thing it governs.
 
 Profiles is the **one** place `AceConfigDialog` is used. `anti-patterns` forbids it for content and
 carves out Profiles explicitly, and the carve-out earns itself: AceDBOptions returns a complete,
@@ -58,7 +106,7 @@ chrome between choosing a panel and editing it. The panel selector carries no la
 makes it 14px shorter than a labeled control — so a compensating spacer (`LABEL_ROW_H`) sits above
 it, or the `Edit` heading would look tighter than every other heading on the page.
 
-The editor opens with a **General** section in decision order — which panel is this (name, and the
+The editor opens on its **General** tab, in decision order — which panel is this (name, and the
 option to copy another's look), is it on (Enabled / Unlock), am I done with it (Reset / Delete). The
 frame name lives in the name box's **tooltip** rather than as a permanent second label: it is
 reference information you need once, when wiring something else up to this panel.
@@ -69,8 +117,9 @@ copying position too would land the two exactly on top of each other. Size **is*
 dimensions is usually what was wanted, and unlike position it cannot make a panel disappear. Values
 are deep-copied, or the two panels would share a color array and editing one would change the other.
 
-`Reset` and `Delete` sit at the **top** of the editor beside `Enabled` and `Unlock`, because that is
-where you look once you have decided you are done with a panel. A Delete parked at the foot of a long
+`Reset` and `Delete` sit on the **General** tab beside `Enabled` and `Unlock`, because that is
+where you look once you have decided you are done with a panel — and because General is the tab about
+which panel this is, rather than about how it looks. A Delete parked at the foot of a long
 scrolling form is one the user only reaches after scrolling past everything they might have wanted to
 change instead. `Registry:Reset` restores the whole record from the template plus the profile's
 New-Panel-Defaults — the same path `Registry:New` takes, so "reset" and "make a new one" cannot
@@ -79,9 +128,12 @@ drift — keeping only `id` and `name`, so the frame name survives and external 
 The editor emits a sequence of full-width **rows** into a `List`-layout group rather than pouring
 every widget into one `Flow`. A single Flow reflows controls of differing heights into whatever gaps
 it can find, so a checkbox rides up beside a slider's label and two unrelated settings share a line —
-which is what made the first version look cluttered. Explicit rows, `Heading`-separated subsections,
-and three named gap sizes (`EDITOR_SELECT_GAP` > `EDITOR_SECTION_GAP` > `EDITOR_ROW_GAP`) mean the
-spacing itself carries the structure.
+which is what made the first version look cluttered. Explicit rows and two named gap sizes
+(`EDITOR_SELECT_GAP` > `EDITOR_ROW_GAP`) mean the spacing itself carries the structure.
+
+The middle gap size, and the `editorHeading` it spaced, are **gone**: the editor's six subsections
+are tabs now, and a tab is announced by the strip rather than by a divider-flanked heading part-way
+down the page.
 
 #### Three widget workarounds
 

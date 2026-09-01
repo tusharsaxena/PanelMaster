@@ -30,7 +30,12 @@ File-by-file table and the seam/load-order contract in **[module-map.md](module-
 
 Two SavedVariables scopes: `defaults/Profile.lua` carries the per-character panel registry, `nextID`
 and the settings block; `defaults/Global.lua` carries the account-wide `schemaVersion` stamp only.
-`settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`.
+`settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
+carries **12 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
+(`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
+the array's order is the strip a player sees on the General page — `Master controls` (3),
+`Editing` (5), `New panels` (4). Three of the twelve are session-only `state.*` rows that route
+through their own `get`/`set` and are never persisted.
 
 The panel record, every field on it, the artwork fields and the sanitizing pass are in
 **[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;
