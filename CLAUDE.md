@@ -55,7 +55,7 @@ The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/
 [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and
 [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). It is a deviation from `§1` itself and
 **not** a `performance-§12` exemption — `§12` is neither claimed nor claimable here, because its
-no-combat-path criterion (a) fails: `modules/Canvas.lua:577` runs a shared 10Hz `OnUpdate`.
+no-combat-path criterion (a) fails: `modules/Canvas.lua:646` runs a shared 10Hz `OnUpdate`.
 `docs/performance.md` carries the sweep and the cost argument.
 
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever

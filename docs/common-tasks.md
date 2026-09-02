@@ -31,7 +31,7 @@ path that already has a row.
 This is the change with the most places to touch, and `core/Constants.lua` is nearly all of them.
 
 1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:262`) with its shipped default.
-2. Add it to `C.PANEL_FIELD_TYPE`, and to `C.PANEL_FIELD_ORDER` (`:480`) at the position it should
+2. Add it to `C.PANEL_FIELD_TYPE`, and to `C.PANEL_FIELD_ORDER` (`:504`) at the position it should
    appear in `/pm panel <name>` output and in the editor.
 3. Add its media / enum / color map entry if it needs one.
 4. Teach `Registry:Sanitize` to validate and clamp it. **Sanitize is the repair path, not just the
@@ -42,11 +42,11 @@ This is the change with the most places to touch, and `core/Constants.lua` is ne
    headless test with no frames involved. `applySpec` stays a thin application of the result.
 6. If the field should **not** be reachable from the CLI, leave it out of `PANEL_FIELD_TYPE`,
    `PANEL_FIELD_ORDER` and `PANEL_TEMPLATE` — that omission is the mechanism, and
-   `core/Constants.lua:525` documents the existing case.
+   `core/Constants.lua:550` documents the existing case.
 
 ## Add a slash verb
 
-Append one triple to `NS.COMMANDS` (`settings/Slash.lua:214`), shaped
+Append one triple to `NS.COMMANDS` (`settings/Slash.lua:273`), shaped
 `{ name, description, handler }`. The help index, the settings landing page's command list and the
 README table are all generated from it, so nothing else needs editing — regenerate the README with
 `/wow-addon:sync-docs`.
@@ -103,8 +103,15 @@ needed them: standing up three placeholders used to rebuild every consumer three
 `settings/Panel.lua` owns the four page builders and what LibKa0s-Options-1.0 does **not** own: the
 open-dropdown registry that closes a list on scroll, the paired-button width, the landing page's body
 and the Profiles page. The canvas factory, header, breadcrumb, lazy Defaults button, scroll frame,
-scrollbar patch, section headings, spacers, tooltips, the five widget makers and the two-column flow
-engine are the library's.
+scrollbar patch, section headings, spacers, tooltips, the five widget makers, the two-column flow
+engine and the **tab strip** are the library's.
+
+A new page is **tabbed** unless it is one of the two `options-ui-§13` exempts (the landing page and
+Profiles). A schema-driven page gets its strip from one `H.RenderTabbedSchema` call, which
+partitions the rows by `group` in declaration order; a bespoke page draws its own with `H.TabStrip`
+and dispatches on `ctx.activeTab`, the way `settings/PanelEditor.lua` does. A control that governs
+the whole page rather than one tab belongs in the chrome band, in the page's single `H.PageHeader`
+block (`options-ui-§14`) — not under a tab, and not in the scroll.
 
 If you need to change how a field renders, wrap the library member **on the instance** — `RenderField`
 and `EnsureScroll` already are — because the flow engine resolves both from the instance table at

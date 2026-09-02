@@ -7,11 +7,22 @@ placed in, the pool that owns the frames, and the events that drive a render. Th
 The README's player-facing description of how panels work is the same pipeline one level up; the two
 must not contradict each other.
 
-`Canvas.BuildSpec(record, settings)` is **pure**: record + settings → exactly what the frame should
-look like, with every value already validated and clamped. All of "what does this panel render as"
-is therefore unit-testable headlessly, and `applySpec` is a thin, uninteresting application of the
-result. `spec.shown` folds the master switch and the panel's own `enabled` into one answer so no
-call site has to remember both.
+`Canvas.BuildSpec(record, settings, inCombat)` is **pure**: record + settings + the combat state →
+exactly what the frame should look like, with every value already validated and clamped. All of
+"what does this panel render as" is therefore unit-testable headlessly, and `applySpec` is a thin,
+uninteresting application of the result. `spec.shown` folds **three** independent switches into one
+answer so no call site has to remember them: the addon-wide master (`settings.enabled`), the
+addon-wide general-visibility rule (`settings.visibility`, decided by the separately published and
+equally pure `Canvas.VisibilityShows(mode, inCombat)`), and the panel's own `enabled`. `inCombat` is
+an input rather than something read inside, which is what keeps the rule assertable; a caller that
+omits it gets the out-of-combat answer, which is what every profile written before `visibility`
+existed already meant.
+
+The other two addon-wide rows on the **Master controls** tab are honored in the same place, as
+**multipliers** rather than replacements: `settings.scale` multiplies each panel's own `scale` and
+`settings.alpha` its own `alpha`, so the editor's per-panel sliders keep showing what the player
+typed for that panel. All three degrade to the identity, so a profile written before they existed
+renders exactly as it did.
 
 A panel is drawn as a background **texture** (an LSM `background` name, tinted with the resolved
 color) plus a `BackdropTemplate` **edge** (an LSM `border` name at the user's thickness). The
@@ -176,7 +187,10 @@ mouse-transparent rectangles under a message that never mentions preview.
 
 Panels are **non-secure** frames, so the render path is not combat-gated at all: creating, moving,
 recoloring and hiding a plain backdrop frame is legal in combat, and gating it would mean a panel
-that visibly failed to follow a settings change mid-pull.
+that visibly failed to follow a settings change mid-pull. That is also what lets the combat
+transition itself drive a repaint — `Canvas:RenderForCombat` runs on both regen events and repaints
+**only** when `settings.visibility` is `inCombat` or `outOfCombat`, since `Always` and `Never`
+answer the same thing either side of a pull and the common case is meant to cost one table read.
 
 Two things are gated, in the two different shapes the standard defines:
 
@@ -195,5 +209,6 @@ Two things are gated, in the two different shapes the standard defines:
 | Event | Handler | Why |
 |---|---|---|
 | `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
-| `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()` | Replays a combat-deferred unlock. |
+| `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat()` | Replays a combat-deferred unlock, and repaints for the general-visibility rule. |
+| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat()` | The entering-combat half of the same rule. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration, for the load order where `Settings`/AceGUI were not there yet in `OnInitialize`. `Register` is idempotent, so it is a no-op on a normal login. Not a deferral to first `/pm config` (anti-pattern #22). Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing — the only one a non-LoD addon gets. |

@@ -135,6 +135,22 @@ The panel **background** is not a bar group and takes no opacity row of its own:
 background takes the swatch and its companion, and the alpha in the swatch plus the panel-wide
 opacity are already the two controls that decide how solid the fill is.
 
+**What is honored by hand here is the ROW SET and the ORDER, not the composer.** `options-ui-§16`
+also says these blocks are emitted from one library declaration rather than typed out
+(`H.BorderGroup` / `H.BarGroup`, anti-pattern #73) — and those composers emit **schema rows**, which
+is a shape the Panels page has not got: a panel is a registry record with no `path`, drawn from
+`NS.Registry` by `settings/PanelEditor.lua`, so there is nothing for a row composer to emit into.
+The stub in `settings/OptionsSetup.lua` answers `BorderGroup` and `BarGroup` for the parity case and
+nothing in this addon calls either. The gap is therefore real and is **not** currently ratified —
+there is no `options-ui-§16` row in `ARCHITECTURE.md` ▸ *Documented deviations* — so an audit will
+keep re-filing it until it is either ratified or closed by a composer that can emit into a bespoke
+page. The **General** page has no color, font, border or bar row at all, so `§16` does not engage
+there.
+
+The class-color intent `options-ui-§17` requires per control is declared in `C.COLOR_CLASS_SOURCE`
+rather than on a row, for the same reason: these controls have no rows. All five entries are
+`"player"` — a panel is chrome and tracks no unit — and the map is what an audit reads.
+
 Counts come from `settings/Schema.lua` and `settings/PanelEditor.lua`, and are pinned by the
 partition cases in `tests/test_schema.lua` — which are written out as the *designed* table rather
 than derived from the schema, because an expectation derived from the schema agrees with any
@@ -330,6 +346,15 @@ resolves it. A rebuild clears `ctx.refreshers` first, since every closure in it 
 rebuild is about to release. The color-picker refresher uses `SetColor`, which fires no callback and
 therefore cannot re-enter `Registry:Set`.
 
-Defaults actions differ by page and by destructiveness: **General**'s resets settings only and is
-safe behind Blizzard's un-gated footer control; **Panels**' is "delete every panel" (the genuine
-stock state of that page) and is therefore confirm-gated behind `KA0S_PANELMASTER_DELETEALL`.
+Defaults actions differ by page, and **both are destructive now**: **General**'s is the shared
+profile reset described above (`Sl:ConfirmResetAll`, behind `KA0S_PANELMASTER_RESETALL`), so the
+player's panels go with the settings; **Panels**' is "delete every panel" (the genuine stock state of
+that page), behind `KA0S_PANELMASTER_DELETEALL`. Blizzard's own un-gated footer control forwards to
+the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the footer and the header
+button are one implementation and the confirmation cannot be reached round.
+
+**The General page's Defaults tooltip still reads *"Your panels are untouched"*, and so does the
+comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:365`, `:372`).** Both predate
+`options-ui-§12` turning `resetall` into a profile reset and neither matches what the button now
+does. That is a code fix, not a doc one, and it is recorded here so the next reader does not take
+the tooltip for the contract.

@@ -465,7 +465,10 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
     falls back to another panel rather than going blank.
 14. Press **Defaults** on the Panels page → **Expect:** a confirmation dialog, and nothing deleted
     until you accept.
-15. Press **Defaults** on the General page → **Expect:** settings reset and **your panels survive**.
+15. Press **Defaults** on the General page → **Expect:** the same confirmation `/pm resetall` raises,
+    and on accepting, the whole profile resets — settings **and** panels. (The button's tooltip
+    still claims your panels are untouched; that wording predates `options-ui-§12` and is a known
+    code-side staleness, not what the button does.)
 16. Close the options window, run `/pm new Offscreen`, reopen → **Expect:** the new panel is in the
     dropdown (it was rebuilt on show, not missed).
 

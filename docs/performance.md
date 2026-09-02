@@ -38,7 +38,7 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:577` installs
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:646` installs
 a single shared driver the first time any panel is tracked for mouseover:
 
 ```lua
@@ -116,20 +116,21 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:577` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:646` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
 
-### `RegisterEvent` — 4 hits
+### `RegisterEvent` — 5 hits
 
 | Site | Event | Work | Runs in combat? |
 |---|---|---|---|
 | `core/LSMPatch.lua:31` | `PLAYER_LOGIN` | re-registers one AceGUI widget type, then `UnregisterAllEvents` | no — fires once, before any combat |
 | `core/PanelMaster.lua:51` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
 | `core/PanelMaster.lua:72` | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
-| `core/PanelMaster.lua:73` | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()` | fires on **leaving** combat, by definition |
+| `core/PanelMaster.lua:73` | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat()` | fires on **leaving** combat, by definition |
+| `core/PanelMaster.lua:76` | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat()` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
 
 ### `C_Timer` — 0 hits
 
-None. The one scheduling seam is `settings/OptionsSetup.lua:113`, which forwards to the addon's
+None. The one scheduling seam is `settings/OptionsSetup.lua:178`, which forwards to the addon's
 AceTimer embed for a **one-shot** panel-refresh delay — not a repeating ticker.
 
 ### `ScheduleRepeatingTimer` — 0 hits

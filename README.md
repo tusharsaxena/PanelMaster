@@ -63,15 +63,15 @@ below.
 | `/pm set setting value` | Change a setting |
 | `/pm list` | List every setting |
 | `/pm reset setting` | Put one setting back to normal |
-| `/pm resetall` | Put every setting back to normal (your panels are kept) |
+| `/pm resetall` | Reset this profile to the addon's defaults — settings **and** panels. It asks first |
 | `/pm debug` | Show the debug window. `/pm debug on`/`off` turns logging on and off, `/pm debug dump` writes a state dump into the log |
 | `/pm help` | Show this list |
 
 The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `point`, `relPoint`,
 `x`, `y`, `strata`, `level`, `scale`, `alpha`, `bgTexture`, `bgColor`, `bgClassColor`, `borderTexture`,
 `borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover`, `mouseoverAlpha`,
-`accentEnabled`, `accentEdges`, `accentTexture`, `accentThickness`, `accentOffset`, `accentColor`,
-`accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
+`accentEnabled`, `accentEdges`, `accentTexture`, `accentAlpha`, `accentThickness`, `accentOffset`,
+`accentColor`, `accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
 `accentBorderColor`, `accentBorderClassColor`, `artTexture`, `artCustomPath`, `artColor`,
 `artClassColor`, `artAlpha`, `artFill`, `artPoint`, `artX`, `artY`, `artScale`, `artRotation`,
 `artFlipH`, `artFlipV`, `artDesaturate`, `artBlend` and `artLayer`. So:
@@ -366,12 +366,6 @@ conversion guide, including how to pick good sources, is in
 | I dragged a panel and it jumped somewhere slightly different | Snap-to-grid is on. Turn it off (`/pm set settings.snapToGrid false`) or make the grid finer (`/pm set settings.gridSize 1`). |
 | Something is genuinely broken | Run `/pm debug on`, reproduce it, then `/pm debug` to open the log and **Copy** to grab the text. Attaching that to an issue makes it far easier to work out what happened. |
 
-## Credits
-
-The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
-the sizes the client wants and redistributed under
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
-
 ## Issues and feature requests
 
 Bugs and feature requests are tracked at
@@ -384,3 +378,9 @@ lives. A debug log (see above) helps a great deal for anything that looks like a
 | Version | Date | Highlights |
 |---------|------|------------|
 | 1.0.0 | 2026-08-07 | - First release: create, place and style as many backdrop panels as you like<br>- LibSharedMedia background and border textures, with a class-color option for both<br>- Accent bars along any edge, with their own texture, border and class color<br>- Per-panel scale, mouseover-only fade, and all eight frame strata<br>- Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>- Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>- Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>- Full command-line control and AceDB profiles |
+
+## Credits
+
+The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
+the sizes the client wants and redistributed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
