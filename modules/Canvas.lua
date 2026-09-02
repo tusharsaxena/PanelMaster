@@ -56,9 +56,46 @@ local mouseoverDriver
 --
 -- `shown` folds the two independent switches — the addon-wide master and the panel's own — into one
 -- answer, so no call site has to remember both.
+-- ── The addon-wide master controls (options-ui-§15) ─────────────────────────────
+-- Three settings that act on EVERY panel at once, honored here because this is the one place a
+-- panel's final geometry and opacity are decided. Each is a MULTIPLIER over the panel's own value
+-- rather than a replacement: the editor's per-panel sliders keep showing what the player typed for
+-- that panel, which is what options-ui-§15 means by the master rows and the per-instance rows being
+-- different settings.
+--
+-- All three degrade to the identity, so a profile written before they existed renders byte for byte
+-- as it did.
+
+-- Is the addon's display shown at all right now?
+--
+-- PURE, and separately published, because it is the only part of the visibility rule that is worth
+-- asserting: `inCombat` and `outOfCombat` are the two answers a boolean could never give, and the
+-- combat state is an input rather than something read in here.
+function Canvas.VisibilityShows(mode, inCombat)
+  if mode == "never"       then return false end
+  if mode == "inCombat"    then return inCombat and true or false end
+  if mode == "outOfCombat" then return not inCombat end
+  return true   -- "always", and anything a hand-edited file put there that is not one of the four
+end
+
+-- The master scale. Guarded rather than clamped to a range restated here: the canonical bounds are
+-- the composer's, the schema's validate refuses anything outside them at the write seam, and a
+-- second copy of the numbers in this file is the copy that goes stale (options-ui-§8's reasoning).
+-- What the renderer needs is only that it never multiplies a size by nil, a string or zero.
+local function masterScale(settings)
+  local v = tonumber(settings.scale)
+  if not v or v <= 0 then return 1 end
+  return v
+end
+
+-- The master opacity. 0..1 is not a library constant, it is what alpha IS, so it is clamped here.
+local function masterAlpha(settings)
+  return Util.Clamp(settings.alpha, 0, 1, 1)
+end
+
 -- Where the panel sits and how big it is. Written into the spec in place rather than returned as a
 -- tuple, so each writer owns a coherent slice and nothing has to be threaded back through a caller.
-local function addGeometry(spec, rec)
+local function addGeometry(spec, rec, settings)
   -- Written first because the artwork geometry needs the CLAMPED size, not the raw record fields:
   -- art fitted to a width the panel will never actually be drawn at is art that lands in the wrong
   -- place the moment the clamp bites.
@@ -68,7 +105,12 @@ local function addGeometry(spec, rec)
   -- border, accent bars and artwork alike. It is deliberately NOT folded into `width`/`height`
   -- here: the stored size is what the user typed and what the editor's sliders show, and
   -- multiplying it would make a scaled panel report a size nobody set.
+  --
+  -- Multiplied by the addon-wide master scale, and multiplied rather than replaced for the same
+  -- reason it is not folded into width/height: the per-panel scale is what the player set for THIS
+  -- panel and the master one moves all of them together.
   spec.scale    = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale)
+                  * masterScale(settings)
   spec.point    = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point
   spec.relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
   spec.x        = tonumber(rec.x) or 0
@@ -78,8 +120,10 @@ local function addGeometry(spec, rec)
 end
 
 -- What the panel looks like: opacity and its mouseover fade, the background and the border.
-local function addAppearance(spec, rec)
-  local alpha = Util.Clamp(rec.alpha, 0, 1, 1)
+local function addAppearance(spec, rec, settings)
+  -- The panel's own opacity, faded by the addon-wide master. The mouseover floor below is computed
+  -- from the RESULT, so the resting alpha can still never exceed the alpha it fades up to.
+  local alpha = Util.Clamp(rec.alpha, 0, 1, 1) * masterAlpha(settings)
   local mouseover = rec.mouseover and true or false
   spec.alpha = alpha
   -- Colors come from the shared resolver, so the class-color override is applied in exactly one
@@ -98,7 +142,17 @@ local function addAppearance(spec, rec)
   -- resting alpha above the hover alpha would make the panel FADE when you moused over it, which
   -- is not what the setting says it does.
   spec.mouseoverAlpha =
-    mouseover and math.min(Util.Clamp(rec.mouseoverAlpha, 0, 1, 0), alpha) or alpha
+    mouseover and math.min(Util.Clamp(rec.mouseoverAlpha, 0, 1, 0) * masterAlpha(settings), alpha)
+      or alpha
+end
+
+-- The accent bar's own opacity multiplied into its resolved color's alpha. A separate step rather
+-- than a fourth argument to the resolver, because it is this addon's composition and not the
+-- class-color rule's: `Util.ResolveColor` decides the HUE and preserves the stored alpha, and this
+-- decides how much of the result is drawn.
+local function accentFill(color, rec)
+  local a = Util.Clamp(rec.accentAlpha, 0, 1, C.PANEL_TEMPLATE.accentAlpha)
+  return { color[1], color[2], color[3], color[4] * a }
 end
 
 -- The accent bar, resolved into one sub-table so the renderer takes a single decision per edge
@@ -114,7 +168,11 @@ local function buildAccentSpec(rec)
       C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, C.PANEL_TEMPLATE.accentOffset),
     -- Through the same shared resolver as every other color, so the class-color override needed
     -- no new code here at all — just the C.COLOR_FIELDS row.
-    color     = Util.ResolveColor(rec, "accentColor"),
+    -- The bar group's mandated opacity row (options-ui-§16), applied to the bar's FILL alpha. It
+    -- multiplies what the color already carries rather than replacing it, so a bar whose color was
+    -- picked at half opacity and whose bar opacity is a half lands at a quarter -- which is the
+    -- same composition the panel-wide alpha makes with every other color here.
+    color     = accentFill(Util.ResolveColor(rec, "accentColor"), rec),
     -- The bar's own border, sharing the panel border's bounds so the two sliders read alike.
     borderTexture = rec.accentBorderTexture or C.PANEL_TEMPLATE.accentBorderTexture,
     borderSize    = Util.Clamp(rec.accentBorderSize,
@@ -125,7 +183,14 @@ local function buildAccentSpec(rec)
   }
 end
 
-function Canvas.BuildSpec(rec, settings)
+--- Record + settings + the combat state → exactly what the frame should look like.
+---
+--- `inCombat` is an ARGUMENT rather than a call to InCombatLockdown from in here, because this
+--- function is the addon's one pure spec builder and the whole of "what does this panel render as"
+--- is unit-testable only for as long as it stays that way. Canvas:Render supplies it; a caller that
+--- omits it gets the out-of-combat answer, which is what every existing caller and every stored
+--- profile written before `visibility` existed already meant.
+function Canvas.BuildSpec(rec, settings, inCombat)
   if type(rec) ~= "table" then return nil end
   settings = settings or {}
   local spec = {
@@ -135,10 +200,14 @@ function Canvas.BuildSpec(rec, settings)
     -- made a rename swap frames. NS.Registry owns the fallback for a record that predates the stored
     -- field, so this stays the one reader rather than a second copy of the rule.
     frameName = NS.Registry.FrameName(rec),
-    shown     = (settings.enabled ~= false) and (rec.enabled ~= false),
+    -- Three independent switches folded into one answer: the addon-wide master, the addon-wide
+    -- visibility rule (options-ui-§15) and the panel's own.
+    shown     = (settings.enabled ~= false)
+                and Canvas.VisibilityShows(settings.visibility, inCombat)
+                and (rec.enabled ~= false),
   }
-  addGeometry(spec, rec)
-  addAppearance(spec, rec)
+  addGeometry(spec, rec, settings)
+  addAppearance(spec, rec, settings)
   spec.accent = buildAccentSpec(rec)
 
   -- The artwork layer, resolved entirely by modules/Artwork.lua — every fill, crop, flip and
@@ -693,7 +762,7 @@ function Canvas:Render(id)
     if active[id] then release(active[id]); active[id] = nil end
     return nil
   end
-  local spec = Canvas.BuildSpec(rec, currentSettings())
+  local spec = Canvas.BuildSpec(rec, currentSettings(), NS.Compat.InCombat())
   local f = active[id]
   -- A frame can only ever answer to the name it was created with, so a frame holding the wrong name
   -- has to be retired and the one belonging to the right name brought in.
@@ -733,6 +802,19 @@ function Canvas:RenderAll()
     end
   end
   NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
+end
+
+-- Repaint on a combat transition, and ONLY when the general-visibility setting is one of the two
+-- that depend on it (options-ui-§15). `Always` and `Never` answer the same thing in and out of
+-- combat, so the common case costs one table read per pull instead of a full RenderAll.
+--
+-- Returns whether it repainted, which is the part a headless test can see: the alternative is a
+-- case that asserts on frame state and passes for the wrong reason when nothing was drawn at all.
+function Canvas:RenderForCombat()
+  local mode = currentSettings().visibility
+  if mode ~= "inCombat" and mode ~= "outOfCombat" then return false end
+  Canvas:RenderAll()
+  return true
 end
 
 -- The frame currently showing a given panel, or nil. Unlock mode needs it to attach drag handles;

@@ -762,9 +762,11 @@ test("Panels page: only the active tab's controls are built", function()
   assertFalse(position["Panel name"] == true, "the Position tab rebuilt the General tab's name box")
 
   -- The merged tab: the fill AND the edge, which were two subsections of two and four controls.
+  -- The merge stays; what options-ui-§7 added is a heading per half, and options-ui-§16 the
+  -- canonical border names -- "Border style", not "Border texture".
   local surface = labelsOfTab(ctx, "Background and border")
   assertTrue(surface["Background texture"], "the merged tab lost the background")
-  assertTrue(surface["Border texture"], "the merged tab lost the border")
+  assertTrue(surface["Border style"], "the merged tab lost the border")
 
   local fade = labelsOfTab(ctx, "Opacity and fade")
   assertTrue(fade["Panel opacity"], "the Opacity and fade tab did not build Panel opacity")
@@ -791,17 +793,170 @@ test("Panels page: an unknown active tab heals to the first one rather than draw
     E.__setSelectedID(nil)
   end)
 
-test("Panels page: Create and Edit are NOT tabs — they stay above the strip", function()
+test("Panels page: creating and picking a panel are ABOVE the strip, in the chrome band", function()
   -- The strip is the EDITOR's alone. Making a panel and choosing which panel to edit are not two of
   -- the six subjects, and a tab you have to leave to pick a different panel would be one.
   for _, name in ipairs(E.TABS) do
     assertFalse(name == "Create", "Create was folded into the tab strip")
     assertFalse(name == "Edit", "Edit was folded into the tab strip")
   end
-  -- And the page still emits both section headings, which is what keeps them above the editor.
+
+  -- They used to be two untabbed sections at the top of the SCROLL, which put page-wide controls
+  -- under whichever tab happened to be showing (options-ui-§14). They are in the page's chrome
+  -- band now, and the source half of this assertion is what pins the direction of that move: a
+  -- host that put them back would do it by calling `section` again.
   local src = assert(io.open("settings/PanelEditor.lua", "r"))
   local body = src:read("*a")
   src:close()
-  assertTrue(body:find('section(ctx, "Create")', 1, true) ~= nil, "the Create section is gone")
-  assertTrue(body:find('section(ctx, "Edit")', 1, true) ~= nil, "the Edit section is gone")
+  assertEqual(body:find('section(ctx, "Create")', 1, true), nil,
+    "the Create section is back in the scroll, below the strip")
+  assertEqual(body:find('section(ctx, "Edit")', 1, true), nil,
+    "the Edit section is back in the scroll, below the strip")
+
+  -- And the rendered half, which is the one that can fail for a reason the grep cannot see: the
+  -- block really is drawn, and the picker inside it is the widget the page keeps a handle on.
+  local ctx = freshPanelsCtx()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Banded")
+  E.__setSelectedID(rec.id)
+  E:Rebuild(ctx)
+  assertTrue(ctx.__pmPicker ~= nil, "the page drew no panel picker in its chrome band")
+  assertEqual(ctx.__pmPicker.labelText, "Panel",
+    "the picker lost the label it needs now that no section heading names it")
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
 end)
+
+test("Panels page: the strip is drawn with ZERO panels, and the empty state is content", function()
+  -- options-ui-§13. The page used to RELEASE its strip and give the band back when the registry was
+  -- empty, on the argument that a strip over nothing is chrome for its own sake -- which is exactly
+  -- the conditional no-strip state the rule forbids. It is also no longer survivable: the create
+  -- box and the panel picker are IN that band now (options-ui-§14), so releasing it would take the
+  -- only control that can make a panel off the screen at the moment the player needs it most.
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+  local ctx = freshPanelsCtx()
+
+  -- The strip's buttons are plain frames rather than AceGUI widgets, so they are counted off the
+  -- library's own chrome ledger rather than out of the widget capture. Compared against the count
+  -- for a page that HAS a panel rather than against a literal: the ledger also carries the content
+  -- panel, and the invariant worth pinning is that the strip is the same either way, not what the
+  -- library happens to park beside it.
+  local populated = NS.Registry:New("Present")
+  E.__setSelectedID(populated.id)
+  E:Rebuild(ctx)
+  local withPanels = #(ctx.__tabKids or {})
+  local stripBefore = ctx.__tabKids
+  assertTrue(withPanels >= #E.TABS, "the populated page drew fewer frames than it has tabs")
+
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+  local labels = labelsBuiltBy(function()
+    ctx.activeTab = E.TABS[1]
+    E:Rebuild(ctx)
+  end)
+
+  -- IDENTITY, not just the count. TabStrip drains its ledger into a FRESH table every time it
+  -- draws, so a rebuild that skipped the strip would leave the previous one's table sitting there
+  -- with the same number of entries in it -- which is exactly what a count-only assertion passes
+  -- against, and what the `if #records > 0 then drawTabStrip(ctx) end` mutation this case exists to
+  -- kill would have produced.
+  assertFalse(ctx.__tabKids == stripBefore,
+    "the strip was not redrawn for an empty registry — the old buttons were left standing")
+  assertEqual(#(ctx.__tabKids or {}), withPanels,
+    "the Panels page drew a different strip once the last panel was deleted")
+  -- And the band itself is still occupied. The branch this replaces called __releaseChrome, which
+  -- empties exactly this ledger -- taking the create box and the picker with it.
+  assertTrue(#(ctx.__chromeKids or {}) > 0, "the chrome band was given back with the panels")
+  assertTrue((ctx.__bannerHeight or 0) > 0, "the band's reserved height was given back")
+  assertTrue(ctx.__pmPicker ~= nil, "the picker went with the band")
+
+  -- And the empty state is INSIDE the page rather than in place of it. No editor control was built.
+  assertFalse(labels["Panel name"] == true, "an editor was built for a registry with no panels")
+
+  E.__setSelectedID(nil)
+end)
+
+test("Panels page: the Master controls tab closes on the canonical button pair", function()
+  -- options-ui-§15: the two resets are the tab's closing button pair, and the hook that draws them
+  -- is keyed on the GROUP NAME. A key that disagreed with the group would detach silently -- the
+  -- tab would simply have no buttons, and nothing would error.
+  local ctx = P.general
+  local created = T.mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  ctx.activeTab = "Master controls"
+  ctx._dirty = true
+  local onShow = ctx.panel:GetScript("OnShow")
+  onShow(ctx.panel)
+
+  local seen = {}
+  for i = from, #created do
+    local w = created[i]
+    if w.type == "Button" and w.text then seen[w.text] = true end
+  end
+  assertTrue(seen["Reset position"], "the Master controls tab drew no Reset position button")
+  assertTrue(seen["Reset all settings"], "the Master controls tab drew no Reset all settings button")
+end)
+
+test("Panels page: every color swatch is followed by a 'Use class color' companion", function()
+  -- options-ui-§17, and the assertion that is NOT vacuous for this addon: its colors live on panel
+  -- RECORDS rather than on schema rows, so the row-walk in tests/test_schema.lua cannot see them.
+  -- Every pair is emitted by one function driven off C.COLOR_FIELDS, and this walks the tabs those
+  -- five colors are drawn on and checks what the editor actually built.
+  --
+  -- Dies under renaming the checkbox back to "Class color", which is what it was called before the
+  -- standard named it, and under a color that gains no companion at all.
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Companioned")
+  E.__setSelectedID(rec.id)
+  local ctx = freshPanelsCtx()
+
+  local WANTED = {
+    ["Background and border"] = { "Background color", "Border color" },
+    ["Accent bar"]            = { "Bar color", "Border color" },
+    ["Artwork"]               = { "Artwork color" },
+  }
+  -- Matched on the PREFIX, because a swatch whose class color is already on carries a live
+  -- `(opacity)` suffix saying which half of it is still read -- `accentClassColor` ships true, so
+  -- the Bar color picker is labeled that way from the first render.
+  local function drewSwatch(labels, swatch)
+    for label in pairs(labels) do
+      if label == swatch or label:sub(1, #swatch + 1) == swatch .. " " then return true end
+    end
+    return false
+  end
+
+  local seen = 0
+  for tab, swatches in pairs(WANTED) do
+    local labels = labelsOfTab(ctx, tab)
+    for _, swatch in ipairs(swatches) do
+      assertTrue(drewSwatch(labels, swatch), tab .. " lost its " .. swatch .. " swatch")
+      seen = seen + 1
+    end
+    assertTrue(labels["Use class color"],
+      tab .. " drew a color swatch with no 'Use class color' companion beside it")
+  end
+  -- Every color the record has is accounted for, so a sixth added later cannot slip past this.
+  local total = 0
+  for _ in pairs(NS.Constants.COLOR_FIELDS) do total = total + 1 end
+  assertEqual(seen, total, "the editor draws a color this case does not walk")
+
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+end)
+
+test("Panels page: every color declares WHOSE class it means, and all five are the player's",
+  function()
+    -- options-ui-§17 requires the intent DECLARED rather than inferred from the path, because a
+    -- path cannot be trusted to say it. A panel is chrome: it tracks no unit and has no unit token
+    -- to ask about, so every one of them is the player's and `Util.ResolveColor` passes a nil unit.
+    local C = NS.Constants
+    for field in pairs(C.COLOR_FIELDS) do
+      assertEqual(C.COLOR_CLASS_SOURCE[field], "player",
+        field .. " has no declared class source — an audit reads that declaration, not the path")
+    end
+    for field in pairs(C.COLOR_CLASS_SOURCE) do
+      assertTrue(C.COLOR_FIELDS[field] ~= nil,
+        field .. " declares a class source but has no class-color companion")
+    end
+  end)

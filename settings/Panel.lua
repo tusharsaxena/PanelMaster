@@ -232,11 +232,16 @@ end
 -- Six of the ten are now LibKa0s-Options-1.0's; the table keeps its shape and its names so
 -- settings/PanelEditor.lua is untouched by the adoption. It binds these LAZILY inside its own
 -- rebuild, so nothing here pins the TOC order.
+--
+-- THREE OF THEM LEFT with the panel editor's "Create" and "Edit" sections. `section`, `addSpacer`
+-- and `ROW_VSPACER` drew those two headings and the gaps around them; both sections are in the
+-- page's chrome band now (options-ui-§14), where a scroll-anchored heading cannot go, and the
+-- editor's remaining in-tab headings go into its own container rather than into the scroll. What
+-- replaced them here is SECTION_HEADING_H, which is the one number that heading needs and the one
+-- the editor may not restate host-side (options-ui-§8).
 P.__ui = {
   attachTooltip   = O.AttachTooltip,   -- library
-  addSpacer       = O.AddSpacer,       -- library
-  section         = O.Section,         -- library
-  ROW_VSPACER     = ROW_VSPACER,       -- library (lib.LAYOUT)
+  SECTION_HEADING_H = SECTION_HEADING_H, -- library (lib.LAYOUT): the editor's subsection headings
   ensureScroll    = ensureScroll,      -- library, plus this file's dropdown-close layer
   makePairButton  = makePairButton,    -- host: adds INTO a caller's row, which O.InlineButtonPair
                                        --       cannot do — it builds and owns the row itself
@@ -388,7 +393,13 @@ function P:Register()
       -- mode with the thing it modes, and a two-column line has no third cell. `afterGroup` fires
       -- after the group's last row with the pending line already flushed, which is where the flow
       -- engine puts a group's buttons anyway.
-      O.RenderTabbedSchema(c, "general", {
+      --
+      -- The Master controls tab's closing BUTTON PAIR -- Reset position and Reset all settings --
+      -- is the composer's own `afterGroup`, handed back beside the rows and parked on NS.Schema
+      -- (options-ui-§15). The GROUP NAME IS THE KEY, so it is read from the composed rows rather
+      -- than written out here: a literal that disagreed with the composer would detach the hook
+      -- and nothing would error -- the tab would simply lose both buttons.
+      local afterGroup = {
         ["Editing"] = function(cc)
           -- Through EnsureScroll rather than off `cc.scroll`, which is the library's own field and
           -- not a contract this file is entitled to read: the hook fires inside the render, and
@@ -402,7 +413,11 @@ function P:Register()
             onClick = function() if NS.Slash then NS.Slash:CliRecover() end end,
           })
         end,
-      })
+      }
+      if NS.Schema.MasterGroup and NS.Schema.MasterAfterGroup then
+        afterGroup[NS.Schema.MasterGroup] = NS.Schema.MasterAfterGroup
+      end
+      O.RenderTabbedSchema(c, "general", afterGroup)
     end)
     return Settings.RegisterCanvasLayoutSubcategory(mainCategory, ctx.panel, "General")
   end)

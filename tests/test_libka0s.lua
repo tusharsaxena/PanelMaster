@@ -585,7 +585,13 @@ end)
 
 test("Options: the enum row's dropdown is populated from the schema's `values`", function()
   local row = NS.Schema:FindRow("settings.defaultStrata")
-  local dd = widgetsOfType(P_general(), "Dropdown")[1]
+  -- Found BY LABEL, never by position. The page has two dropdowns now -- General visibility on the
+  -- Master controls tab and this one on New panels -- and `[1]` silently became the wrong widget
+  -- the moment the first of them arrived, with the case still passing shape checks against it.
+  local dd
+  for _, w in ipairs(widgetsOfType(P_general(), "Dropdown")) do
+    if w.labelText == row.label then dd = w end
+  end
   assertTrue(dd ~= nil, "the enum row rendered no dropdown")
   assertEqual(#dd.order, #row.values, "the dropdown lost an option")
   -- Ordered-array position IS the order, which is why the strata list reads BACKGROUND..TOOLTIP
@@ -1022,3 +1028,37 @@ test("L trap: the seam-file list covers every file that calls lib:New", function
   assertEqual(#missing, 0,
     "these files resolve a LibKa0s major but are not in SEAM_FILES: " .. table.concat(missing, ", "))
 end)
+
+test("Degraded install: the schema loses the composed Master controls rows and NOTHING else",
+  function()
+    -- options-ui-§1 requires the stub's cost to be MEASURED rather than assumed, and pinned by the
+    -- suite. The composers are the one thing the stub cannot answer honestly: what they emit is the
+    -- library's canonical row data -- the order, the labels, the ranges, the defaults -- and a
+    -- hand-copied set in the stub would be the copy that goes stale (anti-pattern #47).
+    --
+    -- So a library-less install reaches the Editing and New panels rows through `/pm list|get|set`
+    -- and not the Master controls ones. That is the whole difference, and this case exists so it
+    -- can never widen without somebody deciding to widen it.
+    local degradedNS = loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true,
+                                     OptionsCompose = true })
+    local live, degraded = NS.Schema.Schema, degradedNS.Schema.Schema
+
+    local master = 0
+    for _, row in ipairs(live) do
+      if row.group == "Master controls" then master = master + 1 end
+    end
+    assertTrue(master > 0, "the live schema has no Master controls rows to lose")
+    assertEqual(#degraded, #live - master,
+      "the degraded schema is not exactly the live one minus the composed block")
+
+    for _, row in ipairs(degraded) do
+      assertFalse(row.group == "Master controls",
+        "the degradation stub composed a Master controls row after all: " .. tostring(row.path))
+    end
+    assertFalse(degradedNS.Schema:InstallMaster(degradedNS.Helpers),
+      "the stub reported that the canonical rows arrived")
+
+    -- Every remaining row still resolves against the defaults, so the degraded install's CLI is
+    -- narrower and not broken.
+    assertEqual(degradedNS.Schema:Register(), 0)
+  end)

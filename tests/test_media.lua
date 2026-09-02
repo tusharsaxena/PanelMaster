@@ -544,10 +544,15 @@ test("Util.ResolveColor: the class color replaces RGB but keeps the stored alpha
 end)
 
 test("Util.ResolveColor: falls back to the stored color when the class is unknown", function()
+  -- LibKa0s-Core-1.0 memoizes the PLAYER's answer ON SUCCESS, so the memo is dropped through the
+  -- library's own suite seam before the class is made unresolvable. Without that this case reads a
+  -- cached Priest, passes, and proves nothing at all about the fallback.
   local saved = T.mocks.UnitClass
   T.mocks.UnitClass = function() return "Tinker", "TINKER", 99 end
+  NS.Core.__ResetClassColor()
   local c = Util.ResolveColor({ bgColor = { 0.2, 0.3, 0.4, 1 }, bgClassColor = true }, "bgColor")
   T.mocks.UnitClass = saved
+  NS.Core.__ResetClassColor()
   -- Never a white panel: an unresolvable class color keeps what the user picked.
   assertNear(c[1], 0.2)
 end)

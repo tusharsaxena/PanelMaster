@@ -595,3 +595,34 @@ test("Canvas: the orientation is re-applied on every repaint, not just the first
   assertTrue(fill.__texCoord ~= nil, "the rotation was not re-applied on repaint")
   assertEqual(fill.__texCoord[2], C.ACCENT_TEXCOORD_ROT90[2])
 end)
+
+test("Accent bar: Bar opacity multiplies the bar color's own alpha", function()
+  -- options-ui-§16's mandated bar row, and it is a NEW stored field rather than a re-label of the
+  -- panel-wide opacity: that one fades background, border and bars together and could not mean
+  -- what this row means on every other page in the collection.
+  --
+  -- Dies under `color[4] = rec.accentAlpha`, which would throw away the opacity the player set in
+  -- the swatch, and under dropping the multiply, which would read 0.8.
+  local spec = Canvas.BuildSpec({
+    accentEnabled = true, accentColor = { 1, 0, 0, 0.8 }, accentClassColor = false,
+    accentAlpha = 0.5,
+  }, {})
+  assertNear(spec.accent.color[4], 0.4)
+  assertNear(spec.accent.color[1], 1, 1e-6, "bar opacity changed the hue as well as the alpha")
+
+  -- The identity, which is what every accent bar written before the field existed reads as.
+  local unset = Canvas.BuildSpec({
+    accentEnabled = true, accentColor = { 1, 0, 0, 0.8 }, accentClassColor = false,
+  }, {})
+  assertNear(unset.accent.color[4], 0.8)
+end)
+
+test("Accent bar: Bar opacity is stored, clamped and reachable from the CLI", function()
+  -- A declared setting that the record cannot hold is worse than one that is absent, so the whole
+  -- round trip is asserted rather than only the renderer's read of it.
+  assertEqual(C.PANEL_FIELD_TYPE.accentAlpha, "number")
+  assertNear(C.PANEL_TEMPLATE.accentAlpha, 1.0)
+  assertNear(R.Sanitize({ accentAlpha = 7 }).accentAlpha, 1.0, 1e-6, "an out-of-range value was kept")
+  assertNear(R.Sanitize({ accentAlpha = -3 }).accentAlpha, 0)
+  assertNear(R.Sanitize({}).accentAlpha, 1.0, 1e-6, "a record predating the field lost its default")
+end)

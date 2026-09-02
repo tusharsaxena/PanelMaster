@@ -27,18 +27,22 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- They are bound on first use rather than captured at load, because the TOC loads THIS file before
 -- settings/Panel.lua — the page has to be able to reach the editor by the time it registers, so the
 -- editor cannot depend on the page existing yet at load time.
-local attachTooltip, addSpacer, section, ensureScroll, makePairButton
-local trackDropdown, forgetDropdowns, safeRun, LSM_WIDGET, ROW_VSPACER
-local BUTTON_PAIR_REL
+local attachTooltip, ensureScroll, makePairButton
+local trackDropdown, forgetDropdowns, safeRun, LSM_WIDGET
+local BUTTON_PAIR_REL, SECTION_HEADING_H
 
+-- `section`, `addSpacer` and `ROW_VSPACER` are no longer among them. They drew the two untabbed
+-- "Create" and "Edit" headings and the gaps around them, and both sections have moved into the
+-- page's chrome band (options-ui-§14) where a scroll-anchored heading cannot go. SECTION_HEADING_H
+-- arrives in their place, for the in-tab subsection headings (options-ui-§7).
 local function bindHelpers()
   local ui = NS.Panel and NS.Panel.__ui
   if not ui then return end
-  attachTooltip,  addSpacer,       section     = ui.attachTooltip, ui.addSpacer, ui.section
-  ensureScroll,   makePairButton               = ui.ensureScroll, ui.makePairButton
-  trackDropdown,  forgetDropdowns, safeRun     = ui.trackDropdown, ui.forgetDropdowns, ui.safeRun
-  LSM_WIDGET,     ROW_VSPACER                  = ui.LSM_WIDGET, ui.ROW_VSPACER
-  BUTTON_PAIR_REL                              = ui.BUTTON_PAIR_REL
+  attachTooltip,  ensureScroll,    makePairButton = ui.attachTooltip, ui.ensureScroll,
+                                                    ui.makePairButton
+  trackDropdown,  forgetDropdowns, safeRun        = ui.trackDropdown, ui.forgetDropdowns, ui.safeRun
+  LSM_WIDGET                                      = ui.LSM_WIDGET
+  BUTTON_PAIR_REL, SECTION_HEADING_H              = ui.BUTTON_PAIR_REL, ui.SECTION_HEADING_H
 end
 
 local function runRebuilders(ctx)
@@ -185,17 +189,23 @@ for _, name in ipairs(EDITOR_TABS) do IS_EDITOR_TAB[name] = true end
 -- two distinct sizes so the spacing itself communicates structure: a big gap means "new part of
 -- the page", a small one "still the same thought".
 --
--- The middle size is gone with the subsection headings it spaced. The editor's six subsections are
--- TABS now, and a tab is announced by the strip rather than by a divider-flanked heading 14px down
--- the page -- so `editorHeading` and the EDITOR_SECTION_GAP it was the only caller of both went
--- with them.
-local EDITOR_SELECT_GAP  = 20   -- panel dropdown → the editor box
+-- The middle size came back, and with it a heading. The editor's six SUBJECTS are tabs and are
+-- announced by the strip -- that has not changed -- but a tab that mixes two kinds of control has
+-- to say where one stops and the next starts (options-ui-§7), and three of the six do.
 local EDITOR_ROW_GAP     = 6    -- between rows within one subsection
--- The height an AceGUI control's label row occupies (a labeled Dropdown is 40 tall, an unlabeled
--- one 26). A section heading is followed by a fixed gap, so a control with NO label starts 14px
--- higher than a labeled one and the heading above it looks tighter than every other heading on the
--- page. Adding this back before an unlabeled control makes the gaps read as equal.
-local LABEL_ROW_H        = 14
+local EDITOR_HEADING_GAP = 10   -- above a subsection heading; below it the heading's own art reads
+                                -- as the separation, so nothing is added there
+-- The gap between the content panel's top edge and the editor's first control.
+--
+-- It used to be EDITOR_ROW_GAP and could afford to be, because the editor was wrapped in a
+-- titleless InlineGroup that contributed an inset of its own -- an empty title bar plus the box's
+-- padding, near twenty pixels of it. That box is gone (options-ui-§14: a bounded box inside a band
+-- the content panel already bounds is a border stating a boundary twice), so the gap is stated here
+-- rather than inherited from a widget that happened to have one.
+local EDITOR_TOP_GAP     = 16
+-- `EDITOR_SELECT_GAP` and `LABEL_ROW_H` went with the same change. The first spaced the panel
+-- dropdown from the editor and the second compensated that dropdown for having no label; the picker
+-- is in the chrome band now, carries a label, and is not above the editor at all.
 
 -- ── Editor building blocks ──────────────────────────────────────────────────────
 -- The editor emits into a List-layout container as a sequence of full-width ROWS, rather than
@@ -243,6 +253,25 @@ local function editorSpacer(parent, height)
   sp:SetFullWidth(true)
   sp:SetHeight(height)
   parent:AddChild(sp)
+end
+
+-- A subsection heading INSIDE one tab (options-ui-§7).
+--
+-- The same AceGUI `Heading` widget, at the same height and under the same font object, that
+-- LibKa0s-Options-1.0's O.Section draws -- one heading widget in the collection, and a colored
+-- full-width Label standing in for it is anti-pattern #71. What it cannot do is call O.Section:
+-- that function adds to the PAGE's scroll, and the editor emits into its own container so that a
+-- rebuild can release the editor without taking the rest of the page with it.
+local function editorHeading(parent, text)
+  local h = AceGUI:Create("Heading")
+  h:SetText(text)
+  h:SetFullWidth(true)
+  h:SetHeight(SECTION_HEADING_H)
+  if h.label and h.label.SetFontObject and _G.GameFontNormalLarge then
+    h.label:SetFontObject(_G.GameFontNormalLarge)
+  end
+  parent:AddChild(h)
+  return h
 end
 
 -- ── Per-editor scalar refreshers (options-ui-§11) ───────────────────────────────
@@ -311,17 +340,24 @@ local function makeMediaDropdown(ctx, row, rec, field, label, tooltip)
   return dd
 end
 
--- A color control plus its "use class color" companion.
+-- A color control plus its "Use class color" companion (options-ui-§17).
 --
 -- Driven off C.COLOR_FIELDS rather than written out per color, so a color added to the panel
--- record later gets its class-color checkbox for free.
+-- record later gets its class-color checkbox for free. That map is why this addon met §17's
+-- "immediately to its right" rule before the rule existed; what the adoption changed is the
+-- companion's LABEL (the standard names it), the swatch's tooltip (which now carries the
+-- collection's own sentence rather than this file's paraphrase of it) and where the color is
+-- resolved (LibKa0s-Core-1.0, through Util.ResolveColor).
 --
--- The picker stays ENABLED while the class color is on, and this is a deliberate reversal. It used
--- to be grayed out on the reasoning that its RGB was being overridden — but a color's ALPHA is not
--- overridden, it still decides how solid the result is, and the picker is the only control that sets
--- it. Disabling it therefore contradicted its own tooltip ("the opacity you picked still applies")
--- and left the user unable to fix a washed-out class-colored border at all. The label says which
--- half is live instead.
+-- WHICH CLASS is declared in C.COLOR_CLASS_SOURCE, not decided here: all five of this addon's
+-- colors are panel chrome and take the PLAYER's class. There is no per-color branch in this
+-- function because there is no per-color difference to branch on.
+--
+-- The picker stays ENABLED while the class color is on, and it is now forbidden to be anything
+-- else: `disabledIf` on a color row is anti-pattern #74. A color's ALPHA is not overridden — it
+-- still decides how solid the result is, and the picker is the only control that sets it — so
+-- graying it would tell the player something untrue. The label suffix says which half is live and
+-- the tooltip says it in the collection's words.
 local function makeColorPair(ctx, row, rec, field, label)
   local flag = C.COLOR_FIELDS[field]
   local usingClass = flag and rec[flag] and true or false
@@ -358,9 +394,11 @@ local function makeColorPair(ctx, row, rec, field, label)
   -- user drags — which is what a color picker should do anyway.
   picker:SetCallback("OnValueChanged", store)
   picker:SetCallback("OnValueConfirmed", store)
+  -- The note is the LIBRARY's string, not a paraphrase: options-ui-§17 fixes what a swatch says
+  -- about its companion, and nine addons saying it nine ways is the drift the constant ends.
   attachTooltip(picker, label,
-    "Sets the color and its opacity. With Class color ticked the color part is overridden, "
-    .. "but the opacity you set here still decides how solid the result is.")
+    "Sets the color and its opacity. "
+    .. ((NS.Helpers and NS.Helpers.CLASS_COLOR_NOTE) or ""))
   row:AddChild(picker)
 
   -- SetColor, NEVER SetValue: SetColor updates the swatch without firing a callback, whereas
@@ -378,14 +416,15 @@ local function makeColorPair(ctx, row, rec, field, label)
 
   local cb = AceGUI:Create("CheckBox")
   classCheck = cb
-  cb:SetLabel("Class color")
+  -- `Use class color`, verbatim: options-ui-§17 names the control, and it was "Class color" here.
+  cb:SetLabel("Use class color")
   cb:SetRelativeWidth(0.5)
   cb:SetValue(usingClass)
   cb:SetCallback("OnValueChanged", function(_, _, v)
     NS.Registry:Set(rec.id, flag, v and true or false)
     picker:SetLabel(labelFor(v and true or false))
   end)
-  attachTooltip(cb, "Class color",
+  attachTooltip(cb, "Use class color",
     "Use your class color for " .. label:lower() .. ". The opacity from the color picker still "
     .. "applies \226\128\148 a class color at low opacity looks just as washed out as any other.")
   row:AddChild(cb)
@@ -421,14 +460,16 @@ end
 -- fields. Every control writes through NS.Registry:Set, which is the same seam the CLI and the drag
 -- handler use.
 local function buildPanelEditor(ctx, parent, rec)
-  local group = AceGUI:Create("InlineGroup")
-  -- No title: the panel's name is rendered above this box as a full section heading (editorTitle),
-  -- so repeating it here as the group's small left-aligned caption would say the same thing twice.
-  group:SetTitle("")
+  -- A plain List container, NOT an InlineGroup, and the box is the point rather than the widget.
+  -- The editor sits under a tab strip whose content panel already draws a boundary around the whole
+  -- page, and a second bounded box inside it was a border stating a boundary the page already
+  -- states (options-ui-§14, anti-pattern #72). The InlineGroup was also titleless, so it was never
+  -- naming anything -- it was drawing an edge and an inset and nothing else.
+  local group = AceGUI:Create("SimpleGroup")
   group:SetFullWidth(true)
   group:SetLayout("List")
 
-  editorSpacer(group, EDITOR_ROW_GAP)
+  editorSpacer(group, EDITOR_TOP_GAP)
 
   -- `rel` overrides the half-row default for a slider that has no partner on its line. Passed
   -- rather than inferred, because "is this row full" is not something a widget maker can see.
@@ -671,7 +712,14 @@ local function buildPanelEditor(ctx, parent, rec)
   end
 
   -- The panel's own surface: the fill inside it and the edge around it.
+  --
+  -- The MERGE STAYS. It is argued for at the tab list above -- the fill and the edge are two halves
+  -- of one question, and a two-control tab is not a subject -- and options-ui-§7 does not undo a
+  -- deliberate merge. What it adds is that a tab holding two kinds of control says where one stops
+  -- and the next starts, so each half opens with a heading.
   sections[TAB_SURFACE] = function()
+    editorHeading(group, "Background")
+
     local bgRow = editorRow(group)
     makeMediaDropdown(ctx, bgRow, rec, "bgTexture", "Background texture",
       "The texture the panel is filled with. 'Solid' is a flat color; 'None' draws no fill.")
@@ -680,15 +728,26 @@ local function buildPanelEditor(ctx, parent, rec)
     local bgColorRow = editorRow(group)
     -- The fill's own opacity lives in this color's alpha. Panel opacity (on the Opacity and fade
     -- tab) is a separate, panel-wide multiplier — see the note there.
+    --
+    -- The swatch and its companion and nothing else. A background is NOT a bar group
+    -- (options-ui-§16), so no opacity row is invented for it here: the alpha above and the
+    -- panel-wide opacity are already the two controls that decide how solid the fill is.
     makeColorPair(ctx, bgColorRow, rec, "bgColor", "Background color")
 
-    -- The panel's edge, under the same tab as its fill: two halves of one question -- what the
-    -- panel itself is made of -- and two controls was never a subject of its own.
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Border")
+
+    -- The canonical border block, in the mandated order: style, thickness, color, companion. This
+    -- addon's own offset comes AFTER all four and is never interleaved with them (options-ui-§16).
     local borderRow = editorRow(group)
-    makeMediaDropdown(ctx, borderRow, rec, "borderTexture", "Border texture",
+    makeMediaDropdown(ctx, borderRow, rec, "borderTexture", "Border style",
       "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it.")
-    numberField(borderRow, "Border size", "borderSize", C.MIN_BORDER, C.MAX_BORDER, 1,
+    numberField(borderRow, "Border thickness (px)", "borderSize", C.MIN_BORDER, C.MAX_BORDER, 1,
       "Border thickness. 0 removes the border entirely.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local borderColorRow = editorRow(group)
+    makeColorPair(ctx, borderColorRow, rec, "borderColor", "Border color")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     local borderOffsetRow = editorRow(group)
@@ -696,70 +755,94 @@ local function buildPanelEditor(ctx, parent, rec)
       C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
       "How far the border sits from the panel's edge. Positive pushes it outward, "
       .. "negative pulls it inward.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local borderColorRow = editorRow(group)
-    makeColorPair(ctx, borderColorRow, rec, "borderColor", "Border color")
   end
 
-  -- The BenikUI-style strip along a panel's edges, and the strip's own border.
+  -- The BenikUI-style strip along a panel's edges, which edges it runs along, and the strip's own
+  -- border. Three kinds of control on one tab, so three headings (options-ui-§7) — and the middle
+  -- one replaces the collection's last hand-rolled heading, a gold |cffffd100Edges|r Label standing
+  -- in for a Heading widget (anti-pattern #71).
+  --
+  -- The controls are named for what they are within their own subsection — `Bar texture`, not
+  -- `Accent bar texture` — because the tab already says "Accent bar" and the heading already says
+  -- which of the three parts you are in. That is also what lets the bar and border blocks carry the
+  -- canonical names options-ui-§16 gives them.
   sections[TAB_ACCENT] = function()
+    editorHeading(group, "Bar")
+
     local accentRow = editorRow(group)
     boolField(accentRow, "Enable accent bar", "accentEnabled",
-      "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels. "
-      .. "Off by default.")
+      "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels.")
 
-    makeMediaDropdown(ctx, accentRow, rec, "accentTexture", "Accent bar texture",
+    -- The canonical bar block (options-ui-§16): texture, opacity, color, companion.
+    --
+    -- `Bar opacity` is NEW, and it is a stored field rather than a re-labeling of something that
+    -- was already here. The panel-wide opacity on the Opacity and fade tab fades the whole frame —
+    -- background, border and bars together — so it could not be this row without the mandated
+    -- control meaning something different on this page from every other page in the collection.
+    -- It multiplies the bar color's own alpha; modules/Canvas.lua does the composition.
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local barRow = editorRow(group)
+    makeMediaDropdown(ctx, barRow, rec, "accentTexture", "Bar texture",
       "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
       .. "'Solid' is a flat color.")
+    numberField(barRow, "Bar opacity", "accentAlpha", 0, 1, 0.05,
+      "How solid the accent bar's fill is. Multiplies with the opacity in the bar color below and "
+      .. "with the panel's own opacity, so a faded panel fades its bars with it.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
-    local edgeLabel = AceGUI:Create("Label")
-    edgeLabel:SetFullWidth(true)
-    edgeLabel:SetText("|cffffd100Edges|r")
-    group:AddChild(edgeLabel)
-    local edgeRow = editorRow(group)
-    makeEdgeChecks(ctx, edgeRow, rec)
+    local accentColorRow = editorRow(group)
+    makeColorPair(ctx, accentColorRow, rec, "accentColor", "Bar color")
 
+    -- This addon's own bar rows, AFTER the mandated four rather than among them.
     editorSpacer(group, EDITOR_ROW_GAP)
     local accentSizeRow = editorRow(group)
-    numberField(accentSizeRow, "Accent bar thickness", "accentThickness",
+    numberField(accentSizeRow, "Bar thickness", "accentThickness",
       C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
       "How thick the accent bar is, in screen units.")
-    numberField(accentSizeRow, "Accent bar offset", "accentOffset",
+    numberField(accentSizeRow, "Bar offset", "accentOffset",
       C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
       "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
       .. "which is the look this is modeled on; 0 sits flush; negative overlaps the panel.")
 
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local accentColorRow = editorRow(group)
-    makeColorPair(ctx, accentColorRow, rec, "accentColor", "Accent bar color")
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Edges")
 
-    -- The bar's own border. Same four controls as the panel's, in the same order, so the two read
-    -- alike — the only difference is what they outline.
-    editorSpacer(group, EDITOR_ROW_GAP)
+    local edgeRow = editorRow(group)
+    makeEdgeChecks(ctx, edgeRow, rec)
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Border")
+
+    -- The bar's own border. The same canonical four in the same order as the panel's, so the two
+    -- read alike — the only difference is what they outline.
     local accentBorderRow = editorRow(group)
-    makeMediaDropdown(ctx, accentBorderRow, rec, "accentBorderTexture", "Accent bar border texture",
-      "The edge style drawn around the accent bar. 'None' removes it, as does a size of 0.")
-    numberField(accentBorderRow, "Accent bar border size", "accentBorderSize",
+    makeMediaDropdown(ctx, accentBorderRow, rec, "accentBorderTexture", "Border style",
+      "The edge style drawn around the accent bar. 'None' removes it, as does a thickness of 0.")
+    numberField(accentBorderRow, "Border thickness (px)", "accentBorderSize",
       C.MIN_BORDER, C.MAX_BORDER, 1,
-      "Thickness of the accent bar's own border. 0 removes it entirely, which is the default.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local accentBorderOffsetRow = editorRow(group)
-    numberField(accentBorderOffsetRow, "Accent bar border offset", "accentBorderOffset",
-      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-      "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
+      "Thickness of the accent bar's own border. 0 removes it entirely.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     local accentBorderColorRow = editorRow(group)
-    makeColorPair(ctx, accentBorderColorRow, rec, "accentBorderColor", "Accent bar border color")
+    makeColorPair(ctx, accentBorderColorRow, rec, "accentBorderColor", "Border color")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local accentBorderOffsetRow = editorRow(group)
+    numberField(accentBorderOffsetRow, "Border offset", "accentBorderOffset",
+      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
+      "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
   end
 
   -- Artwork is drawn INTO the panel the three tabs before it describe, which is why it sits
   -- after them: it is the decision you make once the panel itself looks right.
   sections[TAB_ARTWORK] = function()
     -- The dropdowns are all label-carrying option lists rather than raw tokens — see optionDropdown.
+    --
+    -- The longest tab on the page, and three kinds of control deep: which image, where it sits, and
+    -- what it looks like. options-ui-§7 wants a heading between each pair of those, and the runs
+    -- were already in that order — the only row that moved is the artwork offset pair, which sat at
+    -- the very bottom under the color controls and belongs with the rest of the placement.
+    editorHeading(group, "Image")
 
     -- Full width. Catalog labels carry their whole derived category, so a row reads
     -- "Faction -> Expansion -> 12 Midnight: Harati" — half a row truncates that to uselessness.
@@ -838,7 +921,9 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "return to the artwork's own size.")
     artPathRow:AddChild(fitBtn)
 
-    editorSpacer(group, EDITOR_ROW_GAP)
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Layout")
+
     local artFillRow = editorRow(group)
     optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
       "How the image is sized inside the panel.\n\n"
@@ -855,7 +940,6 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
       .. "is nowhere for the art to move to.")
 
-    editorSpacer(group, EDITOR_ROW_GAP)
     editorSpacer(group, EDITOR_ROW_GAP)
     local artScaleRow = editorRow(group)
     numberField(artScaleRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
@@ -877,6 +961,21 @@ local function buildPanelEditor(ctx, parent, rec)
       "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
+    local artOffsetRow = editorRow(group)
+    -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
+    -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
+    numberField(artOffsetRow, "Artwork X offset", "artX",
+      -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+      "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
+      .. "have no room to move in.")
+    numberField(artOffsetRow, "Artwork Y offset", "artY",
+      -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
+      "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
+      .. "have no room to move in.")
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Appearance")
+
     local artOpacityRow = editorRow(group)
     numberField(artOpacityRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
       "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
@@ -913,19 +1012,6 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
       .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
       .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local artOffsetRow = editorRow(group)
-    -- The same span as the panel's own X/Y, and for the same reason: C.EDITOR_OFFSET_RANGE is a
-    -- reach, not a clamp, and E.SliderSpan widens it to whatever the record actually holds.
-    numberField(artOffsetRow, "Artwork X offset", "artX",
-      -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
-      "Nudge the art horizontally from its position anchor. Ignored by Stretch, Fill and Tile, which "
-      .. "have no room to move in.")
-    numberField(artOffsetRow, "Artwork Y offset", "artY",
-      -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE, 1,
-      "Nudge the art vertically from its position anchor. Ignored by Stretch, Fill and Tile, which "
-      .. "have no room to move in.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
   end
@@ -974,9 +1060,9 @@ end
 -- state it needs, and buildPanelEditor dispatches on the same field, so the strip and the editor
 -- cannot disagree about which tab is showing.
 --
--- A click re-runs the page's rebuilders rather than re-rendering the whole page: the Create box and
--- the selector above are untouched by a tab change, and releasing them to build the same two
--- widgets again would drop whatever the user had typed into the create box.
+-- A click re-runs the page's rebuilders rather than re-rendering the whole page: the create box and
+-- the panel picker in the band above are untouched by a tab change, and releasing them to build the
+-- same two widgets again would drop whatever the user had typed into the create box.
 local function drawTabStrip(ctx)
   if not (NS.Helpers and NS.Helpers.TabStrip) then return end
   if not IS_EDITOR_TAB[ctx.activeTab] then ctx.activeTab = EDITOR_TABS[1] end
@@ -995,58 +1081,115 @@ local function drawTabStrip(ctx)
   })
 end
 
--- Give the band back when there is no editor under it. Both of the library's chrome ledgers, and
--- the reserved height with them: releasing the buttons alone would leave the scroll frame starting
--- a strip's height down the page with nothing in the gap.
-local function releaseTabStrip(ctx)
+-- ── The page-wide block, ABOVE the strip (options-ui-§14) ───────────────────────
+--
+-- Making a panel and choosing which panel to edit apply to EVERY tab, so they belong in the band
+-- the page banner occupies rather than in the scroll below the strip. They were in the scroll —
+-- two untabbed "Create" and "Edit" sections drawn under whichever tab happened to be showing — and
+-- the rule names exactly that shape: a control that governs the whole page but is drawn under one
+-- tab reads as belonging to that tab.
+--
+-- ONE chrome block per page, and this is it. H.PageHeader and H.PageBanner release the same ledger
+-- and write the same reserved height, so the picker goes INSIDE this block and no banner is drawn
+-- separately: two blocks would be two bands, and the second would push the page down for nothing.
+--
+-- NOT BOXED, either. The band is already separated from the page by its own divider and by the
+-- content panel's top edge, and a bounded box around these two controls would be a border stating a
+-- boundary the band already states.
+--
+-- Built ONCE, from BuildPage, and never released by a rebuild. The create box is the reason and it
+-- was true before the move too: a create broadcasts MSG_PANELS from inside R:New, so the rebuild
+-- lands while the user's own callback is still on the stack, and releasing the box would hand the
+-- widget they are typing into back to AceGUI's pool. The picker beside it is refreshed IN PLACE
+-- instead — SetList and SetValue on the widget that is already there, which is the same scalar path
+-- every other control on this page takes.
+local function drawPageHeader(ctx)
   local H = NS.Helpers
-  if not H then return end
-  if H.__releaseChrome then H.__releaseChrome(ctx) end
-  if H.SetChromeHeight then H.SetChromeHeight(ctx, 0) end
+  if not (H and H.PageHeader) then return end
+
+  H.PageHeader(ctx, {
+    -- The library's own floor for this band, which is roughly an AceGUI control WITH a label —
+    -- exactly what both of these are. Read rather than restated (options-ui-§8).
+    height = H.BANNER_H,
+    build = function(_, frame)
+      local block = AceGUI:Create("SimpleGroup")
+      if not (block and block.frame) then return end
+      block:SetLayout("Flow")
+      block.frame:SetParent(frame)
+      block.frame:ClearAllPoints()
+      block.frame:SetPoint("TOPLEFT",     frame, "TOPLEFT",     0, 0)
+      block.frame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+
+      -- The EditBox's own "Okay" button is the confirm, matching the rename box in the editor
+      -- below — one confirmation gesture for both places you type a panel name.
+      --
+      -- Safe because AceGUI's EditBox does NOT commit on focus loss: `OnEnterPressed` is fired only
+      -- by the Enter key, the Okay button and a drag-receive. `OnEditFocusLost` is not even
+      -- registered. (An earlier version disabled the button and added a separate Create button on
+      -- the mistaken assumption that tabbing away would create a panel.)
+      local nameBox = AceGUI:Create("EditBox")
+      nameBox:SetLabel("New panel name")
+      nameBox:SetRelativeWidth(0.5)
+      nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
+        pageAction.create(ctx, widget, text)
+      end)
+      attachTooltip(nameBox, "New panel name",
+        "Type a name and press Enter, or click Okay, to create the panel.")
+      block:AddChild(nameBox)
+
+      -- The picker carries a LABEL now. It did not when it lived under an "Edit" section heading
+      -- that said what it was for; in the band there is no heading above it, and an unlabeled
+      -- dropdown beside a labeled edit box reads as a control that lost its caption.
+      local picker = AceGUI:Create("Dropdown")
+      picker:SetLabel("Panel")
+      picker:SetRelativeWidth(0.5)
+      picker:SetCallback("OnValueChanged", function(_, _, id)
+        selectedID = id
+        runRebuilders(ctx)
+      end)
+      attachTooltip(picker, "Panel",
+        "Which panel the tabs below are editing. A disabled panel is marked in the list, so it is "
+        .. "obvious why editing it changes nothing on screen.")
+      block:AddChild(picker)
+
+      if block.DoLayout then block:DoLayout() end
+      ctx.__pmPicker = picker
+    end,
+  })
+end
+
+-- Re-point the picker at the current panel list, without releasing it.
+--
+-- Re-registered for scroll-close on every rebuild because `forgetDropdowns` empties that registry
+-- at the top of one: the widget survives the rebuild, so it has to be put back rather than left out
+-- of a list every other dropdown on the page rejoins.
+local function refreshPicker(ctx, records)
+  local picker = ctx.__pmPicker
+  if not picker then return end
+  trackDropdown(ctx, picker)
+
+  local list, order = {}, {}
+  for i, rec in ipairs(records) do
+    -- A disabled panel is marked in the list, so it is obvious why editing it changes nothing
+    -- on screen.
+    list[rec.id] = rec.enabled and rec.name or (rec.name .. " |cff808080(disabled)|r")
+    order[i] = rec.id
+  end
+  picker:SetList(list, order)
+  picker:SetValue(selectedID)
+  -- Nothing to pick from is a disabled control rather than an absent one: a picker that vanished
+  -- with the last panel would take its label with it and leave a hole in the band.
+  picker:SetDisabled(#records == 0)
 end
 
 local function buildPanelsPage(ctx)
   bindHelpers()
   local scroll = ensureScroll(ctx)
 
-  -- ── Create ──
-  section(ctx, "Create")
+  drawPageHeader(ctx)
 
-  local createRow = AceGUI:Create("SimpleGroup")
-  createRow:SetLayout("Flow"); createRow:SetFullWidth(true)
-
-  local nameBox = AceGUI:Create("EditBox")
-  nameBox:SetLabel("New panel name")
-  nameBox:SetFullWidth(true)
-  -- The EditBox's own "Okay" button is the confirm, matching the rename box in the editor below —
-  -- one confirmation gesture for both places you type a panel name.
-  --
-  -- Safe because AceGUI's EditBox does NOT commit on focus loss: `OnEnterPressed` is fired only by
-  -- the Enter key, the Okay button and a drag-receive. `OnEditFocusLost` is not even registered. (An
-  -- earlier version disabled the button and added a separate Create button on the mistaken
-  -- assumption that tabbing away would create a panel.)
-  nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
-    pageAction.create(ctx, widget, text)
-  end)
-  attachTooltip(nameBox, "New panel name",
-    "Type a name and press Enter, or click Okay, to create the panel.")
-  createRow:AddChild(nameBox)
-  scroll:AddChild(createRow)
-  addSpacer(scroll, ROW_VSPACER)
-
-  -- ── Edit ──
-  section(ctx, "Edit")
-
-  -- The selector, plus the editor container beneath it. Both are rebuilt together: the dropdown's
-  -- contents and the editor's contents are two views of the same panel list.
-  local selectRow = AceGUI:Create("SimpleGroup")
-  selectRow:SetLayout("List"); selectRow:SetFullWidth(true)
-  -- The panel dropdown carries no label, so without this it would sit 14px closer to the "Edit"
-  -- heading than the Create box sits to "Create", and the two headings would look inconsistently
-  -- spaced despite both using the same section spacer.
-  addSpacer(scroll, LABEL_ROW_H)
-  scroll:AddChild(selectRow)
-
+  -- Everything a rebuild repaints lives in here, so a rebuild releases exactly the editor and
+  -- nothing in the band above it.
   local listGroup = AceGUI:Create("SimpleGroup")
   listGroup:SetLayout("List"); listGroup:SetFullWidth(true)
   scroll:AddChild(listGroup)
@@ -1055,67 +1198,47 @@ local function buildPanelsPage(ctx)
     -- The widgets about to be released include every dropdown registered for scroll-close, so the
     -- registry is emptied before the new ones re-register.
     forgetDropdowns(ctx)
-    selectRow:ReleaseChildren()
     listGroup:ReleaseChildren()
 
-    local records = panelsByName()
-    if #records == 0 then
-      -- No panel means no editor, and a tab strip over nothing is chrome for its own sake — so the
-      -- band is released and its height given back, rather than left standing over the empty-state
-      -- line. The strip is rebuilt by the very next rebuild, which is what a create fires.
-      releaseTabStrip(ctx)
-      local empty = AceGUI:Create("Label")
-      empty:SetFullWidth(true)
-      empty:SetText("No panels yet. Type a name above and press Create.")
-      listGroup:AddChild(empty)
-      if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
-      return
-    end
-
-    -- The strip, redrawn on every rebuild rather than once at BuildPage: H.TabStrip owns its own
-    -- ledger and drains it, and the ACTIVE tab is drawn as a disabled button, so the highlight can
-    -- only move by rebuilding the buttons. A rebuild is also exactly when the band's height can
-    -- change (a strip that wrapped to two rows on a narrow panel).
+    -- THE STRIP IS DRAWN FIRST, AND ALWAYS (options-ui-§13).
+    --
+    -- It used to be RELEASED when there were no panels, on the argument that a strip over nothing
+    -- is chrome for its own sake. That is the conditional no-strip state the rule forbids: a page
+    -- that loses its strip is the page that looks broken, and the empty state belongs INSIDE the
+    -- page rather than in place of it. `releaseTabStrip` went with the branch — it existed only to
+    -- serve it, and with the create box and the picker now in the chrome band, giving the band back
+    -- would have taken them off the screen as well.
+    --
+    -- Redrawn on every rebuild rather than once at BuildPage: H.TabStrip owns its own ledger and
+    -- drains it, and the ACTIVE tab is drawn as a disabled button, so the highlight can only move
+    -- by rebuilding the buttons. A rebuild is also exactly when the band's height can change (a
+    -- strip that wrapped to two rows on a narrow panel).
     drawTabStrip(ctx)
 
+    local records = panelsByName()
+
     -- Keep the selection if it still exists, otherwise fall back to the first panel. A deleted
-    -- selection must not leave the page blank with a dropdown pointing at nothing.
+    -- selection must not leave the page blank with a picker pointing at nothing.
     if not (selectedID and NS.Registry:Get(selectedID)) then
-      selectedID = records[1].id
+      selectedID = records[1] and records[1].id or nil
+    end
+    refreshPicker(ctx, records)
+
+    if #records == 0 then
+      -- The empty state is CONTENT, under the same strip every other state draws.
+      local empty = AceGUI:Create("Label")
+      empty:SetFullWidth(true)
+      empty:SetText("No panels yet. Type a name in the box above and press Enter to make one.")
+      listGroup:AddChild(empty)
+    else
+      -- No heading naming the panel: the picker in the band above already shows which one is
+      -- selected, and a heading repeating it was a third line of chrome between choosing a panel
+      -- and editing it.
+      buildPanelEditor(ctx, listGroup, NS.Registry:Get(selectedID))
     end
 
-    local dd = AceGUI:Create("Dropdown")
-    trackDropdown(ctx, dd)
-    -- No label, full width. The section heading directly above already says "Edit", and the
-    -- dropdown's only content is panel names — a "Panel" label above it was restating the obvious
-    -- while costing a row of height and leaving the control stranded in the left column.
-    dd:SetLabel("")
-    dd:SetFullWidth(true)
-    local list, order = {}, {}
-    for i, rec in ipairs(records) do
-      -- A disabled panel is marked in the list, so it is obvious why editing it changes nothing
-      -- on screen.
-      list[rec.id] = rec.enabled and rec.name or (rec.name .. " |cff808080(disabled)|r")
-      order[i] = rec.id
-    end
-    dd:SetList(list, order)
-    dd:SetValue(selectedID)
-    dd:SetCallback("OnValueChanged", function(_, _, id)
-      selectedID = id
-      runRebuilders(ctx)
-    end)
-    selectRow:AddChild(dd)
-    -- The gap between the selector and the editor's title. The largest of the editor's three gaps:
-    -- it separates two different things (choosing a panel, and configuring it) rather than two
-    -- groups of the same thing.
-    editorSpacer(selectRow, EDITOR_SELECT_GAP)
-
-    -- No heading naming the panel: the dropdown directly above already shows which one is selected,
-    -- and a heading repeating it was a third line of chrome between choosing a panel and editing it.
-    buildPanelEditor(ctx, listGroup, NS.Registry:Get(selectedID))
     if ctx.scroll and ctx.scroll.DoLayout then ctx.scroll:DoLayout() end
   end
-
 end
 
 -- The Panels page's whole repaint policy, and its only two triggers (options-ui-§11).

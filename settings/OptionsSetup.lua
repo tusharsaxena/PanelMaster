@@ -59,6 +59,27 @@ if not lib then
     -- answers RenderSchema: a missing member is a raise inside a page build rather than a page
     -- that quietly draws nothing.
     SetChromeHeight = noop, TabStrip = noop, PageBanner = noop,
+    -- The chrome BLOCK (options-ui-§14) and the secondary strip (options-ui-§13). PageHeader is
+    -- called by settings/PanelEditor.lua on every Panels-page build, so the stub has to answer it;
+    -- SubTabStrip has no caller here and is present for the parity case, answering the SHAPE its
+    -- live counterpart does (the buttons, then the height it occupies).
+    PageHeader = function() return nil end,
+    SubTabStrip = function() return {}, 0 end,
+    -- The schema composers (OptionsCompose). Each answers an EMPTY ROW LIST, and that is a real
+    -- degradation rather than an oversight: what they emit is the library's canonical row data --
+    -- the order, the labels, the ranges, the defaults -- and a hand-copied set here would be the
+    -- one that goes stale, which is anti-pattern #47 and the whole reason the composers exist.
+    -- So a library-less install loses the Master controls rows from the schema and keeps every
+    -- other row; tests/test_schema.lua pins that count difference by name so it can never widen
+    -- silently (options-ui-§1's measurement rule).
+    ColorPair = function() return {} end, FontGroup = function() return {} end,
+    BorderGroup = function() return {} end, BarGroup = function() return {} end,
+    MasterControls = function() return {}, noop end,
+    -- The composers' published constants. Empty tables and empty strings rather than the library's
+    -- real values, for the reason the three layout constants above are zero: a stub answering
+    -- plausible data lets a caller build a dropdown out of a value set no row was composed from.
+    FONT_FLAGS = {}, FONT_FLAGS_SORT = {}, VISIBILITY_VALUES = {}, VISIBILITY_SORT = {},
+    MASTER_GROUP = "", CLASS_COLOR_NOTE = "",
     -- RenderTabbedSchema answers a LIST on the live path (the group names, in tab order), so the
     -- stub answers an empty one rather than nil: a host that iterates the result gets a page with
     -- no tabs, which is exactly what a degraded install has, instead of an error.
@@ -73,7 +94,11 @@ if not lib then
     __bannerBand = function() return 0 end,
     __tabBand = function() return 0 end,
     __tabPlacement = function() return {}, 0 end,
-    __layoutTabs = noop, __releaseChrome = noop,
+    __layoutTabs = noop, __releaseChrome = noop, __releaseSubTabs = noop,
+    -- The strip's measured row pitch and its suite reset, internals for the same reason the band
+    -- arithmetic above is here: the parity case reads the WHOLE live surface, and an internal the
+    -- stub omits is indistinguishable from one it forgot.
+    __tabArtHeight = function() return 0 end, __resetTabArtHeight = noop,
     ROW_VSPACER = 0, SECTION_HEADING_H = 0, BUTTON_PAIR_REL = 0,
     -- The three chrome heights, ZERO for exactly the reason the three above are: a stub reporting
     -- the library's real band geometry would let a caller lay something out against numbers no
@@ -82,6 +107,11 @@ if not lib then
     AceGUI = nil,
   }
   function NS.SetBuildMain() end
+  -- Called on BOTH arms, because the Master controls block is composed rather than declared
+  -- (settings/Schema.lua) and this is the first moment NS.Helpers exists. Here it answers false
+  -- and the schema keeps the rows it declared itself, which is the measured degradation the stub
+  -- above documents.
+  NS.Schema:InstallMaster(NS.Helpers)
   return
 end
 
@@ -169,6 +199,15 @@ NS.Helpers = lib:New({
   --   L          — LibKa0s-Options-1.0 reads no descriptor `L` at all, so there is nothing to pass.
   --                tests/test_libka0s.lua carries a tripwire that goes red the day it grows one.
 })
+
+-- The General page's FIRST tab (options-ui-§15), composed out of the instance built just above and
+-- spliced at the head of NS.Schema.Schema. It happens HERE rather than in settings/Schema.lua for
+-- the reason that file states: the composer lives on this instance, and this file loads after it.
+--
+-- Before settings/Panel.lua, which reads NS.Schema.MasterAfterGroup at render time — but the
+-- ordering that actually binds is NS.addon:OnInitialize's `NS.Schema:Register()`, which validates
+-- every path against the defaults and would report six unresolved rows if this had not run.
+NS.Schema:InstallMaster(NS.Helpers)
 
 --- Let settings/Panel.lua install the landing page's body after this file has loaded.
 function NS.SetBuildMain(fn) buildMainBody = fn end

@@ -36,7 +36,7 @@ badge and any count quoted in the docs must agree with it.
 - NS.Print: prepends the cyan [PM] tag
 - NS.Print survived the AceConsole embed (architecture-§2)
 
-### test_compat.lua (12)
+### test_compat.lua (11)
 
 - Compat.GetScreenSize: returns the UIParent dimensions
 - Compat.GetUIScale: defaults to 1 when the frame cannot answer
@@ -46,8 +46,7 @@ badge and any count quoted in the docs must agree with it.
 - Compat.MediaList: always offers None first, then the built-in flat texture
 - Compat.MediaList: never lists a name twice
 - Compat.RegisterMedia: reports failure without LibSharedMedia rather than erroring
-- Compat.GetClassColor: reads RAID_CLASS_COLORS by classFile token
-- Compat.GetClassColor: an unknown class is nil, not white
+- Compat: the class-color lookup is the library's, not a private copy here
 - Compat.MouseIsOver: answers without the frame taking mouse input
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
@@ -91,7 +90,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (48)
+### test_registry.lua (49)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -141,8 +140,9 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Reset: puts position and scale back to the defaults too
 - Registry: a new panel is born at the profile's default size
 - Registry.Reset: lands on the same state a new panel is born in
+- Registry.ResetPositions: moves every panel back to where a new one starts
 
-### test_canvas.lua (30)
+### test_canvas.lua (36)
 
 - Canvas.BuildSpec: carries the record's geometry through
 - Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
@@ -174,6 +174,12 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: consumers register on their own bus target (architecture-§4)
 - Canvas: each panel level gets a frame-level band of its own
 - Canvas: one level apart is enough to separate two panels completely
+- Canvas.VisibilityShows: the two combat modes are the answers a boolean could not give
+- Canvas.BuildSpec: general visibility gates the panel alongside the two enables
+- Canvas.BuildSpec: master scale MULTIPLIES the panel's own rather than replacing it
+- Canvas.BuildSpec: master alpha fades the panel AND its mouseover floor
+- Canvas.RenderForCombat: repaints only for the two settings that depend on combat
+- Canvas: leaving and entering combat both reach the renderer
 
 ### test_unlock.lua (32)
 
@@ -296,7 +302,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Delete: drops the panel's session unlock state
 - Database: per-panel unlock state is NOT persisted
 
-### test_accent.lua (63)
+### test_accent.lua (65)
 
 - Accent: ON by default — the accent bar is the shipped look
 - Accent: the panel's OWN border is off, so only one thing defines the edge
@@ -361,6 +367,8 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: a vertical bar rotates its texture 90 degrees
 - Canvas: a horizontal bar draws its texture as authored
 - Canvas: the orientation is re-applied on every repaint, not just the first
+- Accent bar: Bar opacity multiplies the bar color's own alpha
+- Accent bar: Bar opacity is stored, clamped and reachable from the CLI
 
 ### test_artwork.lua (98)
 
@@ -516,10 +524,10 @@ badge and any count quoted in the docs must agree with it.
 - NS.DebugBuild: calls the builder and logs when logging is on
 - NS.DebugBuild: passes the builder's arguments through unbound
 
-### test_schema.lua (24)
+### test_schema.lua (28)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
-- Schema: every row declares a group, label, type and widget
+- Schema: EVERY row declares a group, and a label and a type with it
 - Schema: every row has a tooltip
 - Schema: paths are unique
 - Schema: session-only rows supply their own get and set
@@ -529,6 +537,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema.Set: a failing validate blocks the write
 - Schema.Set: validates the strata dropdown
 - Schema.Set: a session-only row never touches the DB
+- Schema: Lock frame is the unlock state un-inverted, and negates in BOTH directions
 - Schema.Set: a session-only row reads back through its own get
 - Schema.Set: fires onChange
 - Schema.Set: a table value is deep-copied, not aliased
@@ -542,6 +551,9 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the General page's tabs are the designed partition, in strip order
 - Schema: a group's rows are contiguous, so no tab's heading prints twice
 - Schema: the Panels page's tab strip is the designed one, in strip order
+- Schema: Master controls is the FIRST tab, and holds exactly the rows it is entitled to
+- Schema: the Master controls rows are the COMPOSER's, not eight literals here
+- Schema: no color row is ever disabled by its class-color companion
 
 ### test_slash.lua (59)
 
@@ -605,7 +617,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (50)
+### test_panel.lua (54)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -656,7 +668,11 @@ badge and any count quoted in the docs must agree with it.
 - Panel scale: a junk value falls back rather than reaching SetScale
 - Panels page: only the active tab's controls are built
 - Panels page: an unknown active tab heals to the first one rather than drawing nothing
-- Panels page: Create and Edit are NOT tabs — they stay above the strip
+- Panels page: creating and picking a panel are ABOVE the strip, in the chrome band
+- Panels page: the strip is drawn with ZERO panels, and the empty state is content
+- Panels page: the Master controls tab closes on the canonical button pair
+- Panels page: every color swatch is followed by a 'Use class color' companion
+- Panels page: every color declares WHOSE class it means, and all five are the player's
 
 ### test_profiles.lua (23)
 
@@ -740,7 +756,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (44)
+### test_libka0s.lua (45)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -786,6 +802,7 @@ badge and any count quoted in the docs must agree with it.
 - L trap (matcher): the guard catches every offending spelling, not one
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
+- Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
 ### test_harness.lua (14)
 
@@ -820,25 +837,25 @@ badge and any count quoted in the docs must agree with it.
 | Suite | Cases |
 |-------|------:|
 | test_util.lua | 27 |
-| test_compat.lua | 12 |
+| test_compat.lua | 11 |
 | test_constants.lua | 17 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 48 |
-| test_canvas.lua | 30 |
+| test_registry.lua | 49 |
+| test_canvas.lua | 36 |
 | test_unlock.lua | 32 |
 | test_media.lua | 83 |
-| test_accent.lua | 63 |
+| test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 26 |
-| test_schema.lua | 24 |
+| test_schema.lua | 28 |
 | test_slash.lua | 59 |
-| test_panel.lua | 50 |
+| test_panel.lua | 54 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 44 |
+| test_libka0s.lua | 45 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **743** |
+| **Total** | **760** |

@@ -14,9 +14,9 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
   -- Two probes, because the bug's whole shape was that only the second was ever reachable — a bad
   -- path MUST report whether or not the row has a default of its own.
   local probes = {
-    { path = "settings.snapToGird", default = true, type = "bool", widget = "CheckBox",
+    { path = "settings.snapToGird", default = true, type = "bool",
       group = "Editing", label = "typo'd path, WITH a default" },
-    { path = "settings.snapToGird", type = "bool", widget = "CheckBox",
+    { path = "settings.snapToGird", type = "bool",
       group = "Editing", label = "typo'd path, no default" },
   }
   for _, probe in ipairs(probes) do
@@ -28,7 +28,7 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
 
   -- A session-only row is the ONE exemption and stays exempt: it has no db-backed home by design.
   S.Schema[#S.Schema + 1] = { path = "state.notAPath", sessionOnly = true, type = "bool",
-    widget = "CheckBox", group = "Master controls", label = "session-only, unresolvable path",
+    group = "Master controls", label = "session-only, unresolvable path",
     get = function() return false end, set = function() end }
   local sessionCount = S:Register()
   S.Schema[#S.Schema] = nil
@@ -38,12 +38,20 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
   assertEqual(S:Register(), 0)
 end)
 
-test("Schema: every row declares a group, label, type and widget", function()
+test("Schema: EVERY row declares a group, and a label and a type with it", function()
+  -- The `group` half is options-ui-§13's, and it is the one that catches a real defect rather than
+  -- a typo: a page whose rows declare no group cannot draw a strip, so the library reports it and
+  -- renders the page untabbed (anti-pattern #69). One row missing a group does not do that -- it
+  -- lands in a nil group and simply never appears under any tab.
+  --
+  -- There is no `widget` assertion any more, and that is not a relaxation. RenderField dispatches
+  -- on `type` alone, so `widget` named nothing and could disagree with what was drawn; the field is
+  -- gone from every row (settings/Schema.lua's header says why) and asserting on it would have been
+  -- asserting on a value with no reader.
   for _, row in ipairs(S.Schema) do
     assertTrue(row.group ~= nil, row.path .. " has no group")
     assertTrue(row.label ~= nil, row.path .. " has no label")
     assertTrue(row.type ~= nil, row.path .. " has no type")
-    assertTrue(row.widget ~= nil, row.path .. " has no widget")
   end
 end)
 
@@ -103,10 +111,32 @@ test("Schema.Set: validates the strata dropdown", function()
 end)
 
 test("Schema.Set: a session-only row never touches the DB", function()
-  S:Set("state.unlocked", true)
+  S:Set("state.locked", false)
   assertEqual(NS.db.profile.state, nil, "a session-only row was persisted")
   assertTrue(NS.State.unlocked)
-  S:Set("state.unlocked", false)
+  S:Set("state.locked", true)
+end)
+
+test("Schema: Lock frame is the unlock state un-inverted, and negates in BOTH directions", function()
+  -- options-ui-§15's canonical row is `Lock frame`; this addon's session state is UNLOCKED. One of
+  -- the two had to give and it was the addon's, so the row's get and set both negate.
+  --
+  -- There is NO stored value behind it, which is why this is a sense change and not a migration:
+  -- the row it replaces (`state.unlocked`) was session-only too, so nothing was ever written into
+  -- SavedVariables for a migration step to read. What a test can hold onto is the negation, and
+  -- both directions are asserted because a get that negates and a set that does not is a control
+  -- that reads back the opposite of what it was just told.
+  S:Set("state.locked", false)
+  assertTrue(NS.State.unlocked, "unticking Lock frame did not unlock the panels")
+  assertFalse(S:Get("state.locked"), "the row read back locked while the panels were unlocked")
+
+  S:Set("state.locked", true)
+  assertFalse(NS.State.unlocked, "ticking Lock frame did not lock the panels")
+  assertTrue(S:Get("state.locked"), "the row read back unlocked while the panels were locked")
+
+  -- And the default is LOCKED, which is the shipped behavior the composer's own default reverses.
+  assertTrue(S:Default("state.locked"),
+    "Lock frame ships unticked — every install would come back from a reload with draggable panels")
 end)
 
 test("Schema.Set: a session-only row reads back through its own get", function()
@@ -198,8 +228,11 @@ test("Schema: the settings message has exactly one sender", function()
 end)
 
 test("Schema: the numeric rows declare min and max", function()
+  -- Keyed on `type`, which is what RenderField dispatches on, so the composed rows are covered by
+  -- it too. Under the old `widget == "Slider"` gate they were not: a composed row carries no
+  -- `widget`, so master scale and master alpha would have been skipped silently.
   for _, row in ipairs(S.Schema) do
-    if row.widget == "Slider" then
+    if row.type == "number" then
       assertTrue(row.min ~= nil and row.max ~= nil, row.path .. " is a slider with no range")
       assertTrue(row.min < row.max, row.path .. " has an inverted range")
       assertTrue(row.default >= row.min and row.default <= row.max,
@@ -222,8 +255,8 @@ test("Schema: the General page's tabs are the designed partition, in strip order
   -- point: a derived expectation agrees with any arrangement of rows, including the one where a row
   -- has quietly drifted into the wrong tab. Adding a row means adding it here too, deliberately.
   local EXPECTED = {
-    { tab = "Master controls", count = 3 },
-    { tab = "Editing",         count = 5 },
+    { tab = "Master controls", count = 7 },
+    { tab = "Editing",         count = 4 },
     { tab = "New panels",      count = 4 },
   }
 
@@ -273,5 +306,95 @@ test("Schema: the Panels page's tab strip is the designed one, in strip order", 
   assertEqual(#actual, #EXPECTED, "the Panels page has a different number of tabs than designed")
   for i, want in ipairs(EXPECTED) do
     assertEqual(actual[i], want, ("Panels tab %d is '%s', not '%s'"):format(i, tostring(actual[i]), want))
+  end
+end)
+
+-- ── The Master controls tab (options-ui-§15) ────────────────────────────────────
+
+test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is entitled to",
+  function()
+    -- WRITTEN OUT as the canonical table, not derived from what the composer happened to emit.
+    -- Deriving it would agree with any set in any order — including the one where a row has been
+    -- dropped or two have swapped — which is the whole failure the standard's fixed order exists to
+    -- prevent. The set is canonical, not a menu: this addon is not frameless (modules/Unlock.lua
+    -- calls SetMovable), so every row applies, and `Test mode` is the only non-canonical one and
+    -- comes LAST, after the mandated block.
+    local EXPECTED = {
+      { path = "settings.enabled",    label = "Enable Ka0s Panel Master" },
+      { path = "settings.visibility", label = "General visibility" },
+      { path = "settings.scale",      label = "Master scale" },
+      { path = "settings.alpha",      label = "Master alpha" },
+      { path = "state.locked",        label = "Lock frame" },
+      { path = "state.debugConsole",  label = "Debug console" },
+      { path = "state.preview",       label = "Test mode" },
+    }
+
+    assertEqual(S.Schema[1].group, "Master controls",
+      "the General page's first tab is '" .. tostring(S.Schema[1].group) .. "'")
+
+    local rows = {}
+    for _, row in ipairs(S.Schema) do
+      if row.group == "Master controls" then rows[#rows + 1] = row end
+    end
+    assertEqual(#rows, #EXPECTED, "the Master controls tab holds a different number of rows")
+    for i, want in ipairs(EXPECTED) do
+      assertEqual(rows[i].path, want.path,
+        ("Master controls row %d is '%s', not '%s'"):format(i, tostring(rows[i].path), want.path))
+      assertEqual(rows[i].label, want.label,
+        ("Master controls row %d is labeled '%s', not '%s'")
+          :format(i, tostring(rows[i].label), want.label))
+    end
+  end)
+
+test("Schema: the Master controls rows are the COMPOSER's, not eight literals here", function()
+  -- options-ui-§15/§16: a hand-written copy of a composed block is anti-pattern #73, and the whole
+  -- point is that nine addons cannot drift into nine orders. Two halves, because either alone
+  -- passes against the wrong thing: the composer really was called (the tail it returns is parked
+  -- for settings/Panel.lua), and settings/Schema.lua does not name the canonical labels itself.
+  assertEqual(type(S.MasterAfterGroup), "function",
+    "no afterGroup hook was kept — the tab's Reset position / Reset all settings pair cannot draw")
+  assertEqual(S.MasterGroup, "Master controls",
+    "the afterGroup key and the group name disagree, so the hook is detached and nothing errors")
+
+  local f = assert(io.open("settings/Schema.lua", "r"))
+  local body = f:read("*a")
+  f:close()
+  for _, canonical in ipairs({ "Master scale", "Master alpha", "General visibility",
+                               "Reset all settings" }) do
+    assertEqual(body:find('"' .. canonical .. '"', 1, true), nil,
+      "settings/Schema.lua writes out the canonical label " .. canonical ..
+      " — those come from H.MasterControls")
+  end
+end)
+
+test("Schema: no color row is ever disabled by its class-color companion", function()
+  -- options-ui-§17 / anti-pattern #74. The swatch is STILL READ under class color — for its alpha —
+  -- so graying it tells the player something untrue.
+  --
+  -- The row loop is vacuously true today and is here on purpose: this addon's colors live on panel
+  -- RECORDS rather than on schema rows (settings/PanelEditor.lua draws them from C.COLOR_FIELDS),
+  -- so there is no `type = "color"` row to walk. It goes red the day one is added carrying either
+  -- defect, which is exactly when nobody would think to look.
+  local rows = S.Schema
+  for i, row in ipairs(rows) do
+    assertEqual(row.disabledIf, nil, row.path .. " carries disabledIf")
+    if row.type == "color" then
+      local companion = rows[i + 1]
+      assertTrue(companion ~= nil and companion.type == "bool"
+        and companion.label == "Use class color",
+        row.path .. " has no 'Use class color' companion immediately after it")
+    end
+  end
+
+  -- And the surface this addon actually has: nothing in settings/ ASSIGNS a disabledIf, which is
+  -- where the record-backed color pairs are drawn. An assignment rather than a mention, so the
+  -- comment in settings/PanelEditor.lua that records why the picker is never grayed does not read
+  -- as the defect it is warning about.
+  for _, path in ipairs({ "settings/Schema.lua", "settings/PanelEditor.lua",
+                          "settings/Panel.lua" }) do
+    local f = assert(io.open(path, "r"))
+    local body = f:read("*a")
+    f:close()
+    assertEqual(body:find("disabledIf%s*="), nil, path .. " disables a control by condition")
   end
 end)

@@ -71,6 +71,9 @@ function addon:OnEnable()
   -- too early would judge every stored position against the wrong screen.
   self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnterWorld")
   self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnRegenEnabled")
+  -- The other half of the general-visibility rule (options-ui-§15). A panel is a non-secure frame,
+  -- so showing and hiding one at the start of a pull is legal and needs no gate.
+  self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnRegenDisabled")
 
   -- No [Init] line here: the debug flag is session-only and off at login, so a boot-time summary
   -- would always be gated off and never render. It rides the DebugLog:SetEnabled seam instead,
@@ -88,4 +91,13 @@ end
 -- case, which refuses outright and never replays — options-ui-§2).
 function addon:OnRegenEnabled()
   if NS.Unlock and NS.Unlock.ResumePending then NS.Unlock:ResumePending() end
+  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
+end
+
+-- Leaving combat has a second job above; entering it has only this one. Both go through
+-- RenderForCombat, which repaints only when the general-visibility setting is one of the two that
+-- actually depend on the combat state — so the overwhelmingly common "Always" costs one table read
+-- per pull rather than a repaint of every panel.
+function addon:OnRegenDisabled()
+  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
 end

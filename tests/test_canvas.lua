@@ -343,3 +343,104 @@ test("Canvas: one level apart is enough to separate two panels completely", func
   assertTrue(bf:GetFrameLevel() > af:GetFrameLevel() + C.UNLOCK_FRAME_LEVEL,
     "adjacent panel levels still interleave")
 end)
+
+-- ── The addon-wide master controls (options-ui-§15) ─────────────────────────────
+-- Three settings honored in BuildSpec, which is the one place a panel's final geometry and opacity
+-- are decided. Each is asserted against a record that would render differently without it, so none
+-- of these passes against a builder that simply ignored the setting.
+
+test("Canvas.VisibilityShows: the two combat modes are the answers a boolean could not give",
+  function()
+    -- The whole reason options-ui-§15 makes this a dropdown rather than a checkbox.
+    assertTrue(Canvas.VisibilityShows("always", true))
+    assertTrue(Canvas.VisibilityShows("always", false))
+    assertFalse(Canvas.VisibilityShows("never", true))
+    assertFalse(Canvas.VisibilityShows("never", false))
+    assertTrue(Canvas.VisibilityShows("inCombat", true))
+    assertFalse(Canvas.VisibilityShows("inCombat", false))
+    assertFalse(Canvas.VisibilityShows("outOfCombat", true))
+    assertTrue(Canvas.VisibilityShows("outOfCombat", false))
+    -- An absent or hand-edited value reads as "always". Anything else would let a corrupt
+    -- SavedVariables file hide the player's whole backdrop with nothing said.
+    assertTrue(Canvas.VisibilityShows(nil, false))
+    assertTrue(Canvas.VisibilityShows("sometimes", true))
+  end)
+
+test("Canvas.BuildSpec: general visibility gates the panel alongside the two enables", function()
+  local rec = { enabled = true }
+  assertFalse(Canvas.BuildSpec(rec, { visibility = "never" }, false).shown)
+  assertFalse(Canvas.BuildSpec(rec, { visibility = "inCombat" }, false).shown)
+  assertTrue(Canvas.BuildSpec(rec, { visibility = "inCombat" }, true).shown)
+  -- And it cannot resurrect a panel the panel's own switch turned off, or the master one.
+  assertFalse(Canvas.BuildSpec({ enabled = false }, { visibility = "always" }, false).shown)
+  assertFalse(Canvas.BuildSpec(rec, { visibility = "always", enabled = false }, false).shown)
+end)
+
+test("Canvas.BuildSpec: master scale MULTIPLIES the panel's own rather than replacing it", function()
+  -- Dies under `spec.scale = masterScale(settings)`: the per-panel value would vanish and this
+  -- would read 2 instead of 3.
+  assertNear(Canvas.BuildSpec({ scale = 1.5 }, { scale = 2 }).scale, 3)
+  -- The identity, which is what every profile written before the setting existed reads as.
+  assertNear(Canvas.BuildSpec({ scale = 1.5 }, {}).scale, 1.5)
+  -- Junk never reaches SetScale, and never zeroes a panel out of existence either.
+  assertNear(Canvas.BuildSpec({ scale = 1.5 }, { scale = "banana" }).scale, 1.5)
+  assertNear(Canvas.BuildSpec({ scale = 1.5 }, { scale = 0 }).scale, 1.5)
+  -- The STORED size is untouched: master scale magnifies, it does not resize.
+  assertEqual(Canvas.BuildSpec({ width = 300, scale = 1 }, { scale = 2 }).width, 300)
+end)
+
+test("Canvas.BuildSpec: master alpha fades the panel AND its mouseover floor", function()
+  local spec = Canvas.BuildSpec({ alpha = 0.8, mouseover = true, mouseoverAlpha = 0.4 },
+                                { alpha = 0.5 })
+  assertNear(spec.alpha, 0.4)
+  -- The floor is faded too. Left unfaded it would be 0.4 against a 0.4 ceiling, so a half-faded
+  -- addon would show a mouseover panel that never visibly rose on hover.
+  assertNear(spec.mouseoverAlpha, 0.2)
+  -- And the floor still cannot exceed the ceiling it fades up to.
+  local capped = Canvas.BuildSpec({ alpha = 0.5, mouseover = true, mouseoverAlpha = 1 },
+                                  { alpha = 0.5 })
+  assertNear(capped.mouseoverAlpha, capped.alpha)
+end)
+
+test("Canvas.RenderForCombat: repaints only for the two settings that depend on combat", function()
+  -- A combat transition must not cost a full RenderAll for the overwhelmingly common "Always".
+  local settings = NS.db.profile.settings
+  local before = settings.visibility
+
+  settings.visibility = "always"
+  assertFalse(Canvas:RenderForCombat(), "an Always profile repainted on a combat transition")
+  settings.visibility = "never"
+  assertFalse(Canvas:RenderForCombat(), "a Never profile repainted on a combat transition")
+  settings.visibility = "inCombat"
+  assertTrue(Canvas:RenderForCombat(), "a combat-sensitive profile did NOT repaint")
+  settings.visibility = "outOfCombat"
+  assertTrue(Canvas:RenderForCombat(), "a combat-sensitive profile did NOT repaint")
+
+  settings.visibility = before
+end)
+
+test("Canvas: leaving and entering combat both reach the renderer", function()
+  -- The wiring half. Without both handlers the setting is honored on the next unrelated repaint and
+  -- looks intermittent, which is worse than not having it.
+  local settings = NS.db.profile.settings
+  local before = settings.visibility
+  settings.visibility = "outOfCombat"
+
+  R:DeleteAll()
+  local rec = R:New("Combatant")
+  assertTrue(Canvas:FrameFor(rec.id):IsShown(), "an out-of-combat panel was hidden out of combat")
+
+  -- Through the mock's own combat FLAG, never by replacing InCombatLockdown: the unlock deferral
+  -- and the options-panel refusal read the same function, and a case that swapped it out would
+  -- leave those suites running against a stand-in that no longer consults the flag they set.
+  T.mocks.__inCombat = true
+  NS.addon:OnRegenDisabled()
+  assertFalse(Canvas:FrameFor(rec.id):IsShown(), "entering combat did not hide the panel")
+
+  T.mocks.__inCombat = false
+  NS.addon:OnRegenEnabled()
+  assertTrue(Canvas:FrameFor(rec.id):IsShown(), "leaving combat did not bring the panel back")
+
+  settings.visibility = before
+  R:DeleteAll()
+end)
