@@ -229,7 +229,7 @@ end
 -- than duplicated there, so the two halves cannot drift into two different looks.
 --
 -- Internal (`__`), not API: nothing outside settings/ may reach for these.
--- Six of the ten are now LibKa0s-Options-1.0's; the table keeps its shape and its names so
+-- Four of the nine are now LibKa0s-Options-1.0's; the table keeps its shape and its names so
 -- settings/PanelEditor.lua is untouched by the adoption. It binds these LAZILY inside its own
 -- rebuild, so nothing here pins the TOC order.
 --
@@ -362,17 +362,19 @@ function P:Register()
     local ctx = O.CreatePanel(nil, "General", {
       pageKey = "general",
       defaultsButton = true,
-      defaultsTooltip = "Reset every setting on this page to its default. Your panels are untouched.",
+      defaultsTooltip = "Reset this profile to the addon's defaults. Your panels go with it.",
     })
     -- This addon's own per-page state, added onto the ctx the library hands back: the open-dropdown
     -- registry (see the top of this file), and the two flags the Panels page's editor drives.
     ctx.dropdowns, ctx.rebuilders = {}, {}
     P.general = ctx
 
-    -- Non-destructive: this resets settings only and never touches the user's panels, so it is safe
-    -- behind Blizzard's un-gated footer control. O.CreatePanel's OnDefault FORWARDS to this, so the
-    -- footer control and the header Defaults button are one implementation rather than two.
-    -- Deleting panels stays behind the confirm-gated KA0S_PANELMASTER_DELETEALL popup.
+    -- Destructive: options-ui-§12 made this a PROFILE reset, and `db.profile.panels` is in the
+    -- profile, so the user's panels go with it. It therefore goes through the CONFIRM entry point
+    -- rather than the act, which is what keeps Blizzard's un-gated footer control safe.
+    -- O.CreatePanel's OnDefault FORWARDS to this, so the footer control and the header Defaults
+    -- button are one implementation rather than two. Deleting panels outright stays behind the
+    -- Panels page's own confirm-gated KA0S_PANELMASTER_DELETEALL popup.
     ctx.panel.defaultsOnClick = function() P:RestoreDefaults() end
 
     O.SetRenderer(ctx, function(c)

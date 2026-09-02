@@ -146,10 +146,13 @@ S.Schema = {
 -- cannot exist at this file's load time, and the seam that CAN build them calls in.
 --
 -- WHAT A LIBRARY-LESS INSTALL LOSES, said out loud because options-ui-§1 requires it measured
--- rather than assumed: these six rows, and nothing else. The stub's composers answer an empty list
--- (settings/OptionsSetup.lua explains why a hand-copied set there would be the copy that goes
--- stale), so `/pm list|get|set` in a degraded install reaches the Editing and New panels rows only.
--- tests/test_schema.lua pins that count by name so it can never widen silently.
+-- rather than assumed: these seven rows, and nothing else — the composer's six, and the "Test
+-- mode" row below, which rides `extra` and is appended by the composer rather than beside it, so
+-- it goes when they go. The stub's composers answer an empty list (settings/OptionsSetup.lua
+-- explains why a hand-copied set there would be the copy that goes stale) and S:InstallMaster
+-- gives up on that list before an extra could be appended, so `/pm list|get|set` in a degraded
+-- install reaches the Editing and New panels rows only. tests/test_schema.lua pins that count by
+-- name so it can never widen silently.
 
 -- "Test mode" is NOT canonical. It is this addon's own, and it rides the composer's `extra`, which
 -- appends AFTER the mandated block and never interleaves with it (options-ui-§16). Hoisted to a

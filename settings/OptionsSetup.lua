@@ -206,7 +206,11 @@ NS.Helpers = lib:New({
 --
 -- Before settings/Panel.lua, which reads NS.Schema.MasterAfterGroup at render time — but the
 -- ordering that actually binds is NS.addon:OnInitialize's `NS.Schema:Register()`, which validates
--- every path against the defaults and would report six unresolved rows if this had not run.
+-- every path against the defaults and can only reach the composed rows once this has run. Four of
+-- the seven are db-backed and resolve against defaults/Profile.lua; the other three are
+-- session-only (state.locked, state.debugConsole, state.preview) and Register exempts those by
+-- design. Run this any later and the rows are simply not in the array yet — nothing is reported
+-- because nothing is checked.
 NS.Schema:InstallMaster(NS.Helpers)
 
 --- Let settings/Panel.lua install the landing page's body after this file has loaded.
