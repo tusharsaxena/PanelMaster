@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-760%2F760_passing-green)
+![Tests](https://img.shields.io/badge/Tests-763%2F763_passing-green)
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
@@ -186,8 +186,8 @@ fade**. Each panel's editor has:
 | Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. Left and right bars turn the texture a quarter turn, so a bar reads the same way round whichever edge it is on. |
 | Border style, Border thickness (px), Border color / Use class color, Border offset (under the *Accent bar* tab's **Border** heading) | The bar's own outline, with the same four controls the panel's border has. Defaults to a 1px black hairline. |
 | Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each color. |
+| Faded opacity | How visible it is the rest of the time. 0 hides it completely. Sits beside *Panel opacity*, because you choose one against the other. |
 | Show on mouseover only | Keep the panel faded until your cursor is over it. |
-| Faded opacity | How visible it is the rest of the time. 0 hides it completely. |
 | Defaults (the page's own button, not the editor's) | On the **Panels** page this means *delete every panel* — your settings are left alone. It asks first, and nothing goes until you say yes. |
 
 **Two opacities, and they do different things.** Each color carries its own opacity, which affects

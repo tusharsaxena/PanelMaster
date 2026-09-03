@@ -617,7 +617,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (54)
+### test_panel.lua (57)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -667,6 +667,9 @@ badge and any count quoted in the docs must agree with it.
 - Panel scale: reaches the frame, and does not change the stored size
 - Panel scale: a junk value falls back rather than reaching SetScale
 - Panels page: only the active tab's controls are built
+- Panels page: the header block re-lays out when the canvas learns its width
+- Panels page: the create box is labeled for the act, not for its contents
+- Panels page: the two opacity sliders share a row, and the switch is below
 - Panels page: an unknown active tab heals to the first one rather than drawing nothing
 - Panels page: creating and picking a panel are ABOVE the strip, in the chrome band
 - Panels page: the strip is drawn with ZERO panels, and the empty state is content
@@ -851,11 +854,11 @@ badge and any count quoted in the docs must agree with it.
 | test_debuglog.lua | 26 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
-| test_panel.lua | 54 |
+| test_panel.lua | 57 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 45 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
-| **Total** | **760** |
+| **Total** | **763** |

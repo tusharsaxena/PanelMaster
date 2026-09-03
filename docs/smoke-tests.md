@@ -412,9 +412,15 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    state, and it is ticked again after every `/reload`.
 5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
    border | Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band,
-   a **New panel name** box and a **Panel** picker side by side, separated from the strip by a
+   a **Create new panel** box and a **Panel** picker side by side, separated from the strip by a
    hairline rule. **Neither is a tab and neither is in the scroll**: they stay put whichever tab is
    selected. There is **no second box drawn around them** — the band's own divider is the boundary.
+5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
+   page. **Expect:** the band above the strip holds the **Create new panel** box and the **Panel**
+   picker, at full width. An empty band of the right height with nothing in it is the zero-width
+   layout race: the canvas has no width until it lays itself out, and this block is built once for
+   the session, so without its own resize hook it stays empty until a `/reload`. Then drag the
+   Settings window's edge to resize it and confirm both controls follow.
 5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
    it is **still there** with both controls usable, and the page reads "No panels yet…" underneath.
    The page must never lose its strip.
@@ -424,8 +430,9 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    unrelated controls share a line. Three tabs carry **subsection headings**, drawn as the same
    divider-flanked heading the landing page uses: **Background / Border** on *Background and border*,
    **Bar / Edges / Border** on *Accent bar*, and **Image / Layout / Appearance** on *Artwork*. On
-   **Opacity and fade**, **Panel opacity** is alone on its row, with **Faded opacity** and **Show on
-   mouseover only** paired on the next. Compare against KickCD's Icons page for the house rhythm.
+   **Opacity and fade**, **Panel opacity** and **Faded opacity** share the first row — they are the same
+   question asked twice and are read against each other — with **Show on mouseover only** alone on the
+   next, where it governs the line above rather than looking like the companion to one slider. Compare against KickCD's Icons page for the house rhythm.
 5b-2. **Dropdown vs scrolling.** Open any dropdown on the Panels page (the panel selector, Anchor,
    Frame strata, or either texture picker) and — without closing it — **scroll the page**, first with
    the mouse wheel and then by dragging the scrollbar. **Expect:** the open list closes immediately

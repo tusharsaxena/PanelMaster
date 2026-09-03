@@ -50,6 +50,19 @@ callback is still on the stack, and releasing the box would hand the widget they
 to AceGUI's pool. The picker beside it is refreshed **in place** — `SetList` and `SetValue` on the
 widget already there — which is the same scalar path every other control on the page takes.
 
+**Built once is also why the block re-lays itself out on `OnSizeChanged`.** `ctx.chrome` is zero-wide
+until the settings canvas has laid itself out, and the **first page a player opens is rendered before
+that happens** — the library documents this at its own `replaceOnResize`, which is how the tab strip
+heals when the width arrives. Both controls here take `SetRelativeWidth(0.5)`, so a layout run at that
+moment gives each of them half of nothing: two controls that exist, are shown, and occupy no pixels.
+The band keeps its reserved height, so the page draws an **empty strip of chrome above the tabs** and
+the create box and the picker are simply gone. The strip heals; this block, built once for the
+session, never got a second chance — a session that happened to open Panels first stayed that way
+until a `/reload`. The hook goes on the **header frame**, not on `ctx.chrome`, whose `OnSizeChanged`
+the library has already claimed for the strip (`SetScript` replaces, so hooking there would trade
+this bug for a strip that never re-wraps), and it answers only a **change** in width because
+`SetChromeHeight` fires the same script.
+
 | Page | Tabs | Rows per tab |
 |---|---|---|
 | General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
@@ -164,6 +177,13 @@ subject, not for its drawer:
   fill and the edge are two halves of one question, and a two-control tab is not a subject.
 - **Visibility → Opacity and fade.** Its three controls are two opacity sliders and a mouseover
   switch. The old name promised the where/when rules of a visibility engine this addon has not got.
+
+  The two sliders **share a row** and the switch sits **alone below them**. They are the same
+  question asked twice — how visible, and how visible while the cursor is elsewhere — on the same
+  `0..1` scale, so one is chosen against the other and they belong side by side. The switch decides
+  whether the second is consulted at all; beside a slider it reads as governing *that* slider, and
+  on its own line it governs the line above, which is what it does. It was the other way round:
+  *Panel opacity* alone, then *Faded opacity* paired with the checkbox.
 
 **Unlock panels** left the Editing tab in the settings-revamp pass and is `Lock frame` on Master
 controls now. The four rows it used to lead still only mean anything while the panels are unlocked,

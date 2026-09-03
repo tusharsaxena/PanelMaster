@@ -776,6 +776,120 @@ test("Panels page: only the active tab's controls are built", function()
   E.__setSelectedID(nil)
 end)
 
+-- THE BAND MUST SURVIVE BEING BUILT BEFORE THE CANVAS HAS A WIDTH.
+--
+-- `ctx.chrome` is zero-wide until the settings canvas lays itself out, and the
+-- FIRST page a player opens is rendered before that happens -- the library says
+-- so in its own words at `replaceOnResize`, which is how the tab strip heals
+-- itself when the width arrives. Both controls in this band take
+-- SetRelativeWidth(0.5), so a layout run at that moment gives each of them half
+-- of nothing: two controls that exist, are shown, and occupy no pixels. The band
+-- keeps its reserved height, so the page draws an empty strip of chrome above the
+-- tabs and the create box and the panel picker are simply gone.
+--
+-- The strip gets a second chance and this block does not: it is built ONCE for
+-- the session (settings/Panel.lua's `built` flag), so a session that opened
+-- Panels first stayed broken until a /reload.
+--
+-- red under: dropping the OnSizeChanged hook, or re-laying out on every size
+-- event (the height change SetChromeHeight causes fires the same script, and a
+-- layout that answered it would loop).
+test("Panels page: the header block re-lays out when the canvas learns its width", function()
+  NS.Registry:DeleteAll()
+  NS.Registry:New("Sized")
+  local ctx = freshPanelsCtx()
+
+  -- The header frame is the chrome kid carrying the hook.
+  local header
+  for _, kid in ipairs(ctx.__chromeKids or {}) do
+    if kid.__scripts and kid.__scripts.OnSizeChanged then header = kid end
+  end
+  assertTrue(header ~= nil,
+    "the page header frame carries no OnSizeChanged hook, so a band built at zero width stays empty")
+
+  local block = ctx.__pmHeaderBlock
+  assertTrue(block ~= nil, "the header block must be reachable to be re-laid out")
+  local before = block.layoutCount or 0
+
+  header.__scripts.OnSizeChanged(header, 0)
+  assertEqual(block.layoutCount or 0, before, "a zero width is not a width to lay out against")
+
+  header.__scripts.OnSizeChanged(header, 640)
+  assertTrue((block.layoutCount or 0) > before, "the block did not re-lay out when the width arrived")
+
+  local settled = block.layoutCount
+  header.__scripts.OnSizeChanged(header, 640)
+  assertEqual(block.layoutCount, settled,
+    "the same width must be a no-op — SetChromeHeight fires this script too")
+
+  NS.Registry:DeleteAll()
+end)
+
+-- The create box says what pressing Enter DOES. It read "New panel name", which
+-- names the field's contents and answers a question nobody had -- the band holds
+-- two controls that both name a panel, and the reader's question at this one is
+-- which of them makes one. The picker beside it already reads as the picker.
+--
+-- red under: reverting the label, or leaving the tooltip title on the old wording
+-- (the title is what the tooltip's own heading shows, so the two drifting apart
+-- is a control that introduces itself twice under different names).
+test("Panels page: the create box is labeled for the act, not for its contents", function()
+  NS.Registry:DeleteAll()
+  local labels = labelsBuiltBy(function() freshPanelsCtx() end)
+  assertTrue(labels["Create new panel"], "the page header lost the create box's label")
+  assertFalse(labels["New panel name"] == true, "the old, contents-naming label came back")
+  NS.Registry:DeleteAll()
+end)
+
+-- The Opacity and fade tab's LAYOUT, not just its contents. The two sliders are
+-- the same question asked twice -- how visible, and how visible while the cursor
+-- is elsewhere -- both 0..1, and they belong side by side where a reader can
+-- compare them. The switch that decides whether the second one applies at all
+-- goes underneath, on its own line.
+--
+-- It was the other arrangement: Panel opacity alone on the first row, then Faded
+-- opacity paired with the checkbox. That put the two numbers on different lines
+-- and gave the checkbox a slider to look like a companion to.
+--
+-- red under: pairing either slider with the checkbox again, or splitting the two
+-- sliders across rows.
+test("Panels page: the two opacity sliders share a row, and the switch is below", function()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Faded")
+  E.__setSelectedID(rec.id)
+  local ctx = freshPanelsCtx()
+
+  local created = T.mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  ctx.activeTab = "Opacity and fade"
+  E:Rebuild(ctx)
+
+  --- The row (a SimpleGroup) that holds a widget with this label, or nil.
+  local function rowHolding(label)
+    for i = from, #created do
+      local w = created[i]
+      if w.type == "SimpleGroup" then
+        for _, child in ipairs(w.children or {}) do
+          if child.labelText == label then return w end
+        end
+      end
+    end
+  end
+
+  local panelRow  = rowHolding("Panel opacity")
+  local fadedRow  = rowHolding("Faded opacity")
+  local switchRow = rowHolding("Show on mouseover only")
+  assertTrue(panelRow ~= nil, "the tab did not build Panel opacity")
+  assertTrue(fadedRow ~= nil, "the tab did not build Faded opacity")
+  assertTrue(switchRow ~= nil, "the tab lost the mouseover switch")
+
+  assertTrue(panelRow == fadedRow, "the two opacity sliders must share one row")
+  assertFalse(switchRow == panelRow, "the switch must not sit beside a slider")
+
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+end)
+
 test("Panels page: an unknown active tab heals to the first one rather than drawing nothing",
   function()
     NS.Registry:DeleteAll()

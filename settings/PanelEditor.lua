@@ -1018,9 +1018,16 @@ local function buildPanelEditor(ctx, parent, rec)
 
   -- Last, because it is the tab you set once: the panel's own opacity and the mouseover fade.
   sections[TAB_FADE] = function()
-    -- Panel opacity gets its own row: it applies whatever else is set, whereas the two controls below
-    -- are a pair that only mean anything together. Putting the checkbox up here beside it implied the
-    -- opposite grouping.
+    -- THE TWO SLIDERS PAIR, and the switch goes under them. They are the same question asked
+    -- twice — how visible is this panel, and how visible while the cursor is elsewhere — both on
+    -- the same 0..1 scale, and a reader setting one is choosing it AGAINST the other. Side by side
+    -- is where that comparison can be made.
+    --
+    -- It was the other arrangement: Panel opacity alone, then Faded opacity paired with the
+    -- checkbox. That split the two numbers across lines and gave the checkbox a slider to look
+    -- like a companion to — a checkbox beside a slider reads as governing THAT slider, and this
+    -- one governs whether the second number is consulted at all. On its own line it governs the
+    -- line above it, which is what it does.
     --
     -- "Panel opacity", not "Background opacity". It is the FRAME's alpha, so it fades the border as
     -- well as the fill, and it multiplies with the alpha already carried by each color. It is also
@@ -1030,13 +1037,12 @@ local function buildPanelEditor(ctx, parent, rec)
     numberField(opacityRow, "Panel opacity", "alpha", 0, 1, 0.05,
       "How visible the whole panel is \226\128\148 background and border together. Multiplies with "
       .. "the opacity set in each color. This is also the opacity a mouseover panel fades up to.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local mouseoverRow = editorRow(group)
-    numberField(mouseoverRow, "Faded opacity", "mouseoverAlpha", 0, 1, 0.05,
+    numberField(opacityRow, "Faded opacity", "mouseoverAlpha", 0, 1, 0.05,
       "How visible the panel is while the cursor is elsewhere. 0 hides it completely. "
       .. "Only used when 'Show on mouseover only' is ticked.")
 
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local mouseoverRow = editorRow(group)
     boolField(mouseoverRow, "Show on mouseover only", "mouseover",
       "Keep the panel faded until the cursor is over it. The panel still never takes your clicks.")
 
@@ -1128,12 +1134,16 @@ local function drawPageHeader(ctx)
       -- registered. (An earlier version disabled the button and added a separate Create button on
       -- the mistaken assumption that tabbing away would create a panel.)
       local nameBox = AceGUI:Create("EditBox")
-      nameBox:SetLabel("New panel name")
+      -- "Create new panel", not "New panel name". The band holds two controls that both name a
+      -- panel, and the reader's question at this one is which of them MAKES a panel — a label
+      -- naming the field's contents answered a question nobody had, while the box beside it
+      -- ("Panel") already reads as the picker.
+      nameBox:SetLabel("Create new panel")
       nameBox:SetRelativeWidth(0.5)
       nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
         pageAction.create(ctx, widget, text)
       end)
-      attachTooltip(nameBox, "New panel name",
+      attachTooltip(nameBox, "Create new panel",
         "Type a name and press Enter, or click Okay, to create the panel.")
       block:AddChild(nameBox)
 
@@ -1154,6 +1164,36 @@ local function drawPageHeader(ctx)
 
       if block.DoLayout then block:DoLayout() end
       ctx.__pmPicker = picker
+      -- Parked for the same reason the picker is: the block has to be reachable to be re-laid out
+      -- below, and for a case to assert that it was.
+      ctx.__pmHeaderBlock = block
+
+      -- THE LAYOUT ABOVE MAY HAVE RUN AGAINST NOTHING. `ctx.chrome` is zero-wide until the
+      -- settings canvas has laid itself out, and the FIRST page a player opens is rendered before
+      -- that happens — the library states exactly this at its own `replaceOnResize`, which is how
+      -- the tab strip heals when the width arrives. Both children here take SetRelativeWidth(0.5),
+      -- so a layout at that moment gives each of them half of nothing: two controls that exist,
+      -- are shown, and occupy no pixels. What the player sees is an empty band of the right height
+      -- above the strip, with the create box and the panel picker simply absent.
+      --
+      -- THE STRIP GETS A SECOND CHANCE AND THIS BLOCK DOES NOT. It is built ONCE for the session
+      -- (settings/Panel.lua's `built` flag, which exists so a rebuild cannot pool the widget the
+      -- user is typing into), so a session that happened to open Panels first stayed like that
+      -- until a /reload.
+      --
+      -- Hooked on the HEADER FRAME rather than on ctx.chrome, whose OnSizeChanged the library has
+      -- already claimed for the strip — SetScript replaces, so hooking there would trade this bug
+      -- for a strip that never re-wraps. The header frame is anchored to both of the chrome's
+      -- sides, so its width is the chrome's width.
+      --
+      -- Guarded on a CHANGE in width, like the library's: SetChromeHeight fires this same script,
+      -- and a layout that answered every event would run on every height change for nothing.
+      frame:SetScript("OnSizeChanged", function(_, width)
+        if type(width) ~= "number" or width <= 0 then return end
+        if block.__pmLaidOutAt == width then return end
+        block.__pmLaidOutAt = width
+        if block.DoLayout then block:DoLayout() end
+      end)
     end,
   })
 end
