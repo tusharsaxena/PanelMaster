@@ -197,18 +197,29 @@ end
 
 -- Resolve a panel's color field to the {r, g, b, a} that is actually drawn.
 --
--- This is the single seam every color read goes through. If the field has a class-color companion
--- in C.COLOR_FIELDS and that flag is set, the player's class RGB replaces the stored RGB — but the
--- stored ALPHA is kept, because "class colored" is a statement about hue, not about how
--- see-through the user wanted their panel. Falls back to the stored color whenever the class color
--- cannot be determined, so a headless or early-login read is never a white panel.
+-- This is the single seam every color read goes through, and it is now a pure ADAPTER: the three
+-- rules that make a class color a color -- the stored alpha survives the mode, an unresolvable
+-- class falls through to the stored swatch, and the swatch is read under both modes -- are
+-- `LibKa0s-Core-1.0`'s `ResolveColor`, shared with every other Ka0s addon (options-ui-§17). What
+-- stays here is the two things the library cannot know: which flag pairs with which color
+-- (C.COLOR_FIELDS), and that a panel is CHROME so the class is the player's and never a unit's
+-- (C.COLOR_CLASS_SOURCE).
+--
+-- The record's own shape is decoded FIRST, through Util.Color against the template, so a record
+-- missing the field falls back to what this addon ships rather than to the library's own white.
+--
+-- Degrades to the stored color with no library, which is the same answer the old private resolver
+-- gave when UnitClass was unavailable: a panel with a plain color, never a white one.
 function Util.ResolveColor(rec, field)
   local stored = Util.Color(rec and rec[field], C.PANEL_TEMPLATE[field])
   local flag = C.COLOR_FIELDS[field]
-  if not (flag and rec and rec[flag]) then return stored end
-  local r, g, b = NS.Compat.GetClassColor()
-  if not r then return stored end
-  return { r, g, b, stored[4] }
+  local core = NS.Core
+  if not (flag and rec and rec[flag] and core and core.ResolveColor) then return stored end
+  -- nil unit, because C.COLOR_CLASS_SOURCE says every panel color is player-scoped. Read from the
+  -- table rather than hardcoded, so the declaration is what decides and not this line.
+  local unit = C.COLOR_CLASS_SOURCE[field] == "unit" and rec.unit or nil
+  local r, g, b, a = core.ResolveColor(stored, true, unit)
+  return { r, g, b, a }
 end
 
 -- ── Secret-safe chat printer (events-frames-taint-§8) ────────────────────────────

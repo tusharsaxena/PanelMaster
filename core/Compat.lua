@@ -70,26 +70,28 @@ function Compat.GetUIScale()
   return 1
 end
 
--- ── Class color ────────────────────────────────────────────────────────────────
-
--- The player's class color as r, g, b (0-1), or nil when it cannot be determined.
+-- Is the player in combat? Defaults to FALSE when the API is unavailable, which is the answer that
+-- keeps a panel on screen: a general visibility of "Only out of combat" reading `true` on a client
+-- that cannot answer would hide the player's whole backdrop for the session with nothing said.
 --
--- `RAID_CLASS_COLORS` is read rather than `C_ClassColor.GetClassColor` because the former is the one
--- every UI addon already agrees on and is what a user comparing PanelMaster's "class color" against
--- their unit frames will be looking at. Keyed on the **classFile** token ("PRIEST"), never on the
--- localized class name (localization-§4).
---
--- Returns nil rather than white on failure, so the caller can fall back to the stored color instead
--- of silently painting a panel white.
-function Compat.GetClassColor()
-  if type(UnitClass) ~= "function" then return nil end
-  local _, classFile = UnitClass("player")
-  if not classFile then return nil end
-  local colors = RAID_CLASS_COLORS
-  local c = colors and colors[classFile]
-  if not c then return nil end
-  return c.r, c.g, c.b
+-- Read through this seam rather than calling InCombatLockdown at the render site, so the renderer's
+-- spec builder stays pure and the headless suite can drive both answers.
+function Compat.InCombat()
+  if type(InCombatLockdown) ~= "function" then return false end
+  return InCombatLockdown() and true or false
 end
+
+-- ── Class color ────────────────────────────────────────────────────────────────
+--
+-- GONE, and deliberately: `Compat.GetClassColor` read `RAID_CLASS_COLORS` here, and
+-- `LibKa0s-Core-1.0` minor 7 now owns that lookup for the whole collection as `lib.ClassColor`
+-- (options-ui-§17: one resolver, never a fifth private copy). This addon's recorded argument is the
+-- one the library adopted -- RAID_CLASS_COLORS is the table every other UI on the player's screen
+-- is already reading -- so the source did not change, only who owns it. Core also memoizes the
+-- PLAYER's answer on success, which this copy never did.
+--
+-- Reached through `NS.Core.ClassColor` / `NS.Core.ResolveColor`, from `Util.ResolveColor`, which is
+-- still this addon's single color seam. Nothing else in the addon asks for a class color.
 
 -- ── Shared media ────────────────────────────────────────────────────────────────
 

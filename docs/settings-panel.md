@@ -6,12 +6,16 @@ that keep AceGUI usable inside a canvas.
 Blizzard `Settings.RegisterCanvasLayoutCategory` + raw AceGUI (`options-ui`). A parent category and
 three subcategories:
 
-- **Ka0s Panel Master** (parent) — logo, tagline, the generated slash-command list.
+- **Ka0s Panel Master** (parent) — logo, tagline, the generated slash-command list. One of the
+  **two** pages `options-ui-§13` exempts from the strip, and it is exempt because the host draws it
+  outside the flow engine: it declares no `group` and names no sections, so there is nothing for a
+  strip to be a strip of.
 - **General** — the schema rows, in a two-column grid under a three-tab strip.
-- **Panels** — create, edit and delete the panels themselves; the editor sits under a six-tab strip.
+- **Panels** — create, edit and delete the panels themselves; the editor sits under a six-tab strip,
+  with the create box and the panel picker pinned in the band **above** it.
 - **Profiles** — AceDBOptions' own options table, rendered by AceConfigDialog into a container
-  parented to our canvas. The one page with **no** strip, deliberately: it is the library's own
-  page, it is the same in every Ka0s addon, and tabbing it is out of scope.
+  parented to our canvas. The other exempt page, and for the same reason rather than a different
+  one: AceConfigDialog draws it whole and it never reaches the flow engine.
 
 ## The tab strip
 
@@ -29,19 +33,136 @@ The two pages get there by different routes, because their content is not the sa
   `H.TabStrip` over its own ordered `EDITOR_TABS` list, and dispatches on `ctx.activeTab` to one
   section builder per tab.
 
-**Create and Edit are not tabs.** They stay above the editor, untabbed, on every tab: making a panel
-and choosing which panel to work on are not two of the six subjects, and a tab you would have to
-leave to pick a different panel would be one. That is also why this page draws no `H.PageBanner` —
-`§14`'s banner *replaces* a picker, and this page's picker is deliberately staying where it is.
+**Creating a panel and choosing which panel to edit are not tabs, and they are not in the scroll
+either.** They sit in the page's **chrome band**, above the strip, in a single `H.PageHeader` block
+(`options-ui-§14`). Both apply to every tab, and a control that governs the whole page but is drawn
+under one tab reads as belonging to that tab — which is what these two did, as two untabbed
+*Create* and *Edit* sections at the top of the scroll.
+
+A page draws **at most one** such block, so the picker goes **inside** it and no `H.PageBanner` is
+drawn separately: `PageHeader` and `PageBanner` release the same ledger and reserve the same band,
+and two blocks would push the page down twice. The block is not boxed either — the band already has
+its own divider and the content panel's top edge below it.
+
+The block is built **once**, on the page's first `OnShow`, and no rebuild releases it. The create box
+is the reason: `Registry:New` broadcasts before it returns, so the rebuild lands while the user's own
+callback is still on the stack, and releasing the box would hand the widget they are typing into back
+to AceGUI's pool. The picker beside it is refreshed **in place** — `SetList` and `SetValue` on the
+widget already there — which is the same scalar path every other control on the page takes.
+
+**Built once is also why the block re-lays itself out on `OnSizeChanged`.** `ctx.chrome` is zero-wide
+until the settings canvas has laid itself out, and the **first page a player opens is rendered before
+that happens** — the library documents this at its own `replaceOnResize`, which is how the tab strip
+heals when the width arrives. Both controls here take `SetRelativeWidth(0.5)`, so a layout run at that
+moment gives each of them half of nothing: two controls that exist, are shown, and occupy no pixels.
+The band keeps its reserved height, so the page draws an **empty strip of chrome above the tabs** and
+the create box and the picker are simply gone. The strip heals; this block, built once for the
+session, never got a second chance — a session that happened to open Panels first stayed that way
+until a `/reload`. The hook goes on the **header frame**, not on `ctx.chrome`, whose `OnSizeChanged`
+the library has already claimed for the strip (`SetScript` replaces, so hooking there would trade
+this bug for a strip that never re-wraps), and it answers only a **change** in width because
+`SetChromeHeight` fires the same script.
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Editing**, **New panels** | 3, 5, 4 — 12 schema rows |
-| Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 10, 16, 3 — bespoke controls, not schema rows |
+| General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
+| Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 11, 16, 3 — bespoke controls, not schema rows |
 | Profiles | none | AceDBOptions' own page |
 
 A **color** is one control in those counts even though it emits two widgets (the swatch and its
-*Class color* companion), and the accent bar's **Edges** is one control holding four checkboxes.
+*Use class color* companion), and the accent bar's **Edges** is one control holding four checkboxes.
+
+### The Master controls tab
+
+The General page's **first** tab, named exactly that, and it is **composed** rather than declared
+(`options-ui-§15`): `settings/Schema.lua` calls `LibKa0s-Options-1.0`'s `MasterControls` and splices
+what it returns at the head of the row array. The set, the order, the labels and the ranges are the
+library's, so nine addons cannot drift into nine versions of the same tab.
+
+| | |
+|---|---|
+| Enable Ka0s Panel Master | General visibility |
+| Master scale | Master alpha |
+| Lock frame | Debug console |
+| Test mode | |
+| *Reset position* | *Reset all settings* |
+
+The last row is the group's closing **button pair**, drawn by the `afterGroup` hook the composer
+returns beside the rows. The group name *is* the hook's key, so `settings/Panel.lua` reads it off
+the composed rows rather than writing the literal out again — a key that disagreed would detach the
+hook silently and the tab would simply have no buttons.
+
+Four of these are new, and each is honored by drawing code rather than merely declared:
+
+- **General visibility** — `Always` / `Only in combat` / `Only out of combat` / `Never`, honored in
+  `Canvas.VisibilityShows` and folded into `spec.shown`. There was no *show only in combat* boolean
+  here to migrate: the addon never shipped one, so `always` is both the default and what every
+  existing profile already meant.
+- **Master scale** and **Master alpha** — addon-wide **multipliers** over each panel's own scale and
+  opacity, applied in `Canvas.BuildSpec`. They are deliberately not the same settings as the
+  per-panel ones on the Panels page: the editor's sliders keep showing what the player typed for
+  that panel, and these two move all of them together. Both ship at 1, the identity.
+- **Reset position** — `Registry:ResetPositions`, which puts every panel's anchor back where a new
+  one starts and reports how many moved. The **anchor only**: a button labeled *Reset position* that
+  also reset an evening's worth of sizing would be doing something its own label did not warn about.
+
+**Lock frame** is the old *Unlock panels* switch, moved here and **un-inverted**. It stays
+session-only — unlocking is an editing mode, not a preference, and a player who unlocks, drags a
+panel and reloads comes back to a locked UI, which is what this addon has always done. There is no
+stored value behind it, so the sense change is not a migration; the negation is pinned in both
+directions in `tests/test_schema.lua`.
+
+**Test mode** is *not* canonical. It is this addon's own, and it rides the composer's `extra`, which
+appends after the mandated block and never interleaves with it.
+
+**Reset all settings** is `options-ui-§12`'s global reset, verbatim and confirm-gated, and it is the
+same entry point the header **Defaults** button and `/pm resetall` already share — `Sl:ConfirmResetAll`.
+Deleting every panel stays the separate, separately-confirmed act it was, on the Panels page's own
+Defaults button behind `KA0S_PANELMASTER_DELETEALL`.
+
+### Subsection headings
+
+Three of the Panels page's tabs mix more than one kind of control, and each says where one stops and
+the next starts (`options-ui-§7`) — the same AceGUI `Heading` widget every other header in the
+collection uses, drawn into the editor's own container because the library's `O.Section` emits into
+the page's scroll:
+
+| Tab | Headings |
+|---|---|
+| Background and border | **Background**, **Border** |
+| Accent bar | **Bar**, **Edges**, **Border** |
+| Artwork | **Image**, **Layout**, **Appearance** |
+
+The **Edges** one replaces a hand-rolled gold `|cffffd100Edges|r` Label that stood in for a heading,
+which is anti-pattern #71. The *Background and border* merge is not undone by the rule — it is
+argued for above, and what the rule adds is the pair of headings inside it.
+
+The border and bar blocks carry the canonical row sets and order (`options-ui-§16`): **Border style**,
+**Border thickness (px)**, **Border color**, **Use class color**, and then this addon's own **Border
+offset** *after* them rather than among them; **Bar texture**, **Bar opacity**, **Bar color**, **Use
+class color**, then bar thickness and bar offset. **Bar opacity** is a new stored field
+(`accentAlpha`) multiplied into the bar color's alpha — the panel-wide opacity could not stand in for
+it, because that one fades background, border and bars together.
+
+The panel **background** is not a bar group and takes no opacity row of its own: a group over a
+background takes the swatch and its companion, and the alpha in the swatch plus the panel-wide
+opacity are already the two controls that decide how solid the fill is.
+
+**What is honored by hand here is the ROW SET and the ORDER, not the composer.** `options-ui-§16`
+also says these blocks are emitted from one library declaration rather than typed out
+(`H.BorderGroup` / `H.BarGroup`, anti-pattern #73) — and those composers emit **schema rows**, which
+is a shape the Panels page has not got: a panel is a registry record with no `path`, drawn from
+`NS.Registry` by `settings/PanelEditor.lua`, so there is nothing for a row composer to emit into.
+The stub in `settings/OptionsSetup.lua` answers `BorderGroup` and `BarGroup` for the parity case and
+nothing in this addon calls either. The gap is therefore real and is **not** currently ratified —
+there is no `options-ui-§16` row in `ARCHITECTURE.md` ▸ *Documented deviations* — so an audit will
+keep re-filing it until it is either ratified or closed by a composer that can emit into a bespoke
+page. The **General** page has no color, font, border or bar row at all, so `§16` does not engage
+there.
+
+The class-color intent `options-ui-§17` requires per control is declared in `C.COLOR_CLASS_SOURCE`
+rather than on a row, for the same reason: these controls have no rows. All five entries are
+`"player"` — a panel is chrome and tracks no unit — and the map is what an audit reads.
 
 Counts come from `settings/Schema.lua` and `settings/PanelEditor.lua`, and are pinned by the
 partition cases in `tests/test_schema.lua` — which are written out as the *designed* table rather
@@ -57,8 +178,17 @@ subject, not for its drawer:
 - **Visibility → Opacity and fade.** Its three controls are two opacity sliders and a mouseover
   switch. The old name promised the where/when rules of a visibility engine this addon has not got.
 
-**Unlock panels** moved from Master controls to Editing in the same pass: it is a master toggle whose
-whole job is governing the four rows under it, and a master toggle leads the thing it governs.
+  The two sliders **share a row** and the switch sits **alone below them**. They are the same
+  question asked twice — how visible, and how visible while the cursor is elsewhere — on the same
+  `0..1` scale, so one is chosen against the other and they belong side by side. The switch decides
+  whether the second is consulted at all; beside a slider it reads as governing *that* slider, and
+  on its own line it governs the line above, which is what it does. It was the other way round:
+  *Panel opacity* alone, then *Faded opacity* paired with the checkbox.
+
+**Unlock panels** left the Editing tab in the settings-revamp pass and is `Lock frame` on Master
+controls now. The four rows it used to lead still only mean anything while the panels are unlocked,
+which was the argument for putting it there — what changed is that the canonical set is not a menu
+to take the convenient half of.
 
 Profiles is the **one** place `AceConfigDialog` is used. `anti-patterns` forbids it for content and
 carves out Profiles explicitly, and the carve-out earns itself: AceDBOptions returns a complete,
@@ -100,11 +230,18 @@ box in the editor below. That is safe because AceGUI's EditBox does **not** comm
 `OnEditFocusLost` is never registered at all. (An earlier version added a separate Create button on
 the mistaken assumption that tabbing away would create a panel.)
 
-There is deliberately **no heading naming the selected panel** between the dropdown and the editor:
-the dropdown already shows which panel is selected, so a heading repeating it was a third band of
-chrome between choosing a panel and editing it. The panel selector carries no label either, which
-makes it 14px shorter than a labeled control — so a compensating spacer (`LABEL_ROW_H`) sits above
-it, or the `Edit` heading would look tighter than every other heading on the page.
+There is deliberately **no heading naming the selected panel** above the editor: the picker in the
+band already shows which panel is selected, so a heading repeating it was a third band of chrome
+between choosing a panel and editing it. The picker carries a **label** now (`Panel`), which it did
+not when it sat under an *Edit* section heading that said what it was for; in the band there is no
+heading above it, and an unlabeled dropdown beside a labeled edit box reads as a control that lost
+its caption. The `LABEL_ROW_H` spacer that compensated the unlabeled control went with the heading.
+
+**Zero panels is a state of the page, not a different page.** The strip is drawn first and always,
+and the empty state is a line of content underneath it. It used to be the other way round — the band
+was released and the strip taken down when the registry was empty — which is the conditional
+no-strip state `options-ui-§13` forbids, and which is no longer survivable anyway: the only control
+that can make a panel now lives in that band.
 
 The editor opens on its **General** tab, in decision order — which panel is this (name, and the
 option to copy another's look), is it on (Enabled / Unlock), am I done with it (Reset / Delete). The
@@ -125,15 +262,20 @@ change instead. `Registry:Reset` restores the whole record from the template plu
 New-Panel-Defaults — the same path `Registry:New` takes, so "reset" and "make a new one" cannot
 drift — keeping only `id` and `name`, so the frame name survives and external anchors stay attached.
 
-The editor emits a sequence of full-width **rows** into a `List`-layout group rather than pouring
-every widget into one `Flow`. A single Flow reflows controls of differing heights into whatever gaps
-it can find, so a checkbox rides up beside a slider's label and two unrelated settings share a line —
-which is what made the first version look cluttered. Explicit rows and two named gap sizes
-(`EDITOR_SELECT_GAP` > `EDITOR_ROW_GAP`) mean the spacing itself carries the structure.
+The editor emits a sequence of full-width **rows** into a `List`-layout `SimpleGroup` rather than
+pouring every widget into one `Flow`. A single Flow reflows controls of differing heights into
+whatever gaps it can find, so a checkbox rides up beside a slider's label and two unrelated settings
+share a line — which is what made the first version look cluttered. Explicit rows and three named gap
+sizes (`EDITOR_TOP_GAP` > `EDITOR_HEADING_GAP` > `EDITOR_ROW_GAP`) mean the spacing itself carries
+the structure.
 
-The middle gap size, and the `editorHeading` it spaced, are **gone**: the editor's six subsections
-are tabs now, and a tab is announced by the strip rather than by a divider-flanked heading part-way
-down the page.
+That container was a **titleless `InlineGroup`**, and the box is what changed rather than the layout.
+The editor sits under a strip whose content panel already draws a boundary around the whole page, so
+a second bounded box inside it was a border stating a boundary the page already states
+(`options-ui-§14`, anti-pattern #72). `EDITOR_TOP_GAP` exists because that box contributed an inset of
+its own — an empty title bar plus padding, near twenty pixels — and with it gone the gap is stated
+rather than inherited from a widget that happened to have one. `EDITOR_SELECT_GAP` went the other
+way: it spaced the panel dropdown from the editor, and the picker is in the band now.
 
 #### Three widget workarounds
 
@@ -192,9 +334,13 @@ Its body lives in `settings/PanelEditor.lua`, a sibling in the same folder (`lay
 was by far the largest thing in `settings/Panel.lua` and shares none of the page chrome around it.
 `P:Register` wires the bus (`E:WireBus`) at registration and the page's `OnShow` calls `E:BuildPage`
 then `E:Rebuild`, so the lazy-build contract is unchanged. The editor draws with the page's own
-helpers — the scroll frame, the tooltip attacher, the section heading, the paired-button width and
+helpers — the scroll frame, the tooltip attacher, the heading height, the paired-button width and
 the open-dropdown registry — published once as the internal `NS.Panel.__ui` and bound on first use,
-since the TOC loads the editor *before* the page.
+since the TOC loads the editor *before* the page. `section`, `addSpacer` and `ROW_VSPACER` left that
+table with the *Create* and *Edit* sections: `O.Section` emits into the page's **scroll**, and the
+editor's headings go into its own container so a rebuild can release the editor without taking the
+rest of the page with it. `SECTION_HEADING_H` arrived in their place, so the editor's heading is the
+library's number rather than a host copy of it (`options-ui-§8`).
 
 It has exactly **two** triggers, both on the bus, and no widget callback rebuilds the page itself:
 
@@ -220,6 +366,15 @@ resolves it. A rebuild clears `ctx.refreshers` first, since every closure in it 
 rebuild is about to release. The color-picker refresher uses `SetColor`, which fires no callback and
 therefore cannot re-enter `Registry:Set`.
 
-Defaults actions differ by page and by destructiveness: **General**'s resets settings only and is
-safe behind Blizzard's un-gated footer control; **Panels**' is "delete every panel" (the genuine
-stock state of that page) and is therefore confirm-gated behind `KA0S_PANELMASTER_DELETEALL`.
+Defaults actions differ by page, and **both are destructive now**: **General**'s is the shared
+profile reset described above (`Sl:ConfirmResetAll`, behind `KA0S_PANELMASTER_RESETALL`), so the
+player's panels go with the settings; **Panels**' is "delete every panel" (the genuine stock state of
+that page), behind `KA0S_PANELMASTER_DELETEALL`. Blizzard's own un-gated footer control forwards to
+the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the footer and the header
+button are one implementation and the confirmation cannot be reached round.
+
+**The General page's Defaults tooltip still reads *"Your panels are untouched"*, and so does the
+comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:365`, `:372`).** Both predate
+`options-ui-§12` turning `resetall` into a profile reset and neither matches what the button now
+does. That is a code fix, not a doc one, and it is recorded here so the next reader does not take
+the tooltip for the contract.

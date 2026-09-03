@@ -13,7 +13,7 @@ translation always matches another key's — so a translator never does the same
 yet; every label, tooltip and message is hardcoded English. That is a scope decision for the first
 release rather than an oversight, and it is precisely what made the US-English sweep cheap to do —
 there were no keys to move alongside the strings. The seam is kept so a later pass can wrap strings
-(`NS.L["Enable panels"]`) without touching call sites. There is no `local L` alias until the first
+(`NS.L["Show names while unlocked"]`) without touching call sites. There is no `local L` alias until the first
 string is wrapped, so the file stays luacheck-clean.
 
 Two things must **never** be routed through `NS.L`:

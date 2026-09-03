@@ -62,22 +62,29 @@ test("Compat.RegisterMedia: reports failure without LibSharedMedia rather than e
   assertFalse(NS.Compat.RegisterMedia())
 end)
 
-test("Compat.GetClassColor: reads RAID_CLASS_COLORS by classFile token", function()
-  local r, g, b = NS.Compat.GetClassColor()
-  -- The mock player is a Priest (1, 1, 1). Matched on the "PRIEST" token, never on a localized
-  -- class name (localization-§4).
+test("Compat: the class-color lookup is the library's, not a private copy here", function()
+  -- options-ui-§17's ONE RESOLVER rule. `Compat.GetClassColor` used to read RAID_CLASS_COLORS in
+  -- this file; LibKa0s-Core-1.0 minor 7 owns that for the whole collection now, and a host copy
+  -- beside it is the drift the rule exists to end.
+  --
+  -- Both halves are asserted, because either alone passes against the wrong thing: the member is
+  -- gone from Compat, AND the source no longer reads the table it read. Dies under re-adding the
+  -- function, and under a differently-named private copy of its body.
+  assertEqual(NS.Compat.GetClassColor, nil,
+    "core/Compat.lua grew a class-color resolver back — options-ui-§17 allows exactly one, and it " ..
+    "is LibKa0s-Core-1.0's")
+  local f = assert(io.open("core/Compat.lua", "r"))
+  local body = f:read("*a")
+  f:close()
+  -- The comment block that records the removal names the table, so the check is for a READ of it.
+  assertEqual(body:find("RAID_CLASS_COLORS%s*%["), nil,
+    "core/Compat.lua indexes RAID_CLASS_COLORS again")
+  -- And the library really does answer for this addon's mock player, a Priest (1, 1, 1), matched
+  -- on the "PRIEST" token and never on a localized class name (localization-§4).
+  local r, g, b = NS.Core.ClassColor()
   assertEqual(r, 1)
   assertEqual(g, 1)
   assertEqual(b, 1)
-end)
-
-test("Compat.GetClassColor: an unknown class is nil, not white", function()
-  local saved = T.mocks.UnitClass
-  T.mocks.UnitClass = function() return "Tinker", "TINKER", 99 end
-  local r = NS.Compat.GetClassColor()
-  T.mocks.UnitClass = saved
-  -- nil lets the caller keep the user's stored color; white would silently repaint their panel.
-  assertEqual(r, nil)
 end)
 
 test("Compat.MouseIsOver: answers without the frame taking mouse input", function()

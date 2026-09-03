@@ -337,6 +337,11 @@ C.PANEL_TEMPLATE = {
   -- the BenikUI green, which looked deliberate without anyone having chosen it.
   accentColor      = { 1.00, 1.00, 1.00, 1.00 },
   accentClassColor = true,
+  -- The bar group's mandated opacity row (options-ui-§16). 1.0 is the identity, so every accent bar
+  -- that already exists is unaffected. It multiplies the resolved accent COLOR's alpha rather than
+  -- replacing it, which is what keeps it independent of the panel-wide `alpha` below: that one
+  -- fades the whole frame -- background, border and bars together -- and cannot fade the bar alone.
+  accentAlpha      = 1.00,
 
   -- The accent bar's OWN border, mirroring the panel's. Size 0 by default: the bar is already a
   -- decoration, and outlining it unasked would change the look of every accent bar the moment the
@@ -412,9 +417,28 @@ C.COLOR_FIELDS = {
   accentColor = "accentClassColor",
   accentBorderColor = "accentBorderClassColor",
   -- Artwork inherits class color for the price of this one row: the tint already resolves through
-  -- Util.ResolveColor, so the renderer, the CLI, the settings page and the field dump all pick it
+  -- the shared resolver, so the renderer, the CLI, the settings page and the field dump all pick it
   -- up without a line of new code anywhere.
   artColor    = "artClassColor",
+}
+
+-- Color field → WHOSE class the class color means (options-ui-§17).
+--
+-- DECLARED, never inferred. The rule is that a color resolves to the class of the unit the surface
+-- DESCRIBES, and no amount of reading a field name can establish that — a control stored under a
+-- unit's own key can still be drawing the player's own spells. So the intent is written down per
+-- field, and this table is what an audit reads.
+--
+-- All five are "player", and the argument is the same for every one of them: a panel is CHROME. It
+-- is a backdrop the player put behind their own UI, it tracks no unit, and it has no unit token to
+-- ask about — so LibKa0s.ResolveColor is called with a nil unit, which is its "the player" answer.
+-- The day a panel gains a tracked unit, the row for that color changes here and nowhere else.
+C.COLOR_CLASS_SOURCE = {
+  bgColor           = "player",
+  borderColor       = "player",
+  accentColor       = "player",
+  accentBorderColor = "player",
+  artColor          = "player",
 }
 
 -- Field → type, for the CLI's `/pm panel set <name> <field> <value>` coercion and for validation.
@@ -432,7 +456,7 @@ C.PANEL_FIELD_TYPE = {
   mouseover = "boolean", mouseoverAlpha = "number",
   accentEnabled = "boolean", accentEdges = "edges", accentTexture = "media",
   accentThickness = "number", accentOffset = "number",
-  accentColor = "color", accentClassColor = "boolean",
+  accentColor = "color", accentClassColor = "boolean", accentAlpha = "number",
   accentBorderTexture = "media", accentBorderSize = "number",
   accentBorderOffset = "number",
   accentBorderColor = "color", accentBorderClassColor = "boolean",
@@ -483,7 +507,8 @@ C.PANEL_FIELD_ORDER = {
   "bgTexture", "bgColor", "bgClassColor",
   "borderTexture", "borderSize", "borderOffset", "borderColor", "borderClassColor",
   "mouseover", "mouseoverAlpha",
-  "accentEnabled", "accentEdges", "accentTexture", "accentThickness", "accentOffset",
+  "accentEnabled", "accentEdges", "accentTexture", "accentAlpha",
+  "accentThickness", "accentOffset",
   "accentColor", "accentClassColor",
   "accentBorderTexture", "accentBorderSize", "accentBorderOffset",
   "accentBorderColor", "accentBorderClassColor",

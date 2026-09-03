@@ -41,7 +41,7 @@ under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.23.0 (MIT). That line is the
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.25.0 (MIT). That line is the
 **provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
 file for it and compares both vendored payloads — `libs/LibKa0s/` and `tests/_kit/` — against that
 tag in the sibling checkout. So it moves in the **same commit** as the vendored bytes; a line and a
@@ -55,7 +55,7 @@ The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/
 [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and
 [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). It is a deviation from `§1` itself and
 **not** a `performance-§12` exemption — `§12` is neither claimed nor claimable here, because its
-no-combat-path criterion (a) fails: `modules/Canvas.lua:577` runs a shared 10Hz `OnUpdate`.
+no-combat-path criterion (a) fails: `modules/Canvas.lua:646` runs a shared 10Hz `OnUpdate`.
 `docs/performance.md` carries the sweep and the cost argument.
 
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever

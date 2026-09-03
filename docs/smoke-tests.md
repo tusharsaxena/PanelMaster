@@ -100,7 +100,7 @@ With a panel created and locked:
 
 0. **New as of the LibKa0s-Media adoption, and expected:** the addon now registers the collection's
    shared media with LibSharedMedia at load, so the **font** dropdowns gain `JetBrains Mono` and the
-   **Accent bar texture** dropdown gains seven `Ka0s …` entries (`Ka0s Gradient`, `Ka0s Underline 1`
+   **Bar texture** dropdown gains seven `Ka0s …` entries (`Ka0s Gradient`, `Ka0s Underline 1`
    / `2` / `4`, `Ka0s Overline 1` / `2` / `4`). Nothing you had already chosen moves — registration
    only adds names — and the shipped default is still a texture LSM itself always ships.
    **A regression looks like** those names being absent on a complete install, which means
@@ -113,12 +113,12 @@ With a panel created and locked:
 3. Reopen the dropdown. **Expect:** it still reads the texture you picked. (If it has reverted to the
    old name while the panel visibly changed, the LSM widget's value push has regressed — see
    `settings-panel.md` ▸ *Three widget workarounds*.)
-4. Open **Border texture** and pick `Blizzard Tooltip`. **Expect:** a proper decorative edge, with
+4. Open **Border style** and pick `Blizzard Tooltip`. **Expect:** a proper decorative edge, with
    corners drawn correctly — not four flat bars.
-5. Check the closed **Border texture** dropdown is flush with the controls beside it, with no ~42px
+5. Check the closed **Border style** dropdown is flush with the controls beside it, with no ~42px
    empty gap on its left. A gap means `core/LSMPatch.lua` is not taking effect.
-6. Raise **Border size** to 8 and back to 1. **Expect:** the edge scales with it.
-7. Set **Border texture** to `None`. **Expect:** the border disappears entirely while **Border size**
+6. Raise **Border thickness (px)** to 8 and back to 1. **Expect:** the edge scales with it.
+7. Set **Border style** to `None`. **Expect:** the border disappears entirely while **Border thickness (px)**
    stays where it was. Set it back and the border returns.
 8. Set **Background texture** to `None`. **Expect:** the fill disappears, the border stays.
 9. Reload. **Expect:** both texture choices survived.
@@ -184,14 +184,18 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 7. Drag **Bar offset** positive. **Expect:** the bars move *away* from the panel on all sides at
    once. Set it to 0 — they sit flush, and start to look like a thick border. Negative — they
    overlap the panel.
-8. Untick **Class color** next to **Bar color**. **Expect:** the bar turns the stored green. Pick
+8. Untick **Use class color** next to **Bar color**. **Expect:** the bar turns the stored white. Pick
    your own color and confirm it applies (see §5b-2 — same picker, same fix).
 9. Change **Bar texture** to a gradient status-bar texture. **Expect:** the bar renders with it,
    tinted by the bar color. The list should be your **status-bar** textures, not backgrounds.
-9b. **The bar's own border.** Raise **Bar border size** to 3. **Expect:** an outline appears around
-    each bar. Change **Bar border texture**, **Bar border color** and its **Class color** — all
-    behave like the panel's border. Push **Bar border offset** positive and negative. Drop the size
-    back to 0 and confirm the outline goes completely.
+9b. **The bar's own border**, under the tab's **Border** heading. Raise **Border thickness (px)** to
+    3. **Expect:** an outline appears around each bar. Change **Border style**, **Border color** and
+    its **Use class color** — all behave like the panel's border. Push **Border offset** positive and
+    negative. Drop the thickness back to 0 and confirm the outline goes completely.
+9c. **Bar opacity.** Under the **Bar** heading, drag **Bar opacity** to 0.3. **Expect:** the bars
+    themselves get more see-through while the panel's background and border do not — this is the
+    bar's own fill opacity, not the panel-wide one. Set it back to 1 and confirm the bar returns to
+    exactly the solidity the bar color's own alpha gives it.
 10. Set **Panel opacity** to 0.3. **Expect:** the bars fade *with* the panel — they are part of it,
     not separate.
 11. Change **Frame strata**. **Expect:** the bars move with the panel; they can never be on a
@@ -209,14 +213,16 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 
 ## 5c. Class color
 
-1. Tick **Class color** next to **Background color**. **Expect:** the panel takes your class
-   color. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix.
+1. Tick **Use class color** next to **Background color**. **Expect:** the panel takes your class
+   color. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix, and its
+   tooltip ends with the collection's own sentence: *not read while Use class color is on, except
+   for its opacity, which always applies*.
 2. Check the panel's **opacity is unchanged** — class color replaces the hue, not the alpha. Drag
    **Panel opacity** and confirm it still works.
-3. Tick **Class color** next to **Border color** too, and confirm the two are independent: untick
+3. Tick **Use class color** next to **Border color** too, and confirm the two are independent: untick
    the background one and the border stays class-colored.
 4. Untick both. **Expect:** the original colors come back exactly — they were never overwritten.
-4b. **The picker stays usable under class color.** With **Class color** ticked, the picker's label
+4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker's label
    reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
    **Expect:** the class-colored border/fill gets more or less solid. This is the only control that
    sets opacity, so it must not be grayed out.
@@ -224,7 +230,7 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
    color mode produced it. Compare a picked bright color against your class color at the **same
    opacity and size** — a darker class color will legitimately look softer. If they differ at
    matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any color
-   crisp regardless of UI scale.
+   crisp regardless of UI scale (the control is **Border thickness (px)** now).
 5. Log in on a character of a **different class**. **Expect:** that character's panels (if
    class-colored) show the new class color.
 
@@ -295,10 +301,11 @@ panel: three of the five fills only differ once the panel stops matching the art
 
 ## 5e-4. Artwork — color, class color and Desaturate
 
-1. On any piece: change **Color**. **Expect:** the art takes the color. Tick **Class color** → it
+1. On any piece: change **Artwork color**. **Expect:** the art takes the color. Tick **Use class
+   color** → it
    takes your class color. Drop **Opacity** → it fades independently of the panel's own background
    alpha.
-2. **Expect:** the Color and Class color controls are present for **every** piece, and do not appear
+2. **Expect:** the Artwork color and Use class color controls are present for **every** piece, and do not appear
    and disappear as you page through the artwork dropdown. They used to be hidden for full-color
    art, which shoved every row below them up and down.
 3. On a full-color piece with a strong tint set, tick **Desaturate**. **Expect:** the muddy
@@ -377,25 +384,55 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    Blizzard's red stone button. (A red button means it was created too early; see `options-ui-§5`.)
 2b. **Click each tab.** **Expect:** only that tab's controls are on the page, the strip stays put,
    and clicking the tab you are already on does nothing at all (the active tab is drawn disabled).
-   Master controls has 3 rows, Editing 5 plus a **Recover panels** button under them, New panels 4.
+   Master controls has 7 rows plus a **Reset position | Reset all settings** button pair under them,
+   Editing 4 plus a **Recover panels** button, New panels 4.
+2c. **Master controls, in the canonical order** (`options-ui-§15`): **Enable Ka0s Panel Master |
+   General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then
+   **Test mode** alone, then the button pair. Two per line, in that order, with nothing else on the
+   tab. This tab reads identically in every Ka0s addon — compare it against one.
+2d. **The four new controls actually do something.**
+   - **General visibility** → `Only out of combat`, then pull a training dummy. **Expect:** every
+     panel disappears the instant you enter combat and comes back the instant you leave it. Try
+     `Only in combat` (the inverse), then `Never` (nothing draws at all), then back to `Always`.
+   - **Master scale** → 1.5. **Expect:** *every* panel grows, together, including its border, its
+     accent bars and its artwork — and each panel's own **Panel scale** slider on the Panels page
+     still reads what you set it to. The two multiply; they are not the same control.
+   - **Master alpha** → 0.4. **Expect:** every panel fades, on top of its own opacity.
+   - **Reset position** → **Expect:** every panel jumps back to the middle of the screen, a chat
+     line says how many moved, and **nothing else about any panel changes** — same size, same
+     colors, same artwork.
+   - **Reset all settings** → **Expect:** the `options-ui-§12` confirmation popup, word for word,
+     and on **Yes** the profile is reset — settings *and* panels. This is the same act as the header
+     **Defaults** button and `/pm resetall`; deleting every panel without touching the settings is
+     still the separate, separately-confirmed **Defaults** button on the **Panels** page.
 3. Confirm the scrollbar is **present but grayed out** on a page that fits, and that the body does not
    jump width when you tab between pages.
-4. Toggle **Unlock panels** and **Test mode** → **Expect:** they do exactly what the slash
-   commands do.
+4. Toggle **Lock frame** and **Test mode** → **Expect:** they do exactly what the slash commands do,
+   with **Lock frame** the *inverse* of `/pm unlock`: unticking it unlocks. Ticked is the shipped
+   state, and it is ticked again after every `/reload`.
 5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
-   border | Accent bar | Artwork | Opacity and fade** — and, under it, a **Create** section (name
-   box + Create button) and an **Edit** section (a panel dropdown + the active tab's editor).
-   **Create and Edit are not tabs**: they stay on the page whichever tab is selected. With **no
-   panels at all** there is no strip either — the band is given back rather than left standing over
-   the "No panels yet" line.
-5b. **Layout check.** The panel dropdown spans the **full width** with **no "Panel" label** above it,
-   and there is **no heading naming the selected panel** between it and the editor box. The gap
-   below `Create` and the gap below `Edit` must look **identical** — the dropdown carries no label,
-   so a compensating spacer keeps the two headings evenly spaced. Inside the editor there are **no
-   divider-flanked subsection headings any more** — the strip says which subject you are on — and no
-   two unrelated controls share a line. On **Opacity and fade**, **Panel opacity** is alone on its
-   row, with **Faded opacity** and **Show on mouseover only** paired on the next. Compare against
-   KickCD's Icons page for the house rhythm.
+   border | Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band,
+   a **Create new panel** box and a **Panel** picker side by side, separated from the strip by a
+   hairline rule. **Neither is a tab and neither is in the scroll**: they stay put whichever tab is
+   selected. There is **no second box drawn around them** — the band's own divider is the boundary.
+5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
+   page. **Expect:** the band above the strip holds the **Create new panel** box and the **Panel**
+   picker, at full width. An empty band of the right height with nothing in it is the zero-width
+   layout race: the canvas has no width until it lays itself out, and this block is built once for
+   the session, so without its own resize hook it stays empty until a `/reload`. Then drag the
+   Settings window's edge to resize it and confirm both controls follow.
+5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
+   it is **still there** with both controls usable, and the page reads "No panels yet…" underneath.
+   The page must never lose its strip.
+5b. **Layout check.** The **Panel** picker carries its label, sits beside the create box, and there is
+   **no heading naming the selected panel** above the editor. Inside the editor there is **no boxed
+   border** around the controls — the tab strip's own content panel is the boundary — and no two
+   unrelated controls share a line. Three tabs carry **subsection headings**, drawn as the same
+   divider-flanked heading the landing page uses: **Background / Border** on *Background and border*,
+   **Bar / Edges / Border** on *Accent bar*, and **Image / Layout / Appearance** on *Artwork*. On
+   **Opacity and fade**, **Panel opacity** and **Faded opacity** share the first row — they are the same
+   question asked twice and are read against each other — with **Show on mouseover only** alone on the
+   next, where it governs the line above rather than looking like the companion to one slider. Compare against KickCD's Icons page for the house rhythm.
 5b-2. **Dropdown vs scrolling.** Open any dropdown on the Panels page (the panel selector, Anchor,
    Frame strata, or either texture picker) and — without closing it — **scroll the page**, first with
    the mouse wheel and then by dragging the scrollbar. **Expect:** the open list closes immediately
@@ -435,7 +472,10 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
     falls back to another panel rather than going blank.
 14. Press **Defaults** on the Panels page → **Expect:** a confirmation dialog, and nothing deleted
     until you accept.
-15. Press **Defaults** on the General page → **Expect:** settings reset and **your panels survive**.
+15. Press **Defaults** on the General page → **Expect:** the same confirmation `/pm resetall` raises,
+    and on accepting, the whole profile resets — settings **and** panels. (The button's tooltip
+    still claims your panels are untouched; that wording predates `options-ui-§12` and is a known
+    code-side staleness, not what the button does.)
 16. Close the options window, run `/pm new Offscreen`, reopen → **Expect:** the new panel is in the
     dropdown (it was rebuilt on show, not missed).
 

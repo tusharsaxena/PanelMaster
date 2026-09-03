@@ -90,6 +90,7 @@ local CLAMPED = {
   { "borderOffset",       C.MIN_BORDER_OFFSET,    C.MAX_BORDER_OFFSET },
   { "alpha",              0,                      1 },
   { "mouseoverAlpha",     0,                      1 },
+  { "accentAlpha",        0,                      1 },
   { "accentThickness",    C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS },
   { "accentOffset",       C.MIN_ACCENT_OFFSET,    C.MAX_ACCENT_OFFSET },
   -- The accent bar's own border shares the panel border's bounds, so a value legal on one is legal
@@ -947,6 +948,38 @@ function R:Recover()
     local y = Util.Clamp(rec.y, minY, maxY, 0)
     if x ~= rec.x or y ~= rec.y then
       rec.x, rec.y = x, y
+      moved = moved + 1
+    end
+  end
+  if moved > 0 then fire(MSG_PANELS) end
+  return moved
+end
+
+-- ── Reset position ──────────────────────────────────────────────────────────────
+
+-- Put every panel back where a new one starts: the Master controls tab's `Reset position`
+-- (options-ui-§15), which is addon-wide because this addon's frames are per-panel and the master
+-- rows are the addon-wide ones.
+--
+-- The ANCHOR only — point, relPoint and the two offsets. Not the size, not the colors, not the
+-- artwork: a button labeled "Reset position" that also reset an evening's worth of sizing would be
+-- doing something its own label did not warn about, which is the failure options-ui-§12 spends its
+-- whole length preventing at the global scale. R:Reset is the per-panel verb that does take the
+-- whole record, and it is confirmed on its own control.
+--
+-- Distinct from R:Recover, which is the other thing on this page that moves panels: recover clamps
+-- an anchor that has ended up beyond a screen edge and leaves everything already visible exactly
+-- where it is, while this one moves every panel whatever it was doing.
+--
+-- Returns the number of panels moved, so the caller can say so rather than silently rearranging the
+-- user's layout.
+function R:ResetPositions()
+  local t = C.PANEL_TEMPLATE
+  local moved = 0
+  for _, rec in ipairs(R:All()) do
+    if rec.point ~= t.point or rec.relPoint ~= t.relPoint
+       or rec.x ~= t.x or rec.y ~= t.y then
+      rec.point, rec.relPoint, rec.x, rec.y = t.point, t.relPoint, t.x, t.y
       moved = moved + 1
     end
   end

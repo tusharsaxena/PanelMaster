@@ -20,9 +20,28 @@ NS.defaults.profile = {
   nextID = 1,
 
   settings = {
+    -- ── The Master controls tab's stored half (options-ui-§15) ──
+    -- Declared by LibKa0s-Options-1.0's `MasterControls` composer rather than by a literal row in
+    -- settings/Schema.lua; the values live here, which is where savedvariables-§2 says a default
+    -- is declared. `locked` is NOT here: it is the session-only unlock state (NS.State.unlocked),
+    -- inverted, and is never persisted.
+
     -- Master switch. Off hides every panel without deleting anything, which is the fast way to see
     -- the UI underneath.
     enabled     = true,
+
+    -- When the panels are drawn at all: "always" / "inCombat" / "outOfCombat" / "never".
+    -- "always" is what this addon has always done, so no existing install changes behavior — and
+    -- there is no boolean to migrate, because this addon never shipped a "show only in combat"
+    -- checkbox for one to be written into.
+    visibility  = "always",
+
+    -- Addon-wide multipliers over every panel's OWN scale and opacity. 1 is the identity in both
+    -- cases, so an upgrade moves nothing on screen. They are deliberately not folded into the
+    -- per-panel fields: the editor's sliders keep showing what the player typed for that panel,
+    -- and these two move all of them together.
+    scale       = 1.0,
+    alpha       = 1.0,
 
     -- Snap-to-grid for the unlock-mode drag. gridSize is in UI units; 1 means no snapping.
     snapToGrid  = true,

@@ -507,3 +507,39 @@ test("Registry.Reset: lands on the same state a new panel is born in", function(
   NS.Slash:CliReset("settings.defaultAlpha")
   R:DeleteAll()
 end)
+
+test("Registry.ResetPositions: moves every panel back to where a new one starts", function()
+  -- The Master controls tab's `Reset position` (options-ui-§15), addon-wide because this addon's
+  -- frames are per-panel and the master rows are the addon-wide ones.
+  R:DeleteAll()
+  local a = R:New("Wandered")
+  local b = R:New("Also wandered")
+  local home = R:New("Never moved")
+  R:SetPosition(a.id, 300, -200)
+  R:Set(b.id, "point", "TOPLEFT")
+  R:SetPosition(b.id, -40, 40)
+
+  local moved = R:ResetPositions()
+  assertEqual(moved, 2, "the count did not report exactly the panels that actually moved")
+
+  local t = C.PANEL_TEMPLATE
+  for _, rec in ipairs({ R:Get(a.id), R:Get(b.id), R:Get(home.id) }) do
+    assertEqual(rec.x, t.x)
+    assertEqual(rec.y, t.y)
+    assertEqual(rec.point, t.point)
+    assertEqual(rec.relPoint, t.relPoint)
+  end
+
+  -- The ANCHOR only. A button labeled "Reset position" that also reset an evening's worth of sizing
+  -- would be doing something its own label did not warn about (options-ui-§12's reasoning at the
+  -- global scale), so this dies the day it starts calling R:Reset per record.
+  R:Set(a.id, "width", 777)
+  R:Set(a.id, "bgColor", { 0.1, 0.2, 0.3, 1 })
+  R:ResetPositions()
+  assertEqual(R:Get(a.id).width, 777, "reset position resized the panel too")
+  assertNear(R:Get(a.id).bgColor[1], 0.1, 1e-6, "reset position recolored the panel too")
+
+  -- Nothing to do is silent: no broadcast, so a page does not rebuild for a no-op.
+  assertEqual(R:ResetPositions(), 0)
+  R:DeleteAll()
+end)

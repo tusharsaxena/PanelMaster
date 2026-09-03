@@ -33,11 +33,13 @@ letterboxes a non-square plate rather than distorting it, and normalizes the RGB
 transparent pixels, which is invisible under normal blending but is read by other blend modes and
 was otherwise left to whichever code path a plate happened to take.
 
-The source plate each asset was converted from is kept under `media/artwork/raw/`, named for the
-catalog id it produces, so a piece can be re-derived at a different size or with a corrected margin
-without going back to whoever made it. It is committed to git but excluded from the package by
-`.pkgmeta` — the same reasoning as the logo's master renders, since the client cannot load a `.png`
-at all.
+`media/artwork/raw/` is the **reserved** home for the source plate an asset was converted from,
+named for the catalog id it produces, so a piece can be re-derived at a different size or with a
+corrected margin without going back to whoever made it. It is excluded from packaging by `.pkgmeta`
+and skipped by the catalog generator (`update_catalog.py`'s `SKIP_DIRS`) — the same reasoning as the
+logo's master renders, since the client cannot load a `.png` at all. **No plates are committed
+there today**: the folder is absent from the working tree, and the shipped `.tga` set is the only
+copy in the repo. See [artwork-spec.md](artwork-spec.md) for what belongs in it.
 
 `media/poster/artwork-poster.png` is another non-runtime media asset, and the only **generated** one:
 a single contact sheet of every catalog row, drawn by `tools/artwork/make_poster.py` and embedded in

@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-743%2F743_passing-green)
+![Tests](https://img.shields.io/badge/Tests-763%2F763_passing-green)
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
@@ -63,15 +63,15 @@ below.
 | `/pm set setting value` | Change a setting |
 | `/pm list` | List every setting |
 | `/pm reset setting` | Put one setting back to normal |
-| `/pm resetall` | Put every setting back to normal (your panels are kept) |
+| `/pm resetall` | Reset this profile to the addon's defaults — settings **and** panels. It asks first |
 | `/pm debug` | Show the debug window. `/pm debug on`/`off` turns logging on and off, `/pm debug dump` writes a state dump into the log |
 | `/pm help` | Show this list |
 
 The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `point`, `relPoint`,
 `x`, `y`, `strata`, `level`, `scale`, `alpha`, `bgTexture`, `bgColor`, `bgClassColor`, `borderTexture`,
 `borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover`, `mouseoverAlpha`,
-`accentEnabled`, `accentEdges`, `accentTexture`, `accentThickness`, `accentOffset`, `accentColor`,
-`accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
+`accentEnabled`, `accentEdges`, `accentTexture`, `accentAlpha`, `accentThickness`, `accentOffset`,
+`accentColor`, `accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
 `accentBorderColor`, `accentBorderClassColor`, `artTexture`, `artCustomPath`, `artColor`,
 `artClassColor`, `artAlpha`, `artFill`, `artPoint`, `artX`, `artY`, `artScale`, `artRotation`,
 `artFlipH`, `artFlipV`, `artDesaturate`, `artBlend` and `artLayer`. So:
@@ -131,10 +131,15 @@ has a landing page and three pages beneath it:
 
 | Tab | Setting | What it does |
 |---|---|---|
-| Master controls | Enable panels | Master switch. Off hides every panel without deleting any. |
-| Master controls | Test mode | Put three sample panels on screen. |
+| Master controls | Enable Ka0s Panel Master | Master switch. Off hides every panel without deleting any. |
+| Master controls | General visibility | When your panels are drawn at all: always, only in combat, only out of combat, or never. |
+| Master controls | Master scale | Magnifies every panel at once, on top of each panel's own scale. |
+| Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
+| Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
 | Master controls | Debug console | Show the debug window. Resets when you reload. |
-| Editing | Unlock panels | Show every panel with a drag handle and a name label. Resets when you reload. |
+| Master controls | Test mode | Put three sample panels on screen. |
+| Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
+| Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall` and the header **Defaults** button do. |
 | Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
 | Editing | Snap to grid | Round a dragged panel's position to the grid size below. |
 | Editing | Grid size | How coarse that grid is, in screen units. |
@@ -147,10 +152,10 @@ has a landing page and three pages beneath it:
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
 your panels immediately.
 
-On **Panels**, type a name at the top and press Enter (or click **Okay**), then pick any panel from
-the dropdown to edit it. One panel is shown at a time, so the page stays the same size whether you
-have two panels or twenty. The create box and the panel picker stay at the top whichever tab you are
-on; everything below is one tab at a time — **General** (identity, on/off, reset and delete),
+On **Panels**, type a name in the box at the top and press Enter (or click **Okay**), then pick any
+panel from the **Panel** picker beside it to edit it. One panel is shown at a time, so the page stays
+the same size whether you have two panels or twenty. Those two controls sit above the tab strip and
+stay there whichever tab you are on; everything below is one tab at a time — **General** (identity, on/off, reset and delete),
 **Position and size**, **Background and border**, **Accent bar**, **Artwork**, and **Opacity and
 fade**. Each panel's editor has:
 
@@ -167,24 +172,22 @@ fade**. Each panel's editor has:
 | Frame strata | Which layer the panel sits in. |
 | Panel scale | Magnifies the whole panel — its size, its border, its accent bars and its artwork — as one piece, the way the game's own UI scale does. Not the same as changing Width and Height: those resize the panel and leave the border and bars at the thickness you set. Width and Height keep showing the numbers you typed; what changes is how big they turn out on screen. A scaled panel is anchored in its own scaled units, so it also shifts relative to its anchor — nudge the offsets afterwards if it matters. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
-| Background color / Class color | The fill color, or your class color. Its opacity controls the fill alone. |
-| Border texture | Any border style LibSharedMedia knows about, or **None** for no border. |
-| Border size | Thickness. Starts at 0 — the accent bar defines the edge instead. |
+| Background color / Use class color | The fill color, or your class color. Its opacity controls the fill alone. |
+| Border style | Any border style LibSharedMedia knows about, or **None** for no border. |
+| Border thickness (px) | Thickness. Starts at 0 — the accent bar defines the edge instead. |
+| Border color / Use class color | The border color, or your class color. The opacity you set applies either way. |
 | Border offset | How far the border sits from the panel's edge. Positive pushes it out, negative pulls it in. |
-| Border color / Class color | The border color, or your class color. The opacity you set applies either way. |
 | Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. |
-| Accent bar texture | Any status-bar texture LibSharedMedia knows about. |
+| Bar texture | Any status-bar texture LibSharedMedia knows about. |
+| Bar opacity | How solid the bar's own fill is, on top of the opacity in the bar color. |
+| Bar color / Use class color | The bar color. Class color is **on** by default. |
+| Bar thickness | How thick the bar is. |
+| Bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
 | Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. Left and right bars turn the texture a quarter turn, so a bar reads the same way round whichever edge it is on. |
-| Accent bar thickness | How thick the bar is. |
-| Accent bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
-| Accent bar color / Class color | The bar color. Class color is **on** by default. |
-| Accent bar border texture | An edge style for the bar itself, or **None**. |
-| Accent bar border size | Thickness of the bar's own border. Defaults to a 1px black hairline. |
-| Accent bar border offset | How far that border sits from the bar. |
-| Accent bar border color / Class color | The bar border's color, or your class color. |
+| Border style, Border thickness (px), Border color / Use class color, Border offset (under the *Accent bar* tab's **Border** heading) | The bar's own outline, with the same four controls the panel's border has. Defaults to a 1px black hairline. |
 | Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each color. |
+| Faded opacity | How visible it is the rest of the time. 0 hides it completely. Sits beside *Panel opacity*, because you choose one against the other. |
 | Show on mouseover only | Keep the panel faded until your cursor is over it. |
-| Faded opacity | How visible it is the rest of the time. 0 hides it completely. |
 | Defaults (the page's own button, not the editor's) | On the **Panels** page this means *delete every panel* — your settings are left alone. It asks first, and nothing goes until you say yes. |
 
 **Two opacities, and they do different things.** Each color carries its own opacity, which affects
@@ -239,7 +242,7 @@ changes until you choose something.
 |---|---|
 | Artwork | Which piece. **None**, one of the bundled pieces, or **Custom path…** for your own file. |
 | Custom path | The texture to draw when **Custom** is picked. Only read in that case, so switching to a bundled piece and back does not lose what you typed. |
-| Color / Class color | Tints the art, whichever piece it is. The white-on-black pieces are drawn in white, so the tint is what gives them their color; full-color art wants **Desaturate** below first, or the tint only muddies it. Class color works here like it does everywhere else. |
+| Artwork color / Use class color | Tints the art, whichever piece it is. The white-on-black pieces are drawn in white, so the tint is what gives them their color; full-color art wants **Desaturate** below first, or the tint only muddies it. Class color works here like it does everywhere else. |
 | Desaturate | Drains the art to grayscale *before* the tint applies, so tinting full-color art gives you a clean version of the color you picked instead of mud. Off by default, so nothing you already have changes. |
 | Blend mode | **Normal** paints over the panel obeying the image's transparency. **Glow** adds the art's light instead — it can only brighten, never darken, and reads as a lit emblem over a dark panel. |
 | Opacity | How solid the art is, on top of the panel's own opacity. |
@@ -363,12 +366,6 @@ conversion guide, including how to pick good sources, is in
 | I dragged a panel and it jumped somewhere slightly different | Snap-to-grid is on. Turn it off (`/pm set settings.snapToGrid false`) or make the grid finer (`/pm set settings.gridSize 1`). |
 | Something is genuinely broken | Run `/pm debug on`, reproduce it, then `/pm debug` to open the log and **Copy** to grab the text. Attaching that to an issue makes it far easier to work out what happened. |
 
-## Credits
-
-The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
-the sizes the client wants and redistributed under
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
-
 ## Issues and feature requests
 
 Bugs and feature requests are tracked at
@@ -381,3 +378,9 @@ lives. A debug log (see above) helps a great deal for anything that looks like a
 | Version | Date | Highlights |
 |---------|------|------------|
 | 1.0.0 | 2026-08-07 | - First release: create, place and style as many backdrop panels as you like<br>- LibSharedMedia background and border textures, with a class-color option for both<br>- Accent bars along any edge, with their own texture, border and class color<br>- Per-panel scale, mouseover-only fade, and all eight frame strata<br>- Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>- Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>- Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>- Full command-line control and AceDB profiles |
+
+## Credits
+
+The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
+the sizes the client wants and redistributed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.

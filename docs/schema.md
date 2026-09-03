@@ -24,6 +24,16 @@ PanelMasterDB
   profile.settings        -- the schema-backed settings
 ```
 
+`profile.settings` gained three keys in the settings-revamp pass, all of them the stored half of the
+Master controls tab (`options-ui-§15`) and all of them shipping at the identity so no existing
+profile renders differently:
+
+```
+  settings.visibility     -- "always" | "inCombat" | "outOfCombat" | "never"
+  settings.scale          -- addon-wide multiplier over each panel's own scale
+  settings.alpha          -- addon-wide multiplier over each panel's own opacity
+```
+
 #### The panel record
 
 ```lua
@@ -31,7 +41,7 @@ PanelMasterDB
   bgTexture,     bgColor,    bgClassColor,
   borderTexture, borderSize, borderOffset, borderColor, borderClassColor,
   mouseover, mouseoverAlpha,
-  accentEnabled, accentEdges, accentTexture, accentThickness, accentOffset,
+  accentEnabled, accentEdges, accentTexture, accentAlpha, accentThickness, accentOffset,
                  accentColor, accentClassColor,
   accentBorderTexture, accentBorderSize, accentBorderOffset,
                        accentBorderColor, accentBorderClassColor,
@@ -57,6 +67,7 @@ it, so adding a field is one template entry plus one row in whichever of these a
 | `PANEL_FIELD_MEDIA` | which LibSharedMedia type a media field selects from |
 | `PANEL_FIELD_ENUM` | which closed value list an `enum` field is validated against |
 | `COLOR_FIELDS` | which boolean class-colors which color |
+| `COLOR_CLASS_SOURCE` | **whose** class each color means — `"player"` or `"unit"` |
 
 `COLOR_FIELDS` is the generic seam the class-color feature is built on: every color read goes
 through `Util.ResolveColor`, which consults it. A class color replaces only the **RGB**; the stored
@@ -65,9 +76,24 @@ is. Tests pin that a picked color and a class color produce an otherwise identic
 edge texture, same edge size, same alpha, same anchoring — since a drift there would make a
 class-colored border genuinely render fainter than a picked one.
 
-Because the alpha is still the user's, the color picker stays **enabled** while class color is on:
-it is the only control that sets opacity, so graying it out contradicted its own tooltip and left a
-washed-out class color unfixable. Its label gains an `(opacity)` suffix to say which half is live. A color added later gets class-color support in
+**The lookup itself is `LibKa0s-Core-1.0`'s, not this addon's.** `options-ui-§17` allows exactly one
+resolver in the collection, and `Core.ResolveColor` / `Core.ClassColor` are it; `Compat.GetClassColor`
+read `RAID_CLASS_COLORS` here and is gone. This addon's recorded argument is the one the library
+adopted — `RAID_CLASS_COLORS` is the table every other UI on the player's screen is already reading —
+so the source did not change, only who owns it, and the library also memoizes the player's answer on
+success where this copy never did. What stays host-side is the two things the library cannot know:
+which flag pairs with which color (`COLOR_FIELDS`), and whose class each color means
+(`COLOR_CLASS_SOURCE`). All five are `"player"`, and the argument is the same for every one: a panel
+is chrome — it is a backdrop the player put behind their own UI, it tracks no unit, and it has no
+unit token to ask about. The declaration is per field anyway, because that is what an audit reads,
+and because the day a panel gains a tracked unit the change is one row.
+
+Because the alpha is still the user's, the color picker stays **enabled** while class color is on —
+and `disabledIf` on a color row is now forbidden outright (anti-pattern #74). It is the only control
+that sets opacity, so graying it out contradicted its own tooltip and left a washed-out class color
+unfixable. Its label gains an `(opacity)` suffix to say which half is live, and its tooltip carries
+the collection's own sentence for it (`H.CLASS_COLOR_NOTE`) rather than a paraphrase. The companion
+is labeled **`Use class color`**, which is the name the standard gives it. A color added later gets class-color support in
 the renderer, the CLI and the settings page from that one row — nothing re-decides "does this color
 support class color?" at a call site. The accent bar proved this out: adding a third class-colorable
 color was one `COLOR_FIELDS` row and no new class-color logic anywhere.
