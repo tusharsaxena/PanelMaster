@@ -5,11 +5,23 @@ package-as: PanelMaster
 ignore:
   - .luacheckrc
   - .gitignore
+  - .gitattributes   # the repo's line-ending policy: governs the checkout, not the package
+  - .pkgmeta         # packager configuration: consumed before the zip is built, of no use inside it
+  # Those four are every root dot-entry this repo actually has, which is what
+  # packaging.md:28's strong form asks for. There is deliberately no .claude or
+  # .superpowers line: neither directory exists at this root, and the audit
+  # finding that named them was rejected this cycle for exactly that -- a sweep
+  # cannot have seen what is not there, and a list padded with absent entries
+  # goes stale in the other direction.
   - docs        # holds docs/audits/ and docs/reviews/ too — all dev-only
   - tests
   - tools       # the artwork importer — build-time only, and not even Lua
   - _dev
   - "*.bak"
+  # Developer documentation. README.md and LICENSE stay in the package, because
+  # players do read those.
+  - CLAUDE.md
+  - DEPENDENCIES.md
   - media/screenshots   # project-page art, served from the CurseForge CDN — never downloaded by a player
   # Only the .tga logo is loadable at runtime; WoW cannot read .png or .jpg at all. The master .png
   # and the two .jpg renders exist for the project page and for regenerating the .tga, so shipping
