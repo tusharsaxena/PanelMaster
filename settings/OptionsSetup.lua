@@ -224,12 +224,22 @@ NS.Helpers = lib:New({
   --   getLSM     — same reasoning. The three LSM-backed dropdowns are per-PANEL media pickers that
   --                PanelEditor builds itself with the LSM30_* widgets; no schema row is media-backed,
   --                so O.LSMValues would have no caller.
-  --   skipRestoreAll / afterRestoreAll — this addon does not use O.RestoreAllDefaults at all. Its
-  --                global reset is `Sl:CliResetAll`, which must ALSO reach the session-only rows
-  --                (unlock, preview, the console) through each row's own `set`, and the library's
-  --                version walks `allRows` calling `applyDefault`, which for a sessionOnly row would
-  --                write a default the row does not store. One reset implementation, and it is the
-  --                one both the slash verb and the Defaults button already share.
+  --   skipRestoreAll / afterRestoreAll — this addon does not use O.RestoreAllDefaults at all,
+  --                because its global reset is not a row walk. `Sl:CliResetAll` confirms and then
+  --                calls `Sl:DoResetAll`, which is `db:ResetProfile()` on the active profile and
+  --                nothing else (options-ui-§12, and settings/Slash.lua's header states the rule).
+  --                Both hooks exist to shape a walk of `allRows`, so with no walk there is nothing
+  --                for them to shape.
+  --
+  --                The session-only rows -- `state.locked`, `state.preview`, `state.debugConsole` --
+  --                are outside BOTH acts, and that is deliberate rather than an oversight. They
+  --                store nothing in the DB (settings/Schema.lua's `S:Set` sends a sessionOnly row
+  --                to its own `set` and never to WritePath), so a profile reset has nothing of
+  --                theirs to reset, while the library's walk would call `applyDefault` on each and
+  --                write a default the row does not store. What a reset DOES sweep is the durable
+  --                half: `OnProfileReset` reaches the `reload` closure in core/Database.lua, which
+  --                clears preview placeholder RECORDS out of the profile and reloads the registry.
+  --                The session flags themselves are cleared by their own `set`, or by a /reload.
   --   sliderCommit — the default (commit on release) is what this addon has always done. Neither
   --                slider drives anything the user can see mid-drag: grid size applies to the next
   --                drag, and default opacity applies to the next panel created.

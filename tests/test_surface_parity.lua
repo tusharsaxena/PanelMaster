@@ -5,8 +5,9 @@
 -- is a second implementation of somebody else's surface, so it drifts the moment the live half
 -- grows a member the host starts calling: the live path stays green and the degraded path raises in
 -- exactly the install the stub exists for. That is not hypothetical here. `Sl.FormatKV` was
--- assigned at `settings/Slash.lua:381` and not in the branch, so `/pm panel <name>` raised "attempt
--- to call field 'FormatKV' (a nil value)" at `settings/Slash.lua:101`. A presence check over the
+-- assigned at the foot of settings/Slash.lua and not in the degraded branch, so `/pm panel <name>`
+-- raised "attempt to call field 'FormatKV' (a nil value)" from `Sl:CliPanel`, which prints every
+-- field through it. A presence check over the
 -- members somebody remembered misses that exactly as the branch did; only a SET comparison catches
 -- it, which is `Kit.assertSurfaceParity`.
 --
