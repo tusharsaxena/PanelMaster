@@ -759,7 +759,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (45)
+### test_libka0s.lua (46)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -789,6 +789,7 @@ badge and any count quoted in the docs must agree with it.
 - Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry
 - Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
 - L trap (Options tripwire): Options reads no descriptor L
+- Options seam: the live wiring patches LSM30_Border through the library, not a private copy
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
 - Degraded install: the notice is announced exactly ONCE, before the first line
@@ -861,9 +862,9 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 57 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 45 |
+| test_libka0s.lua | 46 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
 | test_eol.lua | 1 |
-| **Total** | **764** |
+| **Total** | **765** |

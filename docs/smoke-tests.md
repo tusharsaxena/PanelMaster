@@ -116,7 +116,9 @@ With a panel created and locked:
 4. Open **Border style** and pick `Blizzard Tooltip`. **Expect:** a proper decorative edge, with
    corners drawn correctly — not four flat bars.
 5. Check the closed **Border style** dropdown is flush with the controls beside it, with no ~42px
-   empty gap on its left. A gap means `core/LSMPatch.lua` is not taking effect.
+   empty gap on its left. A gap means `lib.__PatchLSM30Border()` is not taking effect. **This step
+   checks it with PanelMaster alone, which is exactly the check that stayed green all the way
+   through the defect section 20 exists for** — run 20 too whenever this one matters.
 6. Raise **Border thickness (px)** to 8 and back to 1. **Expect:** the edge scales with it.
 7. Set **Border style** to `None`. **Expect:** the border disappears entirely while **Border thickness (px)**
    stays where it was. Set it back and the border returns.
@@ -850,3 +852,38 @@ that survives a render.
 
 `LibKa0s-Perf-1.0` minor 8 arrived in the same payload and respells five player-facing strings, but
 `Perf` is not wired in this addon, so none of them has a surface here.
+
+---
+
+## 20. The Border dropdown when five Ka0s addons share one registry
+
+**Smoke, session 5. NOT YET RUN.** Run after this addon's `core/LSMPatch.lua` was deleted and
+`settings/OptionsSetup.lua`'s live wiring took over the fixup (`M4-05`), and again after **each** of
+the three remaining deletions — ConsumableMaster, MultiMeters, then AbsorbTracker last, because
+AbsorbTracker's copy is the one that diverges (a callable `NS.ApplyLSMBorderPatch()` rather than a
+`PLAYER_LOGIN` frame). Five deletions, five commits, five bisect points if this goes wrong.
+
+**The thing under test is not PanelMaster.** AceGUI's widget registry is process-global: one slot
+named `LSM30_Border` shared by every addon in the client, Ka0s or not, and the highest version
+registered for the name wins for the rest of the session. Five Ka0s addons each carried a private
+copy of the same wrapper, each registering one version above whatever it found, so the wrapper a
+Border dropdown actually got belonged to whichever addon the client loaded last. Nothing headless in
+any of the five repos could see it — each suite loads one copy, registers once and passes — and
+section 5b step 5 above, which checks the alignment with PanelMaster alone, passed throughout.
+
+KickCD lost its private copy first (`M4-04`); PanelMaster is the second of the five. So this run is
+also the evidence that one library-level registration dresses the dropdown in **two** addons that no
+longer carry their own, with three that still do loaded alongside them.
+
+1. Enable KickCD, PanelMaster, AbsorbTracker, ConsumableMaster and MultiMeters together, and log in.
+2. Open each addon's Border dropdown in turn. PanelMaster's is `/pm` → **Panels** → select a panel →
+   **Border style**.
+3. Change the load order — disable and re-enable addons, or rename folders so a different one is
+   reached last — `/reload`, and walk the five dropdowns again.
+
+**Expect:** in all five, the closed control's left edge is **flush** with the sliders and checkboxes
+stacked with it, with **no ~42px gap**, and opening it still draws the per-row hover previews.
+Nothing differs between the two passes. **Any dropdown that looks different from the other four, or
+that changes when the load order changes, is the finding** — the whole point of moving the
+registration into LibKa0s is that the answer no longer depends on who loaded last. No Lua error at
+any point.

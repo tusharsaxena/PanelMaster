@@ -118,11 +118,10 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 |---|---|---|
 | `modules/Canvas.lua:646` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
 
-### `RegisterEvent` — 5 hits
+### `RegisterEvent` — 4 hits
 
 | Site | Event | Work | Runs in combat? |
 |---|---|---|---|
-| `core/LSMPatch.lua:31` | `PLAYER_LOGIN` | re-registers one AceGUI widget type, then `UnregisterAllEvents` | no — fires once, before any combat |
 | `core/PanelMaster.lua:51` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
 | `core/PanelMaster.lua:72` | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
 | `core/PanelMaster.lua:73` | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat()` | fires on **leaving** combat, by definition |

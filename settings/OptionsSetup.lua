@@ -115,6 +115,41 @@ if not lib then
   return
 end
 
+-- The LSM30_Border fixup, and why it is a call rather than a file.
+--
+-- A LIBRARY ACT, NOT AN ADDON ONE. AceGUI's widget registry is process-global: one slot named
+-- "LSM30_Border" that every addon in the client shares, Ka0s or not, and the highest version
+-- registered for the name wins for the rest of the session. This addon carried the fixup privately
+-- in core/LSMPatch.lua, and so did AbsorbTracker, ConsumableMaster, KickCD and MultiMeters -- five
+-- copies, five distinct md5s, each wrapping whatever it found and registering one version above
+-- it. Load all five and the wrapper a Border dropdown actually gets belongs to whichever addon the
+-- client reached last. Nothing in any of the five repos could see that: each suite loads a single
+-- copy, registers once and passes.
+--
+-- lib.__PatchLSM30Border (LibKa0s-Options-1.0 minor 15) is the same wrapper published once, behind
+-- lib.__lsmBorderPatched. LibStub hands five vendored copies of the library the same instance, so
+-- five callers produce one registration and the return value says which call made it. Calling it
+-- is unconditional and needs no agreement with any sibling addon.
+--
+-- HERE, AT FILE LOAD, is early enough. PanelMaster.toc pulls
+-- libs\AceGUI-3.0-SharedMediaWidgets\widget.xml in with the other libraries (:27), well before
+-- settings\OptionsSetup.lua (:86), so the slot already holds AGSMW's own constructor when this
+-- line runs. A registration whose version is not strictly higher than the one already held is
+-- refused, so another addon's later copy of AGSMW cannot take the slot back at its own fixed
+-- version. (Worded around the AceGUI entry point on purpose: C02's acceptance is a grep for that
+-- identifier over core/, modules/ and settings/ returning nothing, and a prose mention is a hit an
+-- auditor has to read and dismiss.)
+--
+-- It sits in THIS file because this is where the addon's options surface is wired, which is where
+-- the library's own note on the member says to call it from -- and because this is the live arm:
+-- an install with no libs/LibKa0s took the degraded return above and has no library to ask.
+--
+-- core/LSMPatch.lua IS GONE, deleted in the same commit that added this line. Keeping it would
+-- have been a second registration of a wrapper the library has already installed -- harmless in
+-- effect, since both hide the same tile and re-anchor the same two regions, but it is the exact
+-- shape the promotion exists to remove.
+lib.__PatchLSM30Border()
+
 NS.Helpers = lib:New({
   -- The brand: shown on the main page and as every sub-page's breadcrumb prefix. The library's
   -- BREADCRUMB_SEP is the same inline forward-arrow atlas this addon composed by hand, so
@@ -160,11 +195,12 @@ NS.Helpers = lib:New({
   -- settings/Panel.lua reads where it needs the library's own resolution, and a second addon-side
   -- home for the same singleton is exactly the drift a stash like that invites.
   --
-  -- The three remaining `LibStub("AceGUI-3.0", true)` calls each resolve that one singleton once and
-  -- keep it as an upvalue — settings/Panel.lua and settings/PanelEditor.lua at file scope, which is
-  -- BEFORE this descriptor's instance exists, and core/LSMPatch.lua once inside its one-shot
-  -- PLAYER_LOGIN widget fixup, which runs with no options page in play at all. None of the three can
-  -- be served from a build-time seam, so removing the stash removes a duplicate, not a consumer.
+  -- The two remaining `LibStub("AceGUI-3.0", true)` calls each resolve that one singleton once and
+  -- keep it as an upvalue — settings/Panel.lua and settings/PanelEditor.lua, both at file scope,
+  -- which is BEFORE this descriptor's instance exists. Neither can be served from a build-time
+  -- seam, so removing the stash removes a duplicate, not a consumer. There were THREE until the
+  -- Border fixup above became a library call: core/LSMPatch.lua resolved AceGUI itself, inside a
+  -- PLAYER_LOGIN handler that ran with no options page in play at all.
 
   -- The landing page's body. Through the forward-declared upvalue, so settings/Panel.lua can define
   -- it after this file has loaded.

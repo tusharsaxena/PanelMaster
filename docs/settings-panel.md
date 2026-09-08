@@ -294,9 +294,12 @@ swatch is the color I picked but the panel is unchanged". Both color pickers the
 **`AceGUI-3.0-SharedMediaWidgets` fire `OnValueChanged` without calling `SetValue` first**, because
 upstream assumes AceConfigDialog re-renders the whole panel afterwards. This is a canvas panel that
 does not, so each callback pushes the value back explicitly or the dropdown keeps displaying the old
-name even though the write landed. `core/LSMPatch.lua` is a further fixup for the same library: it
-collapses the `LSM30_Border` widget's 42px preview tile, which otherwise leaves a gap beside the
-closed dropdown.
+name even though the write landed. There is a further fixup for the same library, and it is no longer
+this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15, called once from
+`settings/OptionsSetup.lua`) collapses the `LSM30_Border` widget's 42px preview tile, which otherwise
+leaves a gap beside the closed dropdown. It lives in the library because AceGUI's widget registry is
+process-global — one slot every addon in the client shares — so five Ka0s addons each fixing it
+privately meant the last one loaded owned the dropdown for all of them.
 
 **An open dropdown does not follow, or close with, a scrolling page.** AceGUI parents a dropdown's
 open list to `UIParent` so it can overflow the panel, which means scrolling slides the control away

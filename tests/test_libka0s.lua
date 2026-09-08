@@ -43,7 +43,12 @@ end
 --- The degraded arm is built THIS WAY on purpose. Hand-stubbing `lib = nil` inside a seam tests a
 --- branch rather than an install, and never catches a seam that raises at load before it reaches
 --- its own guard; hand-stubbing the member under test asserts the test's own typing.
-local function loadPartial(omit)
+---
+--- `mutate(m, ns)`, when given, runs AFTER the library files and BEFORE the addon's own. That gap is
+--- the only window in which the process-global state a Ka0s addon shares with the rest of the client
+--- -- AceGUI's widget registry, above all -- can be made to look like a real session's before this
+--- addon's files get their one chance to read it.
+local function loadPartial(omit, mutate)
   local m = buildMocks()
   local ns = {}
   Loader.addonName = "PanelMaster"
@@ -52,6 +57,7 @@ local function loadPartial(omit)
     if not omit[path:match("([^/]+)%.lua$")] then libs[#libs + 1] = path end
   end
   Loader.loadAll(libs, ns, m)
+  if mutate then mutate(m, ns) end
   Loader.loadAll(Loader.tocFiles("PanelMaster.toc"), ns, m)
   ns.addon:OnInitialize()
   ns.addon:OnEnable()
@@ -651,6 +657,47 @@ test("L trap (Options tripwire): Options reads no descriptor L", function()
       path .. " reads a descriptor L — replace this tripwire with a real rendered assertion")
   end
 end)
+
+-- ── the LSM30_Border fixup, promoted out of core/LSMPatch.lua ──────────────────
+
+test("Options seam: the live wiring patches LSM30_Border through the library, not a private copy",
+  function()
+    -- AceGUI's WidgetRegistry is PROCESS-GLOBAL: one slot named "LSM30_Border" that every addon in
+    -- the client shares, Ka0s or not. This addon and four siblings each carried the same wrapper in
+    -- their own core/LSMPatch.lua, each registering at whatever version it found plus one, so a
+    -- session running all five stacked five wrappers and the outermost belonged to whichever addon
+    -- the loader happened to reach last. Not one of the five suites could see that -- each loads a
+    -- single copy, registers once and passes -- and this file passed through the whole defect.
+    --
+    -- lib.__PatchLSM30Border (LibKa0s-Options-1.0 minor 15) is that wrapper published once, behind
+    -- lib.__lsmBorderPatched. LibStub hands five vendored copies of the library the same instance,
+    -- so five callers make one registration.
+    --
+    -- WHY A FRESH ENVIRONMENT WITH A SEEDED REGISTRY. The mock's WidgetRegistry starts empty, which
+    -- models AceGUI-3.0-SharedMediaWidgets being absent: the call then finds nothing to wrap,
+    -- returns false WITHOUT arming the sentinel, and proves nothing at all. The mutate hook is the
+    -- one window in which a stand-in constructor can be sitting in the slot at the moment
+    -- settings/OptionsSetup.lua's live arm runs.
+    -- red under: dropping the lib.__PatchLSM30Border() call from the live wiring.
+    local upstream = function() return { frame = {} } end
+    local _, m = loadPartial({}, function(mm)
+      mm.LibStub("AceGUI-3.0"):RegisterWidgetType("LSM30_Border", upstream, 20)
+    end)
+
+    local AceGUI = m.LibStub("AceGUI-3.0")
+    assertTrue(AceGUI.WidgetRegistry["LSM30_Border"] ~= upstream,
+      "the live wiring never called lib.__PatchLSM30Border(): the slot still holds the " ..
+      "constructor the registry was seeded with")
+    assertEqual(AceGUI:GetWidgetVersion("LSM30_Border"), 21,
+      "the wrapper must register one version above what it wrapped, to win the race")
+
+    -- The sentinel is armed, so a sibling addon's copy of the library -- the same instance, as far
+    -- as LibStub is concerned -- registers nothing on top of it.
+    local lib = m.LibStub("LibKa0s-Options-1.0")
+    assertFalse(lib.__PatchLSM30Border(), "a second call must be a no-op")
+    assertEqual(AceGUI:GetWidgetVersion("LSM30_Border"), 21,
+      "and must leave the one registration alone")
+  end)
 
 -- ── degradation ────────────────────────────────────────────────────────────────
 
