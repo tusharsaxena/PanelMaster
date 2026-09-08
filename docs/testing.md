@@ -17,12 +17,39 @@ luacheck .            # 0 errors, 0 warnings
 gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
 vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
 under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
-addon's code and are linted as such, which is why the figure below is 52 files and not the 26 it
+addon's code and are linted as such, which is why the figure below is 57 files and not the 26 it
 was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
 luacheck . 2>&1 | tail -1        # and read the FILE COUNT it reports
 ```
+
+## The suppression gate
+
+`luacheck .` reporting 0/0 has to be a statement about the code rather than about `.luacheckrc`, and
+nothing in the two commands above can tell the difference. `tests/test_lintconfig.lua` is what does:
+it loads `.luacheckrc` as Lua under a sandbox — the table luacheck obeys, not text a different
+spelling would slip past — and holds four rules.
+
+| Rule | What it refuses |
+| --- | --- |
+| No top-level `ignore` | An entry there reaches all 57 files, including every file with no business producing the code. |
+| No wholesale class switch | `unused_args = false` and eight relatives are the same blanket spelled as a switch. |
+| Every `files[...]` ignore is narrow | The stanza key names one `.lua` file, or the entry names the variable as well as the code (`212/self`). |
+| Every inline `-- luacheck: ignore` names a code | Bare, it silences everything in scope; with only a variable after it, every code for that name. |
+
+The fourth rule is this repo's own, and it is here because of what `M4c-06` found. `.luacheckrc`
+carried `ignore = { "212/self", "212/event" }`; removing it reported **101** findings, all of them
+`212/self` and not one `212/event`. Ten per-file stanzas answer the 101, each naming the calling
+convention that forces the receiver. Next to the blanket sat nineteen files opening
+`local addonName, NS = ...` over a folder name they never read, each behind an inline
+`-- luacheck: ignore addonName` — narrow by the letter of the other three rules, and hiding dead code
+in nineteen files. Those nineteen are fixed at source rather than re-parked; the one inline directive
+the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:183`).
+
+Adding a suppression is a two-minute job and removing one is an afternoon's. If a warning is genuine,
+fix the code; if the code is right, put the narrowest suppression the gate allows beside it and say
+in a comment which obligation forces it.
 
 ## The vendor gate
 
@@ -288,9 +315,13 @@ override one by one; the *Mock fidelity that is load-bearing* list below is the 
   reached the renderer, and only the two paths calling `Canvas:RenderAll()` directly (lock/unlock and
   test mode) repainted anything. Calling the real functions means a step dropped from either entry
   point fails the suite instead of hiding in it.
-- `_kit/loader.lua` reproduces the `local addonName, NS = ...` header by calling each chunk as
+- `_kit/loader.lua` reproduces the TOC's two varargs by calling each chunk as
   `chunk("PanelMaster", NS)` under an environment where WoW globals resolve to the mock table first
-  and fall back to real `_G`.
+  and fall back to real `_G`. Both are passed to every file; only the seven that use the folder
+  name bind it — `core/EnvSetup.lua`, `core/CoreSetup.lua`, `core/MediaSetup.lua`,
+  `core/Namespace.lua`, `core/Database.lua`, `core/DebugLogSetup.lua` and `core/PanelMaster.lua`,
+  each handing it to a vendored library that cannot know which folder it was copied into. The
+  rest open `local _, NS = ...` (`M4c-06`).
 - `wow_mock.lua` stubs time, combat, metadata and UI APIs plus a universal frame.
 
 ### The degradation stubs, and the gate over them

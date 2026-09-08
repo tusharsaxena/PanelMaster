@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 
 -- LibKa0s-Options-1.0 seam: the Blizzard settings-canvas shell (options-ui).
 --
@@ -180,7 +180,7 @@ NS.Helpers = lib:New({
   -- simply gone, and the day a per-unit page appears the filter is dropped by a signature nobody
   -- would think to look at. `filter` is ctx.unit, which this addon never sets — it has no per-unit
   -- pages — so it is ignored HERE, visibly, rather than never arriving.
-  rowsForPage = function(pageKey, filter)   -- luacheck: ignore filter
+  rowsForPage = function(pageKey, filter)   -- luacheck: ignore 212/filter
     if pageKey ~= "general" then return {} end
     return NS.Schema.Schema
   end,

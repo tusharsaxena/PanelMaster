@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.Artwork = NS.Artwork or {}
 local Artwork = NS.Artwork
 local C = NS.Constants

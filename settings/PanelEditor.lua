@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.PanelEditor = NS.PanelEditor or {}
 local E = NS.PanelEditor
 local C = NS.Constants

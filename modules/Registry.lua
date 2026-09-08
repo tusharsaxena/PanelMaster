@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.Registry = NS.Registry or {}
 local R = NS.Registry
 local C = NS.Constants

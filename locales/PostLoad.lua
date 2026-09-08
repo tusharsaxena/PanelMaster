@@ -1,9 +1,11 @@
-local addonName, NS = ...   -- luacheck: ignore addonName NS
-
 -- Derived-key aliases (localization-§1): strings whose translation is always the same as another
 -- key's, so a translator never duplicates work. Runs after every locale file, so it reads whatever
 -- the active locale resolved.
 --
 -- Empty in 1.0.0 — no string routes through NS.L yet (see locales/enUS.lua). The file ships as the
--- seam a later localization pass fills, e.g.:
+-- seam a later localization pass fills. It carries NO `local _, NS = ...` header, because with
+-- no alias to write there is nothing to hold the namespace FOR, and a header over two names the
+-- file never reads is the dead code `M4c-06` swept out of eighteen of its siblings. The first
+-- alias brings the header back with it:
+-- local _, NS = ...
 -- NS.L["Backdrop"] = NS.L["Background"]
