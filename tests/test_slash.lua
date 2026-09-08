@@ -24,13 +24,18 @@ test("Slash.Register: registers both the short verb and the full-name alias", fu
 end)
 
 test("Slash.Version: prefers the TOC metadata over the in-code fallback", function()
-  assertEqual(Sl:Version(), "1.0.0")
+  -- The title is the claim, so the assertion has to be able to break it. tests/wow_mock.lua's TOC
+  -- answers a string core/Namespace.lua:7's constant is not, which is the only reason "prefers"
+  -- means anything here: while both read "1.0.0" this line passed whether Sl:Version() went
+  -- through the seam or read the constant directly.
+  assertEqual(Sl:Version(), "1.2.3-toc")
+  assertTrue(Sl:Version() ~= NS.version, "the in-code fallback won over a readable TOC")
 end)
 
 test("Slash.PrintHelp: one row per command, plus a header", function()
   local lines = capture(function() Sl:PrintHelp() end)
   assertEqual(#lines, #NS.COMMANDS + 1)
-  assertTrue(lines[1]:find("v1.0.0", 1, true) ~= nil)
+  assertTrue(lines[1]:find("v" .. NS.Version(), 1, true) ~= nil)
 end)
 
 test("Slash.PrintHelp: no line ends in a colon (slash-commands-§4)", function()
@@ -279,7 +284,7 @@ end)
 
 test("Slash.CliVersion: prints v<version>", function()
   local lines = capture(function() Sl:CliVersion() end)
-  assertTrue(lines[1]:find("v1.0.0", 1, true) ~= nil)
+  assertTrue(lines[1]:find("v" .. NS.Version(), 1, true) ~= nil)
 end)
 
 -- ── Panel CLI ───────────────────────────────────────────────────────────────────

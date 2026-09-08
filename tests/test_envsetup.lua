@@ -9,10 +9,13 @@ local T = _G.PM_TEST
 local NS, mocks = T.NS, T.mocks
 local test, assertEqual, assertTrue = T.test, T.assertEqual, T.assertTrue
 
--- Stand a recording TOC reader up for the duration of `fn`, answering a version the addon's own
--- constant is NOT. tests/wow_mock.lua answers "1.0.0" and core/Namespace.lua:7 sets NS.version to
--- "1.0.0" as well, so against the stock fixture "read the TOC" and "fell back to the constant" are
--- the same string and neither case below could tell them apart.
+-- Stand a RECORDING TOC reader up for the duration of `fn`, answering a third version: not the
+-- addon's constant ("1.0.0", core/Namespace.lua:7) and not the fixture's TOC ("1.2.3-toc",
+-- tests/wow_mock.lua). Two of the three would do to tell "read the TOC" from "fell back to the
+-- constant" -- the fixture now supplies that on its own, and used to answer "1.0.0" too, which is
+-- why these cases could not once tell them apart. The third exists so the cases can also see that
+-- a per-case reader BEATS the default rather than being ignored, and so that what the reader was
+-- asked -- the folder name, the field -- can be read back.
 local function withTOC(version, fn)
   local askedName, askedField
   local saved = mocks.C_AddOns
@@ -30,7 +33,7 @@ test("EnvSetup: NS.Meta reads this addon's TOC, asking about the FOLDER name", f
   -- The one thing a vendored library cannot get right on its own. "PanelMaster",
   -- "Ka0s Panel Master" and "[PM]" are all live strings in this repo and only the first is the
   -- folder; a wrong one reads some other addon's manifest, or none, and answers nil without raising.
-  assertEqual(NS.Meta("Version"), "1.0.0")
+  assertEqual(NS.Meta("Version"), "1.2.3-toc")
   local name, field = withTOC("9.9.9", function()
     assertEqual(NS.Meta("Version"), "9.9.9")
   end)
@@ -39,7 +42,7 @@ test("EnvSetup: NS.Meta reads this addon's TOC, asking about the FOLDER name", f
 end)
 
 test("EnvSetup: NS.Version answers the TOC version, preferring it over the constant", function()
-  assertEqual(NS.Version(), "1.0.0")
+  assertEqual(NS.Version(), "1.2.3-toc")
   withTOC("9.9.9", function()
     -- A packaged addon whose TOC can be read must never report the constant somebody forgot to edit.
     assertEqual(NS.Version(), "9.9.9")

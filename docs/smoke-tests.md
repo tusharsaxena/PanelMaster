@@ -936,3 +936,36 @@ Nothing differs between the two passes. **Any dropdown that looks different from
 that changes when the load order changes, is the finding** — the whole point of moving the
 registration into LibKa0s is that the answer no longer depends on who loaded last. No Lua error at
 any point.
+
+---
+
+## 21. The `[Init]` line reports the PACKAGED version
+
+**Smoke, session 3. NOT YET RUN.** Opportunistic — fold it into whatever login is convenient; it is
+a one-line look and is not a reason to schedule client time. New with `M4-19`, which pointed
+`NS.InitSummary` (`core/Database.lua`) at `NS.Version()` instead of `core/Namespace.lua`'s fallback
+constant, the seam `core/EnvSetup.lua` already said that line used.
+
+**Why it is here at all, given the harness now covers it.** `tests/test_database.lua` proves the
+summary carries whatever the TOC answers, and against a mock that answers on demand. What the mock
+cannot witness is TIMING: the `[Init]` line rides `DebugLog:SetEnabled`, and in a real client the
+manifest read has to have resolved by the moment that descriptor runs. If it has not, `NS.Version()`
+falls back and the line silently reports the constant again — which looks correct on a shipped build
+where the two strings agree, and is exactly the failure this change exists to remove.
+
+**Setup.** In the INSTALLED copy under `Interface/AddOns/PanelMaster/` — never in the repo — edit
+`PanelMaster.toc` so `## Version:` reads `1.0.0-smoke`. That is the whole point: while the TOC and
+`core/Namespace.lua`'s constant read the same `1.0.0`, no in-client observation can tell which one
+was printed.
+
+1. Log in.
+2. `/pm debug on`.
+3. Read the `[Init]` line — in chat and in the console (§ 11 step 2).
+4. `/pm version`.
+5. Restore the installed TOC's `## Version` and `/reload`.
+
+**Expect:** step 3 reads `PanelMaster v1.0.0-smoke, schema v2, profile '<yours>', N panels` — the
+**TOC's** string — and step 4 reads `[PM] v1.0.0-smoke`. The two surfaces agree.
+
+**Fail:** an `[Init]` line reading `v1.0.0` while `/pm version` reads `v1.0.0-smoke`. That is one
+string with two sources of truth, and the `[Init]` line is the one a user pastes into a bug report.
