@@ -84,21 +84,22 @@ if not lib then
     -- stub answers an empty one rather than nil: a host that iterates the result gets a page with
     -- no tabs, which is exactly what a degraded install has, instead of an error.
     RenderTabbedSchema = function() return {} end,
-    __pages = function() return {} end, __panels = function() return {} end,
-    __panelFor = function() return nil end,
-    -- The library's chrome-band arithmetic. Internal (`__`) and called by nothing in this addon —
-    -- they are here because the parity case reads the WHOLE live surface, and an internal the stub
-    -- omits is indistinguishable from one it forgot. Each answers the SHAPE its live counterpart
-    -- does, so a future caller finds a number where a number belongs.
-    __scrollTopInset = function() return 0 end,
-    __bannerBand = function() return 0 end,
-    __tabBand = function() return 0 end,
-    __tabPlacement = function() return {}, 0 end,
-    __layoutTabs = noop, __releaseChrome = noop, __releaseSubTabs = noop,
-    -- The strip's measured row pitch and its suite reset, internals for the same reason the band
-    -- arithmetic above is here: the parity case reads the WHOLE live surface, and an internal the
-    -- stub omits is indistinguishable from one it forgot.
-    __tabArtHeight = function() return 0 end, __resetTabArtHeight = noop,
+    -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
+    -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
+    -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
+    -- any of them was that the parity case read the WHOLE live surface, so an internal the stub
+    -- omitted was indistinguishable from one it forgot. That is no longer how the gate works:
+    -- tests/test_surface_parity.lua calls Kit.assertSurfaceParity's by-name form, which compares
+    -- Kit.publicMembers and drops the whole `__` prefix, and libs/LibKa0s/Options.lua says the
+    -- same thing where it publishes O.__print -- an internal is the library talking to itself
+    -- across a file boundary, and a stub does not mirror it. Nothing in this addon calls one:
+    --   grep -rn '__pages\|__panels\|__panelFor\|__bannerBand\|__tabBand\|__tabPlacement' \
+    --     core modules settings
+    -- returns settings/PanelEditor.lua's own unrelated __panelsByName and nothing else. So they
+    -- were twelve members with no caller and no gate, which is the copy that goes stale.
+    --
+    -- `__degraded` above STAYS: it is this addon's own flag, not the library's, and it is how the
+    -- suite tells which arm ran.
     ROW_VSPACER = 0, SECTION_HEADING_H = 0, BUTTON_PAIR_REL = 0,
     -- The three chrome heights, ZERO for exactly the reason the three above are: a stub reporting
     -- the library's real band geometry would let a caller lay something out against numbers no

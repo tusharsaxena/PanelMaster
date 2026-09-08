@@ -761,7 +761,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (46)
+### test_libka0s.lua (42)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -799,16 +799,19 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: /pm debug on|off still flips the flag and acknowledges
 - Degraded install: /pm debug dump still answers
 - Degraded install: the fallback printer renders the same bytes as the library's
-- Parity: the Core seam's degraded surface matches the live one
-- Parity: the DebugLog seam's degraded surface matches the live one
-- Parity: the Slash seam's degraded surface matches the live one
-- Parity: the Options seam's degraded surface matches the live one
 - Degraded install: /pm config answers on EVERY invocation, not once
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
+
+### test_surface_parity.lua (4)
+
+- Parity: the Core seam's degraded surface matches the live one
+- Parity: the DebugLog seam's degraded surface matches the live one
+- Parity: the Slash seam's degraded surface matches the live one
+- Parity: the Options seam's degraded surface matches the live one
 
 ### test_harness.lua (14)
 
@@ -864,7 +867,8 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 59 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 46 |
+| test_libka0s.lua | 42 |
+| test_surface_parity.lua | 4 |
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |

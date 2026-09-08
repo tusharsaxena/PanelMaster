@@ -211,6 +211,7 @@ tests/
     mock_base.lua    -- the base WoW/Ace mock every Ka0s addon starts from
   run.lua            -- a thin consumer of the kit; also the --list inventory mode
   wow_mock.lua       -- this addon's mock, EXTENDING _kit/mock_base.lua (a fresh env per run)
+  degraded_env.lua   -- builds an addon env from a PARTIAL libs/ list; not a suite, not listed
   test_<module>.lua  -- one suite per module
 ```
 
@@ -246,6 +247,28 @@ override one by one; the *Mock fidelity that is load-bearing* list below is the 
   `chunk("PanelMaster", NS)` under an environment where WoW globals resolve to the mock table first
   and fall back to real `_G`.
 - `wow_mock.lua` stubs time, combat, metadata and UI APIs plus a universal frame.
+
+### The degradation stubs, and the gate over them
+
+Four LibKa0s seams are adopted — Core, DebugLog, Slash and Options — and each setup file carries an
+`if not lib then` branch that is what a library-less install actually runs on. A branch like that is
+a second implementation of somebody else's surface, so it drifts the moment the live half grows a
+member the addon starts calling: the live path stays green and the degraded path raises in exactly
+the install the branch exists for. That is not hypothetical — `Sl.FormatKV` was once assigned on the
+live path and not in the branch, and `/pm panel <name>` raised on it.
+
+`tests/test_surface_parity.lua` is the gate. One case per seam, each comparing the branch against the
+live surface as a **set** through `Kit.assertSurfaceParity`, and each degraded arm built by a **real
+load** with a partial `libs/` list (`tests/degraded_env.lua`) rather than by hand — hand-stubbing
+`lib = nil` inside a seam tests a branch instead of an install. Two of the four call the kit's
+**by-name** form, `assertSurfaceParity(stub, major, ignore)`, which walks only `Kit.publicMembers`
+and so drops every `__`-prefixed internal; `tests/run.lua` tells it where to look with
+`Kit.setSurfaceSource`, because both of those stubs mirror the **instance** `lib:New(descriptor)`
+returned and not the library table LibStub answers for the same name. Core and Slash stay on the
+four-argument form, and the suite's header says why for each.
+
+A member left out on purpose goes in that case's `ignore` list **with its reason**, because otherwise
+a deliberate omission and a bug read identically.
 
 ### Mock fidelity that is load-bearing
 
