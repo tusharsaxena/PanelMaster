@@ -297,11 +297,19 @@ test("Schema: the Panels page's tab strip is the designed one, in strip order", 
   -- hand-drawn from settings/PanelEditor.lua's own ordered list rather than partitioned out of this
   -- file. It is pinned here anyway, because "which tabs does the settings panel have" is one
   -- question and answering half of it in a different suite is how the other half goes stale.
+  --
+  -- FIVE, not six. "General" held the name box, the copy-from dropdown, Enabled, Unlock, Reset and
+  -- Delete — every one of them an act on the panel WHOLE rather than on one aspect of it, which is
+  -- a page-wide control drawn under one tab (options-ui-§14). They are in the chrome band now and
+  -- the tab is gone, so a "General" reappearing in this list is the move being undone.
   local EXPECTED = {
-    "General", "Position and size", "Background and border", "Accent bar", "Artwork",
-    "Opacity and fade",
+    "Position and size", "Background and border", "Accent bar", "Artwork", "Opacity and fade",
   }
   local actual = NS.PanelEditor.TABS
+  for i, name in ipairs(actual) do
+    assertFalse(name == "General",
+      ("the General tab is back at position %d; its controls are page-wide"):format(i))
+  end
   assertEqual(type(actual), "table", "the editor publishes no tab order")
   assertEqual(#actual, #EXPECTED, "the Panels page has a different number of tabs than designed")
   for i, want in ipairs(EXPECTED) do

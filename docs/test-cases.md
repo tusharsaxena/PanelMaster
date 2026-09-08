@@ -617,7 +617,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (57)
+### test_panel.lua (59)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -672,6 +672,8 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: the two opacity sliders share a row, and the switch is below
 - Panels page: an unknown active tab heals to the first one rather than drawing nothing
 - Panels page: creating and picking a panel are ABOVE the strip, in the chrome band
+- Panels page: the panel-wide acts are in the chrome band, not under a tab
+- Panels page: the band's acts follow the picker rather than the panel they were built on
 - Panels page: the strip is drawn with ZERO panels, and the empty state is content
 - Panels page: the Master controls tab closes on the canonical button pair
 - Panels page: every color swatch is followed by a 'Use class color' companion
@@ -859,7 +861,7 @@ badge and any count quoted in the docs must agree with it.
 | test_debuglog.lua | 26 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
-| test_panel.lua | 57 |
+| test_panel.lua | 59 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 46 |
@@ -867,4 +869,4 @@ badge and any count quoted in the docs must agree with it.
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
 | test_eol.lua | 1 |
-| **Total** | **765** |
+| **Total** | **767** |

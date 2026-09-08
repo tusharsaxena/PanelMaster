@@ -18,7 +18,7 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 --     ("Ka0s Panel Master ▸ General"), a Defaults button, and a gold divider.
 --   * Bodies render schema rows into a TWO-COLUMN grid, partitioned into a TAB STRIP pinned in the
 --     page's chrome band: one tab per schema `group` on a schema page (General), and a hand-drawn
---     strip over the editor's six subjects on the bespoke one (Panels). The Profiles page has no
+--     strip over the editor's five subjects on the bespoke one (Panels). The Profiles page has no
 --     strip at all -- it is AceDBOptions' own scrolling page and is not this addon's to re-shape.
 -- The category is registered EAGERLY at load so the entry is always in the options list; each body
 -- is built LAZILY on its first OnShow, because AceGUI lays out against the panel's current width,

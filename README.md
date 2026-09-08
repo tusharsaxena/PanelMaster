@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-765%2F765_passing-green)
+![Tests](https://img.shields.io/badge/Tests-767%2F767_passing-green)
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
@@ -124,7 +124,7 @@ has a landing page and three pages beneath it:
 |---|---|
 | Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. |
 | General | Every addon-wide setting, under three tabs: **Master controls**, **Editing** and **New panels**. |
-| Panels | The panels themselves — create, rename, copy, reset and delete them, and edit the selected one under six tabs: **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
+| Panels | The panels themselves — create, rename, copy, reset and delete them from the band at the top, and edit the selected one's appearance under five tabs: **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
 | Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
 
 **General** carries these, a tab at a time:
@@ -154,10 +154,13 @@ your panels immediately.
 
 On **Panels**, type a name in the box at the top and press Enter (or click **Okay**), then pick any
 panel from the **Panel** picker beside it to edit it. One panel is shown at a time, so the page stays
-the same size whether you have two panels or twenty. Those two controls sit above the tab strip and
-stay there whichever tab you are on; everything below is one tab at a time — **General** (identity, on/off, reset and delete),
-**Position and size**, **Background and border**, **Accent bar**, **Artwork**, and **Opacity and
-fade**. Each panel's editor has:
+the same size whether you have two panels or twenty.
+
+Everything that acts on the panel as a whole sits in that band above the tab strip and stays there
+whichever tab you are on — **Create new panel** and the **Panel** picker, then **Panel name** and
+**Copy settings from panel**, then **Enabled**, **Unlock**, **Reset** and **Delete**. Everything
+below is the selected panel's appearance, one tab at a time: **Position and size**, **Background and
+border**, **Accent bar**, **Artwork**, and **Opacity and fade**. In full:
 
 | Control | What it does |
 |---|---|

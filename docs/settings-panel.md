@@ -11,8 +11,8 @@ three subcategories:
   outside the flow engine: it declares no `group` and names no sections, so there is nothing for a
   strip to be a strip of.
 - **General** — the schema rows, in a two-column grid under a three-tab strip.
-- **Panels** — create, edit and delete the panels themselves; the editor sits under a six-tab strip,
-  with the create box and the panel picker pinned in the band **above** it.
+- **Panels** — create, edit and delete the panels themselves; the editor sits under a five-tab
+  strip, with everything that acts on the panel as a whole pinned in the band **above** it.
 - **Profiles** — AceDBOptions' own options table, rendered by AceConfigDialog into a container
   parented to our canvas. The other exempt page, and for the same reason rather than a different
   one: AceConfigDialog draws it whole and it never reaches the flow engine.
@@ -33,11 +33,13 @@ The two pages get there by different routes, because their content is not the sa
   `H.TabStrip` over its own ordered `EDITOR_TABS` list, and dispatches on `ctx.activeTab` to one
   section builder per tab.
 
-**Creating a panel and choosing which panel to edit are not tabs, and they are not in the scroll
-either.** They sit in the page's **chrome band**, above the strip, in a single `H.PageHeader` block
-(`options-ui-§14`). Both apply to every tab, and a control that governs the whole page but is drawn
-under one tab reads as belonging to that tab — which is what these two did, as two untabbed
-*Create* and *Edit* sections at the top of the scroll.
+**Nothing that acts on the panel as a whole is a tab, and none of it is in the scroll either.**
+Creating a panel, choosing which one to edit, naming it, copying another's look onto it, and the
+four acts — Enabled, Unlock, Reset, Delete — all sit in the page's **chrome band**, above the strip,
+in a single `H.PageHeader` block (`options-ui-§14`). Every one of them applies to every tab, and a
+control that governs the whole page but is drawn under one tab reads as belonging to that tab —
+which is what they did: the first two as untabbed *Create* and *Edit* sections at the top of the
+scroll, the other six under a *General* tab. Both are gone.
 
 A page draws **at most one** such block, so the picker goes **inside** it and no `H.PageBanner` is
 drawn separately: `PageHeader` and `PageBanner` release the same ledger and reserve the same band,
@@ -47,16 +49,16 @@ its own divider and the content panel's top edge below it.
 The block is built **once**, on the page's first `OnShow`, and no rebuild releases it. The create box
 is the reason: `Registry:New` broadcasts before it returns, so the rebuild lands while the user's own
 callback is still on the stack, and releasing the box would hand the widget they are typing into back
-to AceGUI's pool. The picker beside it is refreshed **in place** — `SetList` and `SetValue` on the
+to AceGUI's pool. Everything beside it is refreshed **in place** — `SetList` and `SetValue` on the
 widget already there — which is the same scalar path every other control on the page takes.
 
 **Built once is also why the block re-lays itself out on `OnSizeChanged`.** `ctx.chrome` is zero-wide
 until the settings canvas has laid itself out, and the **first page a player opens is rendered before
 that happens** — the library documents this at its own `replaceOnResize`, which is how the tab strip
-heals when the width arrives. Both controls here take `SetRelativeWidth(0.5)`, so a layout run at that
-moment gives each of them half of nothing: two controls that exist, are shown, and occupy no pixels.
-The band keeps its reserved height, so the page draws an **empty strip of chrome above the tabs** and
-the create box and the picker are simply gone. The strip heals; this block, built once for the
+heals when the width arrives. Every control here takes a **relative** width, so a layout run at that
+moment gives each of them a fraction of nothing: controls that exist, are shown, and occupy no
+pixels. The band keeps its reserved height, so the page draws an **empty strip of chrome above the
+tabs** with everything in it simply gone. The strip heals; this block, built once for the
 session, never got a second chance — a session that happened to open Panels first stayed that way
 until a `/reload`. The hook goes on the **header frame**, not on `ctx.chrome`, whose `OnSizeChanged`
 the library has already claimed for the strip (`SetScript` replaces, so hooking there would trade
@@ -66,7 +68,7 @@ this bug for a strip that never re-wraps), and it answers only a **change** in w
 | Page | Tabs | Rows per tab |
 |---|---|---|
 | General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
-| Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 11, 16, 3 — bespoke controls, not schema rows |
+| Panels | **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 7, 6, 11, 16, 3 — bespoke controls, not schema rows. The six that made a sixth **General** tab are in the chrome band; see below. |
 | Profiles | none | AceDBOptions' own page |
 
 A **color** is one control in those counts even though it emits two widgets (the swatch and its
@@ -225,7 +227,7 @@ rebuilding all of them on every create or delete is exactly the O(N) teardown `o
 exists to prevent.
 
 Creating a panel is committed by the EditBox's own **Okay** button, the same gesture as the rename
-box in the editor below. That is safe because AceGUI's EditBox does **not** commit on focus loss:
+box on the row below it. That is safe because AceGUI's EditBox does **not** commit on focus loss:
 `OnEnterPressed` is fired only by the Enter key, the Okay button and a drag-receive, and
 `OnEditFocusLost` is never registered at all. (An earlier version added a separate Create button on
 the mistaken assumption that tabbing away would create a panel.)
@@ -243,10 +245,53 @@ was released and the strip taken down when the registry was empty — which is t
 no-strip state `options-ui-§13` forbids, and which is no longer survivable anyway: the only control
 that can make a panel now lives in that band.
 
-The editor opens on its **General** tab, in decision order — which panel is this (name, and the
-option to copy another's look), is it on (Enabled / Unlock), am I done with it (Reset / Delete). The
-frame name lives in the name box's **tooltip** rather than as a permanent second label: it is
-reference information you need once, when wiring something else up to this panel.
+### The band holds everything that acts on the panel whole
+
+The band above the strip is **three rows**, and every control in it applies to every tab:
+
+| Row | Controls |
+|---|---|
+| 1 | **Create new panel**, **Panel** (the picker) |
+| 2 | **Panel name**, **Copy settings from panel** |
+| 3 | **Enabled**, **Unlock**, **Reset**, **Delete** |
+
+Rows two and three used to be a sixth tab called **General**, and that is the deviation
+`options-ui-§14` names: *a control that governs the whole page but is drawn under one tab reads as
+belonging to that tab*, and it disappears the moment the player clicks a different one. None of the
+six is about a subject the other five tabs divide — the name, the copy, the two switches and the two
+irreversible acts all apply to the panel as a whole — so the tab was a container for "everything
+that did not fit the others", which is not a subject either. `LibKa0s-Options-1.0` lists this exact
+set at `O.PageHeader`: *creating the thing the page edits, choosing which one is being edited, and
+the acts that apply to it whole (enable, unlock, copy, reset, delete) are all page-wide*.
+
+**The name box went with the five acts, and the audit finding did not ask for that.** It had to:
+leaving it behind makes General a one-control tab, and this page already refuses a two-control tab on
+the grounds that it is not a subject. It belongs there on the merits as well — a panel's name is its
+identity, it is what the picker displays, and the create box and the rename box are the same gesture
+on adjacent rows rather than one in the band and one four tabs away. The frame name still lives in
+the name box's **tooltip** rather than as a permanent second label: it is reference information you
+need once, when wiring something else up to this panel, and the band is already three rows tall.
+
+Three rows is the cost, and it is a real one — roughly `2 × BANNER_H + 26` of chrome above every tab
+rather than one row above five. What buys it back is that the acts are reachable from every tab
+instead of from one, and that the editor below is now five tabs of one subject each with nothing
+left over.
+
+**The band is built once for the session and the acts re-point themselves.** That is the part of the
+move a reader coming from the old file will not expect. Under the General tab the six controls were
+rebuilt per selection against a `rec` upvalue, so acting on the right panel was true by
+construction; in the band each callback resolves the record fresh through `currentRecord()`, and
+`refreshHeaderActs` pushes every value back in place on each rebuild — the same scalar path
+`refreshPicker` takes, for the same reason (`options-ui-§11`). With no panel selected all six are
+**disabled rather than removed**: the band reserves three rows either way, and controls that came
+and went with the registry would leave a hole exactly the size they used to fill.
+
+The **rename box alone is guarded**. Every other control can be pushed blindly on a rebuild, because
+nobody is holding it; this one the user may be mid-edit in, and a `/pm new` from a macro broadcasts
+`PanelsChanged` while they type. It is re-dressed only when the selected id changes or when the
+record's name differs from the last string written into it — which catches a `/pm rename` from
+elsewhere and deliberately does not catch uncommitted typing. The old code needed no guard and said
+so, because a rebuild **released** that widget; the move is what makes the guard necessary.
 
 `Registry:CopyFrom` copies every field except `id`, `name` and the four geometry fields. Position is
 excluded because the point of copying is to make a panel *match* another while staying where it is —
@@ -254,11 +299,12 @@ copying position too would land the two exactly on top of each other. Size **is*
 dimensions is usually what was wanted, and unlike position it cannot make a panel disappear. Values
 are deep-copied, or the two panels would share a color array and editing one would change the other.
 
-`Reset` and `Delete` sit on the **General** tab beside `Enabled` and `Unlock`, because that is
-where you look once you have decided you are done with a panel — and because General is the tab about
-which panel this is, rather than about how it looks. A Delete parked at the foot of a long
-scrolling form is one the user only reaches after scrolling past everything they might have wanted to
-change instead. `Registry:Reset` restores the whole record from the template plus the profile's
+`Reset` and `Delete` close the band's third row, beside `Enabled` and `Unlock`, because the two
+irreversible acts belong together and because "am I done with this panel" is not a question about
+how it looks. A Delete parked at the foot of a long scrolling form is one the user only reaches
+after scrolling past everything they might have wanted to change instead — and a Delete under one
+tab of five is one they have to go looking for.
+`Registry:Reset` restores the whole record from the template plus the profile's
 New-Panel-Defaults — the same path `Registry:New` takes, so "reset" and "make a new one" cannot
 drift — keeping only `id` and `name`, so the frame name survives and external anchors stay attached.
 
@@ -267,7 +313,9 @@ pouring every widget into one `Flow`. A single Flow reflows controls of differin
 whatever gaps it can find, so a checkbox rides up beside a slider's label and two unrelated settings
 share a line — which is what made the first version look cluttered. Explicit rows and three named gap
 sizes (`EDITOR_TOP_GAP` > `EDITOR_HEADING_GAP` > `EDITOR_ROW_GAP`) mean the spacing itself carries
-the structure.
+the structure. **The band is built the same way and for the same reason**: a `List` block holding
+three `Flow` rows, not one Flow with eight children in it — the row of bare checkboxes and buttons
+would otherwise ride up beside the labels above it.
 
 That container was a **titleless `InlineGroup`**, and the box is what changed rather than the layout.
 The editor sits under a strip whose content panel already draws a boundary around the whole page, so

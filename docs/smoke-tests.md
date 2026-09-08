@@ -412,23 +412,30 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 4. Toggle **Lock frame** and **Test mode** → **Expect:** they do exactly what the slash commands do,
    with **Lock frame** the *inverse* of `/pm unlock`: unticking it unlocks. Ticked is the shipped
    state, and it is ticked again after every `/reload`.
-5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
-   border | Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band,
-   a **Create new panel** box and a **Panel** picker side by side, separated from the strip by a
-   hairline rule. **Neither is a tab and neither is in the scroll**: they stay put whichever tab is
-   selected. There is **no second box drawn around them** — the band's own divider is the boundary.
+5. Click **Panels** → **Expect:** a five-tab strip — **Position and size | Background and border |
+   Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band, three
+   rows: **Create new panel** beside the **Panel** picker, then **Panel name** beside **Copy
+   settings from panel**, then **Enabled | Unlock | Reset | Delete** across the bottom. The band is
+   separated from the strip by a hairline rule. **None of the eight is a tab and none is in the
+   scroll**: they stay put whichever tab is selected. There is **no second box drawn around them** —
+   the band's own divider is the boundary.
 5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
-   page. **Expect:** the band above the strip holds the **Create new panel** box and the **Panel**
-   picker, at full width. An empty band of the right height with nothing in it is the zero-width
-   layout race: the canvas has no width until it lays itself out, and this block is built once for
-   the session, so without its own resize hook it stays empty until a `/reload`. Then drag the
-   Settings window's edge to resize it and confirm both controls follow.
+   page. **Expect:** the band above the strip holds all three rows, at full width. An empty band of
+   the right height with nothing in it is the zero-width layout race: the canvas has no width until
+   it lays itself out, and this block is built once for the session, so without its own resize hook
+   it stays empty until a `/reload`. Then drag the Settings window's edge to resize it and confirm
+   every control follows.
 5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
-   it is **still there** with both controls usable, and the page reads "No panels yet…" underneath.
+   it is **still there** at the same height, and the page reads "No panels yet…" underneath. The
+   **Create new panel** box and the **Panel** picker are usable; the other six are **grayed out
+   rather than gone**, and the **Panel name** box is empty. A band that shrinks, or that loses a
+   row, is the failure — the six acts have nothing to act on, which is not the same as not existing.
    The page must never lose its strip.
 5b. **Layout check.** The **Panel** picker carries its label, sits beside the create box, and there is
-   **no heading naming the selected panel** above the editor. Inside the editor there is **no boxed
-   border** around the controls — the tab strip's own content panel is the boundary — and no two
+   **no heading naming the selected panel** above the editor. In the band, the three rows do not run
+   into each other: the two checkboxes and the two buttons stay on their own line rather than riding
+   up beside the labels above them, and the **Delete** button's right border is clear of the band's
+   edge. Inside the editor there is **no boxed border** around the controls — the tab strip's own content panel is the boundary — and no two
    unrelated controls share a line. Three tabs carry **subsection headings**, drawn as the same
    divider-flanked heading the landing page uses: **Background / Border** on *Background and border*,
    **Bar / Edges / Border** on *Accent bar*, and **Image / Layout / Appearance** on *Artwork*. On
@@ -441,10 +448,30 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    in both cases. It must never be left floating over, or outside, the settings window while the
    control it belongs to scrolls away. Re-open it afterwards to confirm one click still opens it
    (rather than the click being eaten as a toggle-shut).
-5c. **Top action row.** On the **General** tab, **Reset** and **Delete** sit directly under
-   **Enabled** and **Unlock**, at the top of the editor — not at the bottom, and not on any other
-   tab. The frame name is **not** a label of its own: it lives
-   on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
+5c. **The band's acts, from every tab** (`options-ui-§14`, `M4-15`).
+   **Smoke, session 3. NOT YET RUN.**
+   **Enabled**, **Unlock**, **Reset** and **Delete** sit on the band's bottom row, with
+   **Panel name** and **Copy settings from panel** on the row above. They were a sixth **General**
+   tab, and all six act on the panel as a whole rather than on one aspect of it. Walk every one of
+   the five tabs and confirm **all six are still there and still enabled** on each — a control that
+   vanishes when you change tab is the move not having been made. Then, from a tab that is *not* the
+   first one: tick and untick **Enabled** (the panel goes and comes back), tick **Unlock** (only
+   that panel grows a handle), press **Reset**, and finally **Delete**. Each must act on the panel
+   the **Panel** picker is showing, not on whichever panel was selected when the page was first
+   opened — the band is built once per session and re-points itself, and acting on a stale panel is
+   the specific regression this step exists to catch. The frame name is **not** a label of its own:
+   it lives on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
+5c-2. **The rename box is not overwritten while you type.**
+   **Smoke, session 3. NOT YET RUN.**
+   Select a panel, click into **Panel name**
+   and type a few characters **without** pressing Enter. Now, with the box still holding your
+   uncommitted text, run `/pm new Interloper` from the chat box. **Expect:** the new panel appears in
+   the **Panel** picker and *your text is still in the rename box*. The box is in the band now and
+   survives the rebuild, so it is dressed only when the selection changes or when the panel's name
+   changed elsewhere; a box that snapped back to the stored name is the guard missing. Then check the
+   other half: with nothing typed, run `/pm rename <selected panel> Renamed` (give it a one-word
+   name first — the CLI reads the old name as the first word only) → **Expect:** the box follows to
+   the new name.
 5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry updates and
    the **Frame name** on the tooltip does **not** — it is fixed at create, so anchors survive. Try
    renaming to an existing panel's name → **Expect:** a cyan-tagged error and the box reverts to the
@@ -528,7 +555,7 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 
 The addon's public contract, and the one thing no unit test can prove works in a live client.
 
-1. Create a panel called **Chat BG**. Hovering the editor's **Panel name** box should report
+1. Create a panel called **Chat BG**. Hovering the band's **Panel name** box should report
    `Frame name: PanelMaster_Panel_Chat_BG`.
 2. In a macro or a `/run`, confirm the frame really exists under that name:
    `/run print(PanelMaster_Panel_Chat_BG:GetWidth())` → **Expect:** the panel's width.
@@ -601,7 +628,8 @@ rather than carried, and the first is the one that could destroy a layout.
 
 1. Make two panels. Style the first heavily — size, textures, both colors, border, accent bar.
    Move the second somewhere clearly different.
-2. On the **second** panel, pick the first from **Copy settings from panel**.
+2. On the **second** panel, pick the first from **Copy settings from panel** — in the chrome band's
+   middle row, beside the rename box, reachable from whichever tab you happen to be on.
 3. **Expect:** the second takes on the first's entire appearance **and size**, and a cyan-tagged
    confirmation names the source.
 4. **Expect: it does not move.** Position is deliberately not copied — otherwise the two would land
@@ -720,8 +748,8 @@ that looks different is the finding.
     headings down one scrolling page — that change is the tabbed-panel pass, not a defect.
 11. **Recover panels** is a button **under** the Editing tab's last row now, rather than to the
     right of **Grid size** — which pairs with **Snap to grid** instead. It does the same thing.
-12. The **Panels** page's create box and selector are untouched; the editor below them is one tab at
-    a time.
+12. The **Panels** page's band holds the create box, the selector and the six panel-wide acts; the
+    editor below them is one tab at a time.
 13. The scrollbar is **always visible** on every page and grays out when the page fits, so the body
     width does not jump as you tab between pages.
 14. Open the **Default frame strata** dropdown, then **scroll the page**: the list closes. Do it
