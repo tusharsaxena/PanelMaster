@@ -8,6 +8,10 @@ and whenever the `## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 
+**§ 22 is the exception to "before tagging a release"**: it is the non-English-client pass, it
+needs a deDE or frFR client, and nothing else on this page looks at a panel name that is not
+ASCII.
+
 Start each run from a clean state: `/reload`, then `/pm resetall` (confirm it) — which is a **profile
 reset** and takes the panels with it, so `/pm panel deleteall` is no longer needed alongside it.
 
@@ -979,3 +983,80 @@ was printed.
 
 **Fail:** an `[Init]` line reading `v1.0.0` while `/pm version` reads `v1.0.0-smoke`. That is one
 string with two sources of truth, and the `[Init]` line is the one a user pastes into a bug report.
+
+---
+
+## 22. Non-English client (session 6, `M5-08`)
+
+**Session 6 of the 2026-09-07 remediation plan. NOT YET RUN — no WoW client was available when
+`M5-08` landed. Nothing in this section has been performed and no step in it is recorded as
+passed.** Run on a client set to **deDE or frFR**, the two the collection's other locale steps use
+(`ConsumableMaster/docs/smoke-tests.md` § 3c, `KickCD/docs/smoke-tests.md` § 9b).
+
+**This addon reads almost nothing the client translates, and that is why it needs this section
+rather than why it does not.** The enumeration came back nearly empty: no chat or tooltip `_G`
+constant, no tooltip line parsed in place of an API return, no `subType` where a `classID` exists
+(`grep -rn '_G\[' core modules settings` reaches only `core/EnvSetup.lua`'s metadata ladder).
+Recheck that grep rather than trusting this sentence — it is a claim, and a claim is what an absent
+step is being replaced with.
+
+The exposure runs the **other way**: through the panel names a player types. On a German or French
+client those names carry umlauts and accents, and two seams treat those bytes as punctuation:
+
+- **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore.
+  Lua's `%w` is ASCII-only, so `Ü` is not a letter to it. `Übersicht` slugs to `bersicht`, and
+  **`Ärger` and `Örger` both slug to `rger`**. That slug is not cosmetic: it is the addon's public
+  contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
+  to.
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:278-285`) and the Panels list's
+  sort (`settings/PanelEditor.lua:263`) both use `string.lower`, which folds ASCII and nothing else.
+  `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
+
+Every label the addon prints is hardcoded English and stays English here. That is the addon's scope,
+not a regression.
+
+1. **A panel named in the client's own language.** `/pm new Übersicht` (or `Écran`, on frFR). Open
+   the settings page and hover the band's **Panel name** box to read the reported frame name, then
+   `/run print(PanelMaster_Panel_<the reported slug>:GetWidth())`.
+   **Expect:** the panel is created, the name renders correctly everywhere it is shown — the band,
+   the Panels list, `/pm panels` — and the reported frame name resolves to a real frame.
+   **Fail:** a name that renders as `?` or mojibake anywhere (the text never survived the round
+   trip), or a reported frame name that does not resolve (the slug shown and the slug stamped
+   disagree). **Write down the slug the tooltip reports.** `Übersicht` losing its first letter to
+   `PanelMaster_Panel_bersicht` is not itself a crash, and it is the answer this step exists to get:
+   the contract § 11b documents is "another addon can work the frame name out from the panel name",
+   and a player who cannot do that arithmetic in their own alphabet has no contract.
+2. **Two names, one slug.** `/pm new Ärger`, then `/pm new Örger`.
+   **Expect, if the contract holds:** two panels, two distinct frame names.
+   **Fail:** the second refused, with a message naming a frame name (`PanelMaster_Panel_rger`)
+   that looks like neither name the player typed. That is the slug-uniqueness check doing its job
+   over a slug that threw the distinguishing letter away, and on an English client the pair that
+   provokes it does not exist. Record which happened; a refusal here is a finding to file, not a
+   step to re-run.
+3. **The name lookup folds only half the alphabet.** With `Übersicht` created, run
+   `/pm panel übersicht` (lower-case `ü`) and any other verb that takes a name.
+   **Expect:** the panel resolves, the same way `/pm panel chat bg` resolves `Chat BG` on English —
+   `FindByName`'s own comment says requiring the user to reproduce their own casing is friction
+   with no upside.
+   **Fail:** "no panel called übersicht", while the ASCII half of the same name matches fine. Then
+   try creating a **second** panel named `übersicht`: if it is accepted, the duplicate-name guard
+   has the same hole and there are now two panels the CLI cannot tell apart.
+4. **Sort order in the Panels list.** With three or four panels whose names start with accented and
+   unaccented letters, open the Panels page.
+   **Expect:** names sorted the way a reader of that language would expect.
+   **Fail:** every accented name clumped at one end regardless of its letter. Cosmetic, and worth
+   knowing before someone calls it a rendering bug.
+5. **The round trip.** `/reload`, then check all of the above again, then switch profiles and back
+   (§ 12).
+   **Expect:** names, frame names and anchors identical.
+   **Fail:** any name that changed shape across the reload, which means it was re-slugified or
+   re-encoded on the way out of SavedVariables rather than stored as typed.
+
+**Sign-off without a non-English client.** Steps 1 to 4 can be *provoked* on an English client by
+typing the same characters into `/pm new` — the client's language does not decide what `string.lower`
+folds, and a US keyboard can still produce `Ä`. That is worth doing and is not the same test: it
+tells you nothing about how the client renders those glyphs in its own fonts, about the name
+surviving its own text input, or about what a player of that language would actually type. The
+headless suite proves none of it: `tests/test_util.lua` and `tests/test_registry.lua` feed ASCII
+names in throughout. Until the pass runs, the honest state of this section is unrun, and it is
+recorded that way rather than as coverage.
