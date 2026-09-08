@@ -6,11 +6,11 @@ codes = true
 -- library's testkit/, so linting the copy as well would report every finding twice and let the copy
 -- drift green while the original went red -- the one state tests/test_vendor_sync.lua exists to
 -- forbid. That reason reaches the vendored copy and nothing else: the rest of tests/ is ours, and
--- it is linted (lint-§1).
+-- it is linted (lint.md).
 -- Under docs/ only the FROZEN evidence bundles are excluded. A blanket docs/ exclude would silently
 -- drop any Lua a future doc directory carries out of the gate.
 exclude_files = { "libs/", "docs/audits/", "docs/reviews/", "_dev/", "tests/_kit/" }
--- NO TOP-LEVEL `ignore`, and none is coming back (lint-§1, `M4-11`). This file carried
+-- NO TOP-LEVEL `ignore`, and none is coming back (lint.md, `M4-11`). This file carried
 -- `ignore = { "212/self", "212/event" }` until `M4c-06`. Both entries already named a variable,
 -- which is narrower than most blankets start out, and it still reached all 56 files the tree then
 -- had: the ten that earn a 212 and the forty-six that do not. Removing the two lines reported
@@ -74,7 +74,7 @@ files["tests/"] = {
 }
 
 -- ---------------------------------------------------------------------------
--- The narrowed 212s (lint-§1, `M4c-06`)
+-- The narrowed 212s (lint.md, `M4c-06`)
 -- ---------------------------------------------------------------------------
 --
 -- Every stanza below names ONE file, and every entry inside it names the code AND the variable, in

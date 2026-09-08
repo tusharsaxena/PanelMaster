@@ -1,4 +1,4 @@
--- tests/test_lintconfig.lua — the "no blanket suppression" gate (lint-§1, `M4-11`).
+-- tests/test_lintconfig.lua — the "no blanket suppression" gate (lint.md, `M4-11`).
 --
 -- WHAT IT PROVES. That `luacheck .` reaching 0/0 in this repo is a statement about the code and not
 -- about the configuration. Four things are checked, and all four are one rule seen from a different
@@ -133,7 +133,7 @@ test("lintconfig: .luacheckrc sets no top-level ignore", function()
     end
     fail(".luacheckrc sets a top-level `ignore` of { " .. table.concat(shown, ", ") .. " }. A "
       .. "blanket ignore silences the code in all 56 files, including the ones with no business "
-      .. "producing it, so it reads as coverage and provides none (lint-§1, `M4-11`). Move each "
+      .. "producing it, so it reads as coverage and provides none (lint.md, `M4-11`). Move each "
       .. "code into a `files[...]` stanza naming the file that earns it, narrow the entry to the "
       .. "variable (`212/self`), or put a `-- luacheck: ignore <code>` beside the single line that "
       .. "needs it", 2)
@@ -152,7 +152,7 @@ test("lintconfig: .luacheckrc switches no warning class off wholesale", function
   end
   if #off > 0 then
     fail(".luacheckrc turns a whole warning class off at the top level: "
-      .. table.concat(off, ", ") .. ". That is a blanket ignore spelled as a switch, and lint-§1 "
+      .. table.concat(off, ", ") .. ". That is a blanket ignore spelled as a switch, and lint.md "
       .. "refuses it for the same reason: it reaches every file in the repository and reports as "
       .. "coverage", 2)
   end
@@ -270,6 +270,6 @@ test("lintconfig: every inline luacheck ignore names the code it answers", funct
       .. table.concat(unnamed, ", ") .. ". Bare, the directive silences every code in scope; with "
       .. "only a variable after it, it silences every code for that name — which is how nineteen "
       .. "dead `addonName` locals survived until `M4c-06`. Write the code the line actually "
-      .. "produces, as `212/filter` does at settings/OptionsSetup.lua:183 (lint-§1)", 2)
+      .. "produces, as `212/filter` does at settings/OptionsSetup.lua:183 (lint.md)", 2)
   end
 end)
