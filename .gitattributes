@@ -64,11 +64,6 @@
 *.bin binary
 *.param binary
 
-# Extensionless binaries — marked by PATH, because no extension rule can
-# reach them. This block is a ratified deviation from line-endings-§5's
-# byte-for-byte rule; see docs/ARCHITECTURE.md ▸ ## Documented deviations.
-tools/artwork/bin/realesrgan-ncnn-vulkan binary
-
 # Renormalizing after this file is added or changed. The attributes only take
 # effect for content as it passes through git, so an existing checkout must be
 # rewritten once, in this order:
@@ -84,3 +79,9 @@ tools/artwork/bin/realesrgan-ncnn-vulkan binary
 #   tr -dc '\n' < <path> | wc -c     # …this, in a CRLF repo.
 # Not `file <path>`: it reports nothing about line terminators for JSON or
 # for any binary, so it passes files it never examined (line-endings-§7).
+
+# --- line-endings-§5 appendix ---
+# tools/artwork/bin/realesrgan-ncnn-vulkan is the Real-ESRGAN upscaler ELF
+# executable behind tools/artwork/. It carries no extension, so no line in
+# §4's union list can ever reach it and the mark has to be by path.
+tools/artwork/bin/realesrgan-ncnn-vulkan binary

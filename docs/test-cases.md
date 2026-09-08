@@ -857,6 +857,10 @@ badge and any count quoted in the docs must agree with it.
 - optionsgroups: no register row outlives the block it records
 - optionsgroups: every options-ui-§16 register row carries a re-check trigger
 
+### test_register.lua (1)
+
+- every deviation id the register cites is assigned by a bundle in docs/audits/
+
 ### test_eol.lua (1)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
@@ -890,5 +894,6 @@ badge and any count quoted in the docs must agree with it.
 | test_vendor_sync.lua | 2 |
 | test_layout_cap.lua | 3 |
 | test_options_groups.lua | 3 |
+| test_register.lua | 1 |
 | test_eol.lua | 1 |
-| **Total** | **777** |
+| **Total** | **778** |
