@@ -187,6 +187,16 @@ end
 -- tab on the grounds that it is not a subject. It belongs there on the merits as well -- a panel's
 -- name is its identity, it is what the picker in the band displays, and renaming from the band is
 -- what finally makes the create box and the rename box read as the pair they have always been.
+-- `General` is FIRST, and that is what makes it legal rather than a matter of taste.
+-- options-ui-§14 (v2.40.0) bounds the chrome band at one row -- the picker and the create box --
+-- and lets a page's remaining page-wide acts move here on three conditions, the load-bearing one
+-- being that the page OPENS on this tab. A page-wide control under a tab is hidden; a page-wide
+-- control on the tab the page lands on is simply where the player already is.
+--
+-- This tab existed before, was deleted in v2.38.0 under the previous wording of §14, and is back
+-- because the rule was wrong about a page this size: six acts stacked into the band made a second
+-- page above the page, which is the same cost §14 already refuses to pay for a second chrome block.
+local TAB_GENERAL  = "General"
 local TAB_POSITION = "Position and size"
 local TAB_SURFACE  = "Background and border"
 local TAB_ACCENT   = "Accent bar"
@@ -196,7 +206,7 @@ local TAB_FADE     = "Opacity and fade"
 -- Strip order: where the panel sits, then the three appearance tabs read together, then the one you
 -- set once. "Which panel, and is it on" used to open the strip; it opens the band now.
 local EDITOR_TABS = {
-  TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
+  TAB_GENERAL, TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
 }
 
 -- Published for the partition case in tests/test_schema.lua, which is the only reader outside this
@@ -232,12 +242,6 @@ local EDITOR_TOP_GAP     = 16
 -- dropdown from the editor and the second compensated that dropdown for having no label; the picker
 -- is in the chrome band now, carries a label, and is not above the editor at all.
 
--- Height of the chrome band's third row -- Enabled, Unlock, Reset, Delete. HOST-SIDE, and it is the
--- one band number the library does not supply: H.BANNER_H is the floor for a row holding a LABELED
--- control, which is what the band's other two rows hold, and a checkbox or a button carries its
--- text inside itself. AceGUI frames both at 24; the two extra pixels are the separation from the
--- row above, which a List layout does not add for you.
-local BAND_ACT_ROW_H     = 26
 
 -- ── Editor building blocks ──────────────────────────────────────────────────────
 -- The editor emits into a List-layout container as a sequence of full-width ROWS, rather than
@@ -591,6 +595,117 @@ local function buildPanelEditor(ctx, parent, rec)
   -- why every control registers its refresher from inside its own section rather than
   -- from the top of this function.
   local sections = {}
+
+  -- What the panel IS, and what can be done to it whole. Six controls that were three rows of
+  -- chrome above the strip until v2.40.0 of the standard let them come here.
+  --
+  -- Three rows of TWO rather than one row of four: the acts were quarter-width in the band, which
+  -- put two checkboxes and two buttons on one line at a size that made none of them scannable --
+  -- reported from the game as "hard to parse", and it was. A pair per row is the same shape every
+  -- other row on this page uses.
+  --
+  -- No refreshers and no re-pointing: unlike the band, this tab is rebuilt on every selection
+  -- change, so each control is created against the current record and reads it directly.
+  sections[TAB_GENERAL] = function()
+    local identityRow = editorRow(group)
+
+    -- Renaming changes the selector entry and every label the panel appears under, so it is
+    -- structural (the frame name is NOT affected -- it is stamped at create) and R:Rename
+    -- broadcasts MSG_PANELS, which rebuilds this tab. Nothing below the rename call may touch
+    -- `widget` on the success path, because the rebuild releases it.
+    local nameBox = AceGUI:Create("EditBox")
+    nameBox:SetLabel("Panel name")
+    nameBox:SetRelativeWidth(0.5)
+    nameBox:SetText(rec.name or "")
+    nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
+      pageAction.rename(widget, rec, text)
+    end)
+    -- The frame name lives in the TOOLTIP rather than as a second label. It is reference
+    -- information you need once, when anchoring something else to this panel.
+    attachTooltip(nameBox, "Panel name",
+      ("Rename this panel. Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor "
+       .. "to this frame by name. It is fixed when the panel is created and does not change when "
+       .. "you rename the panel, so anything anchored to it keeps working.")
+        :format(NS.Registry.FrameName(rec)))
+    identityRow:AddChild(nameBox)
+
+    -- Copy every appearance setting from another panel. Position is deliberately not copied -- see
+    -- Registry.CopyFrom -- so the panel takes on the other's look without moving on top of it.
+    --
+    -- Deliberately VALUELESS: this is an ACTION, not a stored setting. Showing a "current" entry
+    -- would imply an ongoing link between the two panels, when the copy is a one-off.
+    local others, order = {}, {}
+    for _, other in ipairs(panelsByName()) do
+      if other.id ~= rec.id then
+        others[other.id] = other.name
+        order[#order + 1] = other.id
+      end
+    end
+    local copyFrom = AceGUI:Create("Dropdown")
+    copyFrom:SetLabel("Copy settings from panel")
+    copyFrom:SetRelativeWidth(0.5)
+    copyFrom:SetList(others, order)
+    copyFrom:SetValue(nil)
+    copyFrom:SetDisabled(#order == 0)
+    copyFrom:SetCallback("OnValueChanged", function(widget, _, sourceID)
+      pageAction.copyFrom(widget, rec, sourceID)
+    end)
+    trackDropdown(ctx, copyFrom)
+    attachTooltip(copyFrom, "Copy settings from panel",
+      #order == 0
+        and "Make another panel first, then you can copy its settings onto this one."
+        or ("Take on another panel's appearance \226\128\148 size, textures, colors, border and "
+            .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
+    identityRow:AddChild(copyFrom)
+
+    local toggleRow = editorRow(group)
+
+    local enabled = AceGUI:Create("CheckBox")
+    enabled:SetLabel("Enabled")
+    enabled:SetRelativeWidth(0.5)
+    -- `~= false`, not truthiness: a record that predates the field is enabled.
+    enabled:SetValue(rec.enabled ~= false)
+    enabled:SetCallback("OnValueChanged", function(_, _, v)
+      NS.Registry:Set(rec.id, "enabled", v and true or false)
+    end)
+    attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
+    toggleRow:AddChild(enabled)
+    -- The one control here that wants the scalar tier: `/pm panel <name> enabled false`, a Reset
+    -- and a CopyFrom all broadcast MSG_PANEL without rebuilding, and the checkbox has to follow.
+    addRefresher(ctx, rec, function(live) enabled:SetValue(live.enabled ~= false) end)
+
+    -- Per-panel unlock. The global unlock is all-or-nothing; this one puts a drag handle on just
+    -- the panel being edited, which is what you want with a dozen of them on screen.
+    --
+    -- No refresher: this is session state (NS.State.unlockedPanels), not a record field, so no
+    -- MSG_PANEL ever describes it, and a rebuild is the only thing that can change it.
+    local unlocked = AceGUI:Create("CheckBox")
+    unlocked:SetLabel("Unlock")
+    unlocked:SetRelativeWidth(0.5)
+    unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
+    unlocked:SetCallback("OnValueChanged", function(widget, _, v)
+      local result = NS.Unlock:SetPanelUnlocked(rec.id, v and true or false)
+      -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
+      -- rather than claiming a state the panel is not in.
+      if result == nil then widget:SetValue(false) end
+    end)
+    attachTooltip(unlocked, "Unlock",
+      "Give just this panel a drag handle and a name label, so it can be moved. "
+      .. "Session-only \226\128\148 always locked again after a reload.")
+    toggleRow:AddChild(unlocked)
+
+    local actionRow = editorRow(group)
+
+    local resetBtn = makePairButton("Reset", function() pageAction.reset(rec) end)
+    attachTooltip(resetBtn, "Reset",
+      "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors "
+      .. "and all. Its name is kept, so anything anchored to it stays anchored.")
+    actionRow:AddChild(resetBtn)
+
+    local deleteBtn = makePairButton("Delete", function() pageAction.delete(rec) end)
+    attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
+    actionRow:AddChild(deleteBtn)
+  end
 
   -- Where the panel is and how big it is, ending on the scale that acts on all of it at once.
   sections[TAB_POSITION] = function()
@@ -1049,10 +1164,14 @@ local function drawPageHeader(ctx)
   if not (H and H.PageHeader) then return end
 
   H.PageHeader(ctx, {
-    -- Two rows of LABELED controls at the library's own floor for one — which is what H.BANNER_H
-    -- is, and it is read rather than restated (options-ui-§8) — plus the bare acts row, whose
-    -- height is this file's because nothing in the library describes it.
-    height = H.BANNER_H * 2 + BAND_ACT_ROW_H,
+    -- ONE ROW of LABELED controls, at the library's own floor for exactly that -- which is what
+    -- H.BANNER_H is, and it is read rather than restated (options-ui-§8).
+    --
+    -- It was three rows until v2.40.0 of the standard bounded the band at one and let the acts move
+    -- to the `General` tab. Reserving the old height now would leave a hole of precisely the size
+    -- the acts used to fill, which is the argument this file already makes for not hiding controls
+    -- when there is no panel -- running the other way.
+    height = H.BANNER_H,
     build = function(_, frame)
       local block = AceGUI:Create("SimpleGroup")
       if not (block and block.frame) then return end
@@ -1064,6 +1183,20 @@ local function drawPageHeader(ctx)
 
       local makeRow = editorRow(block)
 
+      -- The picker carries a LABEL. It did not when it lived under an "Edit" section heading that
+      -- said what it was for; in the band there is no heading above it, and an unlabeled dropdown
+      -- beside a labeled edit box reads as a control that lost its caption.
+      local picker = AceGUI:Create("Dropdown")
+      picker:SetLabel("Panel")
+      picker:SetRelativeWidth(0.5)
+      picker:SetCallback("OnValueChanged", function(_, _, id)
+        selectedID = id
+        runRebuilders(ctx)
+      end)
+      attachTooltip(picker, "Panel",
+        "Which panel the tabs below are editing. A disabled panel is marked in the list, so it is "
+        .. "obvious why editing it changes nothing on screen.")
+      makeRow:AddChild(picker)
       -- The EditBox's own "Okay" button is the confirm, matching the rename box beside it — one
       -- confirmation gesture for both places you type a panel name, and now on adjacent rows where
       -- that pairing is visible rather than argued for in a comment.
@@ -1085,131 +1218,13 @@ local function drawPageHeader(ctx)
         "Type a name and press Enter, or click Okay, to create the panel.")
       makeRow:AddChild(newBox)
 
-      -- The picker carries a LABEL. It did not when it lived under an "Edit" section heading that
-      -- said what it was for; in the band there is no heading above it, and an unlabeled dropdown
-      -- beside a labeled edit box reads as a control that lost its caption.
-      local picker = AceGUI:Create("Dropdown")
-      picker:SetLabel("Panel")
-      picker:SetRelativeWidth(0.5)
-      picker:SetCallback("OnValueChanged", function(_, _, id)
-        selectedID = id
-        runRebuilders(ctx)
-      end)
-      attachTooltip(picker, "Panel",
-        "Which panel the tabs below are editing. A disabled panel is marked in the list, so it is "
-        .. "obvious why editing it changes nothing on screen.")
-      makeRow:AddChild(picker)
-
-      local identityRow = editorRow(block)
-
-      -- Renaming changes the selector entry and every label the panel appears under, so it is
-      -- structural (the frame name is NOT affected — it is stamped at create) and R:Rename
-      -- broadcasts MSG_PANELS. That used to release this very box, which is why the old code
-      -- carried a "nothing below the call may touch `widget` on the success path" warning. It is in
-      -- the band now and survives the rebuild, so the rejection path's SetText is unconditionally
-      -- safe rather than safe-by-argument.
-      local nameBox = AceGUI:Create("EditBox")
-      nameBox:SetLabel("Panel name")
-      nameBox:SetRelativeWidth(0.5)
-      nameBox:SetCallback("OnEnterPressed", function(widget, _, text)
-        local live = currentRecord()
-        if not live then return end
-        pageAction.rename(widget, live, text)
-      end)
-      identityRow:AddChild(nameBox)
-
-      -- Copy every appearance setting from another panel. Position is deliberately not copied — see
-      -- Registry.CopyFrom — so the panel takes on the other's look without moving on top of it.
-      --
-      -- Deliberately VALUELESS: this is an ACTION, not a stored setting. Showing a "current" entry
-      -- would imply an ongoing link between the two panels, when the copy is a one-off.
-      local copyFrom = AceGUI:Create("Dropdown")
-      copyFrom:SetLabel("Copy settings from panel")
-      copyFrom:SetRelativeWidth(0.5)
-      copyFrom:SetValue(nil)
-      copyFrom:SetCallback("OnValueChanged", function(widget, _, sourceID)
-        local live = currentRecord()
-        if not live then widget:SetValue(nil); return end
-        pageAction.copyFrom(widget, live, sourceID)
-      end)
-      identityRow:AddChild(copyFrom)
-
-      local actionRow = editorRow(block)
-
-      -- A quarter of the row each, taken as HALF the paired-button width rather than as a flat
-      -- 0.25. BUTTON_PAIR_REL is the library's clearance for the rightmost control in a row, and
-      -- halving it gives four controls the same clearance it gives two; a flat 0.25 would put the
-      -- Delete button's right border where a pair's is not allowed to go.
-      --
-      -- Defaulted, unlike H.BANNER_H above. That one arrives on the same library instance as
-      -- PageHeader, which this function has already tested for; this one comes through
-      -- NS.Panel.__ui, a different object bound lazily, so a nil here would cost the whole band
-      -- rather than one number.
-      local actRel = (BUTTON_PAIR_REL or 0.5) / 2
-
-      local enabled = AceGUI:Create("CheckBox")
-      enabled:SetLabel("Enabled")
-      enabled:SetRelativeWidth(actRel)
-      enabled:SetCallback("OnValueChanged", function(_, _, v)
-        local live = currentRecord()
-        if not live then return end
-        NS.Registry:Set(live.id, "enabled", v and true or false)
-      end)
-      attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
-      actionRow:AddChild(enabled)
-
-      -- Per-panel unlock, alongside Enabled. The global unlock is all-or-nothing; this one puts a
-      -- drag handle on just the panel being edited, which is what you want with a dozen of them on
-      -- screen.
-      local unlocked = AceGUI:Create("CheckBox")
-      unlocked:SetLabel("Unlock")
-      unlocked:SetRelativeWidth(actRel)
-      unlocked:SetCallback("OnValueChanged", function(widget, _, v)
-        local live = currentRecord()
-        if not live then widget:SetValue(false); return end
-        local result = NS.Unlock:SetPanelUnlocked(live.id, v and true or false)
-        -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
-        -- rather than claiming a state the panel is not in.
-        if result == nil then widget:SetValue(false) end
-      end)
-      attachTooltip(unlocked, "Unlock",
-        "Give just this panel a drag handle and a name label, so it can be moved. "
-        .. "Session-only \226\128\148 always locked again after a reload.")
-      actionRow:AddChild(unlocked)
-
-      -- makePairButton, then a width of its own: the maker exists so that no caller hand-sets a
-      -- paired button's width, and these two are a pair of four rather than a pair of two.
-      local resetBtn = makePairButton("Reset", function()
-        local live = currentRecord()
-        if live then pageAction.reset(live) end
-      end)
-      resetBtn:SetRelativeWidth(actRel)
-      attachTooltip(resetBtn, "Reset",
-        "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors "
-        .. "and all. Its name is kept, so anything anchored to it stays anchored.")
-      actionRow:AddChild(resetBtn)
-
-      local deleteBtn = makePairButton("Delete", function()
-        local live = currentRecord()
-        if live then pageAction.delete(live) end
-      end)
-      deleteBtn:SetRelativeWidth(actRel)
-      attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
-      actionRow:AddChild(deleteBtn)
 
       if block.DoLayout then block:DoLayout() end
       ctx.__pmPicker = picker
-      -- The six that re-point at the selection on every rebuild. Parked as one table rather than
-      -- six fields so that refreshHeaderActs can bail on a single nil check, and so a case can ask
-      -- for the band's acts by name.
-      ctx.__pmActs = {
-        name     = nameBox,
-        copy     = copyFrom,
-        enabled  = enabled,
-        unlocked = unlocked,
-        reset    = resetBtn,
-        delete   = deleteBtn,
-      }
+      -- The picker is the only band control left to park. The six acts moved to the `General`
+      -- tab (options-ui-§14, v2.40.0): three band rows for controls touched once a session was
+      -- a second page above the page, and the tab the editor OPENS on is not a tab anything is
+      -- hidden behind. They are rebuilt with the editor now, so nothing has to re-point them.
       -- Parked for the same reason the picker is: the block has to be reachable to be re-laid out
       -- below, and for a case to assert that it was.
       ctx.__pmHeaderBlock = block
@@ -1268,92 +1283,7 @@ local function refreshPicker(ctx, records)
   picker:SetDisabled(#records == 0)
 end
 
--- Dress the rename box, but only when what it should be showing has actually changed.
---
--- Every other control in the band can be pushed on every rebuild, because a widget nobody is
--- holding does not care. This one the user may be MID-EDIT in: a `/pm new` from a macro, or a
--- delete on another panel, broadcasts MSG_PANELS while they are typing, and a blind SetText would
--- replace what they had typed with what the record still says. The old code needed no guard and
--- said so — the box lived in the editor, which a rebuild RELEASES, so there was never a surviving
--- widget to overwrite. Moving it into the band is what makes the guard necessary, and it is the one
--- behavior of the move that is not simply the old behavior in a new place.
---
--- Keyed on the id AND on the last string written. The id catches a change of selection. The string
--- catches a rename that came from somewhere else (`/pm rename`), where the id is the same but the
--- box is now showing a name the panel no longer has. What it deliberately does not catch is the
--- user's own uncommitted typing: the record still says what was last written, so there is nothing
--- to push.
-local function dressNameBox(box, rec)
-  local id   = rec and rec.id or nil
-  local name = rec and rec.name or ""
-  if box.__pmForID == id and box.__pmWrote == name then return end
-  box.__pmForID, box.__pmWrote = id, name
-  box:SetText(name)
-end
 
--- Re-point the band's six panel-wide controls at the current selection, without releasing any of
--- them (options-ui-§11). The picker's sibling, and called from the same place for the same reason.
---
--- NOTHING IS HIDDEN WHEN THERE IS NO PANEL. All six are disabled instead: the band's height is
--- reserved for three rows, and controls that came and went with the registry would leave a hole of
--- exactly the size they used to fill. It is the same argument the picker makes one function up, and
--- the same one options-ui-§13 makes about the strip.
-local function refreshHeaderActs(ctx, records, rec)
-  local acts = ctx.__pmActs
-  if not acts then return end
-
-  local on = rec ~= nil
-  acts.name:SetDisabled(not on)
-  acts.enabled:SetDisabled(not on)
-  acts.unlocked:SetDisabled(not on)
-  acts.reset:SetDisabled(not on)
-  acts.delete:SetDisabled(not on)
-
-  dressNameBox(acts.name, rec)
-  -- The frame name lives in the TOOLTIP rather than as a second label beside the box. It is
-  -- reference information you need once, when wiring something else up to this panel — not
-  -- something worth a permanent line of chrome in a band that is already three rows tall. It names
-  -- the SELECTED panel, so it is re-attached per selection; O.AttachTooltip binds through
-  -- SetCallback, which replaces rather than stacks.
-  attachTooltip(acts.name, "Panel name",
-    on and (("Rename this panel. Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can "
-             .. "anchor to this frame by name. It is fixed when the panel is created and does not "
-             .. "change when you rename the panel, so anything anchored to it keeps working.")
-              :format(NS.Registry.FrameName(rec)))
-       or "Make a panel first, then you can rename it.")
-
-  -- Every OTHER panel. Re-registered for scroll-close on every rebuild for the reason refreshPicker
-  -- gives: forgetDropdowns empties that registry at the top of one and this widget survives it.
-  local others, order = {}, {}
-  for _, other in ipairs(records) do
-    if not (rec and other.id == rec.id) then
-      others[other.id] = other.name
-      order[#order + 1] = other.id
-    end
-  end
-  trackDropdown(ctx, acts.copy)
-  acts.copy:SetList(others, order)
-  acts.copy:SetValue(nil)
-  acts.copy:SetDisabled(not on or #order == 0)
-  attachTooltip(acts.copy, "Copy settings from panel",
-    #order == 0
-      and "Make another panel first, then you can copy its settings onto this one."
-      or ("Take on another panel's appearance \226\128\148 size, textures, colors, border and "
-          .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
-
-  -- `~= false`, not truthiness: a record that predates the field is enabled.
-  acts.enabled:SetValue(on and rec.enabled ~= false)
-  -- No refresher: per-panel unlock is session state (NS.State.unlockedPanels), not a record field,
-  -- so no MSG_PANEL ever describes it. A rebuild is the only thing that can change which panel is
-  -- selected, and that is the only way this value goes stale.
-  acts.unlocked:SetValue(on and NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
-
-  -- The one band control that DOES want the scalar tier. `/pm panel <name> enabled false`, a Reset
-  -- and a CopyFrom all broadcast MSG_PANEL without rebuilding, and the checkbox has to follow.
-  if on then
-    addRefresher(ctx, rec, function(live) acts.enabled:SetValue(live.enabled ~= false) end)
-  end
-end
 
 local function buildPanelsPage(ctx)
   bindHelpers()
@@ -1397,10 +1327,6 @@ local function buildPanelsPage(ctx)
     end
     local rec = currentRecord()
     refreshPicker(ctx, records)
-    -- AFTER the picker and BEFORE the editor, which is the order the band reads in. It also has to
-    -- come after ctx.refreshers was emptied at the top of runRebuilders, because the Enabled box
-    -- registers one of its own.
-    refreshHeaderActs(ctx, records, rec)
 
     if not rec then
       -- The empty state is CONTENT, under the same strip every other state draws.

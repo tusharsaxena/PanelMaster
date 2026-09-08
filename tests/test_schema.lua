@@ -298,18 +298,21 @@ test("Schema: the Panels page's tab strip is the designed one, in strip order", 
   -- file. It is pinned here anyway, because "which tabs does the settings panel have" is one
   -- question and answering half of it in a different suite is how the other half goes stale.
   --
-  -- FIVE, not six. "General" held the name box, the copy-from dropdown, Enabled, Unlock, Reset and
-  -- Delete — every one of them an act on the panel WHOLE rather than on one aspect of it, which is
-  -- a page-wide control drawn under one tab (options-ui-§14). They are in the chrome band now and
-  -- the tab is gone, so a "General" reappearing in this list is the move being undone.
+  -- SIX, and `General` is FIRST. It holds the name box, the copy-from dropdown, Enabled, Unlock,
+  -- Reset and Delete — every one an act on the panel WHOLE. That made them page-wide controls under
+  -- a tab, which options-ui-§14 forbade outright until v2.40.0 of the standard bounded the chrome
+  -- band at ONE ROW and let a page's remaining acts move to a `General` first tab instead. Six of
+  -- them stacked the band three rows deep, which is a second page above the page.
+  --
+  -- Position matters more than membership here: the escape rests entirely on the page OPENING on
+  -- this tab, so a `General` anywhere but first is the finding, not `General` existing.
   local EXPECTED = {
-    "Position and size", "Background and border", "Accent bar", "Artwork", "Opacity and fade",
+    "General", "Position and size", "Background and border", "Accent bar", "Artwork",
+    "Opacity and fade",
   }
   local actual = NS.PanelEditor.TABS
-  for i, name in ipairs(actual) do
-    assertFalse(name == "General",
-      ("the General tab is back at position %d; its controls are page-wide"):format(i))
-  end
+  assertEqual(actual[1], "General",
+    "General is not first, so its page-wide acts are behind a click again (options-ui-§14)")
   assertEqual(type(actual), "table", "the editor publishes no tab order")
   assertEqual(#actual, #EXPECTED, "the Panels page has a different number of tabs than designed")
   for i, want in ipairs(EXPECTED) do

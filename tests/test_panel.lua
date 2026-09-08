@@ -910,8 +910,8 @@ test("Panels page: an unknown active tab heals to the first one rather than draw
     -- The shape a renamed tab leaves behind in a context that outlives the rename. "General" is
     -- now one of those names, and the fallback is keyed off EDITOR_TABS[1] rather than off a tab
     -- constant precisely so that removing a tab cannot leave the fallback pointing at nothing.
-    local labels = labelsOfTab(ctx, "General")
-    assertTrue(labels["Width"],
+    local labels = labelsOfTab(ctx, "Nonexistent tab")
+    assertTrue(labels["Panel name"],
       "a stale tab pointer drew an empty editor instead of falling back to the first tab")
     assertEqual(ctx.activeTab, E.TABS[1], "the stale pointer was not healed")
 
@@ -979,7 +979,28 @@ local function captionsBuiltBy(fn)
   return caps
 end
 
--- THE FIVE PAGE-WIDE ACTS ARE IN THE BAND (options-ui-§14, PANELMASTER-A-01).
+-- The six acts, read out of the CURRENT build of the General tab. They are rebuilt on every
+-- selection change now, so there is no parked table to read and no stale widget to read it from --
+-- which is the whole reason the re-pointing machinery the band needed could be deleted.
+local function actsOnGeneral(ctx)
+  ctx.activeTab = "General"
+  local created = T.mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  E:Rebuild(ctx)
+  local acts = {}
+  local BY_LABEL = { ["Panel name"] = "name", ["Copy settings from panel"] = "copy",
+                     ["Enabled"] = "enabled", ["Unlock"] = "unlocked" }
+  local BY_TEXT  = { Reset = "reset", Delete = "delete" }
+  for i = from, #created do
+    local w = created[i]
+    local key = (w.labelText and BY_LABEL[w.labelText])
+             or (w.type == "Button" and w.text and BY_TEXT[w.text])
+    if key then acts[key] = w end
+  end
+  return acts
+end
+
+-- THE SIX PAGE-WIDE ACTS ARE ON THE GENERAL FIRST TAB (options-ui-§14 as of standard v2.40.0).
 --
 -- Copy, Enabled, Unlock, Reset and Delete were all inside the editor's General tab, and every one of
 -- them acts on the panel WHOLE rather than on the subject that tab was about -- which is the exact
@@ -992,50 +1013,51 @@ end
 --
 -- red under: putting any of the six back into a `sections[...]` function, or dropping one on the
 -- way into the band.
-test("Panels page: the panel-wide acts are in the chrome band, not under a tab", function()
+test("Panels page: the panel-wide acts are on the General FIRST tab, and the band keeps the picker",
+  function()
   NS.Registry:DeleteAll()
   local rec = NS.Registry:New("Banded acts")
   E.__setSelectedID(rec.id)
   local ctx = freshPanelsCtx()
   E:Rebuild(ctx)
 
-  local acts = ctx.__pmActs
-  assertTrue(acts ~= nil, "the page parked no band acts")
-
-  -- The captions the player reads, against the field each control type answers to: a label for the
-  -- three labeled controls and a checkbox, the button's own text for the two buttons.
-  assertEqual(acts.name.labelText, "Panel name", "the band lost the rename box")
-  assertEqual(acts.copy.labelText, "Copy settings from panel", "the band lost the copy dropdown")
-  assertEqual(acts.enabled.labelText, "Enabled", "the band lost the Enabled switch")
-  assertEqual(acts.unlocked.labelText, "Unlock", "the band lost the per-panel Unlock switch")
-  assertEqual(acts.reset.text, "Reset", "the band lost the Reset button")
-  assertEqual(acts.delete.text, "Delete", "the band lost the Delete button")
-
-  -- And they are really INSIDE the header block, rather than parked on the ctx and added somewhere
-  -- else. A widget that never reached the block would be created, disabled, refreshed on every
-  -- rebuild and invisible.
+  -- THE BAND KEEPS THE IDENTITY CONTROLS, and that half of §14 is untouched by v2.40.0: a page
+  -- that edits one instance out of many still says which one, permanently, above the strip. A band
+  -- left as a bare divider because the picker moved into a tab is the shape the rule exists to
+  -- forbid, so this is the assertion that must not be relaxed with the others.
   local inBlock = {}
   for _, w in ipairs(descendants(assert(ctx.__pmHeaderBlock))) do inBlock[w] = true end
-  for _, key in ipairs({ "name", "copy", "enabled", "unlocked", "reset", "delete" }) do
-    assertTrue(inBlock[acts[key]], ("the band's %s act was never added to the header block"):format(key))
+  assertTrue(inBlock[ctx.__pmPicker], "the picker left the band, which §14 forbids outright")
+
+  -- ONE ROW now, not three. The band reserving three rows' height for controls that moved is a hole
+  -- of exactly the size they used to fill.
+  assertTrue((ctx.__bannerHeight or 0) < NS.Helpers.BANNER_H * 2,
+    "the band still reserves three rows of height for acts that are on a tab now")
+
+  -- The six draw on `General`, by the caption a player reads.
+  local ACTS = { "Panel name", "Copy settings from panel", "Enabled", "Unlock", "Reset", "Delete" }
+  local onGeneral = captionsBuiltBy(function()
+    ctx.activeTab = "General"
+    E:Rebuild(ctx)
+  end)
+  for _, caption in ipairs(ACTS) do
+    assertTrue(onGeneral[caption] == true,
+      ("the General tab does not draw '%s'"):format(caption))
   end
-  assertTrue(inBlock[ctx.__pmPicker], "the picker was never added to the header block")
 
-  -- The band reserves the rows it now needs. One row's worth of height with three rows of controls
-  -- in it draws two of them outside the frame.
-  assertTrue((ctx.__bannerHeight or 0) >= NS.Helpers.BANNER_H * 2,
-    "the band still reserves a single row of height")
-
-  -- No TAB draws any of them. This is the half that catches a move made by copying.
+  -- And NO OTHER tab draws any of them. §14's third condition: acts split across the band and a tab
+  -- -- or across two tabs -- are worse than either shape alone, because the player has to learn
+  -- which is where. This is also the half that catches a move made by copying rather than cutting.
   for _, tab in ipairs(E.TABS) do
-    local caps = captionsBuiltBy(function()
-      ctx.activeTab = tab
-      E:Rebuild(ctx)
-    end)
-    for _, caption in ipairs({ "Panel name", "Copy settings from panel", "Enabled", "Unlock",
-                              "Reset", "Delete" }) do
-      assertFalse(caps[caption] == true,
-        ("the '%s' tab draws '%s', which is a panel-wide act"):format(tab, caption))
+    if tab ~= "General" then
+      local caps = captionsBuiltBy(function()
+        ctx.activeTab = tab
+        E:Rebuild(ctx)
+      end)
+      for _, caption in ipairs(ACTS) do
+        assertFalse(caps[caption] == true,
+          ("the '%s' tab draws '%s', which belongs to General alone"):format(tab, caption))
+      end
     end
   end
 
@@ -1043,17 +1065,21 @@ test("Panels page: the panel-wide acts are in the chrome band, not under a tab",
   E.__setSelectedID(nil)
 end)
 
--- THE BAND IS BUILT ONCE AND HAS TO RE-POINT ITSELF.
+-- THE ACTS FOLLOW THE PICKER, and under v2.40.0 they do it the easy way again.
 --
--- Under the General tab these six controls were rebuilt per selection against a `rec` upvalue, so
--- acting on the right panel was true by construction. In the band they are built once for the
--- session: every callback resolves the record fresh, and every value is pushed back in place by
--- refreshHeaderActs on each rebuild. Nothing else on this page works that way.
+-- In the band they were built ONCE for the session, so every callback had to resolve the record
+-- fresh and every value had to be pushed back in place by a refreshHeaderActs pass on each rebuild
+-- -- machinery nothing else on this page needed. On the General tab they are rebuilt per selection
+-- against a `rec` upvalue, so acting on the right panel is true by construction and that pass is
+-- gone.
 --
--- red under: closing over the record at build time (Delete goes on deleting the first panel ever
--- selected), or dropping the refreshHeaderActs call (the band keeps showing the first panel's name
--- and Enabled state whichever panel the picker is on).
-test("Panels page: the band's acts follow the picker rather than the panel they were built on",
+-- The assertions are unchanged and that is the point: the property a player cares about does not
+-- depend on which shape delivers it. Switching panels must move the name, the Enabled state and
+-- the copy list, and Delete must remove what the picker is showing.
+--
+-- red under: a tab that is not rebuilt on the picker's callback, or one that closes over a stale
+-- record (Delete goes on deleting the first panel ever selected).
+test("Panels page: the acts follow the picker rather than the panel they were built on",
   function()
     NS.Registry:DeleteAll()
     local first  = NS.Registry:New("Alpha")
@@ -1064,12 +1090,17 @@ test("Panels page: the band's acts follow the picker rather than the panel they 
     local ctx = freshPanelsCtx()
     E:Rebuild(ctx)
 
-    local acts = ctx.__pmActs
-    assertEqual(acts.name.text, "Alpha", "the band opened on a panel the picker is not showing")
-    assertEqual(acts.enabled.value, true, "Alpha is enabled and the band's switch disagrees")
+    -- The tab is rebuilt per selection, so the widgets are read back out of the current build
+    -- rather than off a parked table.
+    ctx.activeTab = "General"
+    E:Rebuild(ctx)
+    local acts = actsOnGeneral(ctx)
+    assertEqual(acts.name.text, "Alpha", "the tab opened on a panel the picker is not showing")
+    assertEqual(acts.enabled.value, true, "Alpha is enabled and the tab's switch disagrees")
 
     -- Through the picker's own callback, which is what a click does.
     ctx.__pmPicker:__fire("OnValueChanged", second.id)
+    acts = actsOnGeneral(ctx)
     assertEqual(acts.name.text, "Bravo", "the rename box stayed on the previous panel")
     assertEqual(acts.enabled.value, false, "the Enabled switch stayed on the previous panel")
 
@@ -1077,8 +1108,8 @@ test("Panels page: the band's acts follow the picker rather than the panel they 
     assertEqual(acts.copy.list[first.id], "Alpha", "the copy list does not offer the other panel")
     assertEqual(acts.copy.list[second.id], nil, "the copy list offers the selected panel itself")
 
-    -- And the destructive act lands on what the picker is showing, not on what the band was built
-    -- against. This is the assertion that a captured record fails.
+    -- And the destructive act lands on what the picker is showing. This is the assertion a stale
+    -- captured record fails.
     acts.delete.callbacks.OnClick(acts.delete, "OnClick")
     assertEqual(NS.Registry:Get(second.id), nil, "Delete did not remove the selected panel")
     assertTrue(NS.Registry:Get(first.id) ~= nil, "Delete removed the panel the band was built on")
@@ -1108,6 +1139,10 @@ test("Panels page: the strip is drawn with ZERO panels, and the empty state is c
   local withPanels = #(ctx.__tabKids or {})
   local stripBefore = ctx.__tabKids
   assertTrue(withPanels >= #E.TABS, "the populated page drew fewer frames than it has tabs")
+  -- The acts are TAB CONTENT now, so with no panel they are absent rather than disabled -- there
+  -- is no record for them to act on, and the empty state is what the tab draws instead. The band's
+  -- picker and create box stay either way, which is the half that has to survive an empty registry
+  -- (options-ui-§14: releasing them would take the only control that can make a panel off screen).
 
   NS.Registry:DeleteAll()
   E.__setSelectedID(nil)
@@ -1137,14 +1172,18 @@ test("Panels page: the strip is drawn with ZERO panels, and the empty state is c
   -- when the name box moved into the band: no tab render draws it at all now.
   assertFalse(labels["Width"] == true, "an editor was built for a registry with no panels")
 
-  -- The band's own acts survive the empty registry too, disabled rather than absent -- the band
-  -- reserves three rows either way, and controls that came and went would leave a hole.
-  local acts = ctx.__pmActs
-  assertTrue(acts ~= nil, "the band's acts went with the panels")
-  for _, key in ipairs({ "name", "copy", "enabled", "unlocked", "reset", "delete" }) do
-    assertTrue(acts[key].disabled, ("the band's %s act is live with no panel selected"):format(key))
+  -- The acts are TAB CONTENT now, so with no panel they are absent rather than disabled: there is
+  -- no record for them to act on, and the empty state is what the tab draws in their place. What
+  -- MUST survive an empty registry is the band -- §14 keeps the picker there in every state, and
+  -- releasing the create box would take the only control that can make a panel off the screen at
+  -- the moment the player needs it most.
+  assertTrue(ctx.__pmPicker ~= nil, "the picker went with the panels")
+  local bandCaps = {}
+  for _, w in ipairs(descendants(assert(ctx.__pmHeaderBlock))) do
+    if w.labelText then bandCaps[w.labelText] = true end
   end
-  assertEqual(acts.name.text, "", "the rename box still shows a deleted panel's name")
+  assertTrue(bandCaps["Panel"], "the band lost its picker on an empty registry")
+  assertTrue(bandCaps["Create new panel"], "the band lost the only control that can make a panel")
 
   E.__setSelectedID(nil)
 end)

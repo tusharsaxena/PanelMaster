@@ -35,7 +35,7 @@ The two pages get there by different routes, because their content is not the sa
 
 **Nothing that acts on the panel as a whole is a tab, and none of it is in the scroll either.**
 Creating a panel, choosing which one to edit, naming it, copying another's look onto it, and the
-four acts — Enabled, Unlock, Reset, Delete — all sit in the page's **chrome band**, above the strip,
+four acts — Enabled, Unlock, Reset, Delete — sit on the page's **`General` first tab**, above the strip,
 in a single `H.PageHeader` block (`options-ui-§14`). Every one of them applies to every tab, and a
 control that governs the whole page but is drawn under one tab reads as belonging to that tab —
 which is what they did: the first two as untabbed *Create* and *Edit* sections at the top of the
@@ -68,7 +68,7 @@ this bug for a strip that never re-wraps), and it answers only a **change** in w
 | Page | Tabs | Rows per tab |
 |---|---|---|
 | General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
-| Panels | **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 7, 6, 11, 16, 3 — bespoke controls, not schema rows. The six that made a sixth **General** tab are in the chrome band; see below. |
+| Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 
 A **color** is one control in those counts even though it emits two widgets (the swatch and its
@@ -281,14 +281,19 @@ rather than one row above five. What buys it back is that the acts are reachable
 instead of from one, and that the editor below is now five tabs of one subject each with nothing
 left over.
 
-**The band is built once for the session and the acts re-point themselves.** That is the part of the
-move a reader coming from the old file will not expect. Under the General tab the six controls were
-rebuilt per selection against a `rec` upvalue, so acting on the right panel was true by
-construction; in the band each callback resolves the record fresh through `currentRecord()`, and
-`refreshHeaderActs` pushes every value back in place on each rebuild — the same scalar path
-`refreshPicker` takes, for the same reason (`options-ui-§11`). With no panel selected all six are
-**disabled rather than removed**: the band reserves three rows either way, and controls that came
-and went with the registry would leave a hole exactly the size they used to fill.
+**The acts are rebuilt per selection, which is why the band's re-pointing machinery is gone.** While
+they lived in the chrome band they were built ONCE for the session, so every callback had to resolve
+the record fresh through `currentRecord()` and a `refreshHeaderActs` pass had to push every value
+back in place on each rebuild — machinery nothing else on this page needed. On the `General` tab
+they are built against the `rec` the editor already holds, so acting on the right panel is true by
+construction, and both that pass and the rename box's `dressNameBox` guard were deleted rather than
+moved.
+
+With no panel selected the acts are **absent rather than disabled**, which is the opposite of what
+the band did and is correct for a tab: there is no record for them to act on, and the empty state is
+what the editor draws in their place. The band keeps the picker and the create box in every state,
+including an empty registry — releasing them would take the only control that can make a panel off
+the screen at the moment the player needs it most.
 
 The **rename box alone is guarded**. Every other control can be pushed blindly on a rebuild, because
 nobody is holding it; this one the user may be mid-edit in, and a `/pm new` from a macro broadcasts
