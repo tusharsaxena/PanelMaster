@@ -271,6 +271,21 @@ return function()
   M.InCombatLockdown = function() return M.__inCombat end
 
   -- TOC metadata, so Sl:Version() resolves the packaged version rather than the in-code fallback.
+  --
+  -- The version this answers is DELIBERATELY NOT core/Namespace.lua:7's "1.0.0" fallback constant.
+  -- While the two agreed, every case that claims to prove a version surface reads the manifest --
+  -- test_slash.lua's "prefers the TOC metadata over the in-code fallback", test_envsetup.lua's
+  -- NS.Version cases, test_database.lua's [Init] summary -- asserted a string that BOTH the seam
+  -- and the bypass produce, and passed identically either way. A fixture whose TOC version equals
+  -- the constant cannot tell "read the TOC" from "read the constant", which is the one
+  -- distinction those cases exist for.
+  --
+  -- It must also not CONTAIN the constant: those cases match with a plain `find`, so "1.0.0-toc"
+  -- would still be found by a search for "1.0.0" and would leave them exactly as asleep as before.
+  -- Hence a wholly different triple. Nor is it "9.9.9": test_envsetup.lua's withTOC() swaps that
+  -- in to prove a per-case override beats the default, and a default equal to the override would
+  -- make that swap unobservable in its turn.
+
   -- The installed-addon roster, which the Sunn adapter reads to answer "is this pack's folder on
   -- disk", including for addons the player has DISABLED. Driven per case through `M.__addons`.
   --
@@ -286,7 +301,7 @@ return function()
   M.__addons = {}
   M.C_AddOns = {
     GetAddOnMetadata = function(_, field)
-      if field == "Version" then return "1.0.0" end
+      if field == "Version" then return "1.2.3-toc" end
       return nil
     end,
     -- nil rather than 0 when the roster is unset: Compat.AddOnFolders guards on `tonumber(count())`
@@ -375,8 +390,11 @@ return function()
   -- headlessly" used to be written down as a fact about the page rather than about the mock.
   local aceGUI = M.__libs["AceGUI-3.0"]
   local baseCreate = aceGUI.Create
-  function aceGUI:Create(wtype)
-    local w = baseCreate(self, wtype)
+  -- Declared with an explicit `gui` receiver rather than `aceGUI:Create`: the widgets this
+  -- wrapper installs are methods and their receiver is `self`, so an implicit `self` here would
+  -- mean the LIBRARY on one line and the WIDGET four lines down, inside one function body.
+  function aceGUI.Create(gui, wtype)
+    local w = baseCreate(gui, wtype)
     if w then
       if not w.SetTitle then function w:SetTitle(v) self.title = v; return self end end
       -- The artwork path box asks its underlying editbox whether it has focus before overwriting

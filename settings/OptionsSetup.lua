@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 
 -- LibKa0s-Options-1.0 seam: the Blizzard settings-canvas shell (options-ui).
 --
@@ -84,21 +84,22 @@ if not lib then
     -- stub answers an empty one rather than nil: a host that iterates the result gets a page with
     -- no tabs, which is exactly what a degraded install has, instead of an error.
     RenderTabbedSchema = function() return {} end,
-    __pages = function() return {} end, __panels = function() return {} end,
-    __panelFor = function() return nil end,
-    -- The library's chrome-band arithmetic. Internal (`__`) and called by nothing in this addon —
-    -- they are here because the parity case reads the WHOLE live surface, and an internal the stub
-    -- omits is indistinguishable from one it forgot. Each answers the SHAPE its live counterpart
-    -- does, so a future caller finds a number where a number belongs.
-    __scrollTopInset = function() return 0 end,
-    __bannerBand = function() return 0 end,
-    __tabBand = function() return 0 end,
-    __tabPlacement = function() return {}, 0 end,
-    __layoutTabs = noop, __releaseChrome = noop, __releaseSubTabs = noop,
-    -- The strip's measured row pitch and its suite reset, internals for the same reason the band
-    -- arithmetic above is here: the parity case reads the WHOLE live surface, and an internal the
-    -- stub omits is indistinguishable from one it forgot.
-    __tabArtHeight = function() return 0 end, __resetTabArtHeight = noop,
+    -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
+    -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
+    -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
+    -- any of them was that the parity case read the WHOLE live surface, so an internal the stub
+    -- omitted was indistinguishable from one it forgot. That is no longer how the gate works:
+    -- tests/test_surface_parity.lua calls Kit.assertSurfaceParity's by-name form, which compares
+    -- Kit.publicMembers and drops the whole `__` prefix, and libs/LibKa0s/Options.lua says the
+    -- same thing where it publishes O.__print -- an internal is the library talking to itself
+    -- across a file boundary, and a stub does not mirror it. Nothing in this addon calls one:
+    --   grep -rn '__pages\|__panels\|__panelFor\|__bannerBand\|__tabBand\|__tabPlacement' \
+    --     core modules settings
+    -- returns settings/PanelEditor.lua's own unrelated __panelsByName and nothing else. So they
+    -- were twelve members with no caller and no gate, which is the copy that goes stale.
+    --
+    -- `__degraded` above STAYS: it is this addon's own flag, not the library's, and it is how the
+    -- suite tells which arm ran.
     ROW_VSPACER = 0, SECTION_HEADING_H = 0, BUTTON_PAIR_REL = 0,
     -- The three chrome heights, ZERO for exactly the reason the three above are: a stub reporting
     -- the library's real band geometry would let a caller lay something out against numbers no
@@ -114,6 +115,41 @@ if not lib then
   NS.Schema:InstallMaster(NS.Helpers)
   return
 end
+
+-- The LSM30_Border fixup, and why it is a call rather than a file.
+--
+-- A LIBRARY ACT, NOT AN ADDON ONE. AceGUI's widget registry is process-global: one slot named
+-- "LSM30_Border" that every addon in the client shares, Ka0s or not, and the highest version
+-- registered for the name wins for the rest of the session. This addon carried the fixup privately
+-- in core/LSMPatch.lua, and so did AbsorbTracker, ConsumableMaster, KickCD and MultiMeters -- five
+-- copies, five distinct md5s, each wrapping whatever it found and registering one version above
+-- it. Load all five and the wrapper a Border dropdown actually gets belongs to whichever addon the
+-- client reached last. Nothing in any of the five repos could see that: each suite loads a single
+-- copy, registers once and passes.
+--
+-- lib.__PatchLSM30Border (LibKa0s-Options-1.0 minor 15) is the same wrapper published once, behind
+-- lib.__lsmBorderPatched. LibStub hands five vendored copies of the library the same instance, so
+-- five callers produce one registration and the return value says which call made it. Calling it
+-- is unconditional and needs no agreement with any sibling addon.
+--
+-- HERE, AT FILE LOAD, is early enough. PanelMaster.toc pulls
+-- libs\AceGUI-3.0-SharedMediaWidgets\widget.xml in with the other libraries (:27), well before
+-- settings\OptionsSetup.lua (:86), so the slot already holds AGSMW's own constructor when this
+-- line runs. A registration whose version is not strictly higher than the one already held is
+-- refused, so another addon's later copy of AGSMW cannot take the slot back at its own fixed
+-- version. (Worded around the AceGUI entry point on purpose: C02's acceptance is a grep for that
+-- identifier over core/, modules/ and settings/ returning nothing, and a prose mention is a hit an
+-- auditor has to read and dismiss.)
+--
+-- It sits in THIS file because this is where the addon's options surface is wired, which is where
+-- the library's own note on the member says to call it from -- and because this is the live arm:
+-- an install with no libs/LibKa0s took the degraded return above and has no library to ask.
+--
+-- core/LSMPatch.lua IS GONE, deleted in the same commit that added this line. Keeping it would
+-- have been a second registration of a wrapper the library has already installed -- harmless in
+-- effect, since both hide the same tile and re-anchor the same two regions, but it is the exact
+-- shape the promotion exists to remove.
+lib.__PatchLSM30Border()
 
 NS.Helpers = lib:New({
   -- The brand: shown on the main page and as every sub-page's breadcrumb prefix. The library's
@@ -144,7 +180,7 @@ NS.Helpers = lib:New({
   -- simply gone, and the day a per-unit page appears the filter is dropped by a signature nobody
   -- would think to look at. `filter` is ctx.unit, which this addon never sets — it has no per-unit
   -- pages — so it is ignored HERE, visibly, rather than never arriving.
-  rowsForPage = function(pageKey, filter)   -- luacheck: ignore filter
+  rowsForPage = function(pageKey, filter)   -- luacheck: ignore 212/filter
     if pageKey ~= "general" then return {} end
     return NS.Schema.Schema
   end,
@@ -160,11 +196,12 @@ NS.Helpers = lib:New({
   -- settings/Panel.lua reads where it needs the library's own resolution, and a second addon-side
   -- home for the same singleton is exactly the drift a stash like that invites.
   --
-  -- The three remaining `LibStub("AceGUI-3.0", true)` calls each resolve that one singleton once and
-  -- keep it as an upvalue — settings/Panel.lua and settings/PanelEditor.lua at file scope, which is
-  -- BEFORE this descriptor's instance exists, and core/LSMPatch.lua once inside its one-shot
-  -- PLAYER_LOGIN widget fixup, which runs with no options page in play at all. None of the three can
-  -- be served from a build-time seam, so removing the stash removes a duplicate, not a consumer.
+  -- The two remaining `LibStub("AceGUI-3.0", true)` calls each resolve that one singleton once and
+  -- keep it as an upvalue — settings/Panel.lua and settings/PanelEditor.lua, both at file scope,
+  -- which is BEFORE this descriptor's instance exists. Neither can be served from a build-time
+  -- seam, so removing the stash removes a duplicate, not a consumer. There were THREE until the
+  -- Border fixup above became a library call: core/LSMPatch.lua resolved AceGUI itself, inside a
+  -- PLAYER_LOGIN handler that ran with no options page in play at all.
 
   -- The landing page's body. Through the forward-declared upvalue, so settings/Panel.lua can define
   -- it after this file has loaded.
@@ -187,12 +224,22 @@ NS.Helpers = lib:New({
   --   getLSM     — same reasoning. The three LSM-backed dropdowns are per-PANEL media pickers that
   --                PanelEditor builds itself with the LSM30_* widgets; no schema row is media-backed,
   --                so O.LSMValues would have no caller.
-  --   skipRestoreAll / afterRestoreAll — this addon does not use O.RestoreAllDefaults at all. Its
-  --                global reset is `Sl:CliResetAll`, which must ALSO reach the session-only rows
-  --                (unlock, preview, the console) through each row's own `set`, and the library's
-  --                version walks `allRows` calling `applyDefault`, which for a sessionOnly row would
-  --                write a default the row does not store. One reset implementation, and it is the
-  --                one both the slash verb and the Defaults button already share.
+  --   skipRestoreAll / afterRestoreAll — this addon does not use O.RestoreAllDefaults at all,
+  --                because its global reset is not a row walk. `Sl:CliResetAll` confirms and then
+  --                calls `Sl:DoResetAll`, which is `db:ResetProfile()` on the active profile and
+  --                nothing else (options-ui-§12, and settings/Slash.lua's header states the rule).
+  --                Both hooks exist to shape a walk of `allRows`, so with no walk there is nothing
+  --                for them to shape.
+  --
+  --                The session-only rows -- `state.locked`, `state.preview`, `state.debugConsole` --
+  --                are outside BOTH acts, and that is deliberate rather than an oversight. They
+  --                store nothing in the DB (settings/Schema.lua's `S:Set` sends a sessionOnly row
+  --                to its own `set` and never to WritePath), so a profile reset has nothing of
+  --                theirs to reset, while the library's walk would call `applyDefault` on each and
+  --                write a default the row does not store. What a reset DOES sweep is the durable
+  --                half: `OnProfileReset` reaches the `reload` closure in core/Database.lua, which
+  --                clears preview placeholder RECORDS out of the profile and reloads the registry.
+  --                The session flags themselves are cleared by their own `set`, or by a /reload.
   --   sliderCommit — the default (commit on release) is what this addon has always done. Neither
   --                slider drives anything the user can see mid-drag: grid size applies to the next
   --                drag, and default opacity applies to the next panel created.

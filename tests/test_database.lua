@@ -157,7 +157,21 @@ test("Database.InitSummary: names the addon, version, schema, profile and count"
   NS.Registry:New("One")
   local s = NS.InitSummary()
   assertTrue(s:find("PanelMaster", 1, true) ~= nil)
-  assertTrue(s:find("v" .. NS.version, 1, true) ~= nil)
+  -- Through the SEAM, not around it. core/EnvSetup.lua:5-6 promises "the database's debug summary"
+  -- resolves through NS.Version(), which prefers the packaged TOC over core/Namespace.lua:7's
+  -- fallback constant; the [Init] line is what a user pastes into a bug report, so a build whose
+  -- TOC has moved ahead of the constant must not report the constant here.
+  --
+  -- The fixture guard below is what makes the two lines after it falsifiable, and it is not
+  -- decoration: while tests/wow_mock.lua answered the same "1.0.0" the constant holds, this case
+  -- passed identically whether InitSummary called NS.Version() or read NS.version, which is the
+  -- whole of PANELMASTER-R-04. Seen red with `NS.InitSummary`'s `tostring(NS.Version())`
+  -- put back to `tostring(NS.version)`.
+  assertTrue(NS.Version() ~= NS.version,
+    "fixture: the mock TOC version must differ from NS.version or this case cannot fail")
+  assertTrue(s:find("v" .. NS.Version(), 1, true) ~= nil, "the summary omitted the TOC version")
+  assertTrue(s:find("v" .. NS.version, 1, true) == nil,
+    "the [Init] line reported the fallback constant instead of the packaged version")
   assertTrue(s:find("schema v" .. NS.SCHEMA_VERSION, 1, true) ~= nil)
   assertTrue(s:find("Default", 1, true) ~= nil)
   assertTrue(s:find("1 panels", 1, true) ~= nil)

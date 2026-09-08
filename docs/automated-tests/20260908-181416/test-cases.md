@@ -861,17 +861,6 @@ badge and any count quoted in the docs must agree with it.
 
 - every deviation id the register cites is assigned by a bundle in docs/audits/
 
-### test_docs.lua (1)
-
-- docs/smoke-tests.md carries a non-English-client section
-
-### test_lintconfig.lua (4)
-
-- lintconfig: .luacheckrc sets no top-level ignore
-- lintconfig: .luacheckrc switches no warning class off wholesale
-- lintconfig: every files[...] ignore is narrowed to a file or a name
-- lintconfig: every inline luacheck ignore names the code it answers
-
 ### test_eol.lua (1)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
@@ -906,7 +895,5 @@ badge and any count quoted in the docs must agree with it.
 | test_layout_cap.lua | 3 |
 | test_options_groups.lua | 3 |
 | test_register.lua | 1 |
-| test_docs.lua | 1 |
-| test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **783** |
+| **Total** | **778** |

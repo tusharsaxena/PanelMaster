@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 
 -- Account-wide defaults. The persisted-DB version stamp is what this scope is FOR: everything the
 -- user configures is per-character (defaults/Profile.lua), but the schema shape is a property of the

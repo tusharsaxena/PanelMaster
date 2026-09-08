@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.Slash = NS.Slash or {}
 local Sl = NS.Slash
 local C = NS.Constants
@@ -366,8 +366,9 @@ if not lib then
   Sl.LandingRows    = function() return {} end
   Sl.HelpRows       = function() return {} end
   function Sl:CliVersion() print("v" .. tostring(Sl:Version())) end
-  -- Kept WORKING rather than explained away: it is the one schema verb with no library dependency —
-  -- it is a loop over the schema through this addon's own write seam.
+  -- Kept WORKING rather than explained away: it is the one reset verb with no library dependency.
+  -- Not because it walks the schema -- it does not, here or on the live arm -- but because
+  -- ConfirmResetAll ends in `db:ResetProfile()`, which is AceDB's and needs nothing of LibKa0s.
   function Sl:CliResetAll() Sl:ConfirmResetAll() end
   function Sl:OnSlash(input)
     if input == nil or input:match("^%s*$") then return explain() end

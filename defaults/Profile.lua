@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 
 -- Per-character defaults. Everything the user configures lives here; `global` (defaults/Global.lua)
 -- carries only the schema stamp.

@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.Registry = NS.Registry or {}
 local R = NS.Registry
 local C = NS.Constants
@@ -523,6 +523,18 @@ function R:CopyFrom(targetKey, sourceKey)
   return true, source.name
 end
 
+-- Everything the session holds that is keyed on a panel id, dropped in one act. Two callers,
+-- opposite reasons, one state: a profile switch makes every id name a different panel, `DeleteAll`
+-- makes every id name no panel at all. The FLAG belongs in here with the two tables and is the
+-- point of the extraction — `SetPreview` opens with `if on == NS.State.preview`, so a flag left
+-- true over an empty id list makes `SetPreview(true)` a no-op and the user cannot restart preview
+-- to clear it. `NS.State.unlocked` stays out, for the reason dropSessionIDs gives below.
+local function clearPanelSessionState()
+  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
+  for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
+  NS.State.preview = false
+end
+
 -- Re-read the registry after the active AceDB profile changed underneath it.
 --
 -- Lives here, rather than in core/Database.lua where the profile callbacks are registered, so that
@@ -548,17 +560,16 @@ end
 --                           id someone unlocked in the profile they left.
 --   NS.Unlock's pendingPanels — the same, for unlocks deferred by combat.
 --
--- This is exactly the sweep R:DeleteAll already does, and for the same reason: an incoming profile
--- shares no identity with the outgoing one, so nothing keyed on the outgoing one survives. Done
+-- This is exactly the sweep R:DeleteAll does — `clearPanelSessionState` above is the one copy of
+-- it — and for the same reason: an incoming profile shares no identity with the outgoing one, so
+-- nothing keyed on the outgoing one survives. Done
 -- BEFORE Sanitize and the broadcast, so no consumer can observe the half-swapped state.
 --
 -- The global unlock flag is deliberately NOT cleared. It is a mode the user put the SCREEN in, not a
 -- claim about any particular panel, and a profile switch mid-edit that silently re-locked everything
 -- would be its own surprise.
 local function dropSessionIDs()
-  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
-  for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
-  NS.State.preview = false
+  clearPanelSessionState()
   if NS.Unlock and NS.Unlock.ForgetPending then NS.Unlock:ForgetPending() end
   -- The Panels page's open editor is the fourth holder of an id, for the same reason and with the
   -- same consequence: it would resolve to whichever panel the incoming profile has under that id.
@@ -582,10 +593,10 @@ function R:DeleteAll()
 
   -- Same sweep `destroy` does per panel, and for the same reason: an id that no longer exists would
   -- linger in the session state for the rest of the session and show up in a debug dump as an
-  -- unlocked (or previewed) panel that is not there. Nothing survives an empty registry, so both
-  -- tables go wholesale rather than id by id.
-  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
-  for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
+  -- unlocked (or previewed) panel that is not there. Nothing survives an empty registry, so the
+  -- whole sweep runs wholesale rather than id by id — including the preview FLAG, which this used
+  -- to leave standing over an empty id list.
+  clearPanelSessionState()
 
   if n > 0 then fire(MSG_PANELS) end
   return n

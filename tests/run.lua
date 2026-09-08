@@ -48,6 +48,26 @@ Loader.loadAll(Loader.tocFiles("PanelMaster.toc"), NS, mocks)
 NS.addon:OnInitialize()
 NS.addon:OnEnable()
 
+-- Where Kit.assertSurfaceParity's by-name form looks the LIVE half up (kit 15, vendored by M4-01).
+-- Registered explicitly, and the explicitness is the point. Kit.expose auto-wires the mock's
+-- LibStub, which is right for a repo whose stubs mirror LIBRARY TABLES; these two mirror an
+-- INSTANCE instead -- what `lib:New(descriptor)` returned. Left to the auto-wiring,
+-- "LibKa0s-Options-1.0" resolves the small library table (LAYOUT, New, PatchAlwaysShowScrollbar,
+-- STRINGS) rather than the surface settings/Panel.lua and settings/PanelEditor.lua actually call,
+-- and tests/test_surface_parity.lua goes red naming members no stub was ever meant to carry.
+--
+-- The other two seams are absent from this table on purpose and tests/test_surface_parity.lua says
+-- why: Core is a set of names on NS rather than a major's surface, and NS.Slash is this addon's own
+-- republished table rather than the library's dispatcher, which settings/Slash.lua keeps as a
+-- file-scope local.
+--
+-- Set BEFORE Kit.expose, which is what makes it stick: expose registers a source only when none is
+-- registered yet, precisely so a runner like this one keeps its own.
+Kit.setSurfaceSource{
+  ["LibKa0s-Options-1.0"]  = NS.Helpers,
+  ["LibKa0s-DebugLog-1.0"] = NS.DebugLog,
+}
+
 -- The kit's registry and assertions are MERGED into this addon's existing global test table, under
 -- its existing name and beside its existing keys, so not one suite file's `local T = _G.PM_TEST`
 -- header changes. Kit.expose adds three assertions this repo did not have (fail, assertNil,
@@ -68,9 +88,25 @@ local SUITES = {
   "test_database", "test_debuglog",
   "test_schema", "test_slash", "test_panel", "test_profiles",
   "test_sunnart",
-  "test_libka0s", "test_harness",
+  "test_libka0s", "test_surface_parity", "test_harness",
   "test_spelling",
   "test_vendor_sync",
+  "test_layout_cap", "test_options_groups",
+  "test_register", "test_docs", "test_lintconfig",
+  -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
+  -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives
+  -- rather than being re-typed into nine repositories, so it is declared with its own `dir`.
+  -- Kit.assertSuiteInventory fails the run until it is declared, so it cannot arrive with a
+  -- re-vendor and then quietly run nothing.
+  { name = "test_eol", dir = "tests/_kit/" },
 }
+
+-- Published so tests/test_harness.lua can state the inventory gate as a NAMED case over the
+-- real list. It used to re-read this file and pull the basenames out of the `local SUITES = {`
+-- block with a string pattern, which could only see quoted names -- so the kit entry above
+-- reached it as the two bare strings "test_eol" and "tests/_kit/", and the case failed over a
+-- suite the runner had declared correctly. A parser of one's own source is a second spelling
+-- of the list; this is the list.
+_G.PM_TEST.suites = SUITES
 
 Kit.run({ dir = "tests/", suites = SUITES })

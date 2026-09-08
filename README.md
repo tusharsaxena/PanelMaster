@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-763%2F763_passing-green)
+![Tests](https://img.shields.io/badge/Tests-783%2F783_passing-green)
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
@@ -89,7 +89,9 @@ The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `
 ```
 
 Colors take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
-half-transparent red. Texture names are whatever LibSharedMedia has, and are matched however you
+half-transparent red. Which of the two scales you meant is decided by R, G and B alone; an alpha of
+1 or less is read as a fraction under either, so `255,0,0,1` is opaque red rather than a red you
+cannot see. Texture names are whatever LibSharedMedia has, and are matched however you
 type the capitals. `accentEdges` takes a comma list of `top`, `bottom`, `left`, `right` — or `none`
 for no bars at all. `artTexture` takes the id of a bundled artwork (matched however you type the
 capitals), `None`, or `Custom`; the five `art*` dropdown fields refuse anything that is not one of
@@ -124,7 +126,7 @@ has a landing page and three pages beneath it:
 |---|---|
 | Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. |
 | General | Every addon-wide setting, under three tabs: **Master controls**, **Editing** and **New panels**. |
-| Panels | The panels themselves — create, rename, copy, reset and delete them, and edit the selected one under six tabs: **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
+| Panels | The panels themselves — create, rename, copy, reset and delete them from the band at the top, and edit the selected one's appearance under five tabs: **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
 | Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
 
 **General** carries these, a tab at a time:
@@ -154,10 +156,13 @@ your panels immediately.
 
 On **Panels**, type a name in the box at the top and press Enter (or click **Okay**), then pick any
 panel from the **Panel** picker beside it to edit it. One panel is shown at a time, so the page stays
-the same size whether you have two panels or twenty. Those two controls sit above the tab strip and
-stay there whichever tab you are on; everything below is one tab at a time — **General** (identity, on/off, reset and delete),
-**Position and size**, **Background and border**, **Accent bar**, **Artwork**, and **Opacity and
-fade**. Each panel's editor has:
+the same size whether you have two panels or twenty.
+
+Everything that acts on the panel as a whole sits in that band above the tab strip and stays there
+whichever tab you are on — **Create new panel** and the **Panel** picker, then **Panel name** and
+**Copy settings from panel**, then **Enabled**, **Unlock**, **Reset** and **Delete**. Everything
+below is the selected panel's appearance, one tab at a time: **Position and size**, **Background and
+border**, **Accent bar**, **Artwork**, and **Opacity and fade**. In full:
 
 | Control | What it does |
 |---|---|

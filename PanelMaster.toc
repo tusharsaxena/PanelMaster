@@ -39,7 +39,6 @@ core\Compat.lua
 # reader out of it. Its position is conventional, not load-bearing: nothing here resolves at file
 # load, and NS.version is read at call time from core/Namespace.lua, which loads later.
 core\EnvSetup.lua
-core\LSMPatch.lua
 # MediaSetup BEFORE Constants, and that position is load-bearing rather than conventional:
 # core/Constants.lua resolves C.FONT_MONO from NS.MediaFont at FILE LOAD, so a seam published
 # later would leave the constant holding nil forever. It needs nothing but its own addonName

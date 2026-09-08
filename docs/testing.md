@@ -14,13 +14,42 @@ luacheck .            # 0 errors, 0 warnings
 ```
 
 **`luacheck`'s figure is SCOPED, not repo-wide**, and reading it as repo-wide is how a clean run
-gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` (vendored code is not this
-addon's to lint), `tests/`, `_dev/` and the frozen bundles under `docs/`. Before quoting 0/0,
-confirm what was actually opened:
+gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
+vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
+under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
+addon's code and are linted as such, which is why the figure below is 57 files and not the 26 it
+was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
 luacheck . 2>&1 | tail -1        # and read the FILE COUNT it reports
 ```
+
+## The suppression gate
+
+`luacheck .` reporting 0/0 has to be a statement about the code rather than about `.luacheckrc`, and
+nothing in the two commands above can tell the difference. `tests/test_lintconfig.lua` is what does:
+it loads `.luacheckrc` as Lua under a sandbox — the table luacheck obeys, not text a different
+spelling would slip past — and holds four rules.
+
+| Rule | What it refuses |
+| --- | --- |
+| No top-level `ignore` | An entry there reaches all 57 files, including every file with no business producing the code. |
+| No wholesale class switch | `unused_args = false` and eight relatives are the same blanket spelled as a switch. |
+| Every `files[...]` ignore is narrow | The stanza key names one `.lua` file, or the entry names the variable as well as the code (`212/self`). |
+| Every inline `-- luacheck: ignore` names a code | Bare, it silences everything in scope; with only a variable after it, every code for that name. |
+
+The fourth rule is this repo's own, and it is here because of what `M4c-06` found. `.luacheckrc`
+carried `ignore = { "212/self", "212/event" }`; removing it reported **101** findings, all of them
+`212/self` and not one `212/event`. Ten per-file stanzas answer the 101, each naming the calling
+convention that forces the receiver. Next to the blanket sat nineteen files opening
+`local addonName, NS = ...` over a folder name they never read, each behind an inline
+`-- luacheck: ignore addonName` — narrow by the letter of the other three rules, and hiding dead code
+in nineteen files. Those nineteen are fixed at source rather than re-parked; the one inline directive
+the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:183`).
+
+Adding a suppression is a two-minute job and removing one is an afternoon's. If a warning is genuine,
+fix the code; if the code is right, put the narrowest suppression the gate allows beside it and say
+in a comment which obligation forces it.
 
 ## The vendor gate
 
@@ -30,11 +59,43 @@ own suite passes against the library, and this addon's suite passes against a st
 works. Nothing goes red. Run these four whenever `../LibKa0s` has moved, and read them in pairs:
 
 ```sh
-diff -r --strip-trailing-cr ../LibKa0s/LibKa0s libs/LibKa0s    # content — MUST be empty
+diff -r --strip-trailing-cr ../LibKa0s/LibKa0s libs/LibKa0s    # content — empty vs the CLAIMED tag
 diff -r ../LibKa0s/LibKa0s libs/LibKa0s                        # bytes   — SHOULD be empty
-diff -r --strip-trailing-cr ../LibKa0s/testkit tests/_kit      # content — MUST be empty
+diff -r --strip-trailing-cr ../LibKa0s/testkit tests/_kit      # content — empty vs the CLAIMED tag
 diff -r ../LibKa0s/testkit tests/_kit                          # bytes   — SHOULD be empty
 ```
+
+### When these diffs are supposed to be non-empty
+
+They compare against the sibling checkout's **working tree** — whatever `../LibKa0s` happens to have
+checked out — which is a different question from *"is the vendored payload the release this addon
+claims?"*. The two questions give the same answer only while the library has tagged nothing newer
+than the tag this addon has taken.
+
+Between a library release and the re-vendor that carries it they disagree, and that disagreement is
+the normal state rather than a defect. It is the state as this is written: `../LibKa0s` sits on
+**v1.27.0**, [`CLAUDE.md`](../CLAUDE.md) names **v1.26.0**, and the commands above report **306**
+differing lines for the library and **947** for the test kit. Re-vendoring to quiet them would be
+the actual mistake — it would pull an untested library release for the sake of a clean diff.
+
+**The authoritative comparison is against the tag `CLAUDE.md` names**, and that one must be empty at
+every commit:
+
+```sh
+tag=$(grep -oE 'Bundles \[LibKa0s\]\([^)]*\) v[0-9]+\.[0-9]+\.[0-9]+' CLAUDE.md \
+        | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
+rm -rf "/tmp/libka0s-$tag" && mkdir -p "/tmp/libka0s-$tag"
+git -C ../LibKa0s archive "$tag" | tar -x -C "/tmp/libka0s-$tag"
+diff -r --strip-trailing-cr "/tmp/libka0s-$tag/LibKa0s" libs/LibKa0s   # MUST be empty
+diff -r --strip-trailing-cr "/tmp/libka0s-$tag/testkit" tests/_kit     # MUST be empty
+```
+
+`tests/test_vendor_sync.lua` asks exactly this question inside the suite — it greps the tag out of
+`CLAUDE.md` and reads that blob out of git — so **a green suite has already answered it**, and the
+block above is only the by-eye version for when you want to see the hunks. Which leaves the
+working-tree diffs above answering a real but different question: *how far behind the library is
+this addon?* That is release planning, not a gate.
+
 
 | Result | What it means | What to do |
 |---|---|---|
@@ -104,6 +165,49 @@ offered to someone who does not have it. Recorded in closed issue
 The generator also warns, on stderr, when a pack's declared section count disagrees with the files
 on disk, or when one theme's sections differ in size. Both are worth reading rather than ignoring —
 they mean the pack changed shape — and neither is fatal: it trusts the files.
+
+## The `layout-§1` size gate
+
+`tests/test_layout_cap.lua` compares two things: every authored `.lua` git tracks, and the census
+under *Files by the `layout-§1` band* in [ARCHITECTURE.md](ARCHITECTURE.md). It reads them in both
+directions, so a file that reaches the 1000-line on-notice band unremarked and a row left behind for a
+file that has fallen back under it are each a red.
+
+`layout-§1` binds **every authored file the repository tracks**, `tests/` included; vendored code
+(`libs/`, `tests/_kit/`) is the only carve-out that reaches this repo. A red on a file **in the band**
+is cleared by adding its census row saying what is to be done about it. A red on a file **over the
+1500 cap** is cleared only by one of the three terminal states the rule allows — peel it, open an issue
+naming the seam a peel would follow, or ratify a register row with a re-check trigger — and the census
+row then has to name the issue or the row. It is not cleared by raising `CAP`, and it must not be
+cleared by dropping the suite from `SUITES`: `Kit.assertSuiteInventory` reddens on that too, which is
+the point of having one.
+
+**This repo gates the band as well as the cap, and its siblings gate the cap alone.** MultiMeters and
+LibKa0s carry the same suite over their over-cap files and leave the band as prose. Nothing here is
+over the cap, so that shape would assert nothing at all today; the largest authored file is twelve
+lines under it and the band is where this addon's actual question lives. The reason the distinction is
+not academic: the gate's first run found `tests/test_panel.lua` at 1222, which crossed 1000 on
+2026-09-03 with nothing anywhere recording it.
+
+The line figures in the census are dated measurements and nothing asserts them, so an ordinary edit to
+a large file does not redden this gate. Membership is the invariant, not the numbers.
+
+## The `options-ui-§16` register gate
+
+`tests/test_options_groups.lua` is the same bargain as the size gate, over a different table.
+`options-ui-§16`'s border, bar and font blocks are supposed to be composed by the library; this
+addon types three of them out, because the composers emit path-keyed schema rows and the Panels page
+edits registry records. That is a ratified deviation, one row per block, in
+[ARCHITECTURE.md](ARCHITECTURE.md) ▸ *Documented deviations* — and the gate keeps the rows and the
+code honest in both directions: a fourth hand-written block with no row is a red, and so is a row
+naming a block that is no longer typed out, because the register is not a graveyard.
+
+A block is recognized by its leading row — *Font*, *Border style*, *Bar texture*, the labels the rule
+itself names — and matched to its row by the stored field the picker writes (`borderTexture`,
+`accentTexture`, `accentBorderTexture`). Field keys rather than line numbers, for the same reason the
+size gate does not assert its census figures: a citation that drifts on every ordinary edit is a gate
+with a standing reason to be switched off. *Background texture* is deliberately not a block head — a
+group over a background is not a bar group.
 
 ## Automated test records — the consolidated run
 
@@ -179,6 +283,7 @@ tests/
     mock_base.lua    -- the base WoW/Ace mock every Ka0s addon starts from
   run.lua            -- a thin consumer of the kit; also the --list inventory mode
   wow_mock.lua       -- this addon's mock, EXTENDING _kit/mock_base.lua (a fresh env per run)
+  degraded_env.lua   -- builds an addon env from a PARTIAL libs/ list; not a suite, not listed
   test_<module>.lua  -- one suite per module
 ```
 
@@ -210,10 +315,36 @@ override one by one; the *Mock fidelity that is load-bearing* list below is the 
   reached the renderer, and only the two paths calling `Canvas:RenderAll()` directly (lock/unlock and
   test mode) repainted anything. Calling the real functions means a step dropped from either entry
   point fails the suite instead of hiding in it.
-- `_kit/loader.lua` reproduces the `local addonName, NS = ...` header by calling each chunk as
+- `_kit/loader.lua` reproduces the TOC's two varargs by calling each chunk as
   `chunk("PanelMaster", NS)` under an environment where WoW globals resolve to the mock table first
-  and fall back to real `_G`.
+  and fall back to real `_G`. Both are passed to every file; only the seven that use the folder
+  name bind it — `core/EnvSetup.lua`, `core/CoreSetup.lua`, `core/MediaSetup.lua`,
+  `core/Namespace.lua`, `core/Database.lua`, `core/DebugLogSetup.lua` and `core/PanelMaster.lua`,
+  each handing it to a vendored library that cannot know which folder it was copied into. The
+  rest open `local _, NS = ...` (`M4c-06`).
 - `wow_mock.lua` stubs time, combat, metadata and UI APIs plus a universal frame.
+
+### The degradation stubs, and the gate over them
+
+Four LibKa0s seams are adopted — Core, DebugLog, Slash and Options — and each setup file carries an
+`if not lib then` branch that is what a library-less install actually runs on. A branch like that is
+a second implementation of somebody else's surface, so it drifts the moment the live half grows a
+member the addon starts calling: the live path stays green and the degraded path raises in exactly
+the install the branch exists for. That is not hypothetical — `Sl.FormatKV` was once assigned on the
+live path and not in the branch, and `/pm panel <name>` raised on it.
+
+`tests/test_surface_parity.lua` is the gate. One case per seam, each comparing the branch against the
+live surface as a **set** through `Kit.assertSurfaceParity`, and each degraded arm built by a **real
+load** with a partial `libs/` list (`tests/degraded_env.lua`) rather than by hand — hand-stubbing
+`lib = nil` inside a seam tests a branch instead of an install. Two of the four call the kit's
+**by-name** form, `assertSurfaceParity(stub, major, ignore)`, which walks only `Kit.publicMembers`
+and so drops every `__`-prefixed internal; `tests/run.lua` tells it where to look with
+`Kit.setSurfaceSource`, because both of those stubs mirror the **instance** `lib:New(descriptor)`
+returned and not the library table LibStub answers for the same name. Core and Slash stay on the
+four-argument form, and the suite's header says why for each.
+
+A member left out on purpose goes in that case's `ignore` list **with its reason**, because otherwise
+a deliberate omission and a bug read identically.
 
 ### Mock fidelity that is load-bearing
 

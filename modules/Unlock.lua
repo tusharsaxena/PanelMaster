@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.Unlock = NS.Unlock or {}
 local U = NS.Unlock
 local C = NS.Constants

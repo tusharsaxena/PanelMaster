@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 NS.Util = NS.Util or {}
 local Util = NS.Util
 local C = NS.Constants
@@ -81,11 +81,20 @@ end
 -- "r,g,b,a" → a color array, for `/pm panel set <name> bgColor 0.1,0.1,0.1,0.8`. Accepts 3 or 4
 -- components (alpha defaults to 1) and 0-255 byte input as well as 0-1.
 --
--- The byte-vs-fraction decision reads only R, G and B, and then applies to all four: a hex color
--- pasted as bytes carries its alpha as a byte too, and alpha alone is not a reliable signal (a
--- fully-opaque byte alpha is 255, but a fully-opaque fractional one is 1, and "1" is a legal value
--- in both readings). Deciding on the three unambiguous components and following through is the only
--- rule that round-trips both forms.
+-- The byte-vs-fraction decision reads only R, G and B: a fully-opaque byte alpha is 255 and a
+-- fully-opaque fractional one is 1, so alpha on its own cannot pick the scale. But it is not
+-- FOLLOWED THROUGH onto alpha unconditionally, and that is the part to read carefully. A byte alpha
+-- is always above 1 except for the near-transparent bottom of its range, so under byte-scale RGB an
+-- alpha of 1 or less is taken as already fractional and passed through untouched.
+--
+-- What that trades away is the byte alphas 0..1, which are 0% and 0.4% opaque — indistinguishable
+-- on screen from the 0 and the "fully opaque" the fractional reading gives them. What it buys is
+-- `/pm panel set x bgColor 255,0,0,1`, the form a user reaches for after reading that this parser
+-- takes bytes: it used to store alpha 1/255 and hand back a panel invisible on screen, with no
+-- error anywhere to say why.
+--
+-- Round-tripping is unaffected either way. FormatColor only ever emits the fractional form, whose
+-- RGB decides scale 1, and alpha under scale 1 is never rescaled at all.
 --
 -- Returns nil on anything unparseable, which the CLI reports rather than silently storing white.
 function Util.ParseColor(s)
@@ -101,10 +110,13 @@ function Util.ParseColor(s)
   for i = 1, 3 do
     if nums[i] > 1 then scale = 255 break end
   end
-  return {
-    nums[1] / scale, nums[2] / scale, nums[3] / scale,
-    (nums[4] == nil and 1 or nums[4] / scale),
-  }
+  local alpha = nums[4]
+  if alpha == nil then
+    alpha = 1
+  elseif scale ~= 1 and alpha > 1 then
+    alpha = alpha / scale
+  end
+  return { nums[1] / scale, nums[2] / scale, nums[3] / scale, alpha }
 end
 
 -- A color array → the "r,g,b,a" form ParseColor accepts, for the CLI echo and `/pm panel show`.

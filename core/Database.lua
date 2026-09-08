@@ -130,13 +130,21 @@ end
 -- Pure [Init] session summary for the SetEnabled seam (debug-logging-§5/§8): addon name + version,
 -- schema version, active profile, and panel count — e.g.
 -- "PanelMaster v1.0.0, schema v1, profile 'Mock - Realm', 3 panels".
--- Guarded so it can't error before the DB is ready. All values are plain constants/counts, so a raw
--- tostring is secret-safe here.
+-- Guarded so it can't error before the DB is ready. All values are plain constants, counts or the
+-- addon's own manifest strings, so a raw tostring is secret-safe here.
+--
+-- The version comes through NS.Version() (core/EnvSetup.lua), which prefers the packaged TOC's
+-- `## Version` over core/Namespace.lua's fallback constant. Not the constant directly, and the
+-- distinction is the whole point of this line: it is what a user pastes into a bug report, so on a
+-- build whose TOC has moved ahead of the constant it has to name the version the player installed,
+-- not the one somebody forgot to edit. core/EnvSetup.lua's header has always listed "the database's
+-- debug summary" among the surfaces that resolve through the seam; until M4-19 this was the one
+-- that did not.
 function NS.InitSummary()
   local g = NS.db and NS.db.global
   local schema = (g and g.schemaVersion) or 0
   local profile = (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?"
   local panels = (NS.db and NS.db.profile and NS.db.profile.panels and #NS.db.profile.panels) or 0
   return ("%s v%s, schema v%s, profile '%s', %s panels"):format(
-    tostring(NS.name), tostring(NS.version), tostring(schema), tostring(profile), tostring(panels))
+    tostring(NS.name), tostring(NS.Version()), tostring(schema), tostring(profile), tostring(panels))
 end

@@ -1,4 +1,4 @@
-local addonName, NS = ...   -- luacheck: ignore addonName
+local _, NS = ...
 
 -- The known-pack manifest for the Sunn - Viewport Art adapter: what the OFFICIAL packs contain,
 -- recorded here so the feature does not depend on their registration having run.

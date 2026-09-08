@@ -345,9 +345,10 @@ test("Unlock: the overlay follows the panel's level when the panel's level chang
   R:New("ZFollow")
   local rec = R:FindByName("ZFollow")
   U:SetUnlocked(true)
-  local f = Canvas:FrameFor(rec.id)
   R:Set(rec.id, "level", 7)
-  f = Canvas:FrameFor(rec.id)
+  -- Fetched AFTER the level change: FrameFor is a lookup in `active`, so a pre-change fetch
+  -- proves nothing the assertion below does not.
+  local f = Canvas:FrameFor(rec.id)
   assertEqual(f.overlay.frame:GetFrameLevel(),
     f:GetFrameLevel() + NS.Constants.UNLOCK_FRAME_LEVEL)
   U:SetUnlocked(false)

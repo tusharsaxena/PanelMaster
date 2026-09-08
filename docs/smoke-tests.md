@@ -8,6 +8,10 @@ and whenever the `## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 
+**§ 22 is the exception to "before tagging a release"**: it is the non-English-client pass, it
+needs a deDE or frFR client, and nothing else on this page looks at a panel name that is not
+ASCII.
+
 Start each run from a clean state: `/reload`, then `/pm resetall` (confirm it) — which is a **profile
 reset** and takes the panels with it, so `/pm panel deleteall` is no longer needed alongside it.
 
@@ -87,6 +91,15 @@ number it replaced, so the first half of every check is that **nothing moved**.
 With a panel created and locked:
 
 1. `/pm panel <name> bgColor 1,0,0,0.5` → **Expect:** it turns translucent red immediately.
+1a. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-18`; the plan gives this item no numbered
+   session, so fold it into any convenient login). The same color in the byte form the parser also
+   accepts, with a fractional alpha: `/pm panel <name> bgColor 255,0,0,0.5` → **Expect:** the
+   *identical* translucent red as step 1, and the echo reads `1.00,0.00,0.00,0.50`. Then
+   `/pm panel <name> bgColor 255,0,0,1` → **Expect:** the same red, **fully opaque**, echoing
+   `1.00,0.00,0.00,1.00`. That last one is the fix: the byte scale chosen from R, G and B used to be
+   applied to alpha as well, so a 1 there meant 1/255 and the panel vanished off the screen with
+   nothing in chat or the error frame to say why. `/pm panel <name> bgColor 255,0,0,128` still
+   scales — half-transparent, echoing `0.50` — because a byte alpha above 1 is unambiguous.
 2. `/pm panel <name> borderSize 6` (it starts at 0) and `/pm panel <name> borderColor 0,1,0,1` → **Expect:** a thick
    green border, with the four edges **meeting cleanly at the corners** — no darker overlap squares,
    which is what a translucent border would reveal.
@@ -116,7 +129,9 @@ With a panel created and locked:
 4. Open **Border style** and pick `Blizzard Tooltip`. **Expect:** a proper decorative edge, with
    corners drawn correctly — not four flat bars.
 5. Check the closed **Border style** dropdown is flush with the controls beside it, with no ~42px
-   empty gap on its left. A gap means `core/LSMPatch.lua` is not taking effect.
+   empty gap on its left. A gap means `lib.__PatchLSM30Border()` is not taking effect. **This step
+   checks it with PanelMaster alone, which is exactly the check that stayed green all the way
+   through the defect section 20 exists for** — run 20 too whenever this one matters.
 6. Raise **Border thickness (px)** to 8 and back to 1. **Expect:** the edge scales with it.
 7. Set **Border style** to `None`. **Expect:** the border disappears entirely while **Border thickness (px)**
    stays where it was. Set it back and the border returns.
@@ -251,6 +266,16 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
    the cursor, so it can be found and dragged. Untick and the fade resumes.
 8. Create half a dozen mouseover panels and watch your frame rate. **Expect:** no measurable change —
    one shared 10Hz ticker drives all of them.
+9. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-22`; the plan gives this item no numbered session, so
+   fold it into any convenient login). **The ticker comes back after it has been switched off.** Untick
+   **Show on mouseover only** on *every* panel that has it — the last one is the one that matters,
+   because that is when `SetMouseoverTracked` now takes the `OnUpdate` off the shared driver frame.
+   Then tick it again on one panel and hover it. **Expect:** the fade works exactly as in step 3,
+   promptly and without stutter. **Fail:** the panel sits at one opacity and never responds to the
+   cursor again for the rest of the session — which is what an `ensureMouseoverDriver` that early-returns
+   on a frame it already created would produce. No headless case can witness that: the suite calls
+   `Canvas.__updateMouseover` directly and never goes through the script slot, which is why the new case
+   asserts on the slot itself rather than on an alpha.
 
 ## 5e. Artwork — does it load at all
 
@@ -410,23 +435,30 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 4. Toggle **Lock frame** and **Test mode** → **Expect:** they do exactly what the slash commands do,
    with **Lock frame** the *inverse* of `/pm unlock`: unticking it unlocks. Ticked is the shipped
    state, and it is ticked again after every `/reload`.
-5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
-   border | Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band,
-   a **Create new panel** box and a **Panel** picker side by side, separated from the strip by a
-   hairline rule. **Neither is a tab and neither is in the scroll**: they stay put whichever tab is
-   selected. There is **no second box drawn around them** — the band's own divider is the boundary.
+5. Click **Panels** → **Expect:** a five-tab strip — **Position and size | Background and border |
+   Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band, three
+   rows: **Create new panel** beside the **Panel** picker, then **Panel name** beside **Copy
+   settings from panel**, then **Enabled | Unlock | Reset | Delete** across the bottom. The band is
+   separated from the strip by a hairline rule. **None of the eight is a tab and none is in the
+   scroll**: they stay put whichever tab is selected. There is **no second box drawn around them** —
+   the band's own divider is the boundary.
 5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
-   page. **Expect:** the band above the strip holds the **Create new panel** box and the **Panel**
-   picker, at full width. An empty band of the right height with nothing in it is the zero-width
-   layout race: the canvas has no width until it lays itself out, and this block is built once for
-   the session, so without its own resize hook it stays empty until a `/reload`. Then drag the
-   Settings window's edge to resize it and confirm both controls follow.
+   page. **Expect:** the band above the strip holds all three rows, at full width. An empty band of
+   the right height with nothing in it is the zero-width layout race: the canvas has no width until
+   it lays itself out, and this block is built once for the session, so without its own resize hook
+   it stays empty until a `/reload`. Then drag the Settings window's edge to resize it and confirm
+   every control follows.
 5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
-   it is **still there** with both controls usable, and the page reads "No panels yet…" underneath.
+   it is **still there** at the same height, and the page reads "No panels yet…" underneath. The
+   **Create new panel** box and the **Panel** picker are usable; the other six are **grayed out
+   rather than gone**, and the **Panel name** box is empty. A band that shrinks, or that loses a
+   row, is the failure — the six acts have nothing to act on, which is not the same as not existing.
    The page must never lose its strip.
 5b. **Layout check.** The **Panel** picker carries its label, sits beside the create box, and there is
-   **no heading naming the selected panel** above the editor. Inside the editor there is **no boxed
-   border** around the controls — the tab strip's own content panel is the boundary — and no two
+   **no heading naming the selected panel** above the editor. In the band, the three rows do not run
+   into each other: the two checkboxes and the two buttons stay on their own line rather than riding
+   up beside the labels above them, and the **Delete** button's right border is clear of the band's
+   edge. Inside the editor there is **no boxed border** around the controls — the tab strip's own content panel is the boundary — and no two
    unrelated controls share a line. Three tabs carry **subsection headings**, drawn as the same
    divider-flanked heading the landing page uses: **Background / Border** on *Background and border*,
    **Bar / Edges / Border** on *Accent bar*, and **Image / Layout / Appearance** on *Artwork*. On
@@ -439,10 +471,30 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    in both cases. It must never be left floating over, or outside, the settings window while the
    control it belongs to scrolls away. Re-open it afterwards to confirm one click still opens it
    (rather than the click being eaten as a toggle-shut).
-5c. **Top action row.** On the **General** tab, **Reset** and **Delete** sit directly under
-   **Enabled** and **Unlock**, at the top of the editor — not at the bottom, and not on any other
-   tab. The frame name is **not** a label of its own: it lives
-   on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
+5c. **The band's acts, from every tab** (`options-ui-§14`, `M4-15`).
+   **Smoke, session 3. NOT YET RUN.**
+   **Enabled**, **Unlock**, **Reset** and **Delete** sit on the band's bottom row, with
+   **Panel name** and **Copy settings from panel** on the row above. They were a sixth **General**
+   tab, and all six act on the panel as a whole rather than on one aspect of it. Walk every one of
+   the five tabs and confirm **all six are still there and still enabled** on each — a control that
+   vanishes when you change tab is the move not having been made. Then, from a tab that is *not* the
+   first one: tick and untick **Enabled** (the panel goes and comes back), tick **Unlock** (only
+   that panel grows a handle), press **Reset**, and finally **Delete**. Each must act on the panel
+   the **Panel** picker is showing, not on whichever panel was selected when the page was first
+   opened — the band is built once per session and re-points itself, and acting on a stale panel is
+   the specific regression this step exists to catch. The frame name is **not** a label of its own:
+   it lives on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
+5c-2. **The rename box is not overwritten while you type.**
+   **Smoke, session 3. NOT YET RUN.**
+   Select a panel, click into **Panel name**
+   and type a few characters **without** pressing Enter. Now, with the box still holding your
+   uncommitted text, run `/pm new Interloper` from the chat box. **Expect:** the new panel appears in
+   the **Panel** picker and *your text is still in the rename box*. The box is in the band now and
+   survives the rebuild, so it is dressed only when the selection changes or when the panel's name
+   changed elsewhere; a box that snapped back to the stored name is the guard missing. Then check the
+   other half: with nothing typed, run `/pm rename <selected panel> Renamed` (give it a one-word
+   name first — the CLI reads the old name as the first word only) → **Expect:** the box follows to
+   the new name.
 5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry updates and
    the **Frame name** on the tooltip does **not** — it is fixed at create, so anchors survive. Try
    renaming to an existing panel's name → **Expect:** a cyan-tagged error and the box reverts to the
@@ -526,7 +578,7 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 
 The addon's public contract, and the one thing no unit test can prove works in a live client.
 
-1. Create a panel called **Chat BG**. Hovering the editor's **Panel name** box should report
+1. Create a panel called **Chat BG**. Hovering the band's **Panel name** box should report
    `Frame name: PanelMaster_Panel_Chat_BG`.
 2. In a macro or a `/run`, confirm the frame really exists under that name:
    `/run print(PanelMaster_Panel_Chat_BG:GetWidth())` → **Expect:** the panel's width.
@@ -599,7 +651,8 @@ rather than carried, and the first is the one that could destroy a layout.
 
 1. Make two panels. Style the first heavily — size, textures, both colors, border, accent bar.
    Move the second somewhere clearly different.
-2. On the **second** panel, pick the first from **Copy settings from panel**.
+2. On the **second** panel, pick the first from **Copy settings from panel** — in the chrome band's
+   middle row, beside the rename box, reachable from whichever tab you happen to be on.
 3. **Expect:** the second takes on the first's entire appearance **and size**, and a cyan-tagged
    confirmation names the source.
 4. **Expect: it does not move.** Position is deliberately not copied — otherwise the two would land
@@ -718,8 +771,8 @@ that looks different is the finding.
     headings down one scrolling page — that change is the tabbed-panel pass, not a defect.
 11. **Recover panels** is a button **under** the Editing tab's last row now, rather than to the
     right of **Grid size** — which pairs with **Snap to grid** instead. It does the same thing.
-12. The **Panels** page's create box and selector are untouched; the editor below them is one tab at
-    a time.
+12. The **Panels** page's band holds the create box, the selector and the six panel-wide acts; the
+    editor below them is one tab at a time.
 13. The scrollbar is **always visible** on every page and grays out when the page fits, so the body
     width does not jump as you tab between pages.
 14. Open the **Default frame strata** dropdown, then **scroll the page**: the list closes. Do it
@@ -739,6 +792,18 @@ proves nothing about the verb.
 3. `/pm config` → **Panels** → **Defaults** → the **same** popup appears. Choose **No**. Both
    panels survive.
 4. Now choose **Yes** from either. Both panels are gone, and chat says `deleted 2 panels.`
+4a. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-18`; the plan gives this item no numbered
+   session, so fold it into any convenient login). What the wipe does to preview, which is the
+   session state it could not see: `/pm preview on` (three placeholders appear), then **without
+   turning it off** run `/pm panel deleteall` and choose **Yes** — the placeholders go with
+   everything else. Now `/pm preview on` again → **Expect:** the three placeholders **come back**.
+   Before the fix this was a silent no-op with nothing on screen: `DeleteAll` emptied the tracked id
+   list but left the `preview` flag standing, and `SetPreview` returns early when the flag already
+   matches, so the only way back was to turn off a preview that was not running. Finish with
+   `/pm preview off`. ⚠ **Also expect the screen to stay unlocked** across the wipe — preview's
+   *implied* unlock outlives the preview that caused it here, exactly as it does across a profile
+   switch (12b-2), because the global unlock is a mode you put the screen in and no sweep clears it.
+   A panel made after the wipe comes up with its drag handle; `/pm lock` puts it back.
 5. `/pm resetall` → the **confirm popup** appears first, carrying the collection's one wording
    (`options-ui-§12`), verbatim: *"Reset this profile to the addon's defaults? Everything you have
    configured or added in it is discarded — your other profiles are not affected."* Choose **No**:
@@ -820,3 +885,178 @@ is step 1.
     options, that is precisely the case this checks — a remembered theme with no files behind it
     must not be offered.
 
+## 19. LibKa0s — the tab strip survives being pooled and re-dressed
+
+**Smoke, session 3. NOT YET RUN.** New with `M4-01`'s LibKa0s v1.27.0 re-vendor. `TabStrip`
+(`libs/LibKa0s/OptionsWidgets.lua`) no longer builds a button and a content panel per click: it
+acquires both from per-`ctx` `LibKa0s-Pool-1.0` pools and re-dresses them, re-setting `OnClick` on
+every dress. Its only headless proof counts `CreateFrame` calls on a second selection pass, and the
+case that would pin band geometry as invariant under selection cannot be written yet — the shared
+mock answers `GetHeight` with 0 for every frame, and that flips at kit 16, not here. **So a stale
+label, a mis-anchored button or a band that changes height on a re-dressed tab is invisible to every
+automated check in this repo.**
+
+This addon's strip is drawn straight onto the chrome band with `H.TabStrip`
+(`settings/PanelEditor.lua`) rather than through `H.RenderTabbedSchema`, because a panel is a
+registry record and not a set of schema rows to partition. So it exercises the pooled path more
+directly than a schema-driven strip does, and `ctx.activeTab` is the one piece of selection state
+that survives a render.
+
+1. `/pm` → **Panels**. Cycle every tab of the strip three times, ending back on the first.
+2. Watch three things on each pass: the **label** is that tab's own, the **selected** tab is the one
+   you pressed, and the strip's **band height** does not move as you go through it.
+3. **Expect:** every tab named and selected correctly on all three passes, and no band that grows or
+   shrinks. A name carried over from the previously-dressed tab, a highlight on the wrong button, a
+   body drawn under the wrong tab, or a strip whose height moves between passes is the pool handing
+   back a frame it did not finish dressing.
+4. Then reopen the page from scratch (`Esc`, `/pm` again) and repeat step 1 once. The pools are
+   per-`ctx`, so a second build is the case where a released frame comes back dressed for a
+   different tab.
+
+`LibKa0s-Perf-1.0` minor 8 arrived in the same payload and respells five player-facing strings, but
+`Perf` is not wired in this addon, so none of them has a surface here.
+
+---
+
+## 20. The Border dropdown when five Ka0s addons share one registry
+
+**Smoke, session 5. NOT YET RUN.** Run after this addon's `core/LSMPatch.lua` was deleted and
+`settings/OptionsSetup.lua`'s live wiring took over the fixup (`M4-05`), and again after **each** of
+the three remaining deletions — ConsumableMaster, MultiMeters, then AbsorbTracker last, because
+AbsorbTracker's copy is the one that diverges (a callable `NS.ApplyLSMBorderPatch()` rather than a
+`PLAYER_LOGIN` frame). Five deletions, five commits, five bisect points if this goes wrong.
+
+**The thing under test is not PanelMaster.** AceGUI's widget registry is process-global: one slot
+named `LSM30_Border` shared by every addon in the client, Ka0s or not, and the highest version
+registered for the name wins for the rest of the session. Five Ka0s addons each carried a private
+copy of the same wrapper, each registering one version above whatever it found, so the wrapper a
+Border dropdown actually got belonged to whichever addon the client loaded last. Nothing headless in
+any of the five repos could see it — each suite loads one copy, registers once and passes — and
+section 5b step 5 above, which checks the alignment with PanelMaster alone, passed throughout.
+
+KickCD lost its private copy first (`M4-04`); PanelMaster is the second of the five. So this run is
+also the evidence that one library-level registration dresses the dropdown in **two** addons that no
+longer carry their own, with three that still do loaded alongside them.
+
+1. Enable KickCD, PanelMaster, AbsorbTracker, ConsumableMaster and MultiMeters together, and log in.
+2. Open each addon's Border dropdown in turn. PanelMaster's is `/pm` → **Panels** → select a panel →
+   **Border style**.
+3. Change the load order — disable and re-enable addons, or rename folders so a different one is
+   reached last — `/reload`, and walk the five dropdowns again.
+
+**Expect:** in all five, the closed control's left edge is **flush** with the sliders and checkboxes
+stacked with it, with **no ~42px gap**, and opening it still draws the per-row hover previews.
+Nothing differs between the two passes. **Any dropdown that looks different from the other four, or
+that changes when the load order changes, is the finding** — the whole point of moving the
+registration into LibKa0s is that the answer no longer depends on who loaded last. No Lua error at
+any point.
+
+---
+
+## 21. The `[Init]` line reports the PACKAGED version
+
+**Smoke, session 3. NOT YET RUN.** Opportunistic — fold it into whatever login is convenient; it is
+a one-line look and is not a reason to schedule client time. New with `M4-19`, which pointed
+`NS.InitSummary` (`core/Database.lua`) at `NS.Version()` instead of `core/Namespace.lua`'s fallback
+constant, the seam `core/EnvSetup.lua` already said that line used.
+
+**Why it is here at all, given the harness now covers it.** `tests/test_database.lua` proves the
+summary carries whatever the TOC answers, and against a mock that answers on demand. What the mock
+cannot witness is TIMING: the `[Init]` line rides `DebugLog:SetEnabled`, and in a real client the
+manifest read has to have resolved by the moment that descriptor runs. If it has not, `NS.Version()`
+falls back and the line silently reports the constant again — which looks correct on a shipped build
+where the two strings agree, and is exactly the failure this change exists to remove.
+
+**Setup.** In the INSTALLED copy under `Interface/AddOns/PanelMaster/` — never in the repo — edit
+`PanelMaster.toc` so `## Version:` reads `1.0.0-smoke`. That is the whole point: while the TOC and
+`core/Namespace.lua`'s constant read the same `1.0.0`, no in-client observation can tell which one
+was printed.
+
+1. Log in.
+2. `/pm debug on`.
+3. Read the `[Init]` line — in chat and in the console (§ 11 step 2).
+4. `/pm version`.
+5. Restore the installed TOC's `## Version` and `/reload`.
+
+**Expect:** step 3 reads `PanelMaster v1.0.0-smoke, schema v2, profile '<yours>', N panels` — the
+**TOC's** string — and step 4 reads `[PM] v1.0.0-smoke`. The two surfaces agree.
+
+**Fail:** an `[Init]` line reading `v1.0.0` while `/pm version` reads `v1.0.0-smoke`. That is one
+string with two sources of truth, and the `[Init]` line is the one a user pastes into a bug report.
+
+---
+
+## 22. Non-English client (session 6, `M5-08`)
+
+**Session 6 of the 2026-09-07 remediation plan. NOT YET RUN — no WoW client was available when
+`M5-08` landed. Nothing in this section has been performed and no step in it is recorded as
+passed.** Run on a client set to **deDE or frFR**, the two the collection's other locale steps use
+(`ConsumableMaster/docs/smoke-tests.md` § 3c, `KickCD/docs/smoke-tests.md` § 9b).
+
+**This addon reads almost nothing the client translates, and that is why it needs this section
+rather than why it does not.** The enumeration came back nearly empty: no chat or tooltip `_G`
+constant, no tooltip line parsed in place of an API return, no `subType` where a `classID` exists
+(`grep -rn '_G\[' core modules settings` reaches only `core/EnvSetup.lua`'s metadata ladder).
+Recheck that grep rather than trusting this sentence — it is a claim, and a claim is what an absent
+step is being replaced with.
+
+The exposure runs the **other way**: through the panel names a player types. On a German or French
+client those names carry umlauts and accents, and two seams treat those bytes as punctuation:
+
+- **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore.
+  Lua's `%w` is ASCII-only, so `Ü` is not a letter to it. `Übersicht` slugs to `bersicht`, and
+  **`Ärger` and `Örger` both slug to `rger`**. That slug is not cosmetic: it is the addon's public
+  contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
+  to.
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:278-285`) and the Panels list's
+  sort (`settings/PanelEditor.lua:263`) both use `string.lower`, which folds ASCII and nothing else.
+  `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
+
+Every label the addon prints is hardcoded English and stays English here. That is the addon's scope,
+not a regression.
+
+1. **A panel named in the client's own language.** `/pm new Übersicht` (or `Écran`, on frFR). Open
+   the settings page and hover the band's **Panel name** box to read the reported frame name, then
+   `/run print(PanelMaster_Panel_<the reported slug>:GetWidth())`.
+   **Expect:** the panel is created, the name renders correctly everywhere it is shown — the band,
+   the Panels list, `/pm panels` — and the reported frame name resolves to a real frame.
+   **Fail:** a name that renders as `?` or mojibake anywhere (the text never survived the round
+   trip), or a reported frame name that does not resolve (the slug shown and the slug stamped
+   disagree). **Write down the slug the tooltip reports.** `Übersicht` losing its first letter to
+   `PanelMaster_Panel_bersicht` is not itself a crash, and it is the answer this step exists to get:
+   the contract § 11b documents is "another addon can work the frame name out from the panel name",
+   and a player who cannot do that arithmetic in their own alphabet has no contract.
+2. **Two names, one slug.** `/pm new Ärger`, then `/pm new Örger`.
+   **Expect, if the contract holds:** two panels, two distinct frame names.
+   **Fail:** the second refused, with a message naming a frame name (`PanelMaster_Panel_rger`)
+   that looks like neither name the player typed. That is the slug-uniqueness check doing its job
+   over a slug that threw the distinguishing letter away, and on an English client the pair that
+   provokes it does not exist. Record which happened; a refusal here is a finding to file, not a
+   step to re-run.
+3. **The name lookup folds only half the alphabet.** With `Übersicht` created, run
+   `/pm panel übersicht` (lower-case `ü`) and any other verb that takes a name.
+   **Expect:** the panel resolves, the same way `/pm panel chat bg` resolves `Chat BG` on English —
+   `FindByName`'s own comment says requiring the user to reproduce their own casing is friction
+   with no upside.
+   **Fail:** "no panel called übersicht", while the ASCII half of the same name matches fine. Then
+   try creating a **second** panel named `übersicht`: if it is accepted, the duplicate-name guard
+   has the same hole and there are now two panels the CLI cannot tell apart.
+4. **Sort order in the Panels list.** With three or four panels whose names start with accented and
+   unaccented letters, open the Panels page.
+   **Expect:** names sorted the way a reader of that language would expect.
+   **Fail:** every accented name clumped at one end regardless of its letter. Cosmetic, and worth
+   knowing before someone calls it a rendering bug.
+5. **The round trip.** `/reload`, then check all of the above again, then switch profiles and back
+   (§ 12).
+   **Expect:** names, frame names and anchors identical.
+   **Fail:** any name that changed shape across the reload, which means it was re-slugified or
+   re-encoded on the way out of SavedVariables rather than stored as typed.
+
+**Sign-off without a non-English client.** Steps 1 to 4 can be *provoked* on an English client by
+typing the same characters into `/pm new` — the client's language does not decide what `string.lower`
+folds, and a US keyboard can still produce `Ä`. That is worth doing and is not the same test: it
+tells you nothing about how the client renders those glyphs in its own fonts, about the name
+surviving its own text input, or about what a player of that language would actually type. The
+headless suite proves none of it: `tests/test_util.lua` and `tests/test_registry.lua` feed ASCII
+names in throughout. Until the pass runs, the honest state of this section is unrun, and it is
+recorded that way rather than as coverage.
