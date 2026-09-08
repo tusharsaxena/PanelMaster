@@ -38,16 +38,17 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:646` installs
-a single shared driver the first time any panel is tracked for mouseover:
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:644-650` is the
+tick and `:660` installs it on a single shared driver, the first time any panel is tracked for
+mouseover:
 
 ```lua
-mouseoverDriver:SetScript("OnUpdate", function(_, delta)
-  elapsed = elapsed + (delta or 0)
-  if elapsed < MOUSEOVER_INTERVAL then return end   -- 0.1 == 10Hz
-  elapsed = 0
+local function mouseoverTick(_, delta)
+  mouseoverElapsed = mouseoverElapsed + (delta or 0)
+  if mouseoverElapsed < MOUSEOVER_INTERVAL then return end   -- 0.1 == 10Hz
+  mouseoverElapsed = 0
   updateMouseover()
-end)
+end
 ```
 
 `updateMouseover` walks every mouseover-tracked panel and calls `NS.Compat.MouseIsOver(f)` on each,
@@ -55,8 +56,9 @@ setting alpha. There is no `InCombatLockdown` gate and none is wanted — the wh
 is that it keeps working while the player is busy.
 
 The driver exists only once a panel has **Show on mouseover only** ticked (`mouseover` defaults to
-`false`, `core/Constants.lua:306`), and it is never destroyed afterwards. That makes it a
-user-reachable hot path, not dead code, so:
+`false`, `core/Constants.lua:306`), and the frame is never destroyed afterwards — only its script,
+which `Canvas.SetMouseoverTracked` removes when the tracked set empties and re-installs when it
+refills. That makes it a user-reachable hot path, not dead code, so:
 
 - **(a) fails.** There is an `OnUpdate` handler doing per-frame-budget work in combat.
 - **(b) fails with it.** A declared bucket around `updateMouseover` would not read `0.000` by
@@ -80,8 +82,9 @@ The reason is the shape of the one path, not a claim that the path does not exis
   per-record work, no allocation, no string building, and no scan that grows with saved data.
 - **The set is bounded by a number the player sets.** A panel joins it only with *Show on mouseover
   only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:306`). With none ticked
-  `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the
-  driver accumulates `delta` and returns.
+  `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the frame
+  survives but its `OnUpdate` does not — `SetMouseoverTracked` clears the script on the untrack that
+  empties the set, so the dormant cost is a bare frame and no per-frame callback at all.
 - **Nothing a raid does changes it.** Group size, combat log volume and saved-data size are all
   irrelevant to this loop, which is what separates it from the paths `performance-§1` exists for.
 
@@ -116,7 +119,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:646` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:644-650` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
 
 ### `RegisterEvent` — 4 hits
 

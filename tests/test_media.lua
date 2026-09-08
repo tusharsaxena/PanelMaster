@@ -660,6 +660,23 @@ test("Canvas: a deleted mouseover panel leaves the ticker", function()
   assertEqual(Canvas.__mouseoverPanels[rec.id], nil)
 end)
 
+test("Canvas: the ticker unhooks when the last tracked panel leaves, and comes back", function()
+  fresh()
+  local rec = R:New("Fader", { mouseover = true })
+  local driver = Canvas.__mouseoverDriver
+  assertTrue(driver ~= nil, "tracking the first panel must create the driver")
+  assertTrue(driver:GetScript("OnUpdate") ~= nil, "a tracked panel must be driven")
+  R:Delete(rec.id)
+  -- The frame is kept -- creating it once is right -- but an OnUpdate over an empty set still runs
+  -- every frame to accumulate a delta it does nothing with, for the rest of the session.
+  assertEqual(driver:GetScript("OnUpdate"), nil, "the driver still runs with nothing to drive")
+  R:New("Fader again", { mouseover = true })
+  -- And the re-install is the half that is easy to get wrong: ensureMouseoverDriver sees a frame it
+  -- already made, so an early return there leaves every later mouseover panel un-driven in game --
+  -- which no other case can see, because they all call __updateMouseover directly.
+  assertTrue(driver:GetScript("OnUpdate") ~= nil, "re-tracking left the driver scriptless")
+end)
+
 test("Canvas: an unlocked mouseover panel is held fully visible", function()
   fresh()
   local rec = R:New("Fader", { mouseover = true, mouseoverAlpha = 0, alpha = 1 })

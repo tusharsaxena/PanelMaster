@@ -639,28 +639,44 @@ local function updateMouseover()
 end
 Canvas.__updateMouseover = updateMouseover   -- test seam: the headless build has no OnUpdate
 
+-- The tick itself, built once at file scope rather than per install: SetMouseoverTracked takes the
+-- script off again when the tracked set empties, so this is assigned more than once per session.
+local mouseoverElapsed = 0
+local function mouseoverTick(_, delta)
+  mouseoverElapsed = mouseoverElapsed + (delta or 0)
+  if mouseoverElapsed < MOUSEOVER_INTERVAL then return end
+  mouseoverElapsed = 0
+  updateMouseover()
+end
+
 local function ensureMouseoverDriver()
-  if mouseoverDriver then return mouseoverDriver end
-  mouseoverDriver = CreateFrame("Frame")
-  local elapsed = 0
-  mouseoverDriver:SetScript("OnUpdate", function(_, delta)
-    elapsed = elapsed + (delta or 0)
-    if elapsed < MOUSEOVER_INTERVAL then return end
-    elapsed = 0
-    updateMouseover()
-  end)
+  if not mouseoverDriver then
+    mouseoverDriver = CreateFrame("Frame")
+    Canvas.__mouseoverDriver = mouseoverDriver   -- test seam: created once, so never stale
+  end
+  -- Assigned every time, not only on creation. The frame outlives the tracked set but its script
+  -- does not, so a driver that already exists may well be sitting there scriptless.
+  mouseoverElapsed = 0
+  mouseoverDriver:SetScript("OnUpdate", mouseoverTick)
   return mouseoverDriver
 end
 
--- Add or drop a panel from the mouseover ticker, and start the ticker on first use. The driver is
--- never destroyed once created — it is one frame, and it stops doing any work the moment the tracked
--- set is empty.
+-- Add or drop a panel from the mouseover ticker, and start the ticker on first use.
+--
+-- The frame is never destroyed once created — it is one frame, and re-creating it would leak the old
+-- one. Its script is another matter: an OnUpdate over an empty tracked set is not free, it runs every
+-- frame to add a delta it will do nothing with, and it would outlive by the whole session the one
+-- panel that installed it. So the script comes off when the set empties, and ensureMouseoverDriver
+-- puts it back.
 function Canvas.SetMouseoverTracked(id, frame, tracked)
   if tracked then
     mouseoverPanels[id] = frame
     ensureMouseoverDriver()
   else
     mouseoverPanels[id] = nil
+    if mouseoverDriver and next(mouseoverPanels) == nil then
+      mouseoverDriver:SetScript("OnUpdate", nil)
+    end
   end
 end
 

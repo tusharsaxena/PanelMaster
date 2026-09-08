@@ -262,6 +262,16 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
    the cursor, so it can be found and dragged. Untick and the fade resumes.
 8. Create half a dozen mouseover panels and watch your frame rate. **Expect:** no measurable change —
    one shared 10Hz ticker drives all of them.
+9. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-22`; the plan gives this item no numbered session, so
+   fold it into any convenient login). **The ticker comes back after it has been switched off.** Untick
+   **Show on mouseover only** on *every* panel that has it — the last one is the one that matters,
+   because that is when `SetMouseoverTracked` now takes the `OnUpdate` off the shared driver frame.
+   Then tick it again on one panel and hover it. **Expect:** the fade works exactly as in step 3,
+   promptly and without stutter. **Fail:** the panel sits at one opacity and never responds to the
+   cursor again for the rest of the session — which is what an `ensureMouseoverDriver` that early-returns
+   on a frame it already created would produce. No headless case can witness that: the suite calls
+   `Canvas.__updateMouseover` directly and never goes through the script slot, which is why the new case
+   asserts on the slot itself rather than on an alpha.
 
 ## 5e. Artwork — does it load at all
 

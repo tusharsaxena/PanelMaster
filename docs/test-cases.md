@@ -219,7 +219,7 @@ badge and any count quoted in the docs must agree with it.
 - Unlock: the outline thickness comes from the setting, and ships at the old literal
 - Unlock: a hand-edited outline thickness is clamped, not drawn
 
-### test_media.lua (83)
+### test_media.lua (84)
 
 - Util.Slugify: keeps alphanumerics and collapses everything else
 - Util.Slugify: trims leading and trailing separators
@@ -293,6 +293,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: only mouseover panels are tracked by the ticker
 - Canvas: turning mouseover off untracks the panel and restores its alpha
 - Canvas: a deleted mouseover panel leaves the ticker
+- Canvas: the ticker unhooks when the last tracked panel leaves, and comes back
 - Canvas: an unlocked mouseover panel is held fully visible
 - Canvas: a panel unlocked ON ITS OWN also suspends the fade
 - Unlock.IsPanelUnlocked: false by default
@@ -866,7 +867,7 @@ badge and any count quoted in the docs must agree with it.
 | test_registry.lua | 50 |
 | test_canvas.lua | 36 |
 | test_unlock.lua | 32 |
-| test_media.lua | 83 |
+| test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
@@ -883,4 +884,4 @@ badge and any count quoted in the docs must agree with it.
 | test_vendor_sync.lua | 2 |
 | test_layout_cap.lua | 3 |
 | test_eol.lua | 1 |
-| **Total** | **773** |
+| **Total** | **774** |
