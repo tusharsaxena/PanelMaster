@@ -6,7 +6,7 @@ badge and any count quoted in the docs must agree with it.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (27)
+### test_util.lua (29)
 
 - Util.SplitPath: splits a dotted path
 - Util.SplitPath: a single segment is one part
@@ -25,8 +25,10 @@ badge and any count quoted in the docs must agree with it.
 - Util.ParseColor: reads a 0-1 triple and defaults alpha
 - Util.ParseColor: reads a 0-255 tuple and scales it
 - Util.ParseColor: the byte decision reads RGB only
+- Util.ParseColor: a byte triple's alpha of 1 or less is already fractional (PANELMASTER-R-03)
 - Util.ParseColor: rejects junk and wrong-length input
 - Util.FormatColor: round-trips through ParseColor
+- Util.FormatColor: round-trips the mixed-scale byte form too (PANELMASTER-R-03)
 - Util.CleanName: trims and collapses whitespace
 - Util.CleanName: empty and whitespace-only names are nil
 - Util.DeepCopy: copies nested tables rather than aliasing
@@ -90,7 +92,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (49)
+### test_registry.lua (50)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -103,6 +105,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Delete: an unknown panel is an error, not a silent no-op
 - Registry.DeleteAll: empties the registry and reports the count
 - Registry.DeleteAll: drops the session state keyed on the panels it removed (F-020)
+- Registry.DeleteAll: the preview flag goes with the ids it belongs to (PANELMASTER-R-02)
 - Registry.Resolve: finds by name and by id
 - Registry.Resolve: a name wins over an id that looks like it
 - Registry.Rename: renames and reports the old name
@@ -855,12 +858,12 @@ badge and any count quoted in the docs must agree with it.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 27 |
+| test_util.lua | 29 |
 | test_compat.lua | 11 |
 | test_constants.lua | 17 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 49 |
+| test_registry.lua | 50 |
 | test_canvas.lua | 36 |
 | test_unlock.lua | 32 |
 | test_media.lua | 83 |
@@ -880,4 +883,4 @@ badge and any count quoted in the docs must agree with it.
 | test_vendor_sync.lua | 2 |
 | test_layout_cap.lua | 3 |
 | test_eol.lua | 1 |
-| **Total** | **770** |
+| **Total** | **773** |

@@ -87,6 +87,15 @@ number it replaced, so the first half of every check is that **nothing moved**.
 With a panel created and locked:
 
 1. `/pm panel <name> bgColor 1,0,0,0.5` → **Expect:** it turns translucent red immediately.
+1a. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-18`; the plan gives this item no numbered
+   session, so fold it into any convenient login). The same color in the byte form the parser also
+   accepts, with a fractional alpha: `/pm panel <name> bgColor 255,0,0,0.5` → **Expect:** the
+   *identical* translucent red as step 1, and the echo reads `1.00,0.00,0.00,0.50`. Then
+   `/pm panel <name> bgColor 255,0,0,1` → **Expect:** the same red, **fully opaque**, echoing
+   `1.00,0.00,0.00,1.00`. That last one is the fix: the byte scale chosen from R, G and B used to be
+   applied to alpha as well, so a 1 there meant 1/255 and the panel vanished off the screen with
+   nothing in chat or the error frame to say why. `/pm panel <name> bgColor 255,0,0,128` still
+   scales — half-transparent, echoing `0.50` — because a byte alpha above 1 is unambiguous.
 2. `/pm panel <name> borderSize 6` (it starts at 0) and `/pm panel <name> borderColor 0,1,0,1` → **Expect:** a thick
    green border, with the four edges **meeting cleanly at the corners** — no darker overlap squares,
    which is what a translucent border would reveal.
@@ -769,6 +778,18 @@ proves nothing about the verb.
 3. `/pm config` → **Panels** → **Defaults** → the **same** popup appears. Choose **No**. Both
    panels survive.
 4. Now choose **Yes** from either. Both panels are gone, and chat says `deleted 2 panels.`
+4a. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-18`; the plan gives this item no numbered
+   session, so fold it into any convenient login). What the wipe does to preview, which is the
+   session state it could not see: `/pm preview on` (three placeholders appear), then **without
+   turning it off** run `/pm panel deleteall` and choose **Yes** — the placeholders go with
+   everything else. Now `/pm preview on` again → **Expect:** the three placeholders **come back**.
+   Before the fix this was a silent no-op with nothing on screen: `DeleteAll` emptied the tracked id
+   list but left the `preview` flag standing, and `SetPreview` returns early when the flag already
+   matches, so the only way back was to turn off a preview that was not running. Finish with
+   `/pm preview off`. ⚠ **Also expect the screen to stay unlocked** across the wipe — preview's
+   *implied* unlock outlives the preview that caused it here, exactly as it does across a profile
+   switch (12b-2), because the global unlock is a mode you put the screen in and no sweep clears it.
+   A panel made after the wipe comes up with its drag handle; `/pm lock` puts it back.
 5. `/pm resetall` → the **confirm popup** appears first, carrying the collection's one wording
    (`options-ui-§12`), verbatim: *"Reset this profile to the addon's defaults? Everything you have
    configured or added in it is discarded — your other profiles are not affected."* Choose **No**:

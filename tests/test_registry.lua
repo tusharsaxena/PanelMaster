@@ -113,6 +113,24 @@ test("Registry.DeleteAll: drops the session state keyed on the panels it removed
   assertEqual(#NS.State.previewIDs, 0, "preview still claims ids that no longer exist")
 end)
 
+test("Registry.DeleteAll: the preview flag goes with the ids it belongs to (PANELMASTER-R-02)",
+  function()
+  -- The flag and the id list are one piece of state in two halves, and DeleteAll used to clear only
+  -- the half it could see. Left true with nothing tracking it, SetPreview(true) returns early on
+  -- `on == NS.State.preview` and the user cannot restart preview at all -- the exact failure
+  -- dropSessionIDs' own comment names, on the other caller of the same sweep.
+  fresh()
+  R:New("A")
+  NS.State.previewIDs = { 1 }
+  NS.State.preview = true
+  R:DeleteAll()
+  -- Read, restore, then assert: the harness pcalls a body, so a raise here would otherwise leave
+  -- the flag true in the shared namespace for every suite that runs after this one.
+  local flag = NS.State.preview
+  NS.State.preview = false
+  assertFalse(flag, "DeleteAll left preview claiming to be on with nothing tracking it")
+end)
+
 test("Registry.Resolve: finds by name and by id", function()
   fresh()
   local rec = R:New("Findable")

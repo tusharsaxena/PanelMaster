@@ -110,6 +110,21 @@ test("Util.ParseColor: the byte decision reads RGB only", function()
   assertNear(c[4], 1)
 end)
 
+test("Util.ParseColor: a byte triple's alpha of 1 or less is already fractional (PANELMASTER-R-03)",
+  function()
+  -- The scale is chosen from R, G and B and it is right to choose it there. Applying it to alpha as
+  -- well is what this case rejects: "255,0,0,1" is the form a user reaches for after reading that
+  -- the parser takes bytes, and it used to yield alpha 1/255 = 0.0039 — a panel invisible on screen
+  -- with no error anywhere to explain it.
+  local c = Util.ParseColor("255,0,0,1")
+  assertNear(c[1], 1)
+  assertNear(c[4], 1, 0.001)
+  -- Not only about 1: any alpha the user could have meant fractionally reads that way, and a byte
+  -- alpha still scales, because a byte alpha above 1 is unambiguous.
+  assertNear(Util.ParseColor("128,64,32,0.5")[4], 0.5, 0.001)
+  assertNear(Util.ParseColor("255,0,0,128")[4], 128 / 255, 0.001)
+end)
+
 test("Util.ParseColor: rejects junk and wrong-length input", function()
   assertEqual(Util.ParseColor("red"), nil)
   assertEqual(Util.ParseColor("1,2"), nil)
@@ -121,6 +136,18 @@ test("Util.FormatColor: round-trips through ParseColor", function()
   local original = { 0.25, 0.5, 0.75, 0.5 }
   local reparsed = Util.ParseColor(Util.FormatColor(original))
   for i = 1, 4 do assertNear(reparsed[i], original[i], 0.01) end
+end)
+
+test("Util.FormatColor: round-trips the mixed-scale byte form too (PANELMASTER-R-03)", function()
+  -- FormatColor always emits the fractional form, so the round trip that matters for the byte
+  -- reading is the FIRST hop: whatever ParseColor made of the bytes has to survive being written
+  -- out and read back. The pre-fix parse round-tripped perfectly — 0.0039 formats "0.00" and reads
+  -- back 0.00 — which is why this asserts the COLOR, not merely that the trip is stable.
+  local reparsed = Util.ParseColor(Util.FormatColor(Util.ParseColor("255,0,0,1")))
+  assertNear(reparsed[1], 1, 0.01)
+  assertNear(reparsed[2], 0, 0.01)
+  assertNear(reparsed[3], 0, 0.01)
+  assertNear(reparsed[4], 1, 0.01)
 end)
 
 test("Util.CleanName: trims and collapses whitespace", function()

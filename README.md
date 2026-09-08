@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-770%2F770_passing-green)
+![Tests](https://img.shields.io/badge/Tests-773%2F773_passing-green)
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
@@ -89,7 +89,9 @@ The fields you can change on a panel are `name`, `enabled`, `width`, `height`, `
 ```
 
 Colors take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
-half-transparent red. Texture names are whatever LibSharedMedia has, and are matched however you
+half-transparent red. Which of the two scales you meant is decided by R, G and B alone; an alpha of
+1 or less is read as a fraction under either, so `255,0,0,1` is opaque red rather than a red you
+cannot see. Texture names are whatever LibSharedMedia has, and are matched however you
 type the capitals. `accentEdges` takes a comma list of `top`, `bottom`, `left`, `right` — or `none`
 for no bars at all. `artTexture` takes the id of a bundled artwork (matched however you type the
 capitals), `None`, or `Custom`; the five `art*` dropdown fields refuse anything that is not one of
