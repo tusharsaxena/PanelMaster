@@ -624,6 +624,18 @@ test("Tagline: the landing page, the TOC Notes and the README say one thing (F-0
   local readme = slurp("README.md"):gsub("%s+", " ")
   assertTrue(readme:find(sentence:sub(1, 1):lower() .. sentence:sub(2), 1, true) ~= nil,
     "the README's opening line no longer quotes the tagline")
+
+  -- AND IT HAS TO ACTUALLY BE ONE LINE. Reported from the game: the landing page wrapped this
+  -- sentence onto two, alone among the nine addons, while the file above it called it "the
+  -- canonical one-line description of the addon". Nothing held it to that, so it grew.
+  --
+  -- A character count is a proxy for a proportional font, and it is honest about being one: the
+  -- sentence that wrapped was 113 characters, the form that fits is 88, and the longest tagline
+  -- anywhere else in the collection is MultiMeters' 102. The budget sits above the collection's
+  -- observed maximum and below the width that actually wrapped, so it catches a return to two
+  -- lines without pretending to measure pixels.
+  assertTrue(#sentence <= 105,
+    ("the landing tagline is %d characters and will wrap onto a second line"):format(#sentence))
 end)
 
 test("PanelEditor: the panel dropdowns are ordered by name, not by creation", function()

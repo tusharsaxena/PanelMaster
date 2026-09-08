@@ -8,8 +8,7 @@
 
 ![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
 
-Ka0s Panel Master draws plain backdrop panels behind your UI, so a screen full of separate frames
-reads as a few deliberate groups.
+Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate groups.
 
 That is all a panel is: a rectangle with a color, a border and a position. It sits **behind**
 everything, it holds nothing, and it never moves or touches any of your other frames. Your action

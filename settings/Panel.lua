@@ -34,12 +34,19 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- descriptor's `parentTitle` in settings/OptionsSetup.lua, which the library uses for the main
 -- page and for every sub-page breadcrumb. One definition rather than two that can disagree.
 -- The canonical one-line description of the addon: this is the sentence a player reads on the
--- landing page, so it is the one the other two copies quote. The TOC's `## Notes` carries a
--- shortened form of it (the client's addon list has room for one short line) and the README's
--- opening line quotes it whole.
+-- landing page, so it is the one the other two copies quote. The TOC's `## Notes` and the README's
+-- opening line now carry it verbatim.
+--
+-- ONE LINE IS A CONSTRAINT, NOT A DESCRIPTION OF IT. This used to carry a second clause -- "so a
+-- screen full of separate frames reads as a few deliberate groups" -- and at 113 characters it
+-- wrapped onto two lines in the client, alone among the nine addons, while this comment went on
+-- calling it one-line. Nothing held it to that, so it grew. tests/test_panel.lua does now.
+--
+-- The shortened wording was already sitting in the TOC, which is why the two are now IDENTICAL
+-- rather than one being a trim of the other: a second wording is a second thing that has to be
+-- kept true, and this sentence had already drifted into three.
 local ADDON_TAGLINE =
-  "Draws plain backdrop panels behind your UI, so a screen full of separate frames reads as a few "
-  .. "deliberate groups."
+  "Draws plain backdrop panels behind your UI, so separate frames read as deliberate groups."
 
 -- Layout constants. The Ka0s values (options-ui-§8) now live in ONE place — LibKa0s-Options-1.0's
 -- lib.LAYOUT, re-exported on the instance — rather than being restated here, so this page's spacing
