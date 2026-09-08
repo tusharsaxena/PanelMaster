@@ -139,6 +139,32 @@ The generator also warns, on stderr, when a pack's declared section count disagr
 on disk, or when one theme's sections differ in size. Both are worth reading rather than ignoring —
 they mean the pack changed shape — and neither is fatal: it trusts the files.
 
+## The `layout-§1` size gate
+
+`tests/test_layout_cap.lua` compares two things: every authored `.lua` git tracks, and the census
+under *Files by the `layout-§1` band* in [ARCHITECTURE.md](ARCHITECTURE.md). It reads them in both
+directions, so a file that reaches the 1000-line on-notice band unremarked and a row left behind for a
+file that has fallen back under it are each a red.
+
+`layout-§1` binds **every authored file the repository tracks**, `tests/` included; vendored code
+(`libs/`, `tests/_kit/`) is the only carve-out that reaches this repo. A red on a file **in the band**
+is cleared by adding its census row saying what is to be done about it. A red on a file **over the
+1500 cap** is cleared only by one of the three terminal states the rule allows — peel it, open an issue
+naming the seam a peel would follow, or ratify a register row with a re-check trigger — and the census
+row then has to name the issue or the row. It is not cleared by raising `CAP`, and it must not be
+cleared by dropping the suite from `SUITES`: `Kit.assertSuiteInventory` reddens on that too, which is
+the point of having one.
+
+**This repo gates the band as well as the cap, and its siblings gate the cap alone.** MultiMeters and
+LibKa0s carry the same suite over their over-cap files and leave the band as prose. Nothing here is
+over the cap, so that shape would assert nothing at all today; the largest authored file is twelve
+lines under it and the band is where this addon's actual question lives. The reason the distinction is
+not academic: the gate's first run found `tests/test_panel.lua` at 1222, which crossed 1000 on
+2026-09-03 with nothing anywhere recording it.
+
+The line figures in the census are dated measurements and nothing asserts them, so an ordinary edit to
+a large file does not redden this gate. Membership is the invariant, not the numbers.
+
 ## Automated test records — the consolidated run
 
 All four out-of-game suites go through one vendored runner, and every run is recorded

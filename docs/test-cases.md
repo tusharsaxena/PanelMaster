@@ -841,6 +841,12 @@ badge and any count quoted in the docs must agree with it.
 - libs/LibKa0s is the LibKa0s release CLAUDE.md says this addon bundles
 - tests/_kit is the test kit that shipped with that release
 
+### test_layout_cap.lua (3)
+
+- layoutcap: every authored file at or over 1000 lines is named in the ARCHITECTURE.md census
+- layoutcap: no census row outlives the file it records
+- layoutcap: every file over the 1500-line cap carries a disposition that can be followed
+
 ### test_eol.lua (1)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
@@ -872,5 +878,6 @@ badge and any count quoted in the docs must agree with it.
 | test_harness.lua | 14 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
+| test_layout_cap.lua | 3 |
 | test_eol.lua | 1 |
-| **Total** | **767** |
+| **Total** | **770** |

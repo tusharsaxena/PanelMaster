@@ -197,3 +197,60 @@ See [`performance.md`](performance.md) for the cost argument and the committed s
 | `line-endings-§5` | `.gitattributes` carries one extra block — `tools/artwork/bin/realesrgan-ncnn-vulkan binary` — so it is not byte-identical to the canonical client-bound body. | **Two MUSTs collide and only one can hold.** `line-endings-§4` requires every binary to be marked `binary`; `line-endings-§5` requires this file to match the canonical body byte-for-byte. The canonical list is an **extension** census, and this repo vendors an **extensionless** ELF executable (the Real-ESRGAN upscaler behind `tools/artwork/`), which no `*.ext` rule can ever match. Left unmarked it is the sole working-tree stray `line-endings-§7` reports for this addon — a real §4 failure, not a false positive, and one that would be re-filed every cycle. The block is scoped to the single path rather than a `tools/**` glob so it cannot silently swallow a future text file. Nothing about the pin, the `*.sh` carve-out or the shared binary list changes; the deviation is additive and comment-documented in the file itself. | 2026-08-07 | `line-endings-§4`/`§5` gaining any provision for extensionless or path-marked binaries upstream — at which point this block moves into the canonical body and the row retires. Re-check also if `tools/artwork/bin/` stops being vendored. |
 | `options-ui-§1` (the degradation rule) | With `libs/LibKa0s/` absent the schema loses its seven **Master controls** rows — the composed block — so a library-less install's `/pm list`, `get`, `set` and `reset` reach the *Editing* and *New panels* rows only. Every other member of the stub is answered and the addon loads, runs and draws panels exactly as before. | **The stub cannot answer this one honestly, and a dishonest answer is worse than a narrower CLI.** `§1` requires the stub to publish every member a page file touches at load, real enough for the file to finish — which it does: `S:InstallMaster` returns false and the array keeps the rows it declared itself. What it cannot do is *reproduce* what `H.MasterControls` emits, because that is the library's canonical row data (the set, the order, the labels, the ranges, the defaults) and a hand-copied set in the stub is the copy that goes stale — which is `§1`'s own MUST NOT against carrying library code into the stub, and anti-pattern #47. The cost is therefore taken deliberately and MEASURED rather than assumed, as `§1` requires: `tests/test_libka0s.lua` pins the degraded row count at exactly *live minus the composed block* and asserts every surviving row still resolves against the defaults, so the loss can never widen without somebody deciding to widen it. Owner's decision, 2026-09-02. | 2026-09-02 | `LibKa0s-Options-1.0` gaining a composer form that can run without the library — or `options-ui-§1` gaining a rule for composed rows in the degraded arm, at which point this row retires. Re-check also the day a row the block emits becomes the ONLY way to reach something a player in this state needs — the master switch is the closest, and today `/pm delete` still removes a panel outright without it. |
 | `documentation-§4` | Pending work lives in this repo's GitHub issues, which also function as a backlog, rather than in a root `TODO.md`. | `documentation-§4` forbids a `TODO.md` **once released**; it does not mandate one before. An issue is the better shape for the job — it records the *decision* and its rationale per item, with a re-surface rule, which a bare checklist cannot. The addon is pre-release, so the rule is not yet engaged. | 2026-08-05 | The first published release, which is when `documentation-§4` engages |
+
+## File sizes (`layout-§1`)
+
+`layout-§1` caps every **authored** `.lua` file this repository tracks at 1500 lines — `tests/`
+included, with vendored code (`libs/`, `tests/_kit/`) the only carve-out that reaches anything here;
+nothing in this repo is generated non-shipping data, so the second carve-out has no instance. Files in
+the **1000–1500 band are on notice**. A file **over** the cap has three terminal states and no others:
+peeled, an open issue naming the seam a peel would follow, or a ratified row in
+`## Documented deviations` above carrying a re-check trigger. What the rule does not allow is a file
+nothing anywhere remarks on — "the count sitting in a bundle manifest that no document reads".
+
+This table is the remark, and it is the **live** register. `docs/automated-tests/RESULTS.md` also
+carries a *Files by `layout-§1` band* watch list; that one is per-run generated evidence, frozen at the
+run that wrote it, and it is not hand-edited (`performance-§10`). When the two disagree, this table is
+the current one and the other is a measurement of an August afternoon.
+
+### Files by the `layout-§1` band
+
+Measured 2026-09-08 with
+
+```
+git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
+```
+
+| File | Lines (2026-09-08) | Disposition |
+|---|---|---|
+| `settings/PanelEditor.lua` | 1488 | **On notice, and its own trigger has fired.** Issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor (`:190-220`, `:342-993`, ~650 lines) out from under the Panels page's chrome band, into a sibling under `settings/`; the issue names the four shared symbols the peel has to publish on `E` first. Not peeled this cycle by plan. |
+| `tests/test_artwork.lua` | 1356 | **Accepted — it peels when `modules/Artwork.lua` does, on the same seam, in the same commit.** A mirror suite has no partition of its own: pick one before the module has, and the two files stop pairing, which is worse for a reader under failure than one long file that pairs. |
+| `tests/test_panel.lua` | 1222 | **Accepted, and it is the row this census was written by finding.** It crossed 1000 at `1b8c672` (2026-09-03, 1076) and nothing anywhere said so — the watch list that should have caught it is frozen at the 1.0.0 release run, where this file was 708. It is the suite for **both** page files, so its appearance cases leave with the editor when [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) peels; same seam, same commit. |
+| `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** Flat since the 1.0.0 release run (1188 at `20260807-160022`, 1087 at the baseline). Split along the catalog / geometry seam before the next feature lands in it; `tests/test_artwork.lua` peels with it. |
+
+**Nothing is over the cap.** The largest authored file in the repository is twelve lines under it, and
+the four rows above are the whole band. `modules/Registry.lua` at 988 is the nearest file outside the
+table and will need a row of its own when it crosses 1000.
+
+**The line counts are dated because they drift, and nothing asserts them.** What
+`tests/test_layout_cap.lua` asserts is the *membership* of this table, in both directions: a file that
+reaches 1000 lines and is not listed here turns the suite red, and so does a row for a file that has
+fallen back under the band or been deleted. A figure in this column is a measurement, not a claim about
+today.
+
+**This repo gates the band; its siblings gate the cap alone, and the difference is deliberate.**
+MultiMeters (fifteen files over the cap) and LibKa0s (two) run the same gate over the over-cap set and
+leave the band as prose, which is right where the breaches are the subject. Here there are no breaches,
+so an over-cap-only gate would assert nothing at all today and would first speak on the day
+`settings/PanelEditor.lua` crossed 1500 with no row — one ordinary commit away. The subject in this
+repository is the band, so the band is what is gated.
+
+**Nothing here is peeled this cycle.** The 2026-09-07 remediation plan rules out splitting any file
+(`03_SPEC.md` § C22 non-goals; `04_EXECUTION_PLAN.md` `M4-14`: *"No splits in this plan"*). The
+deliverable was the disposition, and the disposition is this table plus [#47](https://github.com/tusharsaxena/PanelMaster/issues/47).
+
+**Why `settings/PanelEditor.lua` gets an issue rather than a register row.** A register row ratifies a
+**deviation**, and there is nothing to deviate from: at 1488 the file complies with `layout-§1`. A row
+in `## Documented deviations` claiming otherwise would be a false row, which is the same mistake this
+document already reasons about at length for the `performance-§12` exemption it declined to claim. An
+open issue naming a verified seam is the honest record of a peel that is owed and not yet done.
