@@ -851,6 +851,12 @@ badge and any count quoted in the docs must agree with it.
 - layoutcap: no census row outlives the file it records
 - layoutcap: every file over the 1500-line cap carries a disposition that can be followed
 
+### test_options_groups.lua (3)
+
+- optionsgroups: every hand-written canonical block is ratified in the deviation register
+- optionsgroups: no register row outlives the block it records
+- optionsgroups: every options-ui-§16 register row carries a re-check trigger
+
 ### test_eol.lua (1)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
@@ -883,5 +889,6 @@ badge and any count quoted in the docs must agree with it.
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 2 |
 | test_layout_cap.lua | 3 |
+| test_options_groups.lua | 3 |
 | test_eol.lua | 1 |
-| **Total** | **774** |
+| **Total** | **777** |

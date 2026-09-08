@@ -91,7 +91,7 @@ local SUITES = {
   "test_libka0s", "test_surface_parity", "test_harness",
   "test_spelling",
   "test_vendor_sync",
-  "test_layout_cap",
+  "test_layout_cap", "test_options_groups",
   -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
   -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives
   -- rather than being re-typed into nine repositories, so it is declared with its own `dir`.

@@ -165,6 +165,23 @@ not academic: the gate's first run found `tests/test_panel.lua` at 1222, which c
 The line figures in the census are dated measurements and nothing asserts them, so an ordinary edit to
 a large file does not redden this gate. Membership is the invariant, not the numbers.
 
+## The `options-ui-§16` register gate
+
+`tests/test_options_groups.lua` is the same bargain as the size gate, over a different table.
+`options-ui-§16`'s border, bar and font blocks are supposed to be composed by the library; this
+addon types three of them out, because the composers emit path-keyed schema rows and the Panels page
+edits registry records. That is a ratified deviation, one row per block, in
+[ARCHITECTURE.md](ARCHITECTURE.md) ▸ *Documented deviations* — and the gate keeps the rows and the
+code honest in both directions: a fourth hand-written block with no row is a red, and so is a row
+naming a block that is no longer typed out, because the register is not a graveyard.
+
+A block is recognized by its leading row — *Font*, *Border style*, *Bar texture*, the labels the rule
+itself names — and matched to its row by the stored field the picker writes (`borderTexture`,
+`accentTexture`, `accentBorderTexture`). Field keys rather than line numbers, for the same reason the
+size gate does not assert its census figures: a citation that drifts on every ordinary edit is a gate
+with a standing reason to be switched off. *Background texture* is deliberately not a block head — a
+group over a background is not a bar group.
+
 ## Automated test records — the consolidated run
 
 All four out-of-game suites go through one vendored runner, and every run is recorded
