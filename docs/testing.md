@@ -14,9 +14,11 @@ luacheck .            # 0 errors, 0 warnings
 ```
 
 **`luacheck`'s figure is SCOPED, not repo-wide**, and reading it as repo-wide is how a clean run
-gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` (vendored code is not this
-addon's to lint), `tests/`, `_dev/` and the frozen bundles under `docs/`. Before quoting 0/0,
-confirm what was actually opened:
+gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
+vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
+under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
+addon's code and are linted as such, which is why the figure below is 52 files and not the 26 it
+was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
 luacheck . 2>&1 | tail -1        # and read the FILE COUNT it reports

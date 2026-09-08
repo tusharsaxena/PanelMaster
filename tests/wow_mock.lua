@@ -375,8 +375,11 @@ return function()
   -- headlessly" used to be written down as a fact about the page rather than about the mock.
   local aceGUI = M.__libs["AceGUI-3.0"]
   local baseCreate = aceGUI.Create
-  function aceGUI:Create(wtype)
-    local w = baseCreate(self, wtype)
+  -- Declared with an explicit `gui` receiver rather than `aceGUI:Create`: the widgets this
+  -- wrapper installs are methods and their receiver is `self`, so an implicit `self` here would
+  -- mean the LIBRARY on one line and the WIDGET four lines down, inside one function body.
+  function aceGUI.Create(gui, wtype)
+    local w = baseCreate(gui, wtype)
     if w then
       if not w.SetTitle then function w:SetTitle(v) self.title = v; return self end end
       -- The artwork path box asks its underlying editbox whether it has focus before overwriting

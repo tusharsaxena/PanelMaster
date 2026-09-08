@@ -630,7 +630,6 @@ test("PanelEditor: the panel dropdowns are ordered by name, not by creation", fu
   -- Reported from the game: the Edit picker listed "Lower Bar, Action Bar Center, Artwork #1,
   -- Hiding Bar, Artwork #2" — creation order, which is effectively arbitrary once there are more
   -- than a few panels and is the wrong order for a list you have to find a name in.
-  local E = NS.PanelEditor
   NS.Registry:DeleteAll()
   for _, name in ipairs({ "Lower Bar", "Action Bar Center", "Artwork #1", "Hiding Bar", "Artwork #2" }) do
     NS.Registry:New(name)
