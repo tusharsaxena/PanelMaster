@@ -820,3 +820,33 @@ is step 1.
     options, that is precisely the case this checks — a remembered theme with no files behind it
     must not be offered.
 
+## 19. LibKa0s — the tab strip survives being pooled and re-dressed
+
+**Smoke, session 3. NOT YET RUN.** New with `M4-01`'s LibKa0s v1.27.0 re-vendor. `TabStrip`
+(`libs/LibKa0s/OptionsWidgets.lua`) no longer builds a button and a content panel per click: it
+acquires both from per-`ctx` `LibKa0s-Pool-1.0` pools and re-dresses them, re-setting `OnClick` on
+every dress. Its only headless proof counts `CreateFrame` calls on a second selection pass, and the
+case that would pin band geometry as invariant under selection cannot be written yet — the shared
+mock answers `GetHeight` with 0 for every frame, and that flips at kit 16, not here. **So a stale
+label, a mis-anchored button or a band that changes height on a re-dressed tab is invisible to every
+automated check in this repo.**
+
+This addon's strip is drawn straight onto the chrome band with `H.TabStrip`
+(`settings/PanelEditor.lua`) rather than through `H.RenderTabbedSchema`, because a panel is a
+registry record and not a set of schema rows to partition. So it exercises the pooled path more
+directly than a schema-driven strip does, and `ctx.activeTab` is the one piece of selection state
+that survives a render.
+
+1. `/pm` → **Panels**. Cycle every tab of the strip three times, ending back on the first.
+2. Watch three things on each pass: the **label** is that tab's own, the **selected** tab is the one
+   you pressed, and the strip's **band height** does not move as you go through it.
+3. **Expect:** every tab named and selected correctly on all three passes, and no band that grows or
+   shrinks. A name carried over from the previously-dressed tab, a highlight on the wrong button, a
+   body drawn under the wrong tab, or a strip whose height moves between passes is the pool handing
+   back a frame it did not finish dressing.
+4. Then reopen the page from scratch (`Esc`, `/pm` again) and repeat step 1 once. The pools are
+   per-`ctx`, so a second build is the case where a released frame comes back dressed for a
+   different tab.
+
+`LibKa0s-Perf-1.0` minor 8 arrived in the same payload and respells five player-facing strings, but
+`Perf` is not wired in this addon, so none of them has a surface here.

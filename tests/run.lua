@@ -71,6 +71,20 @@ local SUITES = {
   "test_libka0s", "test_harness",
   "test_spelling",
   "test_vendor_sync",
+  -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
+  -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives
+  -- rather than being re-typed into nine repositories, so it is declared with its own `dir`.
+  -- Kit.assertSuiteInventory fails the run until it is declared, so it cannot arrive with a
+  -- re-vendor and then quietly run nothing.
+  { name = "test_eol", dir = "tests/_kit/" },
 }
+
+-- Published so tests/test_harness.lua can state the inventory gate as a NAMED case over the
+-- real list. It used to re-read this file and pull the basenames out of the `local SUITES = {`
+-- block with a string pattern, which could only see quoted names -- so the kit entry above
+-- reached it as the two bare strings "test_eol" and "tests/_kit/", and the case failed over a
+-- suite the runner had declared correctly. A parser of one's own source is a second spelling
+-- of the list; this is the list.
+_G.PM_TEST.suites = SUITES
 
 Kit.run({ dir = "tests/", suites = SUITES })

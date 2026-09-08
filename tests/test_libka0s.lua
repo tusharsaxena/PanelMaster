@@ -902,6 +902,15 @@ test("Parity: the Options seam's degraded surface matches the live one", functio
     -- (settings/Panel.lua), and the three layout constants it DOES read are answered by the branch
     -- as zero rather than as plausible geometry.
     "BuildLandingPage", "TextRow", "PADDING_X",
+    -- New at LibKa0s v1.27.0 (Options minor 8): the ONE instance print sink the shell
+    -- publishes so OptionsWidgets stops building a second one from the same descriptor
+    -- (libs/LibKa0s/Options.lua:392, read at OptionsWidgets.lua:763). The library talking to
+    -- itself across a file boundary, not a member this addon calls -- the grep above returns
+    -- nothing for it. Its own comment there says a degradation stub does not mirror it because
+    -- Kit.assertSurfaceParity skips the `__` prefix; that holds for the kit's BY-NAME form,
+    -- which filters through Kit.publicMembers, and not for the four-argument form this case
+    -- uses, which walks every key of the live table.
+    "__print",
   })
   -- The three layout constants the addon reads are present and are ZERO, not the library's values:
   -- a stub reporting plausible geometry lets a caller lay something out against numbers no widget

@@ -17,12 +17,15 @@ local function readFile(path)
   return src
 end
 
+-- The runner publishes its own suite list as T.suites (tests/run.lua). This used to re-read that
+-- file and pull basenames out of the `local SUITES = {` block with a string pattern, which is a
+-- second spelling of the list and could only see quoted names. Kit revision 15 ships a suite of
+-- its own -- tests/_kit/test_eol.lua -- declared as `{ name = ..., dir = ... }`, and the pattern
+-- read that entry as the two bare strings "test_eol" and "tests/_kit/" and failed the case over
+-- a list the runner had got right.
 local function declaredSuites()
-  local block = readFile("tests/run.lua"):match("local SUITES = {(.-)}")
-  assertTrue(block ~= nil, "tests/run.lua no longer declares `local SUITES = {`")
-  local out = {}
-  for name in block:gmatch('"([^"]+)"') do out[#out + 1] = name end
-  return out
+  assertTrue(type(T.suites) == "table", "tests/run.lua no longer publishes its suite list")
+  return T.suites
 end
 
 test("Harness: the suite list and tests/test_*.lua agree in both directions", function()
