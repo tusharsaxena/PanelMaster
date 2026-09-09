@@ -356,7 +356,7 @@ conversion guide, including how to pick good sources, is in
 
 ## Troubleshooting
 
-| Problem | Fix |
+| Symptom | Fix |
 |---------|-----|
 | I made a panel and cannot see it | Three usual causes. It might be behind something opaque — run `/pm unlock`, which outlines and names every panel regardless. It might be switched off — check `/pm panels`, where a disabled panel is listed in gray. Or the master switch is off — `/pm set settings.enabled true`. |
 | A panel has ended up off the edge of the screen | `/pm recover` brings every stray panel back into view. This never happens by itself, so a panel you deliberately parked half off-screen stays exactly where you put it. |
