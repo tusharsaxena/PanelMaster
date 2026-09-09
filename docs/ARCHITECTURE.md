@@ -82,8 +82,9 @@ test harness hid it by calling `Canvas:Enable()` itself; it now drives the real 
 ## Slash Commands
 
 `/pm` (and the `/panelmaster` alias) via AceConsole. Every verb comes from `NS.COMMANDS` in
-`settings/Slash.lua`, so the help index, the settings landing page's command list and the README
-table are generated from one table and cannot drift.
+`settings/Slash.lua`, so the help index and the settings landing page's command list are generated
+from one table and cannot drift. No hand-kept copy of the descriptions is carried anywhere: `slash-dispatch.md` names the verbs to
+structure its own prose, and that is the only list of them outside the table.
 
 Schema-driven verbs: `config version get set list reset resetall debug help` — `resetall` is a
 **profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it

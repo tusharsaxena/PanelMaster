@@ -47,9 +47,8 @@ This is the change with the most places to touch, and `core/Constants.lua` is ne
 ## Add a slash verb
 
 Append one triple to `NS.COMMANDS` (`settings/Slash.lua:273`), shaped
-`{ name, description, handler }`. The help index, the settings landing page's command list and the
-README table are all generated from it, so nothing else needs editing — regenerate the README with
-`/wow-addon:sync-docs`.
+`{ name, description, handler }`. The help index and the settings landing page's command list are
+both generated from it, so nothing else needs editing.
 
 A **panel** verb acts on registry records rather than schema rows, so it stays host-owned; a
 schema-driven verb can bind to the library's CLI. See [slash-dispatch.md](slash-dispatch.md).

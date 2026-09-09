@@ -1,8 +1,9 @@
 # Slash dispatch
 
 `/pm` (and the `/panelmaster` alias) via AceConsole. Every verb comes from `NS.COMMANDS` in
-`settings/Slash.lua`, so the help index, the settings landing page's command list and the README
-table are all generated from one table and cannot drift.
+`settings/Slash.lua`, so the help index and the settings landing page's command list are generated
+from one table and cannot drift. This file describes the dispatch, not the list: `/pm` prints the
+list itself.
 
 Schema-driven verbs: `config version get set list reset resetall debug help`.
 Panel verbs: `new delete rename panels panel unlock lock preview recover`.
@@ -14,6 +15,38 @@ Output follows `slash-commands-§4/§5`: the cyan `[PM]` tag on every line, gree
 `[group]` headers, gold keys, white values, no trailing colons. `Slash:BuildListLines`,
 `BuildPanelLines` and `BuildPanelShowLines` return arrays rather than printing, so the output shape
 is asserted in tests without capturing chat.
+
+## The `/pm panel` fields
+
+The fields `/pm panel` accepts are `name`, `enabled`, `width`, `height`, `point`, `relPoint`,
+`x`, `y`, `strata`, `level`, `scale`, `alpha`, `bgTexture`, `bgColor`, `bgClassColor`, `borderTexture`,
+`borderSize`, `borderOffset`, `borderColor`, `borderClassColor`, `mouseover`, `mouseoverAlpha`,
+`accentEnabled`, `accentEdges`, `accentTexture`, `accentAlpha`, `accentThickness`, `accentOffset`,
+`accentColor`, `accentClassColor`, `accentBorderTexture`, `accentBorderSize`, `accentBorderOffset`,
+`accentBorderColor`, `accentBorderClassColor`, `artTexture`, `artCustomPath`, `artColor`,
+`artClassColor`, `artAlpha`, `artFill`, `artPoint`, `artX`, `artY`, `artScale`, `artRotation`,
+`artFlipH`, `artFlipV`, `artDesaturate`, `artBlend` and `artLayer`. So:
+
+```
+/pm panel ChatBG width 420
+/pm panel ChatBG bgColor 0.1,0.1,0.12,0.8
+/pm panel ChatBG bgTexture blizzard marble
+/pm panel ChatBG borderClassColor on
+/pm panel ChatBG strata LOW
+/pm panel ChatBG accentEnabled on
+/pm panel ChatBG accentEdges top,left
+/pm panel ChatBG artTexture class-death-knight
+/pm panel ChatBG artFill FILL
+```
+
+Colors take either `r,g,b` or `r,g,b,a`, in 0–1 or 0–255 — `1,0,0,0.5` and `255,0,0,128` both mean
+half-transparent red. Which of the two scales you meant is decided by R, G and B alone; an alpha of
+1 or less is read as a fraction under either, so `255,0,0,1` is opaque red rather than a red you
+cannot see. Texture names are whatever LibSharedMedia has, and are matched however you type the
+capitals. `accentEdges` takes a comma list of `top`, `bottom`, `left`, `right`, or `none` for no bars
+at all. `artTexture` takes the id of a bundled artwork (matched however you type the capitals),
+`None`, or `Custom`; the five `art*` dropdown fields refuse anything that is not one of their values
+and print the real list back at you.
 
 ## What the library owns, and what stays here
 

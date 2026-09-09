@@ -17,6 +17,84 @@ three subcategories:
   parented to our canvas. The other exempt page, and for the same reason rather than a different
   one: AceConfigDialog draws it whole and it never reaches the flow engine.
 
+## What each page covers
+
+The page-granularity summary, moved here out of the README when documentation-§1 made that section
+prose (standard v2.41.0). Open the pages with `/pm config`, or find **Ka0s Panel Master** in the
+game's own Settings ▸ AddOns list.
+
+| Page | Covers |
+|---|---|
+| Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. |
+| General | Every addon-wide setting, under three tabs: **Master controls**, **Editing** and **New panels**. |
+| Panels | The panels themselves — create, rename, copy, reset and delete them from the band at the top, and edit the selected one's appearance under five tabs: **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
+| Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
+
+**General** carries these, a tab at a time:
+
+| Tab | Setting | What it does |
+|---|---|---|
+| Master controls | Enable Ka0s Panel Master | Master switch. Off hides every panel without deleting any. |
+| Master controls | General visibility | When your panels are drawn at all: always, only in combat, only out of combat, or never. |
+| Master controls | Master scale | Magnifies every panel at once, on top of each panel's own scale. |
+| Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
+| Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
+| Master controls | Debug console | Show the debug window. Resets when you reload. |
+| Master controls | Test mode | Put three sample panels on screen. |
+| Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
+| Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall` and the header **Defaults** button do. |
+| Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
+| Editing | Snap to grid | Round a dragged panel's position to the grid size below. |
+| Editing | Grid size | How coarse that grid is, in screen units. |
+| Editing | Unlock outline thickness | How thick the gold outline around an unlocked panel is. Raise it if you are hunting for a small panel on a busy screen. |
+| Editing | Recover panels | A button under the tab rather than a setting: brings any panel whose anchor has ended up beyond a screen edge back into view. The same thing `/pm recover` does. |
+| New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
+| New panels | Default frame strata | The layer new panels start in. |
+| New panels | Default opacity | How see-through new panels start out. |
+
+On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
+your panels immediately.
+
+On **Panels**, type a name in the box at the top and press Enter (or click **Okay**), then pick any
+panel from the **Panel** picker beside it to edit it. One panel is shown at a time, so the page stays
+the same size whether you have two panels or twenty. The controls, in full:
+
+| Control | What it does |
+|---|---|
+| Enabled | Draw this panel at all. |
+| Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
+| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. Test mode's sample panels cannot be reset. |
+| Delete | Remove the panel. |
+| Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to — renaming does not change it. |
+| Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
+| Width, Height, X offset, Y offset | Size and position. |
+| Anchor | Which corner or edge of the screen the offsets are measured from. |
+| Frame strata | Which layer the panel sits in. |
+| Panel scale | Magnifies the whole panel — its size, its border, its accent bars and its artwork — as one piece, the way the game's own UI scale does. Not the same as changing Width and Height: those resize the panel and leave the border and bars at the thickness you set. Width and Height keep showing the numbers you typed; what changes is how big they turn out on screen. A scaled panel is anchored in its own scaled units, so it also shifts relative to its anchor — nudge the offsets afterwards if it matters. |
+| Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
+| Background color / Use class color | The fill color, or your class color. Its opacity controls the fill alone. |
+| Border style | Any border style LibSharedMedia knows about, or **None** for no border. |
+| Border thickness (px) | Thickness. Starts at 0 — the accent bar defines the edge instead. |
+| Border color / Use class color | The border color, or your class color. The opacity you set applies either way. |
+| Border offset | How far the border sits from the panel's edge. Positive pushes it out, negative pulls it in. |
+| Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. |
+| Bar texture | Any status-bar texture LibSharedMedia knows about. |
+| Bar opacity | How solid the bar's own fill is, on top of the opacity in the bar color. |
+| Bar color / Use class color | The bar color. Class color is **on** by default. |
+| Bar thickness | How thick the bar is. |
+| Bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
+| Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. Left and right bars turn the texture a quarter turn, so a bar reads the same way round whichever edge it is on. |
+| Border style, Border thickness (px), Border color / Use class color, Border offset (under the *Accent bar* tab's **Border** heading) | The bar's own outline, with the same four controls the panel's border has. Defaults to a 1px black hairline. |
+| Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each color. |
+| Faded opacity | How visible it is the rest of the time. 0 hides it completely. Sits beside *Panel opacity*, because you choose one against the other. |
+| Show on mouseover only | Keep the panel faded until your cursor is over it. |
+| Defaults (the page's own button, not the editor's) | On the **Panels** page this means *delete every panel* — your settings are left alone. It asks first, and nothing goes until you say yes. |
+
+**Two opacities, and they do different things.** Each color carries its own opacity, which affects
+only what that color paints — so you can have a see-through fill inside a solid border. **Panel
+opacity** is on top of that and fades the whole panel at once, and it is the level a mouseover panel
+fades *up* to.
+
 ## The tab strip
 
 Both of this addon's own pages are **tabbed** (`options-ui-§13`). A tab is pinned in the page's

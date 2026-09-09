@@ -519,9 +519,9 @@ end)
 
 test("COMMANDS: the descs name the sub-verbs their handlers accept (F-011)", function()
   -- `/pm debug dump` and `/pm panel deleteall` both work, and neither used to appear in the
-  -- generated help index, on the settings landing page or in the README — all three of which
-  -- generate from these descs (slash-commands-§3 forbids a hand-maintained help string, so the desc
-  -- is the only place the text can go).
+  -- generated help index or on the settings landing page — both of which generate from these descs
+  -- (slash-commands-§3 forbids a hand-maintained help string, so the desc is the only place the
+  -- text can go).
   local desc = {}
   for _, cmd in ipairs(NS.COMMANDS) do desc[cmd[1]] = cmd[2] end
   assertTrue(desc.debug:find("dump", 1, true) ~= nil,
