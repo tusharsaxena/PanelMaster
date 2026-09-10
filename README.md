@@ -262,3 +262,4 @@ lives. A debug log (see above) helps a great deal for anything that looks like a
 The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg/), AI-upscaled to
 the sizes the client wants and redistributed under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
+
