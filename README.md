@@ -1,6 +1,6 @@
 # Ka0s Panel Master
 
-![WoW](https://img.shields.io/badge/WoW-Midnight_12.0.7-purple)
+![WoW](https://img.shields.io/badge/WoW-Midnight_12.1.0-purple)
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
@@ -253,6 +253,7 @@ lives. A debug log (see above) helps a great deal for anything that looks like a
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.1.0 | 2026-09-10 | Page-wide actions moved onto a **General** first tab, and **Create** and **Edit** now sit above the tab strip<br>Fixed the page band failing when it was built before the canvas existed<br>Fixed the landing tagline wrapping onto a second line<br>The **Defaults** tooltip no longer implies your panels are safe from the reset<br>Updated for game patch 12.1.0<br>_Verified against lint, tests and complexity. This addon ships no `tests/perf.lua`, so the perf suite was skipped rather than measured — the release gate covered three suites, not four._ |
 | 1.0.0 | 2026-08-07 | - First release: create, place and style as many backdrop panels as you like<br>- LibSharedMedia background and border textures, with a class-color option for both<br>- Accent bars along any edge, with their own texture, border and class color<br>- Per-panel scale, mouseover-only fade, and all eight frame strata<br>- Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>- Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>- Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>- Full command-line control and AceDB profiles |
 
 ## Credits
