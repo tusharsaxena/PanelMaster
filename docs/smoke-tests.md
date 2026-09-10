@@ -22,7 +22,7 @@ reset** and takes the panels with it, so `/pm panel deleteall` is no longer need
 1. Log in. **Expect:** no Lua error, and nothing at all on screen — a fresh install draws no panels.
 2. `/pm` → **Expect:** the help index, every line prefixed with a cyan `[PM]`, one row per command,
    no trailing colons.
-3. `/pm version` → **Expect:** `[PM] v1.0.0`, matching the TOC.
+3. `/pm version` → **Expect:** `[PM] v1.1.0`, matching the TOC.
 4. `/pm panels` → **Expect:** "No panels yet", suggesting `/pm new`.
 
 ## 2. Preview mode
@@ -435,30 +435,32 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 4. Toggle **Lock frame** and **Test mode** → **Expect:** they do exactly what the slash commands do,
    with **Lock frame** the *inverse* of `/pm unlock`: unticking it unlocks. Ticked is the shipped
    state, and it is ticked again after every `/reload`.
-5. Click **Panels** → **Expect:** a five-tab strip — **Position and size | Background and border |
-   Accent bar | Artwork | Opacity and fade** — and, **above** it in the page's chrome band, three
-   rows: **Create new panel** beside the **Panel** picker, then **Panel name** beside **Copy
-   settings from panel**, then **Enabled | Unlock | Reset | Delete** across the bottom. The band is
-   separated from the strip by a hairline rule. **None of the eight is a tab and none is in the
-   scroll**: they stay put whichever tab is selected. There is **no second box drawn around them** —
-   the band's own divider is the boundary.
+5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
+   border | Accent bar | Artwork | Opacity and fade** — with **General** active, and **above** it in
+   the page's chrome band a **single row**: the **Panel** picker on the left, **Create new panel** on
+   the right. The band is separated from the strip by a hairline rule. Neither band control is a tab
+   and neither is in the scroll: they stay put whichever tab is selected. There is **no second box
+   drawn around them** — the band's own divider is the boundary. A band two or three rows deep is the
+   pre-v2.40.0 shape and is the failure (`options-ui-§14`).
 5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
-   page. **Expect:** the band above the strip holds all three rows, at full width. An empty band of
+   page. **Expect:** the band above the strip holds its one row, at full width. An empty band of
    the right height with nothing in it is the zero-width layout race: the canvas has no width until
    it lays itself out, and this block is built once for the session, so without its own resize hook
    it stays empty until a `/reload`. Then drag the Settings window's edge to resize it and confirm
    every control follows.
 5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
    it is **still there** at the same height, and the page reads "No panels yet…" underneath. The
-   **Create new panel** box and the **Panel** picker are usable; the other six are **grayed out
-   rather than gone**, and the **Panel name** box is empty. A band that shrinks, or that loses a
-   row, is the failure — the six acts have nothing to act on, which is not the same as not existing.
-   The page must never lose its strip.
+   **Create new panel** box stays usable and the **Panel** picker is **grayed out rather than
+   gone** — a picker that vanished would take its label with it and leave a hole in the band. The
+   six acts on the **General** tab are **absent**, not disabled: there is no record for them to act
+   on, and the empty state is what the editor draws in their place. A band that shrinks, or that
+   loses its row, is the failure. The page must never lose its strip.
 5b. **Layout check.** The **Panel** picker carries its label, sits beside the create box, and there is
-   **no heading naming the selected panel** above the editor. In the band, the three rows do not run
-   into each other: the two checkboxes and the two buttons stay on their own line rather than riding
-   up beside the labels above them, and the **Delete** button's right border is clear of the band's
-   edge. Inside the editor there is **no boxed border** around the controls — the tab strip's own content panel is the boundary — and no two
+   **no heading naming the selected panel** above the editor. On the **General** tab, the three rows
+   do not run into each other: the two checkboxes and the two buttons stay on their own lines rather
+   than riding up beside the labels above them, each control is **half width** rather than a quarter,
+   and the **Delete** button's right border is clear of the page's edge. Inside the editor there is
+   **no boxed border** around the controls — the tab strip's own content panel is the boundary — and no two
    unrelated controls share a line. Three tabs carry **subsection headings**, drawn as the same
    divider-flanked heading the landing page uses: **Background / Border** on *Background and border*,
    **Bar / Edges / Border** on *Accent bar*, and **Image / Layout / Appearance** on *Artwork*. On
@@ -471,19 +473,21 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    in both cases. It must never be left floating over, or outside, the settings window while the
    control it belongs to scrolls away. Re-open it afterwards to confirm one click still opens it
    (rather than the click being eaten as a toggle-shut).
-5c. **The band's acts, from every tab** (`options-ui-§14`, `M4-15`).
+5c. **The `General` tab's acts** (`options-ui-§14`, standard v2.40.0).
    **Smoke, session 3. NOT YET RUN.**
-   **Enabled**, **Unlock**, **Reset** and **Delete** sit on the band's bottom row, with
-   **Panel name** and **Copy settings from panel** on the row above. They were a sixth **General**
-   tab, and all six act on the panel as a whole rather than on one aspect of it. Walk every one of
-   the five tabs and confirm **all six are still there and still enabled** on each — a control that
-   vanishes when you change tab is the move not having been made. Then, from a tab that is *not* the
-   first one: tick and untick **Enabled** (the panel goes and comes back), tick **Unlock** (only
-   that panel grows a handle), press **Reset**, and finally **Delete**. Each must act on the panel
-   the **Panel** picker is showing, not on whichever panel was selected when the page was first
-   opened — the band is built once per session and re-points itself, and acting on a stale panel is
-   the specific regression this step exists to catch. The frame name is **not** a label of its own:
-   it lives on the **Panel name** box's tooltip, so nothing crowds that box's Okay button.
+   **Panel name** and **Copy settings from panel**, then **Enabled** and **Unlock**, then **Reset**
+   and **Delete** — three rows of two on the strip's **first** tab. All six act on the panel as a
+   whole rather than on one aspect of it, which is what earns them a tab of their own rather than a
+   place under a subject tab, and `General` being **first** is the condition §14 grants the move on:
+   the page opens there, so nothing is hidden. Confirm the page **lands on `General`** when you
+   click **Panels**, then walk the other five tabs and confirm none of the six follows you — they
+   are the first tab's, not the band's. Come back to `General` and, with a panel picked: tick and
+   untick **Enabled** (the panel goes and comes back), tick **Unlock** (only that panel grows a
+   handle), press **Reset**, and finally **Delete**. Each must act on the panel the **Panel** picker
+   is showing. Now change the picker to a different panel and confirm the six rebuild against it —
+   they are built per selection, so acting on a stale panel is the specific regression this step
+   exists to catch. The frame name is **not** a label of its own: it lives on the **Panel name**
+   box's tooltip, so nothing crowds that box's Okay button.
 5c-2. **The rename box is not overwritten while you type.**
    **Smoke, session 3. NOT YET RUN.**
    Select a panel, click into **Panel name**
@@ -651,8 +655,8 @@ rather than carried, and the first is the one that could destroy a layout.
 
 1. Make two panels. Style the first heavily — size, textures, both colors, border, accent bar.
    Move the second somewhere clearly different.
-2. On the **second** panel, pick the first from **Copy settings from panel** — in the chrome band's
-   middle row, beside the rename box, reachable from whichever tab you happen to be on.
+2. On the **second** panel, pick the first from **Copy settings from panel** — on the **General**
+   tab's first row, beside the rename box.
 3. **Expect:** the second takes on the first's entire appearance **and size**, and a cyan-tagged
    confirmation names the source.
 4. **Expect: it does not move.** Position is deliberately not copied — otherwise the two would land
@@ -746,7 +750,7 @@ that looks different is the finding.
 2. **Its close control is the library's ×**, 18×18, gray, turning **red** on hover — not the old
    flat `X` that turned gold. `Copy` and `Clear` sit to its left with a 6px gap, unmoved.
 3. **`/pm help` rows are indented two spaces** under the header, and the header now carries an em
-   dash: `v1.0.0 — slash commands (/panelmaster is an alias for /pm)`.
+   dash: `v1.1.0 — slash commands (/panelmaster is an alias for /pm)`.
 4. **The settings landing page's command list** lost its double spacing: `/pm config — Open
    settings`, one space either side of the dash, the dash gold-to-white rather than white-wrapped.
    It should now look **identical** to `/pm help`'s rows minus their indent — compare them directly.
@@ -968,8 +972,8 @@ falls back and the line silently reports the constant again — which looks corr
 where the two strings agree, and is exactly the failure this change exists to remove.
 
 **Setup.** In the INSTALLED copy under `Interface/AddOns/PanelMaster/` — never in the repo — edit
-`PanelMaster.toc` so `## Version:` reads `1.0.0-smoke`. That is the whole point: while the TOC and
-`core/Namespace.lua`'s constant read the same `1.0.0`, no in-client observation can tell which one
+`PanelMaster.toc` so `## Version:` reads `1.1.0-smoke`. That is the whole point: while the TOC and
+`core/Namespace.lua`'s constant read the same `1.1.0`, no in-client observation can tell which one
 was printed.
 
 1. Log in.
@@ -978,10 +982,10 @@ was printed.
 4. `/pm version`.
 5. Restore the installed TOC's `## Version` and `/reload`.
 
-**Expect:** step 3 reads `PanelMaster v1.0.0-smoke, schema v2, profile '<yours>', N panels` — the
-**TOC's** string — and step 4 reads `[PM] v1.0.0-smoke`. The two surfaces agree.
+**Expect:** step 3 reads `PanelMaster v1.1.0-smoke, schema v2, profile '<yours>', N panels` — the
+**TOC's** string — and step 4 reads `[PM] v1.1.0-smoke`. The two surfaces agree.
 
-**Fail:** an `[Init]` line reading `v1.0.0` while `/pm version` reads `v1.0.0-smoke`. That is one
+**Fail:** an `[Init]` line reading `v1.1.0` while `/pm version` reads `v1.1.0-smoke`. That is one
 string with two sources of truth, and the `[Init]` line is the one a user pastes into a bug report.
 
 ---

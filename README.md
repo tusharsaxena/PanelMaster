@@ -51,10 +51,11 @@ second you drop out of combat. A panel that has wandered past a screen edge come
 `/pm recover`.
 
 How it looks is the Panels page in the settings window. Pick a panel from the picker at the top and
-its appearance opens underneath, one tab at a time: position and size, background and border, accent
-bar, artwork, opacity and fade. **Copy settings from panel** takes another panel's entire look
-without touching this one's position, which is what stops your second and third panels from being
-the first one built again by hand. All of it is reachable from the command line too, and for a small
+it opens underneath, one tab at a time: **General** first — its name, the two switches, and the
+buttons that reset or delete it — then position and size, background and border, accent bar,
+artwork, and opacity and fade. **Copy settings from panel**, on that first tab, takes another
+panel's entire look without touching this one's position, which is what stops your second and third
+panels from being the first one built again by hand. All of it is reachable from the command line too, and for a small
 adjustment that is quicker than opening the page: `/pm panel ChatBG width 420`.
 
 `/pm preview` drops three sample panels on screen so you can judge a color or a texture against your
@@ -253,7 +254,7 @@ lives. A debug log (see above) helps a great deal for anything that looks like a
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.1.0 | 2026-09-10 | Page-wide actions moved onto a **General** first tab, and **Create** and **Edit** now sit above the tab strip<br>Fixed the page band failing when it was built before the canvas existed<br>Fixed the landing tagline wrapping onto a second line<br>The **Defaults** tooltip no longer implies your panels are safe from the reset<br>Updated for game patch 12.1.0<br>_Verified against lint, tests and complexity. This addon ships no `tests/perf.lua`, so the perf suite was skipped rather than measured — the release gate covered three suites, not four._ |
+| 1.1.0 | 2026-09-10 | Page-wide actions moved onto a **General** first tab, and **Create** and **Edit** now sit above the tab strip<br>Fixed the page band failing when it was built before the canvas existed<br>Fixed the landing tagline wrapping onto a second line<br>The **Defaults** tooltip no longer implies your panels are safe from the reset<br>Updated for game patch 12.1.0 |
 | 1.0.0 | 2026-08-07 | - First release: create, place and style as many backdrop panels as you like<br>- LibSharedMedia background and border textures, with a class-color option for both<br>- Accent bars along any edge, with their own texture, border and class color<br>- Per-panel scale, mouseover-only fade, and all eight frame strata<br>- Per-panel artwork from the bundled catalog, your own texture, or a Sunn - Viewport Art pack you already own — with tint, desaturate, blend mode, fill, position, scale, rotation, flip, draw layer and fit-to-artwork<br>- Fixed frame names so other addons can anchor to a panel, unaffected by renaming<br>- Global and per-panel unlock with snap-to-grid, test mode and copy-settings-between-panels<br>- Full command-line control and AceDB profiles |
 
 ## Credits

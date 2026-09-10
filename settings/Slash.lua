@@ -304,8 +304,10 @@ NS.COMMANDS = {
   { "reset",    "Reset one setting", function(a) NS.Slash:CliReset(a) end },
   { "resetall", "Reset this profile to defaults", function() NS.Slash:ConfirmResetAll() end },
   -- Every sub-verb a handler below accepts is named in its own `desc`, because the generated help
-  -- index, the settings landing page and the README's command table all read these strings and
-  -- nothing else. A sub-verb missing here is a sub-verb nobody can discover (slash-commands-§4).
+  -- index (`:377`) and the LibKa0s-Slash descriptor that feeds the settings landing page (`:389`)
+  -- read these strings and nothing else. The README's command prose is hand-written and does NOT
+  -- read them, so it drifts separately and is checked separately. A sub-verb missing here is a
+  -- sub-verb nobody can discover (slash-commands-§4).
   { "debug",    "Window; 'on'/'off' set logging, 'dump' writes a state dump",
     function(rest)
       -- `/pm debug` toggles the WINDOW only (the logging flag is untouched); `/pm debug on|off` sets

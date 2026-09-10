@@ -109,8 +109,10 @@ A new page is **tabbed** unless it is one of the two `options-ui-§13` exempts (
 Profiles). A schema-driven page gets its strip from one `H.RenderTabbedSchema` call, which
 partitions the rows by `group` in declaration order; a bespoke page draws its own with `H.TabStrip`
 and dispatches on `ctx.activeTab`, the way `settings/PanelEditor.lua` does. A control that governs
-the whole page rather than one tab belongs in the chrome band, in the page's single `H.PageHeader`
-block (`options-ui-§14`) — not under a tab, and not in the scroll.
+the whole page rather than one tab never belongs in the scroll: the identity pair — make one, choose
+which one — goes in the page's single **one-row** `H.PageHeader` band, and the remaining page-wide
+acts go on a first tab named `General` (`options-ui-§14`, standard v2.40.0), which is legal
+precisely because it is the tab the page opens on.
 
 If you need to change how a field renders, wrap the library member **on the instance** — `RenderField`
 and `EnsureScroll` already are — because the flow engine resolves both from the instance table at

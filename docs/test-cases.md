@@ -676,8 +676,8 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: the two opacity sliders share a row, and the switch is below
 - Panels page: an unknown active tab heals to the first one rather than drawing nothing
 - Panels page: creating and picking a panel are ABOVE the strip, in the chrome band
-- Panels page: the panel-wide acts are in the chrome band, not under a tab
-- Panels page: the band's acts follow the picker rather than the panel they were built on
+- Panels page: the panel-wide acts are on the General FIRST tab, and the band keeps the picker
+- Panels page: the acts follow the picker rather than the panel they were built on
 - Panels page: the strip is drawn with ZERO panels, and the empty state is content
 - Panels page: the Master controls tab closes on the canonical button pair
 - Panels page: every color swatch is followed by a 'Use class color' companion

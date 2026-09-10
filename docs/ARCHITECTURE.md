@@ -279,20 +279,20 @@ the current one and the other is a measurement of an August afternoon.
 
 ### Files by the `layout-§1` band
 
-Measured 2026-09-08 with
+Measured 2026-09-11 with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-| File | Lines (2026-09-08) | Disposition |
+| File | Lines (2026-09-11) | Disposition |
 |---|---|---|
-| `settings/PanelEditor.lua` | 1488 | **On notice, and its own trigger has fired.** Issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor (`:190-220`, `:342-993`, ~650 lines) out from under the Panels page's chrome band, into a sibling under `settings/`; the issue names the four shared symbols the peel has to publish on `E` first. Not peeled this cycle by plan. |
+| `settings/PanelEditor.lua` | 1414 | **On notice, and its own trigger has fired.** Issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor (`:190-220`, `:342-993`, ~650 lines) out from under the Panels page's chrome band, into a sibling under `settings/`; the issue names the four shared symbols the peel has to publish on `E` first. Not peeled this cycle by plan. |
 | `tests/test_artwork.lua` | 1356 | **Accepted — it peels when `modules/Artwork.lua` does, on the same seam, in the same commit.** A mirror suite has no partition of its own: pick one before the module has, and the two files stop pairing, which is worse for a reader under failure than one long file that pairs. |
-| `tests/test_panel.lua` | 1222 | **Accepted, and it is the row this census was written by finding.** It crossed 1000 at `1b8c672` (2026-09-03, 1076) and nothing anywhere said so — the watch list that should have caught it is frozen at the 1.0.0 release run, where this file was 708. It is the suite for **both** page files, so its appearance cases leave with the editor when [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) peels; same seam, same commit. |
+| `tests/test_panel.lua` | 1273 | **Accepted, and it is the row this census was written by finding.** It crossed 1000 at `1b8c672` (2026-09-03, 1076) and nothing anywhere said so — the watch list that should have caught it is frozen at the 1.0.0 release run, where this file was 708. It is the suite for **both** page files, so its appearance cases leave with the editor when [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) peels; same seam, same commit. |
 | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** Flat since the 1.0.0 release run (1188 at `20260807-160022`, 1087 at the baseline). Split along the catalog / geometry seam before the next feature lands in it; `tests/test_artwork.lua` peels with it. |
 
-**Nothing is over the cap.** The largest authored file in the repository is twelve lines under it, and
+**Nothing is over the cap.** The largest authored file in the repository is eighty-six lines under it, and
 the four rows above are the whole band. `modules/Registry.lua` at 999 is the nearest file outside the
 table and is now one line from needing a row of its own. `M4-18` put a private sweep in it and was
 trimmed to stay under the trigger deliberately: crossing the band as a side effect of a Low-severity

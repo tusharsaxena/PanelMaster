@@ -7,8 +7,9 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 
 -- ── The Panels subcategory's body ───────────────────────────────────────────────
--- The chrome band's eight page-wide controls, and one panel's appearance editor under a five-tab
--- strip. This is the structural page: its content depends on how many panels exist, so it lives
+-- The chrome band's two controls — the panel picker and the create box, one row — and one panel's
+-- appearance editor under a six-tab strip. The six page-wide acts live on the editor's own General
+-- tab, which is first (options-ui-§14, standard v2.40.0). This is the structural page: its content depends on how many panels exist, so it lives
 -- behind `rebuilders` and is repainted only when the SET of panels changes (options-ui-§11) or when
 -- a tab is clicked, never on every OnShow.
 --

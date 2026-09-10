@@ -11,6 +11,13 @@ Panel verbs: `new delete rename panels panel unlock lock preview recover`.
 `/pm panel <name> [field] [value]` inspects and edits a single panel from the command line, using the
 same `Registry:Set` seam the settings widgets and the drag handler use.
 
+Two words in that grammar are **actions rather than fields**, and they are ordered oppositely.
+`fitart` is checked *before* the field table; `deleteall` is checked *after* the panel registry. `/pm panel <name> fitart` is the CLI half of the editor's **Fit to artwork**
+button; nothing is ambiguous about it because no panel field is called `fitart` and none can be.
+`/pm panel deleteall` is the confirm-gated wipe of every panel, and it is the verb **only when no
+panel answers to that name** — a panel someone called "deleteall" still wins, so it can be inspected
+and edited from the CLI rather than being unreachable.
+
 Output follows `slash-commands-§4/§5`: the cyan `[PM]` tag on every line, green headers, azure
 `[group]` headers, gold keys, white values, no trailing colons. `Slash:BuildListLines`,
 `BuildPanelLines` and `BuildPanelShowLines` return arrays rather than printing, so the output shape

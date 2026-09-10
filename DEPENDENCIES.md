@@ -56,7 +56,7 @@ sudo apt install -y pipx && pipx ensurepath && pipx install lizard
 | **luacheck** | any recent (verified with 1.2.0) | Half the green gate. Config at `.luacheckrc`; run per `docs/testing.md` ▸ *The green gate*. Pinning a version would be false precision — no rule in `.luacheckrc` depends on one. | `luacheck --version` |
 | **lizard** | any recent (verified with 1.23.0) | Drives the `complexity` suite of the automated-test run at release, per `performance-§10`. Optional day to day: without it the report is simply **stale**, which is a visible state, not a compliance failure. | `lizard --version` |
 | **git** | any recent | Beyond version control, one suite shells out to it: `tests/_kit/vendor_sync.lua:184` runs `git -C <sibling> …` to read the LibKa0s tag the vendored payload claims. Absent git, that case degrades rather than errors (`:183` guards on `io.popen`). The shell-out moved into the vendored kit when `tests/test_vendor_sync.lua` became registration-only; the requirement did not move with it. | `git --version` |
-| **A POSIX shell with `ls` and `find`** | — | `tests/_kit/framework.lua:214` enumerates the suite files behind `T.assertSuiteInventory` (`ls -A`, with a `dir /b` fallback for cmd.exe), and `tests/_kit/vendor_sync.lua:122` lists the vendored trees the same way but recursively (`find . -type f`, with `dir /b /s` as the cmd.exe fallback). Lua 5.1 has no directory API and this repo declines a LuaFileSystem dependency — see the comment at `framework.lua:197-201`. Any WSL2/Ubuntu shell has this; it is listed because it is a real, invisible assumption. | `ls --version` |
+| **A POSIX shell with `ls` and `find`** | — | `tests/_kit/framework.lua:357-358` enumerates the suite files behind `Kit.assertSuiteInventory` (`ls -A`, with a `dir /b` fallback for cmd.exe), and `tests/_kit/vendor_sync.lua:122` lists the vendored trees the same way but recursively (`find . -type f`, with `dir /b /s` as the cmd.exe fallback). Lua 5.1 has no directory API and this repo declines a LuaFileSystem dependency — see the comment at `framework.lua:340-342`. Any WSL2/Ubuntu shell has this; it is listed because it is a real, invisible assumption. | `ls --version` |
 | **The sibling `../LibKa0s` checkout** | matching tag | Not a package — a **checked-out repo next to this one**, needed only to run the vendor gate's four `diff -r` commands (`docs/testing.md` ▸ *The vendor gate*) or to re-vendor. The addon builds, runs and tests without it; `tests/test_vendor_sync.lua` skips what it cannot reach. | `ls ../LibKa0s/LibKa0s` |
 
 **`pip install lizard` does not work on Ubuntu 24.04.** Its Python is marked
@@ -88,7 +88,7 @@ artwork gates that neither can see, are all in [`docs/testing.md`](docs/testing.
 **None of this is needed to build, run or test the addon.** You can fix a bug, write a test, run
 both gates and ship a change with nothing from this section installed. It exists only to
 **regenerate committed assets** — the artwork catalog, the contact-sheet poster and the Sunn
-manifest — and `.pkgmeta:10` excludes `tools` from the packaged addon entirely, so none of it
+manifest — and `.pkgmeta:18` excludes `tools` from the packaged addon entirely, so none of it
 reaches a player.
 
 If you are not touching `media/artwork/` or the Sunn packs, skip the rest of this file.
