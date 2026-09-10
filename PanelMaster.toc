@@ -1,4 +1,4 @@
-## Interface: 120007
+## Interface: 120100
 ## Title: Ka0s Panel Master
 ## Notes: Draws plain backdrop panels behind your UI, so separate frames read as deliberate groups.
 ## Author: add1kted2ka0s
