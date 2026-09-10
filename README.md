@@ -6,8 +6,6 @@
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
 ![Tests](https://img.shields.io/badge/Tests-783%2F783_passing-green)
 
-![Logo](https://media.forgecdn.net/attachments/1849/99/panelmaster-logo-jpg.jpg)
-
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
 
@@ -22,19 +20,19 @@ If you have used kgPanels, or the panels built into ElvUI, this will feel famili
 
 **_Panel Master in action_**
 
-![Panel Master in action](https://media.forgecdn.net/attachments/1849/188/panelmaster-screenshot-04-jpg.jpg)
+![Panel Master in action](https://media.forgecdn.net/attachments/1936/709/panelmaster-screenshot-04-jpg.jpg)
 
 **_Basic panel_**
 
-![Basic panel](https://media.forgecdn.net/attachments/1849/185/panelmaster-screenshot-01-png.png)
+![Basic panel](https://media.forgecdn.net/attachments/1936/706/panelmaster-screenshot-01-png.png)
 
 **_Panels with bundled artwork_**
 
-![Panels with bundled artwork](https://media.forgecdn.net/attachments/1849/186/panelmaster-screenshot-02-png.png)
+![Panels with bundled artwork](https://media.forgecdn.net/attachments/1936/707/panelmaster-screenshot-02-png.png)
 
 **_Panels with SunnArt artwork_**
 
-![Panels with SunnArt artwork](https://media.forgecdn.net/attachments/1849/187/panelmaster-screenshot-03-png.png)
+![Panels with SunnArt artwork](https://media.forgecdn.net/attachments/1936/708/panelmaster-screenshot-03-png.png)
 
 ## Usage
 
