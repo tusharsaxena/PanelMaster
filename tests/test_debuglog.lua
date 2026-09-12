@@ -254,6 +254,23 @@ test("NS.Debug: the ungated call sites still log when logging is on", function()
   NS.Registry:DeleteAll()
 end)
 
+test("NS.Debug: deleting every panel at once is traced, with the count (debug-logging-§8)",
+function()
+  -- A user-initiated purge is a data mutation the log has to show, and a structural registry's
+  -- deletes are traced by its writer (debug-logging-§10). Delete and DeleteBatch go through
+  -- `destroy`, which logs each panel; DeleteAll empties the registry in one sweep, so it has to say
+  -- so itself, or `/pm deleteall` and the Panels page's Defaults leave no line behind.
+  quiet()
+  NS.Registry:DeleteAll()
+  NS.Registry:New("Purged1")
+  NS.Registry:New("Purged2")
+  NS.State.debug = true
+  assertEqual(NS.Registry:DeleteAll(), 2)
+  local joined = table.concat(D.buffer, "\n")
+  assertTrue(joined:find("deleted all 2 panel(s)", 1, true) ~= nil, "DeleteAll left no log line")
+  quiet()
+end)
+
 test("NS.Debug: the ungated call sites stay silent when logging is off", function()
   quiet()
   NS.Registry:DeleteAll()

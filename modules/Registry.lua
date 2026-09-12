@@ -597,8 +597,8 @@ function R:DeleteAll()
   -- whole sweep runs wholesale rather than id by id — including the preview FLAG, which this used
   -- to leave standing over an empty id list.
   clearPanelSessionState()
-
-  if n > 0 then fire(MSG_PANELS) end
+  -- One trace for the whole purge (debug-logging-§8): `destroy` is never called on this path.
+  if n > 0 then NS.Debug("Panel", "deleted all %s panel(s)", n); fire(MSG_PANELS) end
   return n
 end
 

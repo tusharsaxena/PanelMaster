@@ -499,7 +499,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (26)
+### test_debuglog.lua (27)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -523,6 +523,7 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog.Diagnose: works with logging off
 - NS.Debug: call sites do not restate the gate
 - NS.Debug: the ungated call sites still log when logging is on
+- NS.Debug: deleting every panel at once is traced, with the count (debug-logging-§8)
 - NS.Debug: the ungated call sites stay silent when logging is off
 - NS.DebugBuild: does not call its builder when logging is off
 - NS.DebugBuild: calls the builder and logs when logging is on
@@ -901,7 +902,7 @@ badge and any count quoted in the docs must agree with it.
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
-| test_debuglog.lua | 26 |
+| test_debuglog.lua | 27 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
 | test_panel.lua | 59 |
@@ -918,4 +919,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **792** |
+| **Total** | **793** |
