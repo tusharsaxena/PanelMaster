@@ -220,35 +220,51 @@ The **Edges** one replaces a hand-rolled gold `|cffffd100Edges|r` Label that sto
 which is anti-pattern #71. The *Background and border* merge is not undone by the rule — it is
 argued for above, and what the rule adds is the pair of headings inside it.
 
-The border and bar blocks carry the canonical row sets and order (`options-ui-§16`): **Border style**,
-**Border thickness (px)**, **Border color**, **Use class color**, and then this addon's own **Border
-offset** *after* them rather than among them; **Bar texture**, **Bar opacity**, **Bar color**, **Use
-class color**, then bar thickness and bar offset. **Bar opacity** is a new stored field
-(`accentAlpha`) multiplied into the bar color's alpha — the panel-wide opacity could not stand in for
-it, because that one fades background, border and bars together.
+The border and bar blocks are **composed** (`options-ui-§16`): `O.BorderGroup` for the panel's border
+and again for the accent bar's own border, `O.BarGroup` for the accent bar, each with `spec.bind`
+over the panel record ([#48](https://github.com/tusharsaxena/PanelMaster/issues/48)). So each carries
+the canonical row set and order: **Border style**, **Border thickness (px)**, **Border color**, **Use
+class color**, and then this addon's own **Border offset** *after* them rather than among them; **Bar
+texture**, **Bar opacity**, **Bar color**, **Use class color**, then bar thickness and bar offset.
+**Bar opacity** is a stored field of its own (`accentAlpha`) multiplied into the bar color's alpha.
+The panel-wide opacity could not stand in for it, because that one fades background, border and bars
+together.
 
 The panel **background** is not a bar group and takes no opacity row of its own: a group over a
 background takes the swatch and its companion, and the alpha in the swatch plus the panel-wide
 opacity are already the two controls that decide how solid the fill is.
 
-**What is honored by hand here is the ROW SET and the ORDER, not the composer.** `options-ui-§16`
-also says these blocks are emitted from one library declaration rather than typed out
-(`H.BorderGroup` / `H.BarGroup`, anti-pattern #73) — and those composers emit **schema rows**, which
-is a shape the Panels page has not got: a panel is a registry record with no `path`, drawn from
-`NS.Registry` by `settings/PanelEditor.lua`, so there is nothing for a row composer to emit into.
-The stub in `settings/OptionsSetup.lua` answers `BorderGroup` and `BarGroup` for the parity case and
-nothing in this addon calls either. The gap is real, and since 2026-09-08 it is **ratified**: each of
-the three blocks carries its own `options-ui-§16` row in `ARCHITECTURE.md` ▸ *Documented deviations*,
-naming the record-backed bind as the reason and retiring the day its composer gains a record-backed
-arm — with a re-check pinned to the next `LibKa0s-Options` major regardless. The ruling was that the
-arm is an upstream surface cut for one page and does not get made in a hurry, so the state is
-recorded rather than the interface forced; the question it records is still open.
-`tests/test_options_groups.lua` holds the code and the register together in both directions, so a
-fourth hand-written block cannot arrive unratified and a row cannot outlive the block it names.
+**How the page composes blocks it cannot put in a schema.** A panel is a registry record with no
+`path`, so these rows are not settings. The composers take a `bind` in place of a path: the
+record-backed arm LibKa0s v1.31.0 added for this page (OptionsCompose minor 4, read by OptionsWidgets
+minor 15). One bind serves all three blocks. It reads the live record by id, writes through
+`NS.Registry:Set` like every other control on the page, and converts colors between the record's
+`{ r, g, b, a }` arrays and the named keys the library's codec reads. The rows are drawn two to a line
+with `O.RenderField` into the editor's own rows and never enter `NS.Schema.Schema`, so the CLI keeps
+reaching these fields through `/pm panel <name> set`.
+
+Composed rows are plain tables, and the page retunes them before drawing so a player sees what the
+typed-out blocks showed: this page's own tooltips, the media lists from `NS.Compat.MediaList` (with
+this addon's `None` and `Solid`, in that order), the Constants ranges (a border here reaches 32 px, not
+the composer's 16), and **Bar opacity** as a 0–1 ratio rather than a percentage. Two things follow the
+library rather than the old code, because no row field can express them. A composed swatch keeps its
+label while its companion is ticked instead of gaining a gray `(opacity)` suffix; its tooltip already
+says the alpha still applies, in `O.CLASS_COLOR_NOTE`'s words. And a live color drag commits through
+the library's 50 ms throttle. The two swatches still drawn by hand, **Background color** and
+**Artwork color**, keep the suffix.
+
+The library-less stub in `settings/OptionsSetup.lua` answers `BorderGroup` and `BarGroup` with an
+empty row list, so a degraded install draws none of the three blocks rather than raising, which is
+`options-ui-§1`'s ruling for composed content. `tests/test_options_groups.lua` holds the result: no
+hand-written block on the page, the three composer calls bound, no `options-ui-§16` row in
+`ARCHITECTURE.md` ▸ *Documented deviations*, and a control-by-control characterization of what the
+composed blocks draw and write.
 The **General** page has no color, font, border or bar row at all, so `§16` does not engage there.
 
-The class-color intent `options-ui-§17` requires per control is declared in `C.COLOR_CLASS_SOURCE`
-rather than on a row, for the same reason: these controls have no rows. All five entries are
+The class-color intent `options-ui-§17` requires per control is declared in `C.COLOR_CLASS_SOURCE`,
+one entry per color. The three composed swatches also carry it on their rows (`classColor = { source =
+C.COLOR_CLASS_SOURCE.<field> }`, stamped as `classColorSource`); the two hand-drawn ones have no row, so
+the map is their only declaration. All five entries are
 `"player"` — a panel is chrome and tracks no unit — and the map is what an audit reads.
 
 Counts come from `settings/Schema.lua` and `settings/PanelEditor.lua`, and are pinned by the

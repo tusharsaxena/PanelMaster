@@ -1227,9 +1227,9 @@ test("Panels page: every color swatch is followed by a 'Use class color' compani
     ["Accent bar"]            = { "Bar color", "Border color" },
     ["Artwork"]               = { "Artwork color" },
   }
-  -- Matched on the PREFIX, because a swatch whose class color is already on carries a live
-  -- `(opacity)` suffix saying which half of it is still read -- `accentClassColor` ships true, so
-  -- the Bar color picker is labeled that way from the first render.
+  -- Matched on the PREFIX, because the two hand-drawn swatches (Background color, Artwork color)
+  -- carry a live `(opacity)` suffix while their class color is on. The three composed ones (Border
+  -- color twice, Bar color; PanelMaster#48) keep the canonical label and say it in the tooltip.
   local function drewSwatch(labels, swatch)
     for label in pairs(labels) do
       if label == swatch or label:sub(1, #swatch + 1) == swatch .. " " then return true end

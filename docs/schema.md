@@ -91,8 +91,11 @@ and because the day a panel gains a tracked unit the change is one row.
 Because the alpha is still the user's, the color picker stays **enabled** while class color is on —
 and `disabledIf` on a color row is now forbidden outright (anti-pattern #74). It is the only control
 that sets opacity, so graying it out contradicted its own tooltip and left a washed-out class color
-unfixable. Its label gains an `(opacity)` suffix to say which half is live, and its tooltip carries
-the collection's own sentence for it (`H.CLASS_COLOR_NOTE`) rather than a paraphrase. The companion
+unfixable. On the two hand-drawn swatches (Background color, Artwork color) the label gains an
+`(opacity)` suffix to say which half is live. The three composed ones (both border colors and Bar
+color, [#48](https://github.com/tusharsaxena/PanelMaster/issues/48)) keep the canonical label, and
+every swatch's tooltip carries the collection's own sentence for it (`H.CLASS_COLOR_NOTE`) rather than
+a paraphrase. The companion
 is labeled **`Use class color`**, which is the name the standard gives it. A color added later gets class-color support in
 the renderer, the CLI and the settings page from that one row — nothing re-decides "does this color
 support class color?" at a call site. The accent bar proved this out: adding a third class-colorable

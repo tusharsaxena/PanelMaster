@@ -237,10 +237,19 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 3. Tick **Use class color** next to **Border color** too, and confirm the two are independent: untick
    the background one and the border stays class-colored.
 4. Untick both. **Expect:** the original colors come back exactly — they were never overwritten.
-4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker's label
-   reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
+4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker is
+   still **enabled**. **Background color** and **Artwork color** read `… (opacity)`; **Border color**
+   and **Bar color** keep their label, because they are composed (#48), and their tooltip says the
+   opacity still applies. Open one and drag the opacity slider →
    **Expect:** the class-colored border/fill gets more or less solid. This is the only control that
    sets opacity, so it must not be grayed out.
+4d. **The composed blocks (#48).** On **Background and border**, and on **Accent bar** for both the
+   bar and its border, work every control in turn: pick a style or texture, drag the thickness, pick a
+   color, tick and untick **Use class color**, drag the offset (and **Bar opacity**, **Bar thickness**,
+   **Bar offset**). **Expect:** each applies to the panel at once. A newly picked style or texture
+   name shows in its dropdown straight away rather than the old one. **Border thickness (px)**
+   reaches **32**. **Bar opacity** reads as a 0–1 value, not a percentage. Hovering each control shows
+   the same tooltip it did when the blocks were typed out. `/reload`, and every value persisted.
 4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
    color mode produced it. Compare a picked bright color against your class color at the **same
    opacity and size** — a darker class color will legitimately look softer. If they differ at

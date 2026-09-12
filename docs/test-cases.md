@@ -853,11 +853,15 @@ badge and any count quoted in the docs must agree with it.
 - layoutcap: no census row outlives the file it records
 - layoutcap: every file over the 1500-line cap carries a disposition that can be followed
 
-### test_options_groups.lua (3)
+### test_options_groups.lua (7)
 
-- optionsgroups: every hand-written canonical block is ratified in the deviation register
-- optionsgroups: no register row outlives the block it records
-- optionsgroups: every options-ui-§16 register row carries a re-check trigger
+- optionsgroups: the Panels editor types out no canonical block
+- optionsgroups: the three blocks are composed through the record-backed arm (#48)
+- optionsgroups: the deviation register carries no options-ui-§16 row
+- optionsgroups: the Background and border tab draws its canonical blocks control by control (#48)
+- optionsgroups: the Background and border blocks follow a write made elsewhere (#48)
+- optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
+- optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
 
 ### test_register.lua (1)
 
@@ -906,9 +910,9 @@ badge and any count quoted in the docs must agree with it.
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 3 |
-| test_options_groups.lua | 3 |
+| test_options_groups.lua | 7 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **785** |
+| **Total** | **789** |
