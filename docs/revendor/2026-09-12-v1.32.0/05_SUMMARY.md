@@ -31,8 +31,8 @@ copy alone every one of the 794 cases stayed green.
 |---|---|---|
 | `R:Reset` | `[Panel] reset '<panel>' (id n)` | `[Set] reset '<panel>': N rows` |
 | `R:CopyFrom` | `[Panel] '<dst>' copied settings from '<src>'` | `[Set] copy from '<src>' to '<dst>': N rows` |
-| `R:ResetPositions` | nothing | `[Set] reset positions: N panels` |
-| `R:Recover` | nothing | `[Set] recover positions: N panels` |
+| `R:ResetPositions` | nothing | `[Set] reset positions: N rows` |
+| `R:Recover` | nothing | `[Set] recover positions: N rows` |
 | `Sl:DoResetAll` | `[Profile] switched to '<name>', N panels` | `[Set] reset profile '<name>' to defaults (N rows)`, once, from `OnProfileReset` |
 | Profiles ▸ Copy From | `[Profile] switched to …` | `[Set] copied profile '<src>' → '<dst>'` |
 | Profiles ▸ switch | `[Profile] switched to '<name>', N panels` | unchanged |
@@ -55,7 +55,7 @@ No issue was filed.
 |---|---|---|---|
 | Baseline, `19a94af` | 794 passed, 0 failed | 0 / 0 in 57 files | — |
 | Copy + provenance line (`c3479a9`) | 794 passed, 0 failed | 0 / 0 | — |
-| Tests first, before the change | 794 passed, **10 failed** (the new cases, as intended) | — | — |
+| Tests first, before the change | 794 passed, **11 failed** (the new cases, as intended) | — | — |
 | Bracket and acts (`f25a8af`) | **805 passed, 0 failed, 0 skipped** | **0 / 0** | clean |
 | Docs and bundle | 805 passed, 0 failed | 0 / 0 | clean |
 

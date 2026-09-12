@@ -377,35 +377,89 @@ test("bulk log: R:CopyFrom is one [Set] line counting the fields it rewrote", fu
   bulkFresh()
 end)
 
-test("bulk log: R:ResetPositions is one [Set] line counting the panels it moved", function()
+-- The position verbs count ROWS like every other bulk act: the point/relPoint/x/y fields that
+-- actually changed, not the panels. They still RETURN the panels moved, for the caller to print.
+test("bulk log: R:ResetPositions is one [Set] line counting the position fields it changed",
+  function()
   bulkFresh()
-  NS.Registry:New("Off1", { x = 100, y = 50 })
-  NS.Registry:New("Off2", { point = "TOPLEFT", relPoint = "TOPLEFT", x = 10, y = -10 })
-  NS.Registry:New("Home")
+  NS.Registry:New("Off1", { x = 100, y = 50 })                                         -- x, y
+  NS.Registry:New("Off2", { point = "TOPLEFT", relPoint = "TOPLEFT", x = 10, y = -10 }) -- all four
+  NS.Registry:New("Home")                                                               -- none
   NS.State.debug = true
   assertEqual(NS.Registry:ResetPositions(), 2)
   assertEqual(#tagged("Set"), 1)
-  assertEqual(tagged("Set")[1], "reset positions: 2 panels")
+  assertEqual(tagged("Set")[1], "reset positions: 6 rows")
   assertEqual(#tagged("Panel"), 0)
   D:Clear()
   assertEqual(NS.Registry:ResetPositions(), 0)
-  assertEqual(tagged("Set")[1], "reset positions: 0 panels")
+  assertEqual(tagged("Set")[1], "reset positions: 0 rows")
   bulkFresh()
 end)
 
-test("bulk log: R:Recover is one [Set] line counting the panels it moved", function()
+test("bulk log: R:Recover is one [Set] line counting the position fields it changed", function()
   bulkFresh()
-  NS.Registry:New("Lost1", { x = 9000, y = -9000 })
-  NS.Registry:New("Lost2", { x = -9000, y = 9000 })
+  NS.Registry:New("Lost1", { x = 9000, y = -9000 })   -- both offsets clamped
+  NS.Registry:New("Lost2", { x = -9000, y = 0 })      -- x alone
   NS.Registry:New("Fine", { x = 100, y = 100 })
   NS.State.debug = true
   assertEqual(NS.Registry:Recover(), 2)
   assertEqual(#tagged("Set"), 1)
-  assertEqual(tagged("Set")[1], "recover positions: 2 panels")
+  assertEqual(tagged("Set")[1], "recover positions: 3 rows")
   assertEqual(#tagged("Panel"), 0)
   D:Clear()
   assertEqual(NS.Registry:Recover(), 0)
-  assertEqual(tagged("Set")[1], "recover positions: 0 panels")
+  assertEqual(tagged("Set")[1], "recover positions: 0 rows")
+  bulkFresh()
+end)
+
+-- A bulk act that raises still logs its ONE line, marked ` (stopped by an error)`, still releases
+-- the mute, and the error still reaches the caller unchanged.
+test("bulk log: a reset-all that raises logs one marked line, unmutes and re-raises", function()
+  bulkFresh()
+  local S = NS.Schema
+  S:Set("settings.gridSize", S:Default("settings.gridSize"))
+  local orig = NS.db.ResetProfile
+  NS.db.ResetProfile = function()
+    S:Set("settings.gridSize", 8)   -- one bracketed row changes before the reset gives up
+    error("boom", 0)
+  end
+  quiet()
+  NS.State.debug = true
+  local ok, err = pcall(NS.Slash.DoResetAll, NS.Slash)
+  NS.db.ResetProfile = orig
+  assertFalse(ok)
+  assertEqual(err, "boom")
+  assertEqual(#tagged("Set") + #tagged("Profile"), 1, table.concat(D.buffer, "\n"))
+  assertEqual(tagged("Set")[1], "reset all: 1 rows (stopped by an error)")
+  assertEqual(S.bulk.depth, 0)
+  assertEqual(S.resetSnapshot, nil)
+  D:Clear()
+  S:Set("settings.gridSize", S:Default("settings.gridSize"))
+  assertEqual(tagged("Set")[1], "settings.gridSize = " .. tostring(S:Default("settings.gridSize")),
+    "the seam stayed muted after a raising bracket")
+  bulkFresh()
+end)
+
+test("bulk log: a page Defaults that raises logs one marked line, unmutes and re-raises", function()
+  bulkFresh()
+  local S = NS.Schema
+  NS.Helpers.RestoreDefaults("general", nil)
+  S:Set("settings.gridSize", 8)
+  local row = S:FindRow("settings.gridSize")
+  local orig = row.onChange
+  row.onChange = function() error("boom", 0) end   -- the walk stops at this row, after writing it
+  quiet()
+  NS.State.debug = true
+  local ok, err = pcall(NS.Helpers.RestoreDefaults, "general", nil)
+  row.onChange = orig
+  assertFalse(ok)
+  assertEqual(err, "boom")
+  assertEqual(#tagged("Set"), 1, table.concat(D.buffer, "\n"))
+  assertEqual(tagged("Set")[1], "reset general: 1 rows (stopped by an error)")
+  assertEqual(S.bulk.depth, 0)
+  D:Clear()
+  NS.Helpers.RestoreDefaults("general", nil)
+  assertEqual(tagged("Set")[1], "reset general: 0 rows", "the failure mark outlived its act")
   bulkFresh()
 end)
 

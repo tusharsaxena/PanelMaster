@@ -23,26 +23,40 @@ no frame — or the reverse — is the shape of every rendering bug this addon c
 
 ## Bulk copy and reset — one `[Set]` line (`debug-logging-§10`)
 
-A bulk copy or reset logs **one** `[Set]` line naming the act, its scope and how much it actually
-changed, and never a line per field or per row (standard v2.44.0). The lines, exactly:
+A bulk copy or reset logs **one** `[Set]` line naming the act, its scope and how many rows it
+actually changed, and never a line per field or per row (standard v2.44.0). The lines, exactly:
 
 | Act | Line |
 |---|---|
 | Panel editor ▸ Reset (`R:Reset`) | `[Set] reset '<panel>': N rows` |
 | Panel editor ▸ copy settings from another panel (`R:CopyFrom`) | `[Set] copy from '<src>' to '<dst>': N rows` |
-| Master controls ▸ Reset position (`R:ResetPositions`) | `[Set] reset positions: N panels` |
-| Recover panels, `/pm recover` (`R:Recover`) | `[Set] recover positions: N panels` |
+| Master controls ▸ Reset position (`R:ResetPositions`) | `[Set] reset positions: N rows` |
+| Recover panels, `/pm recover` (`R:Recover`) | `[Set] recover positions: N rows` |
+| A library page Defaults (`O.RestoreDefaults`), the defensive walk: no control reaches it today | `[Set] reset <pageKey>: N rows` |
 | Reset all settings, `/pm resetall`, the header Defaults (`Sl:DoResetAll`) | `[Set] reset profile '<name>' to defaults (N rows)` |
+| The same, when `db:ResetProfile()` raises | `[Set] reset all: N rows (stopped by an error)` |
 | Profiles ▸ Reset Profile | `[Set] reset profile '<name>' to defaults`, with no count |
 | Profiles ▸ Copy From | `[Set] copied profile '<src>' → '<dst>'` |
 | Profiles ▸ switch | `[Profile] switched to '<name>', N panels`, unchanged |
 
-**N is what the act changed**, not what it covered: a field already at its default, a field already
-equal to the source's, a panel already where it belongs is not counted. An act that changes nothing
-still logs its line, with `0`. For the record verbs N comes from `Util.CountChanged` over a copy of
-the record taken before the act; for `resetall` it is the persisted schema rows that read back
-differently from the snapshot `Sl:DoResetAll` takes before `db:ResetProfile()`. The Profiles page's
-own Reset Profile takes no snapshot, so its line carries no count, which the rule permits.
+**N is the rows the act changed**, not what it covered: a field already at its default, a field
+already equal to the source's, a position field already at the new-panel template is not counted. An
+act that changes nothing still logs its line, with `0`. For `R:Reset` and `R:CopyFrom` N comes from
+`Util.CountChanged` over a copy of the record taken before the act. The two position verbs count
+the `point` / `relPoint` / `x` / `y` fields they rewrote, across every panel (`R:Recover` only ever
+clamps `x` and `y`); they still return the panels moved, which is what their callers print. For
+`resetall` N is the persisted schema rows that read back differently from the snapshot
+`Sl:DoResetAll` takes before `db:ResetProfile()`. The Profiles page's own Reset Profile takes no
+snapshot, so its line carries no count, which the rule permits.
+
+**The reset-all count covers settings rows only, not panels.** The reset takes the profile's panel
+records with it, but a record is not a settings row, so neither the `reset profile …` line nor the
+`reset all` line counts them.
+
+**An act that raises still logs its one line**, with ` (stopped by an error)` appended and N the
+rows it changed before it stopped. The mute is released and the error is re-raised unchanged: the
+library's bracket re-raises after `bulkEnd`, and `Sl:DoResetAll` after its own. A reset-all that
+raised never reached `OnProfileReset`, which is why the bracket logs `reset all` instead.
 
 **The three profile events are logged by the handler**, once each, worded by the event
 (`core/Database.lua`). A reset or copy is AceDB replacing the profile wholesale, not a batch through

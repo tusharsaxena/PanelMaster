@@ -915,7 +915,7 @@ end
 
 -- Drag a panel back into view if its anchor has ended up outside the screen — after a resolution
 -- change, a UI-scale change, or a copied profile from a different monitor. Returns the number of
--- panels moved, which the caller reports and the log carries as one [Set] line. Nothing here runs
+-- panels moved, for the caller to report; one [Set] line counts the offsets. Nothing here runs
 -- automatically: a panel deliberately parked mostly off-screen is a legitimate design, so recovery
 -- is `/pm recover` and the settings button, never a login-time sweep.
 -- The legal offset range depends on WHICH point the offset is measured from: a CENTER-anchored
@@ -943,7 +943,7 @@ function R:Recover()
   -- taken from `relPoint` — the point on UIParent the offset is measured FROM, i.e. where on the
   -- screen the panel's origin sits — not from `point`, which only says which corner of the panel
   -- lands there.
-  local moved = 0
+  local moved, rows = 0, 0
   for _, rec in ipairs(R:All()) do
     -- Guarded the way the renderer guards it (Canvas.BuildSpec): Sanitize runs per write and on a
     -- profile switch, never as a login sweep, so a hand-edited or pre-anchor SavedVariables record
@@ -956,11 +956,11 @@ function R:Recover()
     local x = Util.Clamp(rec.x, minX, maxX, 0)
     local y = Util.Clamp(rec.y, minY, maxY, 0)
     if x ~= rec.x or y ~= rec.y then
-      rec.x, rec.y = x, y
-      moved = moved + 1
+      rows = rows + (x ~= rec.x and 1 or 0) + (y ~= rec.y and 1 or 0)
+      rec.x, rec.y, moved = x, y, moved + 1
     end
   end
-  NS.Schema.BulkLine("recover", "positions", moved, "panels")   -- ONE counted [Set] line
+  NS.Schema.BulkLine("recover", "positions", rows)   -- ONE [Set] line, N the offsets changed
   if moved > 0 then fire(MSG_PANELS) end
   return moved
 end
@@ -981,19 +981,19 @@ end
 -- an anchor that has ended up beyond a screen edge and leaves everything already visible exactly
 -- where it is, while this one moves every panel whatever it was doing.
 --
--- Returns the number of panels moved, so the caller can say so rather than silently rearranging the
--- user's layout.
+-- Returns the panels moved, so the caller can say so; the log counts the fields it rewrote.
+local POSITION_FIELDS = { "point", "relPoint", "x", "y" }
 function R:ResetPositions()
   local t = C.PANEL_TEMPLATE
-  local moved = 0
+  local moved, rows = 0, 0
   for _, rec in ipairs(R:All()) do
-    if rec.point ~= t.point or rec.relPoint ~= t.relPoint
-       or rec.x ~= t.x or rec.y ~= t.y then
-      rec.point, rec.relPoint, rec.x, rec.y = t.point, t.relPoint, t.x, t.y
-      moved = moved + 1
+    local n = 0
+    for _, f in ipairs(POSITION_FIELDS) do
+      if rec[f] ~= t[f] then rec[f], n = t[f], n + 1 end
     end
+    if n > 0 then moved, rows = moved + 1, rows + n end
   end
-  NS.Schema.BulkLine("reset", "positions", moved, "panels")   -- ONE counted [Set] line
+  NS.Schema.BulkLine("reset", "positions", rows)   -- ONE [Set] line, N the fields changed
   if moved > 0 then fire(MSG_PANELS) end
   return moved
 end

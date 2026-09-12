@@ -345,32 +345,36 @@ end
 -- `info.profileReset`, nothing is emitted: AceDB replaced the whole profile, and the OnProfileReset
 -- handler in core/Database.lua logs that one line. settings/OptionsSetup.lua hands the library both
 -- halves together, so a begun mute always ends.
-S.bulk = { depth = 0, tally = 0, profileReset = false }
+S.bulk = { depth = 0, tally = 0, profileReset = false, failed = false }
 
 function S.BulkBegin(_act, _scope)
   local b = S.bulk
-  if b.depth == 0 then b.tally, b.profileReset = 0, false end
+  if b.depth == 0 then b.tally, b.profileReset, b.failed = 0, false, false end
   b.depth = b.depth + 1
 end
 
--- `_count` is the library's rows-returned figure, unused for the reason above. `unit` is the host's
--- own sixth argument: the Registry's position verbs count panels, not rows.
-function S.BulkEnd(act, scope, _count, _err, info, unit)
+-- `_count` is the library's rows-returned figure, unused for the reason above. `err` is what the
+-- act raised, if anything: the act still logs its one line, marked ` (stopped by an error)`, and
+-- the caller re-raises (the library's bracket, Sl:DoResetAll). A level that raised marks the
+-- outermost line. Closing the last level is what releases S:Set's mute, raise or not.
+function S.BulkEnd(act, scope, _count, err, info)
   local b = S.bulk
   if b.depth == 0 then return end
   b.depth = b.depth - 1
   if info and info.profileReset then b.profileReset = true end
+  if err ~= nil then b.failed = true end
   if b.depth > 0 or b.profileReset then return end
-  NS.Debug("Set", "%s %s: %d %s", tostring(act), tostring(scope), b.tally, unit or "rows")
+  NS.Debug("Set", "%s %s: %d rows%s", tostring(act), tostring(scope), b.tally,
+    b.failed and " (stopped by an error)" or "")
 end
 
 -- A bulk act the host performs itself, outside the schema rows: the Registry's record verbs count
--- the fields or panels they changed and hand the figure here. It is a bracket of its own, so inside
--- an open one it only adds to the tally and the outermost act's line carries it.
-function S.BulkLine(act, scope, n, unit)
+-- the fields they changed and hand the figure here. It is a bracket of its own, so inside an open
+-- one it only adds to the tally and the outermost act's line carries it.
+function S.BulkLine(act, scope, n)
   S.BulkBegin(act, scope)
   S.bulk.tally = S.bulk.tally + n
-  S.BulkEnd(act, scope, nil, nil, nil, unit)
+  S.BulkEnd(act, scope)
 end
 
 -- A profile reset's row count. AceDB fires OnProfileReset AFTER it has replaced the profile, so the

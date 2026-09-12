@@ -65,9 +65,11 @@ end
 --
 -- They are LOGGED by event, once each (debug-logging-§10): AceDB replacing the profile is wholesale
 -- replacement, not a batch through the write seam, so the handler says what happened. A reset is
--- `[Set] reset profile 'X' to defaults (N rows)`, N being the rows the profile stores; a copy is
--- `[Set] copied profile 'A' → 'B'`; a switch rewrites no rows and keeps the `[Profile]` trace. The
--- global reset (`Sl:DoResetAll`, the Profiles page's Reset Profile) logs nothing else.
+-- `[Set] reset profile 'X' to defaults (N rows)`, N being the persisted settings rows the reset
+-- changed, and the count omitted when no snapshot was taken (the Profiles page's own Reset
+-- Profile); a copy is `[Set] copied profile 'A' → 'B'`; a switch rewrites no rows and keeps the
+-- `[Profile]` trace. The global reset (`Sl:DoResetAll`, the Profiles page's Reset Profile) logs
+-- nothing else.
 --
 -- The reload is delegated to NS.Registry so that the panels message keeps a single sender
 -- (architecture-§4).

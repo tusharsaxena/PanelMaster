@@ -501,7 +501,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (36)
+### test_debuglog.lua (38)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -532,8 +532,10 @@ badge and any count quoted in the docs must agree with it.
 - NS.DebugBuild: passes the builder's arguments through unbound
 - bulk log: R:Reset is one [Set] line counting the fields it rewrote
 - bulk log: R:CopyFrom is one [Set] line counting the fields it rewrote
-- bulk log: R:ResetPositions is one [Set] line counting the panels it moved
-- bulk log: R:Recover is one [Set] line counting the panels it moved
+- bulk log: R:ResetPositions is one [Set] line counting the position fields it changed
+- bulk log: R:Recover is one [Set] line counting the position fields it changed
+- bulk log: a reset-all that raises logs one marked line, unmutes and re-raises
+- bulk log: a page Defaults that raises logs one marked line, unmutes and re-raises
 - bulk log: the global reset is ONE line in total, counting the rows it changed
 - bulk log: a profile copy and a profile switch are each worded by their event
 - bulk log: an act inside another logs once, the outermost, with the total
@@ -914,7 +916,7 @@ badge and any count quoted in the docs must agree with it.
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
-| test_debuglog.lua | 36 |
+| test_debuglog.lua | 38 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
 | test_panel.lua | 60 |
@@ -931,4 +933,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **805** |
+| **Total** | **807** |
