@@ -240,6 +240,31 @@ test("Slash.CliSet: a dropdown token followed by more words is refused, and the 
   Sl:CliReset("settings.defaultStrata")
 end)
 
+test("Slash.CliSet: an enum row matches its own values in any case and stores their spelling", function()
+  -- The adapter used to up-case EVERY enum row. That is right for strata, whose tokens are stored
+  -- upper-case, and wrong for the composed General visibility, whose values are always / inCombat /
+  -- outOfCombat / never: every `/pm set settings.visibility <value>` was refused. It now matches the
+  -- typed value against the row's own values without regard to case and hands the library the
+  -- spelling the row stores. Each value differs from the one before, so a refusal cannot pass.
+  for _, v in ipairs({ "never", "outOfCombat", "inCombat", "always" }) do
+    Sl:CliSet("settings.visibility " .. v)
+    assertEqual(NS.Schema:Get("settings.visibility"), v, "a valid visibility value was refused: " .. v)
+  end
+  Sl:CliSet("settings.visibility INCOMBAT")
+  assertEqual(NS.Schema:Get("settings.visibility"), "inCombat",
+    "a value typed in another case did not store the row's own spelling")
+  -- Strata keeps working the way it always has, and the whole value still has to match.
+  Sl:CliSet("settings.defaultStrata HIGH")
+  Sl:CliSet("settings.defaultStrata low")
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "LOW", "a lower-case strata token did not store upper-case")
+  local lines = capture(function() Sl:CliSet("settings.defaultStrata low junk") end)
+  assertTrue(lines[2] and lines[2]:find("allowed values:", 1, true) ~= nil,
+    "a token with trailing words was not refused: " .. tostring(lines[1]))
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "LOW", "a token with trailing words was stored")
+  Sl:CliReset("settings.visibility")
+  Sl:CliReset("settings.defaultStrata")
+end)
+
 test("Slash.CliSet: a non-number for a number row is refused", function()
   local before = NS.Schema:Get("settings.gridSize")
   local lines = capture(function() Sl:CliSet("settings.gridSize banana") end)

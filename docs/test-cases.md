@@ -573,7 +573,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (60)
+### test_slash.lua (61)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -599,6 +599,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)
 - Slash.CliSet: accepts a lower-case dropdown token
 - Slash.CliSet: a dropdown token followed by more words is refused, and the token alone takes
+- Slash.CliSet: an enum row matches its own values in any case and stores their spelling
 - Slash.CliSet: a non-number for a number row is refused
 - Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)
 - Slash.CliReset: restores one setting's default
@@ -919,7 +920,7 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 28 |
-| test_slash.lua | 60 |
+| test_slash.lua | 61 |
 | test_panel.lua | 60 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -934,4 +935,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **808** |
+| **Total** | **809** |

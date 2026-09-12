@@ -72,5 +72,8 @@ nothing for the schema CLI to do with them.
 Two descriptor adapters bridge the difference:
 
 - **`groupKey`** — this schema groups by `row.group`; the library defaults to `row.page`.
-- **`parse`** — the library matches an enum case-sensitively, and
-  `/pm set settings.defaultStrata low` has always worked here.
+- **`parse`** — the library matches an enum case-sensitively. This adapter matches the typed value
+  against the row's own `values` without regard to case and hands the library the spelling the row
+  stores, so `/pm set settings.defaultStrata low` stores `LOW` and
+  `/pm set settings.visibility incombat` stores `inCombat`. The whole value must match (LibKa0s
+  Slash minor 10), so `low junk` is refused rather than stored as `LOW`.

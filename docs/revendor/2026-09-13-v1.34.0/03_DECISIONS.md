@@ -10,8 +10,9 @@ inert, and report that as an option rather than take it. Skip filing and pushing
   commit after the re-vendor. It is a test-only commit; the adapter does not change.
 - **Reported, not taken: `resetProfile` with `profilesPage = true`.** It is accurate and inert (see
   `02_CANDIDATES.md`). The owner decides.
-- **Reported, not taken: the visibility refusal** found while checking the adapter. It predates
-  this release.
+- **The visibility refusal, found while checking the adapter.** It predates this release. It was
+  reported first, then fixed in a follow-up commit at the owner's instruction ("do all of these"),
+  with a test that is red against the old adapter.
 
 Not now: `resetProfile` / `profilesPage` (owner's call). Declined: none. Unreached: none. No issue
 filed.

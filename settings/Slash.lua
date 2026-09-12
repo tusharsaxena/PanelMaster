@@ -397,6 +397,24 @@ if not lib then
   return
 end
 
+--- The spelling `row` stores for `text`, matched against the row's own `values` without regard to
+--- case, or nil when the row is not an enum or nothing matches. `values` is an array of
+--- { value = ... } entries (strata) or a map of value -> label (the composed General visibility),
+--- or a function returning either. The whole trimmed value is compared, never its first word.
+local function canonicalEnumValue(row, text)
+  if not (row and row.type == "string" and row.values) then return nil end
+  local values = row.values
+  if type(values) == "function" then values = values() end
+  if type(values) ~= "table" then return nil end
+  local typed = tostring(text or ""):match("^%s*(.-)%s*$"):lower()
+  for key, entry in pairs(values) do
+    local value = key
+    if type(entry) == "table" and entry.value ~= nil then value = entry.value end
+    if type(value) == "string" and value:lower() == typed then return value end
+  end
+  return nil
+end
+
 local dispatcher = lib:New({
   slash        = "/pm",
   slashAliases = { "/panelmaster" },
@@ -421,15 +439,16 @@ local dispatcher = lib:New({
 
   -- ADAPTER, and a deliberate divergence from the library's own parser rather than a translation of
   -- it. `lib.ParseValue` matches an enum case-sensitively, which is right for a texture name but
-  -- wrong for this addon's one enum: strata tokens are stored upper-case and `/pm set
-  -- settings.defaultStrata low` has always worked. Up-casing only for a row that actually declares
-  -- an enum, then delegating, keeps every other type on the library's parser — including the number
-  -- clamping and the color rescaling this addon never had.
+  -- wrong for a player typing a token: `/pm set settings.defaultStrata low` has always worked here.
+  -- The typed value is matched against the ROW'S OWN values without regard to case, and the library
+  -- is handed the spelling the row stores. That keeps strata (stored upper-case) and the composed
+  -- General visibility (always / inCombat / outOfCombat / never) on one rule. The old adapter
+  -- up-cased every enum row, which refused every visibility value. No match falls through with the
+  -- text as typed, so the library's own refusal and its allowed-values line still answer, and the
+  -- whole value has to match (Slash minor 10): `low junk` is refused. Every other type stays on
+  -- the library's parser, including the number clamping and the color rescaling.
   parse = function(row, text)
-    if row and row.type == "string" and row.values then
-      text = tostring(text or ""):upper()
-    end
-    return lib.ParseValue(row, text)
+    return lib.ParseValue(row, canonicalEnumValue(row, text) or text)
   end,
 
   -- A PLAIN table of the one string this addon actually overrides — never NS.L, whose metatable

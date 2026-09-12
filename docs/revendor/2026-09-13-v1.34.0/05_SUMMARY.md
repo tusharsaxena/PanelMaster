@@ -26,6 +26,7 @@ adapter refuse a token followed by extra words, and the tooltip, whose text does
 | Before the copy | 807 passed, 0 failed, 0 skipped, 807 total | 0 / 0 in 57 files | clean, no function above CCN 15 |
 | After the copy, the roll and this bundle | 807 passed, 0 failed, 0 skipped, 807 total | 0 / 0 in 57 files | clean, no function above CCN 15 |
 | After the adoption (the strata refusal test) | 808 passed, 0 failed, 0 skipped, 808 total | 0 / 0 in 57 files | clean, no function above CCN 15 |
+| After the follow-up (the enum-case fix) | 809 passed, 0 failed, 0 skipped, 809 total | 0 / 0 in 57 files | clean, no function above CCN 15 |
 
 The vendored-payload pair ran rather than skipped, against `../LibKa0s` at `v1.34.0`, and passed.
 No suite total moved at the re-vendor. The adoption adds one case, confirmed red with minor 9's

@@ -57,5 +57,6 @@ None. No module is new at this tag.
   `string` row that declares `values`, not just the strata row, so `always` becomes `ALWAYS` and
   matches nothing. A probe at v1.34.0 refused all three of `always`, `always junk` and `inCombat`
   with `allowed values: always, inCombat, outOfCombat, never`. The same probe with minor 9's
-  `Slash.lua` swapped in refused them too, so this predates the release. The panel dropdown is unaffected. Not
-  fixed here; reported to the owner.
+  `Slash.lua` swapped in refused them too, so this predates the release. The panel dropdown is unaffected. **Fixed
+  in a follow-up commit on this branch** at the owner's instruction: the adapter now matches the typed
+  value against the row's own `values` in any case and hands the library the stored spelling.
