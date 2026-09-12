@@ -26,7 +26,7 @@
 -- names a variable — and it silenced a dead local in nineteen files for months. Naming the code
 -- would not have saved them either; what saved them was `M4c-06` deleting the dead name. But a
 -- directive that cannot say which warning it is answering is a directive nobody can review, and the
--- one this repo keeps says `212/filter` for exactly that reason (settings/OptionsSetup.lua:183).
+-- one this repo keeps says `212/filter` for exactly that reason (settings/OptionsSetup.lua:203).
 --
 -- Removing a blanket is one afternoon's work. Keeping it removed is what this file is for.
 --
@@ -270,6 +270,6 @@ test("lintconfig: every inline luacheck ignore names the code it answers", funct
       .. table.concat(unnamed, ", ") .. ". Bare, the directive silences every code in scope; with "
       .. "only a variable after it, it silences every code for that name — which is how nineteen "
       .. "dead `addonName` locals survived until `M4c-06`. Write the code the line actually "
-      .. "produces, as `212/filter` does at settings/OptionsSetup.lua:183 (lint.md)", 2)
+      .. "produces, as `212/filter` does at settings/OptionsSetup.lua:203 (lint.md)", 2)
   end
 end)
