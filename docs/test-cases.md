@@ -6,8 +6,10 @@ badge and any count quoted in the docs must agree with it.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (29)
+### test_util.lua (31)
 
+- Util.DeepEqual: compares plain data by value, nested tables included
+- Util.CountChanged: counts keys written, added or removed, and not keys left alone
 - Util.SplitPath: splits a dotted path
 - Util.SplitPath: a single segment is one part
 - Util.Clamp: passes a value already in range
@@ -499,7 +501,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (26)
+### test_debuglog.lua (38)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -523,10 +525,22 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog.Diagnose: works with logging off
 - NS.Debug: call sites do not restate the gate
 - NS.Debug: the ungated call sites still log when logging is on
+- NS.Debug: deleting every panel at once is traced, with the count (debug-logging-§8)
 - NS.Debug: the ungated call sites stay silent when logging is off
 - NS.DebugBuild: does not call its builder when logging is off
 - NS.DebugBuild: calls the builder and logs when logging is on
 - NS.DebugBuild: passes the builder's arguments through unbound
+- bulk log: R:Reset is one [Set] line counting the fields it rewrote
+- bulk log: R:CopyFrom is one [Set] line counting the fields it rewrote
+- bulk log: R:ResetPositions is one [Set] line counting the position fields it changed
+- bulk log: R:Recover is one [Set] line counting the position fields it changed
+- bulk log: a reset-all that raises logs one marked line, unmutes and re-raises
+- bulk log: a page Defaults that raises logs one marked line, unmutes and re-raises
+- bulk log: the global reset is ONE line in total, counting the rows it changed
+- bulk log: a profile copy and a profile switch are each worded by their event
+- bulk log: an act inside another logs once, the outermost, with the total
+- bulk log: the Options page reset is one [Set] line, N the rows it changed
+- bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
 ### test_schema.lua (28)
 
@@ -621,7 +635,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (59)
+### test_panel.lua (60)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -681,6 +695,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: the strip is drawn with ZERO panels, and the empty state is content
 - Panels page: the Master controls tab closes on the canonical button pair
 - Panels page: every color swatch is followed by a 'Use class color' companion
+- Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 
 ### test_profiles.lua (23)
@@ -817,12 +832,15 @@ badge and any count quoted in the docs must agree with it.
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
 
-### test_harness.lua (15)
+### test_harness.lua (18)
 
 - Harness: the suite list and tests/test_*.lua agree in both directions
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: a bus target carries the kit's recorded event half (kit revision 16)
+- Harness: NS.addon's timers can be canceled, and the queue counts what ran
+- Harness: NS.addon refuses an event the client does not know
+- Harness: NS.addon is the kit's AceAddon object, with Printf and UnregisterAllEvents (#50)
 - Harness: the runner derives the addon's load list from the TOC
 - Harness: the runner derives the vendored library's load list from LibKa0s.xml
 - Harness: every module LibKa0s.xml declares is live in the loaded environment
@@ -853,11 +871,15 @@ badge and any count quoted in the docs must agree with it.
 - layoutcap: no census row outlives the file it records
 - layoutcap: every file over the 1500-line cap carries a disposition that can be followed
 
-### test_options_groups.lua (3)
+### test_options_groups.lua (7)
 
-- optionsgroups: every hand-written canonical block is ratified in the deviation register
-- optionsgroups: no register row outlives the block it records
-- optionsgroups: every options-ui-§16 register row carries a re-check trigger
+- optionsgroups: the Panels editor types out no canonical block
+- optionsgroups: the three blocks are composed through the record-backed arm (#48)
+- optionsgroups: the deviation register carries no options-ui-§16 row
+- optionsgroups: the Background and border tab draws its canonical blocks control by control (#48)
+- optionsgroups: the Background and border blocks follow a write made elsewhere (#48)
+- optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
+- optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
 
 ### test_register.lua (1)
 
@@ -882,7 +904,7 @@ badge and any count quoted in the docs must agree with it.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 29 |
+| test_util.lua | 31 |
 | test_compat.lua | 11 |
 | test_constants.lua | 17 |
 | test_mediasetup.lua | 10 |
@@ -894,21 +916,21 @@ badge and any count quoted in the docs must agree with it.
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
-| test_debuglog.lua | 26 |
+| test_debuglog.lua | 38 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
-| test_panel.lua | 59 |
+| test_panel.lua | 60 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 42 |
 | test_surface_parity.lua | 4 |
-| test_harness.lua | 15 |
+| test_harness.lua | 18 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 3 |
-| test_options_groups.lua | 3 |
+| test_options_groups.lua | 7 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **785** |
+| **Total** | **807** |

@@ -28,9 +28,21 @@ Sl.RESET_ALL_TEXT = "this profile reset to defaults"
 --- and calls Registry:ReloadProfile.
 ---
 --- Shared by the popup's OnAccept and by the headless fallback, so the two cannot diverge.
+---
+--- It is logged ONCE, by that same handler: `[Set] reset profile 'X' to defaults (N rows)`
+--- (debug-logging-§10). The snapshot taken here is what lets the handler count the rows the reset
+--- CHANGED, and the bracket, reporting `profileReset`, keeps anything the reset runs from adding a
+--- line of its own. A reset that raised never reached the handler, so the bracket logs instead.
 function Sl:DoResetAll()
-  local db = NS.db
-  if db and db.ResetProfile then db:ResetProfile() end
+  local db, S = NS.db, NS.Schema
+  if db and db.ResetProfile then
+    S.BulkBegin("reset", "all")
+    S.resetSnapshot = S:SnapshotPersisted()
+    local ok, err = pcall(db.ResetProfile, db)
+    S.resetSnapshot = nil
+    S.BulkEnd("reset", "all", nil, err, { profileReset = ok })
+    if not ok then error(err, 0) end
+  end
   print(Sl.RESET_ALL_TEXT)
 end
 

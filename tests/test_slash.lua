@@ -19,8 +19,10 @@ local function fresh()
 end
 
 test("Slash.Register: registers both the short verb and the full-name alias", function()
-  assertTrue(T.mocks.__chatCommands["pm"], "/pm was never registered")
-  assertTrue(T.mocks.__chatCommands["panelmaster"], "/panelmaster alias missing")
+  -- AceConsole's own record of what was registered (kit revision 17, #50).
+  local commands = T.mocks.LibStub("AceConsole-3.0").commands
+  assertTrue(commands["pm"], "/pm was never registered")
+  assertTrue(commands["panelmaster"], "/panelmaster alias missing")
 end)
 
 test("Slash.Version: prefers the TOC metadata over the in-code fallback", function()

@@ -229,18 +229,29 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 ## 5c. Class color
 
 1. Tick **Use class color** next to **Background color**. **Expect:** the panel takes your class
-   color. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix, and its
-   tooltip ends with the collection's own sentence: *not read while Use class color is on, except
-   for its opacity, which always applies*.
+   color. The picker beside it stays **enabled**, its label stays **Background color** with no
+   `(opacity)` suffix, and its tooltip ends with the collection's own sentence: *not read while Use
+   class color is on, except for its opacity, which always applies*.
 2. Check the panel's **opacity is unchanged** — class color replaces the hue, not the alpha. Drag
    **Panel opacity** and confirm it still works.
 3. Tick **Use class color** next to **Border color** too, and confirm the two are independent: untick
    the background one and the border stays class-colored.
 4. Untick both. **Expect:** the original colors come back exactly — they were never overwritten.
-4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker's label
-   reads `… (opacity)` and the control is still **enabled**. Open it and drag the opacity slider →
+4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker is
+   still **enabled**. All five swatches (**Background color**, **Border color** twice, **Bar color**,
+   **Artwork color**) keep their plain label, with no `(opacity)` suffix, and their tooltip says the
+   opacity still applies. Open one and drag the opacity slider →
    **Expect:** the class-colored border/fill gets more or less solid. This is the only control that
    sets opacity, so it must not be grayed out.
+4d. **The composed blocks (#48).** On **Background and border**, and on **Accent bar** for both the
+   bar and its border, work every control in turn: pick a style or texture, drag the thickness, pick a
+   color, tick and untick **Use class color**, drag the offset (and **Bar opacity**, **Bar thickness**,
+   **Bar offset**). **Expect:** each applies to the panel at once. A newly picked style or texture
+   name shows in its dropdown straight away rather than the old one. **Border thickness (px)**
+   reaches **32**. **Bar opacity** reads as a 0–1 value, not a percentage. Hovering each control shows
+   the same tooltip it did when the blocks were typed out. The one player-visible label change: no
+   color swatch gains a gray `(opacity)` suffix when **Use class color** is ticked, on these blocks
+   or on **Background color** and **Artwork color**. `/reload`, and every value persisted.
 4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
    color mode produced it. Compare a picked bright color against your class color at the **same
    opacity and size** — a darker class color will legitimately look softer. If they differ at
@@ -567,6 +578,14 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 3. Create, drag and recolor a panel → **Expect:** one `[Panel]` line per action, and the line counter
    climbing.
 4. Change a setting → **Expect:** exactly **one** `[Set]` line (not one per reactor).
+4a. Bulk acts (`debug-logging-§10`). Widen a panel, then press its **Reset** in the editor →
+   **Expect:** one `[Set] reset '<name>': N rows` line and no `[Panel]` line; press it again →
+   `…: 0 rows`. Copy settings from another panel, press Master controls ▸ **Reset position**, and
+   **Recover panels** → one `[Set]` line each, with a count (`copy from '…' to '…': N rows`,
+   `reset positions: N rows`, `recover positions: N rows`). `/pm resetall`, confirmed →
+   exactly one `[Set] reset profile '<name>' to defaults (N rows)` and no `[Profile] switched` line.
+   **A regression looks like** a line per field, a second line for the same act, or a reset-all
+   that reads as a switch. `[Canvas]` repaint lines after the `[Set]` line are expected.
 5. **Drag the scrollbar** → **Expect:** the log scrolls. **Wheel-scroll the log** → **Expect:** the
    thumb follows. No Lua error either way.
 6. Click the **copy mark** → **Expect:** a selectable window with the same lines, no color codes, and

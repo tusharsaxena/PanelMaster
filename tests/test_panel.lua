@@ -57,7 +57,8 @@ test("Panel.Register: a second attempt is made on PLAYER_LOGIN (F-013)", functio
   -- were not yet loaded used to leave the addon absent from Blizzard's options list for the whole
   -- session, silently. Registration stays eager (anti-pattern #22) — this is a second eager attempt,
   -- not a deferral to first /pm config.
-  local retry = T.mocks.__events["PLAYER_LOGIN"]
+  -- Recorded on the addon object itself, per target, as the kit's AceEvent records it (#50).
+  local retry = NS.addon.__events["PLAYER_LOGIN"]
   assertEqual(type(retry), "function", "nothing retries registration at login")
   local before = P.general
   retry()
@@ -1227,21 +1228,13 @@ test("Panels page: every color swatch is followed by a 'Use class color' compani
     ["Accent bar"]            = { "Bar color", "Border color" },
     ["Artwork"]               = { "Artwork color" },
   }
-  -- Matched on the PREFIX, because a swatch whose class color is already on carries a live
-  -- `(opacity)` suffix saying which half of it is still read -- `accentClassColor` ships true, so
-  -- the Bar color picker is labeled that way from the first render.
-  local function drewSwatch(labels, swatch)
-    for label in pairs(labels) do
-      if label == swatch or label:sub(1, #swatch + 1) == swatch .. " " then return true end
-    end
-    return false
-  end
-
+  -- Matched EXACTLY: no swatch carries a `(opacity)` suffix any more, hand-drawn or composed
+  -- (owner's decision 2026-09-12; the case below holds that in both class-color states).
   local seen = 0
   for tab, swatches in pairs(WANTED) do
     local labels = labelsOfTab(ctx, tab)
     for _, swatch in ipairs(swatches) do
-      assertTrue(drewSwatch(labels, swatch), tab .. " lost its " .. swatch .. " swatch")
+      assertTrue(labels[swatch], tab .. " lost its " .. swatch .. " swatch")
       seen = seen + 1
     end
     assertTrue(labels["Use class color"],
@@ -1251,6 +1244,42 @@ test("Panels page: every color swatch is followed by a 'Use class color' compani
   local total = 0
   for _ in pairs(NS.Constants.COLOR_FIELDS) do total = total + 1 end
   assertEqual(seen, total, "the editor draws a color this case does not walk")
+
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+end)
+
+test("Panels page: no swatch label carries '(opacity)', class color on or off", function()
+  -- Owner's decision, 2026-09-12: the gray `(opacity)` suffix is gone from all five swatches. The
+  -- composed three lost it with #48; the hand-drawn Background and Artwork colors kept it, so the
+  -- page said the same thing two ways. Each tooltip already says the opacity still applies.
+  --
+  -- Both states, and both ways a label is set: the build (the flags read off the record) and the
+  -- companion's own callback flipping them in place. Dies under the suffix returning on either path.
+  local TABS = { "Background and border", "Accent bar", "Artwork" }
+  for _, state in ipairs({ false, true }) do
+    NS.Registry:DeleteAll()
+    local rec = NS.Registry:New("Unsuffixed")
+    for _, flag in pairs(NS.Constants.COLOR_FIELDS) do NS.Registry:Set(rec.id, flag, state) end
+    E.__setSelectedID(rec.id)
+    local ctx = freshPanelsCtx()
+    local created = T.mocks.LibStub("AceGUI-3.0", true).__created
+    for _, tab in ipairs(TABS) do
+      local from = #created + 1
+      ctx.activeTab = tab
+      E:Rebuild(ctx)
+      local to = #created
+      for i = from, to do
+        local w = created[i]
+        if w.labelText == "Use class color" then w:__fire("OnValueChanged", not state) end
+      end
+      for i = from, to do
+        local label = created[i].labelText
+        assertFalse(type(label) == "string" and label:find("(opacity)", 1, true) ~= nil,
+          ("%s drew %q with class color %s"):format(tab, tostring(label), tostring(state)))
+      end
+    end
+  end
 
   NS.Registry:DeleteAll()
   E.__setSelectedID(nil)

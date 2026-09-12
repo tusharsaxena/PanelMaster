@@ -393,21 +393,15 @@ end
 -- The picker stays ENABLED while the class color is on, and it is now forbidden to be anything
 -- else: `disabledIf` on a color row is anti-pattern #74. A color's ALPHA is not overridden — it
 -- still decides how solid the result is, and the picker is the only control that sets it — so
--- graying it would tell the player something untrue. The label suffix says which half is live and
--- the tooltip says it in the collection's words.
+-- graying it would tell the player something untrue. The tooltip says so in the collection's words;
+-- the label carries no `(opacity)` suffix, like the composed swatches (owner's decision 2026-09-12).
 local function makeColorPair(ctx, row, rec, field, label)
   local flag = C.COLOR_FIELDS[field]
   local usingClass = flag and rec[flag] and true or false
   local classCheck   -- the companion checkbox, built below when the field has a class-color flag
 
-  -- What the control actually governs right now: everything, or only the opacity.
-  local function labelFor(classOn)
-    if classOn then return label .. " |cff808080(opacity)|r" end
-    return label
-  end
-
   local picker = AceGUI:Create("ColorPicker")
-  picker:SetLabel(labelFor(usingClass))
+  picker:SetLabel(label)
   picker:SetRelativeWidth(0.5)
   picker:SetHasAlpha(true)
   local col = NS.Util.Color(rec[field])
@@ -444,9 +438,7 @@ local function makeColorPair(ctx, row, rec, field, label)
   addRefresher(ctx, rec, function(live)
     local c = NS.Util.Color(live[field])
     picker:SetColor(c[1], c[2], c[3], c[4])
-    local classOn = flag and live[flag] and true or false
-    picker:SetLabel(labelFor(classOn))
-    if classCheck then classCheck:SetValue(classOn) end
+    if classCheck then classCheck:SetValue(live[flag] and true or false) end
   end)
 
   if not flag then return end
@@ -459,7 +451,6 @@ local function makeColorPair(ctx, row, rec, field, label)
   cb:SetValue(usingClass)
   cb:SetCallback("OnValueChanged", function(_, _, v)
     NS.Registry:Set(rec.id, flag, v and true or false)
-    picker:SetLabel(labelFor(v and true or false))
   end)
   attachTooltip(cb, "Use class color",
     "Use your class color for " .. label:lower() .. ". The opacity from the color picker still "
@@ -588,6 +579,77 @@ local function buildPanelEditor(ctx, parent, rec)
     row:AddChild(cb)
     addRefresher(ctx, rec, function(live) cb:SetValue(live[field] and true or false) end)
     return cb
+  end
+
+  -- ── The three canonical blocks, COMPOSED (options-ui-§16, PanelMaster#48) ──
+  -- The panel's border, the accent bar and its border come from LibKa0s-Options' composers. A
+  -- panel is a registry RECORD with no path, so each is composed with `bind` (OptionsCompose minor
+  -- 4): rows carry the record `field` and get/set closures, are drawn straight into the editor, and
+  -- never enter the schema. Resolved at build time: the library-less stub answers each composer with
+  -- an empty row list, so a degraded install draws no block rather than raising (options-ui-§1).
+  local O = NS.Helpers
+
+  -- ONE bind for all three. It reads the LIVE record by id (a profile switch replaces the tables)
+  -- and writes through NS.Registry:Set, like every control here. Colors are stored as { r, g, b, a }
+  -- arrays and the library's codec reads named keys, so the bind converts that one row type.
+  local bind = {
+    get = function(field, row)
+      local v = (NS.Registry:Get(rec.id) or rec)[field]
+      if row.type ~= "color" then return v end
+      local c = NS.Util.Color(v)
+      return { r = c[1], g = c[2], b = c[3], a = c[4] }
+    end,
+    set = function(field, v, row)
+      if row.type == "color" and type(v) == "table" then v = { v.r, v.g, v.b, v.a } end
+      NS.Registry:Set(rec.id, field, v)
+    end,
+  }
+
+  -- Composed rows are plain tables, retuned so a player sees what the typed-out blocks showed: this
+  -- page's tooltips, NS.Compat.MediaList's media in its own order (ordered-array `values`), the
+  -- Constants ranges (a border reaches C.MAX_BORDER, 32, not 16), and Bar opacity as a 0-1 ratio.
+  local SWATCH_TIP = "Sets the color and its opacity. " .. (O.CLASS_COLOR_NOTE or "")
+  local function companionTip(what)
+    return "Use your class color for " .. what .. ". The opacity from the color picker still "
+      .. "applies \226\128\148 a class color at low opacity looks just as washed out as any other."
+  end
+  local function mediaValues(kind)
+    return function()
+      local out = {}
+      for i, name in ipairs(NS.Compat.MediaList(kind)) do out[i] = { value = name, text = name } end
+      return out
+    end
+  end
+  local function retune(rows, tune)
+    for _, row in ipairs(rows) do
+      for k, v in pairs(tune[row.field] or {}) do row[k] = v end
+    end
+    return rows
+  end
+  -- Both border blocks share everything but their fields and the two tooltips naming the outline.
+  local function borderTune(f, styleTip, sizeTip)
+    return {
+      [f.style] = { values = mediaValues("border"), tooltip = styleTip },
+      [f.size]  = { min = C.MIN_BORDER, max = C.MAX_BORDER, tooltip = sizeTip },
+      [f.color] = { tooltip = SWATCH_TIP },
+      [f.flag]  = { tooltip = companionTip("border color") },
+    }
+  end
+  local function borderKeys(f)
+    return { borderStyle = f.style, borderSize = f.size, borderColor = f.color,
+             useClassColorBorder = f.flag }
+  end
+
+  -- Two controls to a line IS the canonical layout (rows 1 and 3 carry startsLine). O.RenderField is
+  -- settings/Panel.lua's wrap (dropdowns join the scroll-close registry), and its makers push their
+  -- refreshers onto ctx.refreshers, the list MSG_PANEL runs.
+  local function renderBlock(rows)
+    for i = 1, #rows, 2 do
+      if i > 1 then editorSpacer(group, EDITOR_ROW_GAP) end
+      local line = editorRow(group)
+      O.RenderField(ctx, rows[i], line, 0.5)
+      if rows[i + 1] then O.RenderField(ctx, rows[i + 1], line, 0.5) end
+    end
   end
 
   -- ── The tabs ──
@@ -770,24 +832,21 @@ local function buildPanelEditor(ctx, parent, rec)
     editorSpacer(group, EDITOR_HEADING_GAP)
     editorHeading(group, "Border")
 
-    -- The canonical border block, in the mandated order: style, thickness, color, companion. This
-    -- addon's own offset comes AFTER all four and is never interleaved with them (options-ui-§16).
-    local borderRow = editorRow(group)
-    makeMediaDropdown(ctx, borderRow, rec, "borderTexture", "Border style",
-      "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it.")
-    numberField(borderRow, "Border thickness (px)", "borderSize", C.MIN_BORDER, C.MAX_BORDER, 1,
-      "Border thickness. 0 removes the border entirely.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local borderColorRow = editorRow(group)
-    makeColorPair(ctx, borderColorRow, rec, "borderColor", "Border color")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local borderOffsetRow = editorRow(group)
-    numberField(borderOffsetRow, "Border offset", "borderOffset",
-      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-      "How far the border sits from the panel's edge. Positive pushes it outward, "
-      .. "negative pulls it inward.")
+    -- The canonical border block, composed: style, thickness, color, companion, in the mandated
+    -- order, and this addon's own offset AFTER all four, never interleaved (options-ui-§16).
+    local border = { style = "borderTexture", size = "borderSize", color = "borderColor",
+                     flag = "borderClassColor" }
+    renderBlock(retune(O.BorderGroup({
+      bind = bind,
+      keys = borderKeys(border),
+      classColor = { source = C.COLOR_CLASS_SOURCE.borderColor },
+      extra = { { field = "borderOffset", type = "number", label = "Border offset",
+                  min = C.MIN_BORDER_OFFSET, max = C.MAX_BORDER_OFFSET, step = 1,
+                  tooltip = "How far the border sits from the panel's edge. Positive pushes it "
+                    .. "outward, negative pulls it inward." } },
+    }), borderTune(border,
+      "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it.",
+      "Border thickness. 0 removes the border entirely.")))
   end
 
   -- The BenikUI-style strip along a panel's edges, which edges it runs along, and the strip's own
@@ -806,36 +865,41 @@ local function buildPanelEditor(ctx, parent, rec)
     boolField(accentRow, "Enable accent bar", "accentEnabled",
       "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels.")
 
-    -- The canonical bar block (options-ui-§16): texture, opacity, color, companion.
+    -- The canonical bar block (options-ui-§16), composed: texture, opacity, color, companion, and
+    -- this addon's own thickness and offset AFTER the mandated four rather than among them.
     --
-    -- `Bar opacity` is NEW, and it is a stored field rather than a re-labeling of something that
-    -- was already here. The panel-wide opacity on the Opacity and fade tab fades the whole frame —
-    -- background, border and bars together — so it could not be this row without the mandated
-    -- control meaning something different on this page from every other page in the collection.
-    -- It multiplies the bar color's own alpha; modules/Canvas.lua does the composition.
+    -- `Bar opacity` is a stored field of its own (`accentAlpha`), not a re-labeling of something
+    -- that was already here. The panel-wide opacity on the Opacity and fade tab fades the whole
+    -- frame — background, border and bars together — so it could not be this row without the
+    -- mandated control meaning something different on this page from every other page in the
+    -- collection. It multiplies the bar color's own alpha; modules/Canvas.lua does the composition.
     editorSpacer(group, EDITOR_ROW_GAP)
-    local barRow = editorRow(group)
-    makeMediaDropdown(ctx, barRow, rec, "accentTexture", "Bar texture",
-      "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
-      .. "'Solid' is a flat color.")
-    numberField(barRow, "Bar opacity", "accentAlpha", 0, 1, 0.05,
-      "How solid the accent bar's fill is. Multiplies with the opacity in the bar color below and "
-      .. "with the panel's own opacity, so a faded panel fades its bars with it.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local accentColorRow = editorRow(group)
-    makeColorPair(ctx, accentColorRow, rec, "accentColor", "Bar color")
-
-    -- This addon's own bar rows, AFTER the mandated four rather than among them.
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local accentSizeRow = editorRow(group)
-    numberField(accentSizeRow, "Bar thickness", "accentThickness",
-      C.MIN_ACCENT_THICKNESS, C.MAX_ACCENT_THICKNESS, 1,
-      "How thick the accent bar is, in screen units.")
-    numberField(accentSizeRow, "Bar offset", "accentOffset",
-      C.MIN_ACCENT_OFFSET, C.MAX_ACCENT_OFFSET, 1,
-      "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
-      .. "which is the look this is modeled on; 0 sits flush; negative overlaps the panel.")
+    renderBlock(retune(O.BarGroup({
+      bind = bind,
+      keys = { barTexture = "accentTexture", barAlpha = "accentAlpha", barColor = "accentColor",
+               useClassColorBar = "accentClassColor" },
+      classColor = { source = C.COLOR_CLASS_SOURCE.accentColor },
+      extra = {
+        { field = "accentThickness", type = "number", label = "Bar thickness",
+          min = C.MIN_ACCENT_THICKNESS, max = C.MAX_ACCENT_THICKNESS, step = 1,
+          tooltip = "How thick the accent bar is, in screen units." },
+        { field = "accentOffset", type = "number", label = "Bar offset",
+          min = C.MIN_ACCENT_OFFSET, max = C.MAX_ACCENT_OFFSET, step = 1,
+          tooltip = "How far the bar sits from the panel's edge. Positive detaches it from the "
+            .. "panel, which is the look this is modeled on; 0 sits flush; negative overlaps the "
+            .. "panel." },
+      },
+    }), {
+      accentTexture    = { values = mediaValues("statusbar"),
+                           tooltip = "The texture the accent bar is drawn with, from your "
+                             .. "LibSharedMedia status-bar textures. 'Solid' is a flat color." },
+      accentAlpha      = { isPercent = false,
+                           tooltip = "How solid the accent bar's fill is. Multiplies with the "
+                             .. "opacity in the bar color below and with the panel's own opacity, "
+                             .. "so a faded panel fades its bars with it." },
+      accentColor      = { tooltip = SWATCH_TIP },
+      accentClassColor = { tooltip = companionTip("bar color") },
+    }))
 
     editorSpacer(group, EDITOR_HEADING_GAP)
     editorHeading(group, "Edges")
@@ -846,24 +910,21 @@ local function buildPanelEditor(ctx, parent, rec)
     editorSpacer(group, EDITOR_HEADING_GAP)
     editorHeading(group, "Border")
 
-    -- The bar's own border. The same canonical four in the same order as the panel's, so the two
-    -- read alike — the only difference is what they outline.
-    local accentBorderRow = editorRow(group)
-    makeMediaDropdown(ctx, accentBorderRow, rec, "accentBorderTexture", "Border style",
-      "The edge style drawn around the accent bar. 'None' removes it, as does a thickness of 0.")
-    numberField(accentBorderRow, "Border thickness (px)", "accentBorderSize",
-      C.MIN_BORDER, C.MAX_BORDER, 1,
-      "Thickness of the accent bar's own border. 0 removes it entirely.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local accentBorderColorRow = editorRow(group)
-    makeColorPair(ctx, accentBorderColorRow, rec, "accentBorderColor", "Border color")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local accentBorderOffsetRow = editorRow(group)
-    numberField(accentBorderOffsetRow, "Border offset", "accentBorderOffset",
-      C.MIN_BORDER_OFFSET, C.MAX_BORDER_OFFSET, 1,
-      "How far the bar's border sits from the bar. Positive pushes it outward, negative inward.")
+    -- The bar's own border. The same composer, so the same canonical four in the same order as
+    -- the panel's, and the two read alike — the only difference is what they outline.
+    local barBorder = { style = "accentBorderTexture", size = "accentBorderSize",
+                        color = "accentBorderColor", flag = "accentBorderClassColor" }
+    renderBlock(retune(O.BorderGroup({
+      bind = bind,
+      keys = borderKeys(barBorder),
+      classColor = { source = C.COLOR_CLASS_SOURCE.accentBorderColor },
+      extra = { { field = "accentBorderOffset", type = "number", label = "Border offset",
+                  min = C.MIN_BORDER_OFFSET, max = C.MAX_BORDER_OFFSET, step = 1,
+                  tooltip = "How far the bar's border sits from the bar. Positive pushes it "
+                    .. "outward, negative inward." } },
+    }), borderTune(barBorder,
+      "The edge style drawn around the accent bar. 'None' removes it, as does a thickness of 0.",
+      "Thickness of the accent bar's own border. 0 removes it entirely.")))
   end
 
   -- Artwork is drawn INTO the panel the three tabs before it describe, which is why it sits

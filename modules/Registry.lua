@@ -467,16 +467,17 @@ function R:Reset(key)
   end
 
   local id, name, frameName = rec.id, rec.name, rec.frameName
+  local before = Util.DeepCopy(rec)
   for k in pairs(rec) do rec[k] = nil end
   for k, v in pairs(C.PANEL_TEMPLATE) do rec[k] = Util.DeepCopy(v) end
   rec.id, rec.name, rec.frameName = id, name, frameName
   applyNewPanelDefaults(rec, p)
   R.Sanitize(rec)
 
-  NS.Debug("Panel", "reset '%s' (id %s)", rec.name, rec.id)
+  -- A bulk reset: ONE [Set] line, N the fields it changed (debug-logging-§10, settings/Schema.lua).
+  NS.Schema.BulkLine("reset", ("'%s'"):format(rec.name), Util.CountChanged(before, rec))
   -- A field-level change, not a structural one: the SET of panels is unchanged, so the targeted
-  -- repaint is the honest message. The settings editor rebuilds itself separately — its widgets all
-  -- hold stale values now, which is a UI concern rather than something the bus should imply.
+  -- repaint is the honest message, and the settings editor refreshes its stale widgets itself.
   fire(MSG_PANEL, rec.id)
   return true, rec.name
 end
@@ -511,14 +512,14 @@ function R:CopyFrom(targetKey, sourceKey)
   if not source then return false, ("no panel called '%s'"):format(tostring(sourceKey)) end
   if source.id == target.id then return false, "a panel cannot copy from itself" end
 
+  local before = Util.DeepCopy(target)
   for field, value in pairs(source) do
-    if not COPY_EXCLUDED[field] then
-      target[field] = Util.DeepCopy(value)
-    end
+    if not COPY_EXCLUDED[field] then target[field] = Util.DeepCopy(value) end
   end
   R.Sanitize(target)
 
-  NS.Debug("Panel", "'%s' copied settings from '%s'", target.name, source.name)
+  NS.Schema.BulkLine("copy", ("from '%s' to '%s'"):format(source.name, target.name),
+    Util.CountChanged(before, target))   -- a bulk copy: ONE [Set] line (debug-logging-§10)
   fire(MSG_PANEL, target.id)
   return true, source.name
 end
@@ -576,11 +577,10 @@ local function dropSessionIDs()
   if NS.PanelEditor and NS.PanelEditor.ForgetSelection then NS.PanelEditor:ForgetSelection() end
 end
 
+-- Logs nothing: the profile handler (core/Database.lua) words the line by the event that got here.
 function R:ReloadProfile()
   dropSessionIDs()
   for _, rec in ipairs(R:All()) do R.Sanitize(rec) end
-  NS.Debug("Profile", "switched to '%s', %s panels",
-    (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?", R:Count())
   fire(MSG_PANELS)
 end
 
@@ -597,8 +597,8 @@ function R:DeleteAll()
   -- whole sweep runs wholesale rather than id by id — including the preview FLAG, which this used
   -- to leave standing over an empty id list.
   clearPanelSessionState()
-
-  if n > 0 then fire(MSG_PANELS) end
+  -- One trace for the whole purge (debug-logging-§8): `destroy` is never called on this path.
+  if n > 0 then NS.Debug("Panel", "deleted all %s panel(s)", n); fire(MSG_PANELS) end
   return n
 end
 
@@ -914,12 +914,10 @@ end
 -- ── Off-screen recovery ─────────────────────────────────────────────────────────
 
 -- Drag a panel back into view if its anchor has ended up outside the screen — after a resolution
--- change, a UI-scale change, or a copied profile from a different monitor.
---
--- Returns the number of panels moved, so the caller can report "recovered 2 panels" rather than
--- silently rearranging the user's layout. Nothing here runs automatically: a panel deliberately
--- parked mostly off-screen is a legitimate design, so recovery is `/pm recover` and the settings
--- button, never a login-time sweep.
+-- change, a UI-scale change, or a copied profile from a different monitor. Returns the number of
+-- panels moved, for the caller to report; one [Set] line counts the offsets. Nothing here runs
+-- automatically: a panel deliberately parked mostly off-screen is a legitimate design, so recovery
+-- is `/pm recover` and the settings button, never a login-time sweep.
 -- The legal offset range depends on WHICH point the offset is measured from: a CENTER-anchored
 -- panel runs -w/2..+w/2, a LEFT-anchored one 0..w, a RIGHT-anchored one -w..0. Using the CENTER
 -- range for all nine points is what let `recover` drag a perfectly visible TOPLEFT panel inward.
@@ -945,7 +943,7 @@ function R:Recover()
   -- taken from `relPoint` — the point on UIParent the offset is measured FROM, i.e. where on the
   -- screen the panel's origin sits — not from `point`, which only says which corner of the panel
   -- lands there.
-  local moved = 0
+  local moved, rows = 0, 0
   for _, rec in ipairs(R:All()) do
     -- Guarded the way the renderer guards it (Canvas.BuildSpec): Sanitize runs per write and on a
     -- profile switch, never as a login sweep, so a hand-edited or pre-anchor SavedVariables record
@@ -958,10 +956,11 @@ function R:Recover()
     local x = Util.Clamp(rec.x, minX, maxX, 0)
     local y = Util.Clamp(rec.y, minY, maxY, 0)
     if x ~= rec.x or y ~= rec.y then
-      rec.x, rec.y = x, y
-      moved = moved + 1
+      rows = rows + (x ~= rec.x and 1 or 0) + (y ~= rec.y and 1 or 0)
+      rec.x, rec.y, moved = x, y, moved + 1
     end
   end
+  NS.Schema.BulkLine("recover", "positions", rows)   -- ONE [Set] line, N the offsets changed
   if moved > 0 then fire(MSG_PANELS) end
   return moved
 end
@@ -982,18 +981,19 @@ end
 -- an anchor that has ended up beyond a screen edge and leaves everything already visible exactly
 -- where it is, while this one moves every panel whatever it was doing.
 --
--- Returns the number of panels moved, so the caller can say so rather than silently rearranging the
--- user's layout.
+-- Returns the panels moved, so the caller can say so; the log counts the fields it rewrote.
+local POSITION_FIELDS = { "point", "relPoint", "x", "y" }
 function R:ResetPositions()
   local t = C.PANEL_TEMPLATE
-  local moved = 0
+  local moved, rows = 0, 0
   for _, rec in ipairs(R:All()) do
-    if rec.point ~= t.point or rec.relPoint ~= t.relPoint
-       or rec.x ~= t.x or rec.y ~= t.y then
-      rec.point, rec.relPoint, rec.x, rec.y = t.point, t.relPoint, t.x, t.y
-      moved = moved + 1
+    local n = 0
+    for _, f in ipairs(POSITION_FIELDS) do
+      if rec[f] ~= t[f] then rec[f], n = t[f], n + 1 end
     end
+    if n > 0 then moved, rows = moved + 1, rows + n end
   end
+  NS.Schema.BulkLine("reset", "positions", rows)   -- ONE [Set] line, N the fields changed
   if moved > 0 then fire(MSG_PANELS) end
   return moved
 end

@@ -62,13 +62,16 @@ names a panel's existence.
   migrations, and from the `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks.
   Neither is called from a slash verb or a control.
 
-Nothing else writes membership or bookkeeping, so the registry carries no `Documented deviations`
-row. `/pm resetall` and Profiles → Reset Profile (`db:ResetProfile()`), and AceDB's own profile
-switch and copy, replace the store wholesale, which is not a registry write; the load pass and
-`NS.Registry:ReloadProfile` run after each of them.
+Nothing else writes membership or bookkeeping, so membership carries no `Documented deviations`
+row. The one `architecture-§5` row this addon has covers the fields on a panel, below.
+`/pm resetall` and Profiles → Reset Profile (`db:ResetProfile()`), and AceDB's own profile switch
+and copy, replace the store wholesale, which is not a registry write; the load pass and
+`NS.Registry:ReloadProfile` run after each of them. Each is logged once, by the profile handler in
+`core/Database.lua` and worded by the event (`debug-logging-§10`; `docs/debug.md`).
 
-**Still open under `architecture-§5`: the fields on a panel.** A panel's appearance and position
-fields are preferences the player sets on a member, and none of them has a schema row. The field
+**The fields on a panel: a ratified `architecture-§5` register row.** A panel's appearance and
+position fields (`C.PANEL_FIELD_TYPE`, less `name`, which is the registry's own label and routes to
+`Rename`) are preferences the player sets on a member, and none of them has a schema row. The field
 controls and `/pm panel <name> set` write them through `NS.Registry:Set`, which coerces, writes,
 sanitizes and sends `PanelChanged` on its own rather than through `NS.Schema:Set`. It is not the
 only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/Unlock.lua`) writes
@@ -76,12 +79,18 @@ only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/U
 `:Reset`, `:CopyFrom` and `:FitToArtwork` rewrite fields and then sanitize. `:Recover` writes
 `x`/`y`, and `:ResetPositions` all four anchor fields, onto every record directly, with no
 per-record sanitize, and each sends `PanelsChanged` once if anything moved. None of these is the
-schema helper. Since standard v2.43.0 a preference with no row is a missing row: these need
-instance-relative rows the helper can address per panel, or a register row. That is an owner
-decision, still pending, and naming the writer above does not settle it. It is tracked as
-tusharsaxena/PanelMaster#49. The unlock-mode drag is part of the same question, not a separate
-one: every anchor field it writes (`point`, `relPoint`, `x`, `y`) is also set by the editor or
-`/pm`, so under v2.43.0 they are preferences, and a drag writing them follows whichever way #49 goes.
+schema helper. The drag is part of the same set, not a separate case: every anchor field it writes
+(`point`, `relPoint`, `x`, `y`) is also set by the editor or `/pm`, so they are preferences.
+
+Since standard v2.43.0 a preference with no row is a missing row. The owner ruled on 2026-09-12
+([#49](https://github.com/tusharsaxena/PanelMaster/issues/49)) for a register row rather than
+instance-relative rows, because the schema helper addresses paths, not records, and
+instance-addressing every per-panel field would be the largest change in the collection for fields
+the Registry already validates and announces. The row is `architecture-§5` (the fields on a panel)
+in [`## Documented deviations`](#documented-deviations). It retires when the schema helper gains
+instance addressing for registry records (an explicit record argument on `NS.Schema:Set`). The
+record-backed bind arm in `LibKa0s-Options-1.0` is not that trigger: it changes how a control
+binds to a record, not where the write goes.
 
 The panel record, every field on it, the artwork fields and the sanitizing pass are in
 **[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;
@@ -228,42 +237,26 @@ The choice is now made, and it is the other one this section allows: a **deliber
 exemption claimed under `§12`. `§12` remains unclaimable here and the row below does not claim it.
 See [`performance.md`](performance.md) for the cost argument and the committed sweep.
 
-**The three hand-written `options-ui-§16` blocks became rows here on 2026-09-08, and the ruling behind
-them is worth stating once rather than three times.** `§16` says the border, bar and font blocks are
-COMPOSED — the library emits each from one declaration, and a hand-written copy is anti-pattern #73.
-This addon's panel editor types three of them out. What blocks the composer is not reluctance: the
-composers emit **schema rows**, each carrying a `path`, a `type` and a `default` for the schema-driven
-flow engine to read, and the Panels page edits **registry records**. A panel is a row in `NS.Registry`
-with an id and no path (`settings/PanelEditor.lua`), so there is nothing for a row composer to emit
-into and no arm of `O.BorderGroup` or `O.BarGroup` this page could call.
-
-The fix is upstream and is a real one: give those composers a record-backed arm — a `get`/`set` pair
-per row in place of a `path` — so a per-instance editor can emit the canonical block from one
-declaration too. That is a new surface on `LibKa0s-Options-1.0` and a change to what reads the rows
-that come out of it, added for one consumer's bespoke page, and this cycle's library tags have fixed
-contents. The owner's ruling, 2026-09-08, is therefore **register rows, not a composer arm**: the
-state is recorded where an audit reads it, with a trigger, rather than an interface being cut in a
-hurry to close a Low. **The rows do not settle the question** — they carry it forward.
-
-Three rows and not one, because each block retires on its own: the day a block composes, its row has
-done its work and goes, and the others stay until theirs do.
-`tests/test_options_groups.lua` pins that pairing in both directions — a fourth hand-written block
-with no row fails the suite, and so does a row naming a block that is no longer typed out.
-
-What is NOT deviated from is the shape. Every block carries the mandated rows, in the mandated order,
-under the mandated labels, with this addon's own extras appended after them rather than interleaved,
-and `docs/settings-panel.md` sets each block out row by row. Nothing a player can see is wrong today;
-the risk `§16` exists to prevent is the latent one, that the day a group grows a row it grows in one
-addon.
-
 | Rule | What differs | Why | Decided | Re-check trigger |
 |---|---|---|---|---|
 | `performance-§1` (the wiring MUST) | No `core/PerfSetup.lua`, no `PanelMasterPerfDB`, no `perf` verb, no `tests/perf.lua`. The `perf` verb stays **reserved** so it can never mean anything else here. | **Ratified as a deviation from `§1`, NOT as a `§12` exemption — `§12` does not apply and is not claimed.** The addon's one in-combat path is a single shared 10Hz `OnUpdate` (`modules/Canvas.lua:644-650`) whose whole body is, per mouseover-tracked panel, one `NS.Compat.MouseIsOver` and one `SetAlpha`. The cost is bounded by a number the player sets: panels with *Show on mouseover only* ticked, which defaults to `false` (`core/Constants.lua:306`). With none ticked the driver is never created; with the set emptied afterwards the frame survives but its script does not — `SetMouseoverTracked` clears the `OnUpdate` on the untrack that empties the set, and `ensureMouseoverDriver` re-installs it when the set refills, so the dormant cost is no per-frame callback at all. There is no per-record work, no allocation, no scan that grows with saved data, and nothing whose cost a raid can change. Wiring the full harness — a setup file, a second SavedVariables global, a slash verb, a `suspend`/`resume` contract and an offline scenario — to bracket two API calls at 10Hz is a cost the measurement could not repay. Owner's decision, 2026-08-25, over [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). | 2026-08-25 | Any of: a second `OnUpdate` or repeating ticker; `updateMouseover` growing work that is not O(tracked panels) of two API calls; a panel count that stops being player-bounded; or `performance-§12` gaining a bounded-cost clause upstream, at which point the exemption becomes claimable and this row is replaced by one that cites it. |
 | `events-frames-taint-§8` (the pre-formatting **SHOULD**) | Roughly 25 chat and slash lines build their text with `("…"):format(…)` or `..` before handing it to `NS.Print` — `settings/Slash.lua`, `settings/PanelEditor.lua`, `settings/Schema.lua` — rather than the preferred `print("count", n)` varargs form. | **The MUST does not engage here, and this was re-graded, not waived.** §8 scopes the MUST NOT to call sites whose arguments are, or derive from, a return of a named combat-protected API. This addon reads **none** of them: a whole-repo sweep of `core/ modules/ settings/ defaults/ locales/` for the trigger set (`UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`, `UnitGetIncomingHeals`, `UnitHealth`, `UnitHealthMax`, `UnitThreatSituation`, `UnitDetailedThreatSituation`, the aura amount/`points` fields, `UNIT_AURA`) returns nothing, and the only unit/client APIs it calls at all are `UnitClass` and `C_AddOns.GetAddOnMetadata`. Every one of these lines formats values the addon owns — a panel name, a stored geometry field, a count it computed, a literal — so none can be handed a secret and the residue is the SHOULD, graded Info. Neither of §8's two unrelaxed points is touched: no site calls the global `print()` (every file takes `local print = NS.Print`), and the seam's guarantee is unconditional — `core/CoreSetup.lua` publishes the library's `IsConcatSafe` / `SafeToString` and builds the printer from `lib:New`, so every argument is stringified through the `table.concat` probe whatever a call site hands it. Converting the sites is therefore a readability change with no reachable behavior, and is declined at `1.0.0`. | 2026-08-05 | The first chat or debug line whose arguments include, or derive from, a return of any API in §8's trigger set — that site converts as a MUST, and an audit files it as one. Re-check also when §8's trigger list grows upstream. |
 | `localization-§1` | No user-facing string routes through `NS.L`: every label, tooltip, slash line and message is hardcoded English. | `1.0.0` ships **English-only** — the second of the two terminal compliant states `localization-§3` names, not an open routing gap. Both MUSTs are met unconditionally: the `NS.L` seam is exported with the key-returning metatable fallback (`locales/enUS.lua:6`) and `enUS.lua` ships, so a later pass wraps strings without touching call sites. Reasoned at `locales/enUS.lua:8-14`. Panel **names** are user data and must never route through `NS.L`; neither must the stored `point` / `strata` tokens (`localization-§4`). | 2026-08-05 | The first non-English locale file added to `locales/` — that change routes the strings and retires this row |
-| `options-ui-§16` (the border block) | The panel's own border group is typed out in `settings/PanelEditor.lua` rather than emitted by `O.BorderGroup`: `borderTexture` (*Border style*), `borderSize` (*Border thickness (px)*), `borderColor` and its `borderClassColor` companion, with this addon's own *Border offset* (`borderOffset`) appended after the mandated four rather than among them. | **No composer arm fits a record-backed bind.** `O.BorderGroup` emits path-keyed schema rows and a panel is a registry record with no path — see the ruling above this table. Ratified rather than fixed because the fix is a new upstream surface on `LibKa0s-Options-1.0`, cut for one page, and this cycle's library tags are already closed. Owner's decision, 2026-09-08, recorded as `M5-09` of the 2026-09-07 review-and-audit remediation plan. | 2026-09-08 | `O.BorderGroup` gaining a record-backed arm — a `get`/`set` pair per row in place of `path` — at which point this block composes and the row retires. Re-check unconditionally at the next `LibKa0s-Options` **major**, whatever it carries: a major is an interface break, and a row naming a surface that has moved must not survive one in silence. |
-| `options-ui-§16` (the bar block) | The accent bar's group is typed out in the same file rather than emitted by `O.BarGroup`: `accentTexture` (*Bar texture*), `accentAlpha` (*Bar opacity*), `accentColor` and its `accentClassColor` companion, with *Bar thickness* and *Bar offset* appended after the mandated four. | The same bind, the same ruling. The bar block is the one whose mandated set this addon had to GROW to honor — `accentAlpha` is a stored field added for it, because the panel-wide opacity fades background, border and bars together and could not have meant *Bar opacity* here without meaning something different from every other page in the collection. It is honored by hand today, and an addition of exactly that kind is what a composer keeps from drifting. Owner's decision, 2026-09-08 (`M5-09`). | 2026-09-08 | `O.BarGroup` gaining the record-backed arm, at which point this block composes and the row retires. Re-check unconditionally at the next `LibKa0s-Options` **major**. |
-| `options-ui-§16` (the bar's border block) | The accent bar's own border group, third and last of the three: `accentBorderTexture` (*Border style*), `accentBorderSize` (*Border thickness (px)*), `accentBorderColor` and its `accentBorderClassColor` companion, with *Border offset* (`accentBorderOffset`) after them. | The same bind and the same ruling, and it is a separate row rather than a clause of the first because it is a separate group over a separate surface — it outlines the strip, not the panel — and it composes, or does not, on its own. Owner's decision, 2026-09-08 (`M5-09`). | 2026-09-08 | `O.BorderGroup` gaining the record-backed arm, at which point this block composes and the row retires. Re-check unconditionally at the next `LibKa0s-Options` **major**. |
+| `architecture-§5` (the fields on a panel) | The per-panel appearance and position fields in `C.PANEL_FIELD_TYPE` (`core/Constants.lua`) are preferences the player sets on a member, and none has a schema row. That is every field except `name`, which routes to `R:Rename`: colors, the border, bar and bar-border blocks, textures, size, `strata`, `level`, `scale`, `alpha`, mouseover, `enabled`, the `art*` fields and the anchor (`point`, `relPoint`, `x`, `y`). They are written through `NS.Registry:Set` (the field controls in `settings/PanelEditor.lua` and `/pm panel <name> set`) and `:SetPosition`, and by the whole-record and bulk verbs: `R:Reset`, `R:CopyFrom`, `R:FitToArtwork` (through `R.ApplyArtSize`), `R:Recover`, `R:ResetPositions`, and the unlock-mode drag-stop in `modules/Unlock.lua`, which writes `point`/`relPoint` onto the live record and then calls `:SetPosition`. Each of these coerces, writes and notifies on its own (`PanelChanged` per record; `PanelsChanged` once for `Recover` and `ResetPositions`), none through `NS.Schema:Set`. | The schema helper addresses paths, not records: `NS.Schema:Set` writes a path under the profile, and a panel is a registry record reached by id. Instance-addressing every per-panel field would be the largest change in the collection, for fields the Registry already validates (the `C.PANEL_FIELD_TYPE` coercers plus `R.Sanitize`), logs once at the seam and announces on the bus. Owner's decision, 2026-09-12, over [#49](https://github.com/tusharsaxena/PanelMaster/issues/49). | 2026-09-12 | The schema helper gains instance addressing for registry records (an explicit record argument on `NS.Schema:Set`). The fields then take instance-relative rows, the verbs above become callers of the helper, and this row retires. |
+
+**Retired on 2026-09-12, three rows for one reason: the `options-ui-§16` border, bar and bar-border
+blocks.** Each row said a canonical group on the Panels page was typed out in
+`settings/PanelEditor.lua`, because `O.BorderGroup` and `O.BarGroup` emitted path-keyed schema rows
+and a panel is a registry record with no path, and each carried the trigger *the composer gains a
+record-backed arm*. LibKa0s v1.31.0 shipped that arm (`spec.bind`, OptionsCompose minor 4, read by
+OptionsWidgets minor 15), so the trigger fired. The three blocks are composed now, each from one
+declaration with a `bind` over the live panel record that writes through `NS.Registry:Set`
+([#48](https://github.com/tusharsaxena/PanelMaster/issues/48)). The behavior is what `§16` mandates,
+and a row for it would be the graveyard `documentation-§3` forbids. `tests/test_options_groups.lua`
+holds the new state: no hand-written block on the page, the three composer calls bound, no
+`options-ui-§16` row in this table, and a control-by-control characterization of what the composed
+blocks draw and write. The `architecture-§5` row above stays. The arm changes how a control binds to a
+record, not where the write goes, and that row's trigger is deliberately the schema helper.
 
 **Retired on 2026-09-08, three rows, three different reasons.**
 
@@ -326,12 +319,13 @@ git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l |
 
 | File | Lines (2026-09-11) | Disposition |
 |---|---|---|
-| `settings/PanelEditor.lua` | 1414 | **On notice, and its own trigger has fired.** Issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor (`:190-220`, `:342-993`, ~650 lines) out from under the Panels page's chrome band, into a sibling under `settings/`; the issue names the four shared symbols the peel has to publish on `E` first. Not peeled this cycle by plan. |
+| `settings/PanelEditor.lua` | 1414 (1485 on 2026-09-12, after [#48](https://github.com/tusharsaxena/PanelMaster/issues/48) composed its three blocks; 1476 once the swatch suffix went) | **On notice, and its own trigger has fired.** Issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor (`:200-231`, `:347-1170`, ~825 lines, measured 2026-09-12) out from under the Panels page's chrome band, into a sibling under `settings/`; the issue names the four shared symbols the peel has to publish on `E` first. Not peeled this cycle by plan. |
 | `tests/test_artwork.lua` | 1356 | **Accepted — it peels when `modules/Artwork.lua` does, on the same seam, in the same commit.** A mirror suite has no partition of its own: pick one before the module has, and the two files stop pairing, which is worse for a reader under failure than one long file that pairs. |
 | `tests/test_panel.lua` | 1273 | **Accepted, and it is the row this census was written by finding.** It crossed 1000 at `1b8c672` (2026-09-03, 1076) and nothing anywhere said so — the watch list that should have caught it is frozen at the 1.0.0 release run, where this file was 708. It is the suite for **both** page files, so its appearance cases leave with the editor when [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) peels; same seam, same commit. |
 | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** Flat since the 1.0.0 release run (1188 at `20260807-160022`, 1087 at the baseline). Split along the catalog / geometry seam before the next feature lands in it; `tests/test_artwork.lua` peels with it. |
 
-**Nothing is over the cap.** The largest authored file in the repository is eighty-six lines under it, and
+**Nothing is over the cap.** The largest authored file in the repository,
+`settings/PanelEditor.lua`, is twenty-four lines under it (1476 lines on 2026-09-12), and
 the four rows above are the whole band. `modules/Registry.lua` at 999 is the nearest file outside the
 table and is now one line from needing a row of its own. `M4-18` put a private sweep in it and was
 trimmed to stay under the trigger deliberately: crossing the band as a side effect of a Low-severity

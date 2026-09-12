@@ -171,6 +171,14 @@ NS.Helpers = lib:New({
   applyDefault = function(row) NS.Schema:Set(row.path, NS.Schema:Default(row.path)) end,
   allRows      = function() return NS.Schema.Schema end,
 
+  -- The bulk bracket (debug-logging-§10, Options minor 16), and it is DEFENSIVE. Neither of this
+  -- addon's own reset controls reaches a library walk: the global reset is `db:ResetProfile()`
+  -- (below), and the Registry's bulk verbs write records. But a page left on the library's own
+  -- Defaults would reach O.RestoreDefaults, and unbracketed that is one [Set] line per row. The pair
+  -- is settings/Schema.lua's, which loads before this file.
+  bulkBegin    = NS.Schema.BulkBegin,
+  bulkEnd      = NS.Schema.BulkEnd,
+
   -- ADAPTER. This addon's schema has no `page` field: every settings row belongs to the one General
   -- page, and the groups within it are section headings rather than pages.
   --
@@ -217,13 +225,15 @@ NS.Helpers = lib:New({
 
   -- DELIBERATELY NOT PASSED:
   --
-  --   colorDecode / colorEncode — this addon has no COLOR schema row. Its colors all live on
-  --                panel RECORDS, which settings/PanelEditor.lua draws by hand from
-  --                NS.Registry, not from the schema, so there is nothing here for a codec to
-  --                translate. If a color row is ever added, both majors take the same pair.
-  --   getLSM     — same reasoning. The three LSM-backed dropdowns are per-PANEL media pickers that
-  --                PanelEditor builds itself with the LSM30_* widgets; no schema row is media-backed,
-  --                so O.LSMValues would have no caller.
+  --   colorDecode / colorEncode — this addon has no COLOR schema row. Its colors live on panel
+  --                RECORDS, and the composed swatches in settings/PanelEditor.lua reach them
+  --                through that file's record-backed `bind`, which converts the record's
+  --                { r, g, b, a } arrays to and from the library's named keys itself. There is
+  --                nothing left for a codec to translate. If a color schema row is ever added,
+  --                both majors take the same pair.
+  --   getLSM     — the media dropdowns are per-PANEL pickers, and PanelEditor replaces each
+  --                composed row's `values` with NS.Compat.MediaList (this addon's None and Solid,
+  --                in its own order), so the library's LSM lookup is never the list a player sees.
   --   skipRestoreAll / afterRestoreAll — this addon does not use O.RestoreAllDefaults at all,
   --                because its global reset is not a row walk. `Sl:CliResetAll` confirms and then
   --                calls `Sl:DoResetAll`, which is `db:ResetProfile()` on the active profile and

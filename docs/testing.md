@@ -192,22 +192,32 @@ not academic: the gate's first run found `tests/test_panel.lua` at 1222, which c
 The line figures in the census are dated measurements and nothing asserts them, so an ordinary edit to
 a large file does not redden this gate. Membership is the invariant, not the numbers.
 
-## The `options-ui-§16` register gate
+## The `options-ui-§16` gate
 
-`tests/test_options_groups.lua` is the same bargain as the size gate, over a different table.
-`options-ui-§16`'s border, bar and font blocks are supposed to be composed by the library; this
-addon types three of them out, because the composers emit path-keyed schema rows and the Panels page
-edits registry records. That is a ratified deviation, one row per block, in
-[ARCHITECTURE.md](ARCHITECTURE.md) ▸ *Documented deviations* — and the gate keeps the rows and the
-code honest in both directions: a fourth hand-written block with no row is a red, and so is a row
-naming a block that is no longer typed out, because the register is not a graveyard.
+`tests/test_options_groups.lua` guards the three canonical blocks on the Panels page.
+`options-ui-§16`'s border, bar and font blocks are composed by the library. Until LibKa0s v1.31.0
+this addon typed three of them out under three ratified register rows, because the composers emitted
+path-keyed schema rows and the Panels page edits registry records. The record-backed arm
+(`spec.bind`) closed that on 2026-09-12 ([#48](https://github.com/tusharsaxena/PanelMaster/issues/48)),
+and the gate now holds the composed state three ways: no hand-written block on the page, both
+`O.BorderGroup` calls and the `O.BarGroup` call carry a `bind`, and
+[ARCHITECTURE.md](ARCHITECTURE.md) ▸ *Documented deviations* carries no `options-ui-§16` row, because
+the register is not a graveyard.
 
-A block is recognized by its leading row — *Font*, *Border style*, *Bar texture*, the labels the rule
-itself names — and matched to its row by the stored field the picker writes (`borderTexture`,
-`accentTexture`, `accentBorderTexture`). Field keys rather than line numbers, for the same reason the
-size gate does not assert its census figures: a citation that drifts on every ordinary edit is a gate
-with a standing reason to be switched off. *Background texture* is deliberately not a block head — a
-group over a background is not a bar group.
+A hand-written block is recognized by its leading row (*Font*, *Border style*, *Bar texture*, the
+labels the rule itself names) on a `makeMediaDropdown` call, the helper a hand-written picker on this
+page would use. *Background texture* is deliberately not a block head, since a group over a background
+is not a bar group. It also keeps the scan from going blind: the background picker is still a
+`makeMediaDropdown` call, and a scan that finds none fails rather than passes.
+
+Below the gates, four cases characterize the composed blocks control by control, per tab: label,
+widget type, width, row pairing, slider range and percent flag, media list and order, opening value,
+tooltip title and body, a write landing through `NS.Registry:Set`, and a write made elsewhere reaching
+the control through the page's refreshers. They were written against the typed-out blocks first and
+passed across the swap. The one assertion tightened afterwards is the swatch label: the typed-out
+swatch gained a gray `(opacity)` suffix under class color, and the composed one does not. The two
+hand-drawn swatches dropped the suffix too (owner's decision, 2026-09-12), and a case in
+`tests/test_panel.lua` holds every swatch on the page to its plain label in both class-color states.
 
 ## Automated test records — the consolidated run
 
@@ -372,10 +382,17 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
   leak into the next panel that reuses the frame.
 - **`UIParent` carries a real 1920×1080 size.** A 0×0 screen makes `Compat.GetScreenSize` return nil
   and silently skips every off-screen-recovery test.
-- **The AceAddon mock stamps AceConsole's colliding `:Print` mixin**, so the tests exercise the real
-  printer-reclaim path (`architecture-§2`, anti-pattern #36).
+- **`NS.addon` is built by the kit's AceAddon (kit revision 17)**, which embeds exactly the libraries
+  `core/PanelMaster.lua` lists. So AceConsole's colliding `:Print` and `:Printf` mixins land on `NS`,
+  and the tests exercise the real printer-reclaim path (`architecture-§2`, anti-pattern #36). Events
+  are recorded per target on `NS.addon.__events`, an event name in `mocks.__badEvents` raises on
+  registration as retail does, timers are AceTimer's with cancellation honored (`mocks.__fireTimers`
+  answers how many ran), and chat commands land in `AceConsole.commands`. Until
+  [#50](https://github.com/tusharsaxena/PanelMaster/issues/50) the harness replaced `NewAddon`
+  wholesale, and none of that reached the addon object.
 - **The message bus keys callbacks by `(message, target)`** and fans `SendMessage` out to every
-  target, so a test can catch two receivers clobbering each other on a shared target.
+  target, so a test can catch two receivers clobbering each other on a shared target. It is the kit's
+  AceEvent, and `mocks.__msgRegistry` is its registry.
 - **`Settings.RegisterCanvasLayout(Sub)category` keeps each frame it is handed** in
   `mocks.__settingsPanels`, so `test_panel.lua` can assert the `OnCommit` / `OnDefault` / `OnRefresh`
   contract on what the framework actually received (`options-ui-§1`).

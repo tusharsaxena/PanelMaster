@@ -332,21 +332,99 @@ function S:WritePath(root, path, value)
   node[parts[#parts]] = value
 end
 
+-- The bulk bracket (debug-logging-§10, LibKa0s Options minor 16). A bulk copy or reset through this
+-- seam is ONE `[Set] <act> <scope>: N rows` line, never one per row, so while a bracket is open the
+-- per-row line below is muted. Validation and each row's onChange still run per row.
+--
+-- N is the rows the act actually CHANGED, and the host tallies it: a bracketed write counts only
+-- when it changes the stored value. The library's own `count` is every row `applyDefault` returned,
+-- rows already at their default included, so it is not N and is not read.
+--
+-- Brackets nest by depth. The tally is shared and the line is emitted only when the OUTERMOST
+-- bracket closes, so an act that runs another logs once, with the total. If any level reports
+-- `info.profileReset`, nothing is emitted: AceDB replaced the whole profile, and the OnProfileReset
+-- handler in core/Database.lua logs that one line. settings/OptionsSetup.lua hands the library both
+-- halves together, so a begun mute always ends.
+S.bulk = { depth = 0, tally = 0, profileReset = false, failed = false }
+
+function S.BulkBegin(_act, _scope)
+  local b = S.bulk
+  if b.depth == 0 then b.tally, b.profileReset, b.failed = 0, false, false end
+  b.depth = b.depth + 1
+end
+
+-- `_count` is the library's rows-returned figure, unused for the reason above. `err` is what the
+-- act raised, if anything: the act still logs its one line, marked ` (stopped by an error)`, and
+-- the caller re-raises (the library's bracket, Sl:DoResetAll). A level that raised marks the
+-- outermost line. Closing the last level is what releases S:Set's mute, raise or not.
+function S.BulkEnd(act, scope, _count, err, info)
+  local b = S.bulk
+  if b.depth == 0 then return end
+  b.depth = b.depth - 1
+  if info and info.profileReset then b.profileReset = true end
+  if err ~= nil then b.failed = true end
+  if b.depth > 0 or b.profileReset then return end
+  NS.Debug("Set", "%s %s: %d rows%s", tostring(act), tostring(scope), b.tally,
+    b.failed and " (stopped by an error)" or "")
+end
+
+-- A bulk act the host performs itself, outside the schema rows: the Registry's record verbs count
+-- the fields they changed and hand the figure here. It is a bracket of its own, so inside an open
+-- one it only adds to the tally and the outermost act's line carries it.
+function S.BulkLine(act, scope, n)
+  S.BulkBegin(act, scope)
+  S.bulk.tally = S.bulk.tally + n
+  S.BulkEnd(act, scope)
+end
+
+-- A profile reset's row count. AceDB fires OnProfileReset AFTER it has replaced the profile, so the
+-- rows it changed can only be counted against a picture taken before: Sl:DoResetAll takes one, and
+-- the handler compares. The Profiles page's own Reset Profile takes none, and its line carries no
+-- count (debug-logging-§10: the count MAY be omitted where it is not cheap). Session-only rows live
+-- in NS.State, which AceDB never sees, so a profile reset changes none of them.
+function S:SnapshotPersisted()
+  local snap = {}
+  for _, row in ipairs(S.Schema) do
+    if not row.sessionOnly then
+      snap[row.path] = NS.Util.DeepCopy(S:ReadPath(NS.db.profile, row.path))
+    end
+  end
+  return snap
+end
+
+function S:CountChangedSince(snap)
+  local n = 0
+  for path, old in pairs(snap) do
+    if not NS.Util.DeepEqual(old, S:ReadPath(NS.db.profile, path)) then n = n + 1 end
+  end
+  return n
+end
+
 -- The single write seam. Panel widgets and the slash `set` both route through here, so validation,
 -- the debug trace and the onChange reaction can never be skipped by one caller.
 function S:Set(path, value)
   local row = S:FindRow(path)
   if not row then return false, "unknown path: " .. tostring(path) end
   if row.validate and not row.validate(value) then return false, "invalid value" end
+  -- Inside a bulk bracket a write is tallied, not logged, and only if it changed what the row reads
+  -- back. Read back rather than compared with `value`: a row whose default is nil (the console
+  -- row) written onto a hidden console changes nothing, and must not count.
+  local bulk, before = S.bulk.depth > 0, nil
+  if bulk then before = S:Get(path) end
   if row.sessionOnly then
     -- Session-only rows never touch the DB; the row's own set() applies the value.
     if row.set then row.set(value) end
   else
     S:WritePath(NS.db.profile, path, NS.Util.DeepCopy(value))
   end
-  -- Every settings mutation is logged ONCE, here at the write seam (debug-logging-§10). Downstream
-  -- reactors must not re-echo the same value.
-  NS.Debug("Set", "%s = %s", tostring(path), tostring(value))
+  -- Every settings mutation is logged ONCE, here at the write seam (debug-logging-§10), unless a
+  -- bulk bracket is open and the act logs its one line instead. Downstream reactors must not
+  -- re-echo the same value.
+  if not bulk then
+    NS.Debug("Set", "%s = %s", tostring(path), tostring(value))
+  elseif not NS.Util.DeepEqual(before, S:Get(path)) then
+    S.bulk.tally = S.bulk.tally + 1
+  end
   if row.onChange then row.onChange(value) end
   return true
 end
