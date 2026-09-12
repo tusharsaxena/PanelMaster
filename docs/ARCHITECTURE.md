@@ -79,9 +79,9 @@ per-record sanitize, and each sends `PanelsChanged` once if anything moved. None
 schema helper. Since standard v2.43.0 a preference with no row is a missing row: these need
 instance-relative rows the helper can address per panel, or a register row. That is an owner
 decision, still pending, and naming the writer above does not settle it. It is tracked as
-tusharsaxena/PanelMaster#49. The drag-written anchor needs an `architecture-§5` register row
-whichever way that goes, because a drag is not a control; that is tracked as
-tusharsaxena/PanelMaster#51.
+tusharsaxena/PanelMaster#49. The unlock-mode drag is part of the same question, not a separate
+one: every anchor field it writes (`point`, `relPoint`, `x`, `y`) is also set by the editor or
+`/pm`, so under v2.43.0 they are preferences, and a drag writing them follows whichever way #49 goes.
 
 The panel record, every field on it, the artwork fields and the sanitizing pass are in
 **[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;
