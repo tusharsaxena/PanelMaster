@@ -72,11 +72,11 @@ test("Harness: wow_mock extends the kit's mock_base rather than replacing it", f
 end)
 
 test("Harness: a bus target carries the kit's recorded event half (kit revision 16)", function()
-  -- tests/wow_mock.lua overrides AceEvent's Embed for the MESSAGE half only and hands the event
-  -- half to the kit's. Before revision 16 the local override stamped two no-ops and no
-  -- UnregisterAllEvents, so a module registering its own game events on NS.NewBusTarget() could
-  -- not be observed headlessly. This pins both halves: events recorded and validated as the kit
-  -- records them, messages still routed through the local registry the canvas cases read.
+  -- A bus target is built by the kit's AceEvent:Embed, both halves; #50 retired the local
+  -- override that kept the message half. Before revision 16 that override stamped two no-ops and no
+  -- UnregisterAllEvents, so a module registering its own game events on NS.NewBusTarget() could not
+  -- be observed headlessly. This pins both halves: events recorded and validated, and messages
+  -- routed through M.__msgRegistry, which the canvas cases read.
   local t = T.NS.NewBusTarget()
   assertTrue(t ~= nil, "NS.NewBusTarget returned nil — AceEvent-3.0 is missing from the mock")
   assertTrue(type(t.__events) == "table", "the bus target has no recorded event registry")
@@ -92,8 +92,53 @@ test("Harness: a bus target carries the kit's recorded event half (kit revision 
   t:RegisterMessage("PM_TEST_PROBE", handler)
   local subs = T.mocks.__msgRegistry.PM_TEST_PROBE
   assertTrue(subs ~= nil and subs[t] == handler,
-    "the message half left the local registry that tests/test_canvas.lua reads")
+    "the message half does not land in M.__msgRegistry, which tests/test_canvas.lua reads")
   t:UnregisterMessage("PM_TEST_PROBE")
+end)
+
+test("Harness: NS.addon's timers can be canceled, and the queue counts what ran", function()
+  -- settings/OptionsSetup.lua hands the library's color and slider throttles to
+  -- NS.addon:ScheduleTimer, so what the suite can say about a throttle rests on this: a canceled
+  -- timer does not run, and __fireTimers answers how many did.
+  local addon = T.NS.addon
+  T.mocks.__fireTimers()   -- drain anything an earlier case left queued
+  local ran = {}
+  addon:ScheduleTimer(function() ran.kept = true end, 0.05)
+  local dropped = addon:ScheduleTimer(function() ran.dropped = true end, 0.05)
+  addon:CancelTimer(dropped)
+  assertEqual(T.mocks.__fireTimers(), 1, "the queue did not count exactly the one timer that ran")
+  assertTrue(ran.kept, "the live timer did not run")
+  assertTrue(not ran.dropped, "a canceled timer still ran")
+end)
+
+test("Harness: NS.addon refuses an event the client does not know", function()
+  -- Retail raises on an unknown event name rather than ignoring it, and one retired name in a
+  -- RegisterEvent list takes the rest of the addon's events down with it. M.__badEvents is how a
+  -- case reproduces that; it is read at call time, so swapping the table is heard.
+  local addon, saved = T.NS.addon, T.mocks.__badEvents
+  T.mocks.__badEvents = { PM_RETIRED_EVENT = true }
+  local ok = pcall(addon.RegisterEvent, addon, "PM_RETIRED_EVENT", function() end)
+  T.mocks.__badEvents = saved
+  addon:UnregisterEvent("PM_RETIRED_EVENT")
+  assertTrue(not ok, "registering an unknown event passed; the client raises")
+end)
+
+test("Harness: NS.addon is the kit's AceAddon object, with Printf and UnregisterAllEvents (#50)",
+function()
+  -- tests/wow_mock.lua used to replace the kit's NewAddon wholesale, so neither the kit's Printf,
+  -- the second of the two mixins AceConsole stamps (architecture-§2, anti-pattern #36), nor its
+  -- per-target event recorder reached NS.addon. The harness now leaves NewAddon to the kit
+  -- (revision 17), which embeds exactly the libraries core/PanelMaster.lua lists.
+  local addon = T.NS.addon
+  assertEqual(type(addon.Printf), "function", "NS.addon has no Printf; AceConsole embeds two mixins")
+  assertEqual(type(addon.UnregisterAllEvents), "function", "NS.addon has no UnregisterAllEvents")
+  assertTrue(type(addon.__events) == "table", "NS.addon records no events of its own")
+  assertEqual(type(addon.__events.PLAYER_LOGIN), "function",
+    "the PLAYER_LOGIN registration retry is not recorded on NS.addon")
+  local AceAddon = T.mocks.LibStub("AceAddon-3.0")
+  assertTrue(AceAddon.GetAddon ~= nil and AceAddon:GetAddon("PanelMaster", true) == addon,
+    "NS.addon is not registered with AceAddon under the addon's name")
+  assertEqual(tostring(addon), "PanelMaster", "NS.addon is not named, as AceAddon names it")
 end)
 
 test("Harness: the runner derives the addon's load list from the TOC", function()

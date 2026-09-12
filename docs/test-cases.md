@@ -817,12 +817,15 @@ badge and any count quoted in the docs must agree with it.
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
 
-### test_harness.lua (15)
+### test_harness.lua (18)
 
 - Harness: the suite list and tests/test_*.lua agree in both directions
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
 - Harness: a bus target carries the kit's recorded event half (kit revision 16)
+- Harness: NS.addon's timers can be canceled, and the queue counts what ran
+- Harness: NS.addon refuses an event the client does not know
+- Harness: NS.addon is the kit's AceAddon object, with Printf and UnregisterAllEvents (#50)
 - Harness: the runner derives the addon's load list from the TOC
 - Harness: the runner derives the vendored library's load list from LibKa0s.xml
 - Harness: every module LibKa0s.xml declares is live in the loaded environment
@@ -906,7 +909,7 @@ badge and any count quoted in the docs must agree with it.
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 42 |
 | test_surface_parity.lua | 4 |
-| test_harness.lua | 15 |
+| test_harness.lua | 18 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 3 |
@@ -915,4 +918,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **789** |
+| **Total** | **792** |

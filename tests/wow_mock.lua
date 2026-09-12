@@ -23,12 +23,9 @@
 --      real frame is shown unless something hides it.
 --   3. AceDB-3.0 — this addon's suites drive __switchProfile / __db / __dbDefaultProfile, which
 --      model AceDB's "swap db.profile wholesale, then fire" semantics.
---   4. AceAddon-3.0 — __badEvents (retail RAISES on an unknown event name), __chatCommands,
---      timers that can be canceled, and a Print mixin that RETURNS its string so the reclaim is
---      assertable.
---   5. AceEvent-3.0 + the bus — callbacks keyed by (message, target), so same-target clobbering
---      (architecture-§4) is catchable. Only the message half: Embed delegates the event half to
---      the kit's (revision 16) and replaces the message functions after it.
+--   4. (retired) AceAddon-3.0 and 5. (retired) AceEvent-3.0 and the bus. Both used to be replaced
+--      here; since kit revision 17 they, AceTimer-3.0 and AceConsole-3.0 are the kit's with nothing
+--      layered over them (PanelMaster#50). The comment where they sat says what the kit gives.
 --   6. DEFAULT_CHAT_FRAME — a capture table feeding __chat. The base's is a plain stub frame whose
 --      AddMessage no-ops, which would silence every chat assertion in the suite.
 --   7. Settings — __settingsPanels / __openedCategory, the canvas-contract evidence (options-ui-§1).
@@ -493,88 +490,22 @@ return function()
   -- run without it (library-stack-§6) — so the default headless environment is the one where it is
   -- missing, which is what makes Compat.FetchMedia's nil path the tested path.
 
-  -- Message bus modeled on CallbackHandler: callbacks keyed by (message, target). Registering the
-  -- same message twice on ONE target overwrites (only the last survives); SendMessage fires to every
-  -- distinct target. Mirroring the real semantics is what lets a test catch same-target clobbering
-  -- (architecture-§4) — a bare no-op mock hides that whole bug class.
-  local msgRegistry = {}
-  M.__msgRegistry = msgRegistry
-  local function embedBus(obj)
-    obj.RegisterMessage = function(self, event, fn)
-      msgRegistry[event] = msgRegistry[event] or {}
-      msgRegistry[event][self] = fn
-    end
-    obj.UnregisterMessage = function(self, event)
-      if msgRegistry[event] then msgRegistry[event][self] = nil end
-    end
-    obj.SendMessage = function(_, event, ...)
-      local t = msgRegistry[event]
-      if not t then return end
-      for _, fn in pairs(t) do fn(event, ...) end
-    end
-    return obj
-  end
-
-  M.__events = {}
-  libs["AceAddon-3.0"] = {
-    NewAddon = function(_, target)
-      target = target or {}
-      local noop = function() end
-      -- Modern retail RAISES on an unknown event name instead of ignoring it. Tests put names in
-      -- M.__badEvents to reproduce that; a mock that silently accepted everything would hide the
-      -- entire failure mode (a single retired event name unregisters the whole addon).
-      target.RegisterEvent = function(_, event, handler)
-        if M.__badEvents[event] then
-          error("Attempt to register unknown event: " .. tostring(event), 2)
-        end
-        M.__events[event] = handler or true
-      end
-      target.UnregisterEvent = noop
-      target.RegisterChatCommand = function(_, cmd) M.__chatCommands[cmd] = true end
-      target.ScheduleTimer = function(_, callback, delay)
-        local handle = { callback = callback, delay = delay, canceled = false }
-        M.__timers[#M.__timers + 1] = handle
-        return handle
-      end
-      target.CancelTimer = function(_, handle)
-        if type(handle) == "table" then handle.canceled = true end
-      end
-      -- AceConsole's :Print mixin, reproduced faithfully: embedding it CLOBBERS a same-named custom
-      -- NS.Print, and renders "|cff33ff99<msg>|r:" (green, trailing colon, no cyan tag). The addon
-      -- reclaims its own printer right after NewAddon; without this stamp the test suite would never
-      -- exercise that reclaim (architecture-§2, anti-pattern #36).
-      target.Print = function(self) return "|cff33ff99" .. tostring(self) .. "|r:" end
-      return embedBus(target)
-    end,
-  }
-  M.__badEvents = {}
-  M.__chatCommands = {}
-  M.__timers = {}
-  M.__fireTimers = function()
-    local due = M.__timers
-    M.__timers = {}
-    local fired = 0
-    for _, handle in ipairs(due) do
-      if not handle.canceled then
-        fired = fired + 1
-        handle.callback()
-      end
-    end
-    return fired
-  end
-
-  -- Only the MESSAGE half is overridden. The event half is the kit's (revision 16): the base Embed
-  -- stamps RegisterEvent / UnregisterEvent / UnregisterAllEvents, recorded on `obj.__events` and
-  -- validated as CallbackHandler validates. It runs first, and embedBus then replaces the base's
-  -- message functions so the bus keeps routing through `msgRegistry` above, which
-  -- tests/test_canvas.lua reads as `T.mocks.__msgRegistry`.
-  local baseEmbed = libs["AceEvent-3.0"].Embed
-  libs["AceEvent-3.0"] = {
-    Embed = function(self, obj)
-      baseEmbed(self, obj)
-      return embedBus(obj)
-    end,
-  }
+  -- AceAddon-3.0, AceEvent-3.0 (both halves), AceTimer-3.0 and AceConsole-3.0 are the KIT'S, kit
+  -- revision 17, and nothing is layered over any of them (PanelMaster#50). core/PanelMaster.lua's
+  -- NewAddon(NS, "PanelMaster", "AceEvent-3.0", "AceTimer-3.0", "AceConsole-3.0") embeds exactly
+  -- those three through the kit's LibStub, as the client does, so:
+  --   * events are recorded per target on `NS.addon.__events`, with UnregisterAllEvents, and a name
+  --     in M.__badEvents raises on its first registration, which is where and when retail raises;
+  --   * the bus keys callbacks by (message, target) and fans SendMessage out to every target
+  --     (architecture-§4), published as M.__msgRegistry, which tests/test_canvas.lua reads;
+  --   * timers are AceTimer's, on the kit's queue: CancelTimer is honored and M.__fireTimers answers
+  --     how many ran. The no-op M.C_Timer.After above does not silence them, because AceTimer
+  --     pushes onto the queue directly;
+  --   * chat commands are recorded in LibStub("AceConsole-3.0").commands;
+  --   * Print AND Printf are stamped over NS, clobbering the addon's printer until
+  --     core/PanelMaster.lua reclaims it (architecture-§2, anti-pattern #36).
+  -- Until #50 this file replaced NewAddon and AceEvent's Embed wholesale, so none of the kit's
+  -- fidelity fixes to either reached the addon object.
 
   -- M.LibStub is the BASE's and is deliberately NOT replaced. Two reasons, both load-bearing:
   --   * it implements NewLibrary with minor tracking, which is how libs/LibKa0s/*.lua register for

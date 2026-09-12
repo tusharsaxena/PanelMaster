@@ -380,10 +380,17 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
   leak into the next panel that reuses the frame.
 - **`UIParent` carries a real 1920×1080 size.** A 0×0 screen makes `Compat.GetScreenSize` return nil
   and silently skips every off-screen-recovery test.
-- **The AceAddon mock stamps AceConsole's colliding `:Print` mixin**, so the tests exercise the real
-  printer-reclaim path (`architecture-§2`, anti-pattern #36).
+- **`NS.addon` is built by the kit's AceAddon (kit revision 17)**, which embeds exactly the libraries
+  `core/PanelMaster.lua` lists. So AceConsole's colliding `:Print` and `:Printf` mixins land on `NS`,
+  and the tests exercise the real printer-reclaim path (`architecture-§2`, anti-pattern #36). Events
+  are recorded per target on `NS.addon.__events`, an event name in `mocks.__badEvents` raises on
+  registration as retail does, timers are AceTimer's with cancellation honored (`mocks.__fireTimers`
+  answers how many ran), and chat commands land in `AceConsole.commands`. Until
+  [#50](https://github.com/tusharsaxena/PanelMaster/issues/50) the harness replaced `NewAddon`
+  wholesale, and none of that reached the addon object.
 - **The message bus keys callbacks by `(message, target)`** and fans `SendMessage` out to every
-  target, so a test can catch two receivers clobbering each other on a shared target.
+  target, so a test can catch two receivers clobbering each other on a shared target. It is the kit's
+  AceEvent, and `mocks.__msgRegistry` is its registry.
 - **`Settings.RegisterCanvasLayout(Sub)category` keeps each frame it is handed** in
   `mocks.__settingsPanels`, so `test_panel.lua` can assert the `OnCommit` / `OnDefault` / `OnRefresh`
   contract on what the framework actually received (`options-ui-§1`).

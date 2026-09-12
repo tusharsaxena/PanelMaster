@@ -57,7 +57,8 @@ test("Panel.Register: a second attempt is made on PLAYER_LOGIN (F-013)", functio
   -- were not yet loaded used to leave the addon absent from Blizzard's options list for the whole
   -- session, silently. Registration stays eager (anti-pattern #22) — this is a second eager attempt,
   -- not a deferral to first /pm config.
-  local retry = T.mocks.__events["PLAYER_LOGIN"]
+  -- Recorded on the addon object itself, per target, as the kit's AceEvent records it (#50).
+  local retry = NS.addon.__events["PLAYER_LOGIN"]
   assertEqual(type(retry), "function", "nothing retries registration at login")
   local before = P.general
   retry()
