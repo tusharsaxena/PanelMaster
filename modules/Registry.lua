@@ -8,9 +8,9 @@ local Util = NS.Util
 -- edit goes through here, so validation, clamping and the change broadcast can never be skipped by a
 -- caller. The settings panel, the CLI and unlock-mode dragging are all just callers.
 --
--- Panel records are a storage carve-out (architecture-§5): they are variable-length user-created
--- objects rather than fixed settings with widgets, so they are NOT Schema rows and are mutated here
--- instead of through Schema:Set.
+-- The panel set is a structural registry and this module is its one runtime writer (architecture-§5;
+-- the load pass is core/Database.lua). Per-panel FIELDS are not Schema rows and go through R:Set, not
+-- Schema:Set — an open architecture-§5 question (instance-relative rows), not a settled carve-out.
 
 -- Sole senders (architecture-§4): the two panel messages below are sent from this file and nowhere
 -- else. `PanelsChanged` means the SET changed (a panel was added, deleted or renamed) and the whole
