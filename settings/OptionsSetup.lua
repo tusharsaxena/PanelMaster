@@ -179,6 +179,18 @@ NS.Helpers = lib:New({
   bulkBegin    = NS.Schema.BulkBegin,
   bulkEnd      = NS.Schema.BulkEnd,
 
+  -- RESET ALL SETTINGS IS A PROFILE RESET (options-ui-§12), and these two fields tell the library so.
+  -- The reset itself is still Sl:DoResetAll (settings/Slash.lua). `/pm resetall`, the header Defaults
+  -- button and the composed Reset all settings button all reach it through Sl:ConfirmResetAll, never
+  -- through O.RestoreAllDefaults. What the fields change is that button's tooltip (LibKa0s-Options
+  -- minor 18). With `resetProfile` it names the current profile and says the other profiles are not
+  -- affected. With `profilesPage` it also names the equivalence with Profiles → Reset Profile, since
+  -- this addon ships AceDBOptions' Profiles page (settings/Panel.lua). The library's only other reader
+  -- of `resetProfile` is O.RestoreAllDefaults, which nothing in this addon or in the library calls.
+  -- The real reset goes there anyway, so the field is accurate if that is ever reached.
+  resetProfile = function() NS.db:ResetProfile() end,
+  profilesPage = true,
+
   -- ADAPTER. This addon's schema has no `page` field: every settings row belongs to the one General
   -- page, and the groups within it are section headings rather than pages.
   --
@@ -234,19 +246,23 @@ NS.Helpers = lib:New({
   --   getLSM     — the media dropdowns are per-PANEL pickers, and PanelEditor replaces each
   --                composed row's `values` with NS.Compat.MediaList (this addon's None and Solid,
   --                in its own order), so the library's LSM lookup is never the list a player sees.
-  --   skipRestoreAll / afterRestoreAll — this addon does not use O.RestoreAllDefaults at all,
-  --                because its global reset is not a row walk. `Sl:CliResetAll` confirms and then
-  --                calls `Sl:DoResetAll`, which is `db:ResetProfile()` on the active profile and
-  --                nothing else (options-ui-§12, and settings/Slash.lua's header states the rule).
-  --                Both hooks exist to shape a walk of `allRows`, so with no walk there is nothing
-  --                for them to shape.
+  --   skipRestoreAll / afterRestoreAll — still not passed, although `resetProfile` now is. The
+  --                global reset is still `Sl:DoResetAll`, not O.RestoreAllDefaults: `Sl:CliResetAll`
+  --                and every control confirm through `Sl:ConfirmResetAll`, which then calls
+  --                `Sl:DoResetAll`. That is `db:ResetProfile()` on the active profile and nothing else
+  --                (options-ui-§12, and settings/Slash.lua's header states the rule). `resetProfile`
+  --                is supplied above for the Reset all settings tooltip. It would also make
+  --                O.RestoreAllDefaults a profile reset if anything called it, and nothing does. Both
+  --                hooks exist to shape that function's walk of `allRows`. The walk is never taken,
+  --                and with `resetProfile` supplied it would visit only the session-only rows, so
+  --                there is nothing for either hook to shape.
   --
   --                The session-only rows -- `state.locked`, `state.preview`, `state.debugConsole` --
-  --                are outside BOTH acts, and that is deliberate rather than an oversight. They
+  --                are outside `Sl:DoResetAll`, and that is deliberate rather than an oversight. They
   --                store nothing in the DB (settings/Schema.lua's `S:Set` sends a sessionOnly row
   --                to its own `set` and never to WritePath), so a profile reset has nothing of
-  --                theirs to reset, while the library's walk would call `applyDefault` on each and
-  --                write a default the row does not store. What a reset DOES sweep is the durable
+  --                theirs to reset. Only the library's unreached walk would call `applyDefault` on
+  --                them. What a reset DOES sweep is the durable
   --                half: `OnProfileReset` reaches the `reload` closure in core/Database.lua, which
   --                clears preview placeholder RECORDS out of the profile and reloads the registry.
   --                The session flags themselves are cleared by their own `set`, or by a /reload.

@@ -94,7 +94,8 @@ function NS:RegisterProfileCallbacks()
     reload()
     NS.Debug("Profile", "switched to '%s', %s panels", current(), NS.Registry:Count())
   end)
-  -- AceDB passes (event, db, key) to all three; for a copy the key is the SOURCE profile.
+  -- AceDB passes (event, db, key) to OnProfileChanged and OnProfileCopied, where for a copy the key is
+  -- the SOURCE profile, and (event, db) alone to OnProfileReset. No handler here reads the reset's.
   NS.db.RegisterCallback(NS, "OnProfileCopied", function(_, _, source)
     NS.Debug("Set", "copied profile '%s' \226\134\146 '%s'", tostring(source), current())
     reload()

@@ -437,6 +437,10 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    - **Reset position** → **Expect:** every panel jumps back to the middle of the screen, a chat
      line says how many moved, and **nothing else about any panel changes** — same size, same
      colors, same artwork.
+   - **Hover Reset all settings** → **Expect:** the tooltip reads *"Reset the current profile to its
+     defaults — the same thing Profiles → Reset Profile does. Your other profiles are not
+     affected."* **A regression looks like** *"Restore every setting in this addon to its
+     default."*, which means the Options descriptor lost `resetProfile` or `profilesPage`.
    - **Reset all settings** → **Expect:** the `options-ui-§12` confirmation popup, word for word,
      and on **Yes** the profile is reset — settings *and* panels. This is the same act as the header
      **Defaults** button and `/pm resetall`; deleting every panel without touching the settings is

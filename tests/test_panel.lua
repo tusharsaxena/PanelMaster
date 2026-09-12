@@ -1210,6 +1210,57 @@ test("Panels page: the Master controls tab closes on the canonical button pair",
   assertTrue(seen["Reset all settings"], "the Master controls tab drew no Reset all settings button")
 end)
 
+test("Panels page: the Reset all settings tooltip says it resets this profile, as Profiles -> Reset Profile does", function()
+  -- The composer picks the wording from the Options descriptor (LibKa0s-Options minor 18). With no
+  -- `resetProfile` it says "Restore every setting in this addon to its default.", which overstates a
+  -- reset that leaves every other profile alone. This addon's reset IS a profile reset
+  -- (Sl:DoResetAll) and it ships the Profiles page, so it supplies `resetProfile` and
+  -- `profilesPage = true`, and the tooltip names the equivalence options-ui-§12 asks for.
+  local ctx = P.general
+  local created = T.mocks.LibStub("AceGUI-3.0", true).__created
+  local from = #created + 1
+  ctx.activeTab = "Master controls"
+  ctx._dirty = true
+  ctx.panel:GetScript("OnShow")(ctx.panel)
+
+  local button
+  for i = from, #created do
+    local w = created[i]
+    if w.type == "Button" and w.text == "Reset all settings" then button = w end
+  end
+  assertTrue(button ~= nil, "the Master controls tab drew no Reset all settings button")
+  local saved, got = T.mocks.GameTooltip, {}
+  T.mocks.GameTooltip = setmetatable({
+    SetText = function(_, text) got.title = text end,
+    AddLine = function(_, text) got.body = text end,
+  }, { __index = function() return function() end end })
+  local ok, err = pcall(button.__fire, button, "OnEnter")
+  T.mocks.GameTooltip = saved
+  assertTrue(ok, tostring(err))
+  assertEqual(got.title, "Reset all settings")
+  assertEqual(got.body, "Reset the current profile to its defaults \226\128\148 the same thing Profiles "
+    .. "\226\134\146 Reset Profile does. Your other profiles are not affected.")
+end)
+
+test("Options descriptor: resetProfile resets the live db's active profile, exactly once", function()
+  -- The descriptor's `resetProfile` is read in one other place, O.RestoreAllDefaults. This addon never
+  -- calls that: its global reset is Sl:DoResetAll. So the field is driven here through the library's
+  -- own reader, and it must be the active profile's reset, once, wiped in place, and nothing more.
+  local db = NS.db
+  local profile = db.profile
+  NS.Schema:Set("settings.gridSize", 8)
+  assertEqual(NS.Schema:Get("settings.gridSize"), 8, "the precondition did not take")
+  local calls, real = 0, db.ResetProfile
+  db.ResetProfile = function(...) calls = calls + 1; return real(...) end
+  local ok, err = pcall(NS.Helpers.RestoreAllDefaults)
+  db.ResetProfile = real
+  assertTrue(ok, tostring(err))
+  assertEqual(calls, 1, "the descriptor's resetProfile did not reset the profile exactly once")
+  assertEqual(NS.Schema:Get("settings.gridSize"), NS.Schema:Default("settings.gridSize"),
+    "the active profile kept a changed setting")
+  assertTrue(db.profile == profile, "the reset replaced the profile table instead of wiping it in place")
+end)
+
 test("Panels page: every color swatch is followed by a 'Use class color' companion", function()
   -- options-ui-§17, and the assertion that is NOT vacuous for this addon: its colors live on panel
   -- RECORDS rather than on schema rows, so the row-walk in tests/test_schema.lua cannot see them.

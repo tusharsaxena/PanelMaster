@@ -8,11 +8,12 @@ inert, and report that as an option rather than take it. Skip filing and pushing
 
 - **Adopted: the strata refusal, as a test.** A new `tests/test_slash.lua` case lands in its own
   commit after the re-vendor. It is a test-only commit; the adapter does not change.
-- **Reported, not taken: `resetProfile` with `profilesPage = true`.** It is accurate and inert (see
-  `02_CANDIDATES.md`). The owner decides.
+- **Adopted in a follow-up: `resetProfile` with `profilesPage = true`.** It was reported as accurate and
+  inert (see `02_CANDIDATES.md`) and then taken at the owner's instruction. The same commit makes the
+  harness's own AceDB fake fire `OnProfileReset` with `(event, db)`, as AceDB-3.0 does.
 - **The visibility refusal, found while checking the adapter.** It predates this release. It was
   reported first, then fixed in a follow-up commit at the owner's instruction ("do all of these"),
   with a test that is red against the old adapter.
 
-Not now: `resetProfile` / `profilesPage` (owner's call). Declined: none. Unreached: none. No issue
+Not now: none. Declined: none. Unreached: none. No issue
 filed.

@@ -43,7 +43,7 @@ game's own Settings ▸ AddOns list.
 | Master controls | Debug console | Show the debug window. Resets when you reload. |
 | Master controls | Test mode | Put three sample panels on screen. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
-| Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall` and the header **Defaults** button do. |
+| Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles → Reset Profile does. Your other profiles are not affected."* |
 | Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
 | Editing | Snap to grid | Round a dragged panel's position to the grid size below. |
 | Editing | Grid size | How coarse that grid is, in screen units. |
@@ -200,6 +200,11 @@ appends after the mandated block and never interleaves with it.
 
 **Reset all settings** is `options-ui-§12`'s global reset, verbatim and confirm-gated, and it is the
 same entry point the header **Defaults** button and `/pm resetall` already share — `Sl:ConfirmResetAll`.
+Its tooltip is the library's. The Options descriptor's `resetProfile` and `profilesPage` pick the
+wording (LibKa0s-Options minor 18): *"Reset the current profile to its defaults — the same thing
+Profiles → Reset Profile does. Your other profiles are not affected."* The reset itself is still
+`Sl:DoResetAll`. The library's other reader of `resetProfile`, `O.RestoreAllDefaults`, is never
+called here.
 Deleting every panel stays the separate, separately-confirmed act it was, on the Panels page's own
 Defaults button behind `KA0S_PANELMASTER_DELETEALL`.
 

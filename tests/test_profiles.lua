@@ -287,3 +287,23 @@ test("Panel: the Profiles page builds lazily on OnShow", function()
   local panel = T.mocks.__settingsPanels["Profiles"]
   assertEqual(type(panel:GetScript("OnShow")), "function")
 end)
+
+-- ── The AceDB fake ──────────────────────────────────────────────────────────────
+
+test("AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does", function()
+  -- CallbackHandler calls a registered function as fn(eventname, ...), and AceDB-3.0's ResetProfile
+  -- ends `self.callbacks:Fire("OnProfileReset", self)`: no key. tests/wow_mock.lua used to pass the
+  -- registering target where the event name goes and the profile key after the db, so a handler that
+  -- read either would pass here and get something else in the client. The recorder keeps only the
+  -- first call, so the resets later cases take cannot disturb it.
+  local got
+  NS.db.RegisterCallback({}, "OnProfileReset", function(...)
+    if not got then got = { n = select("#", ...), ... } end
+  end)
+  NS.db:ResetProfile()
+  assertTrue(got ~= nil, "OnProfileReset never fired")
+  assertEqual(got.n, 2, "OnProfileReset carried " .. tostring(got.n) .. " arguments, not (event, db)")
+  assertEqual(got[1], "OnProfileReset", "the first argument is not the event name")
+  assertTrue(got[2] == NS.db, "the second argument is not the db")
+  fresh()
+end)

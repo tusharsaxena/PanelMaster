@@ -29,13 +29,14 @@ and `../LibKa0s/docs/api/testkit/version-19-docs.md`.
 - **Kit revision 19, `OnProfileReset` without a key.** **Not reached.** The harness replaces the
   kit's AceDB with its own. That fake still fires `OnProfileReset` with `(db, M.__profileName)`
   (`tests/wow_mock.lua:453`), a key real AceDB does not pass. The handler (`core/Database.lua:102`)
-  takes no arguments, so nothing reads it. Noted, not changed.
+  takes no arguments, so nothing reads it. **Aligned in a follow-up commit:** the fake now fires
+  `(event, db)`, and no case depended on the key.
 - **No surface change.** No member is added to either instance, so no surface-parity exclusion moves.
 
 ## Class B: host change required
 
-- **`resetProfile` plus `profilesPage = true` on the Options descriptor. Reported to the owner, not
-  taken.** It would be **accurate**. The tooltip would read *"Reset the current profile to its
+- **`resetProfile` plus `profilesPage = true` on the Options descriptor. Adopted in a
+  follow-up commit at the owner's instruction.** It would be **accurate**. The tooltip would read *"Reset the current profile to its
   defaults — the same thing Profiles → Reset Profile does. Your other profiles are not affected."*
   That is exactly what `Sl:DoResetAll` does, and the Profiles page it names exists. It would be
   **inert everywhere else**. The vendored library reads `resetProfile` in two places only:
