@@ -9,8 +9,8 @@ local Util = NS.Util
 -- caller. The settings panel, the CLI and unlock-mode dragging are all just callers.
 --
 -- The panel set is a structural registry and this module is its one runtime writer (architecture-§5;
--- the load pass is core/Database.lua). Per-panel FIELDS are not Schema rows and go through R:Set, not
--- Schema:Set — an open architecture-§5 question (instance-relative rows), not a settled carve-out.
+-- the load pass is core/Database.lua). Per-panel FIELDS are not Schema rows: R:Set, R:SetPosition,
+-- the whole-record and bulk verbs here and Unlock's drag-stop write them — an open §5 question.
 
 -- Sole senders (architecture-§4): the two panel messages below are sent from this file and nowhere
 -- else. `PanelsChanged` means the SET changed (a panel was added, deleted or renamed) and the whole
@@ -840,9 +840,9 @@ function COERCE.artwork(value)
   return matched
 end
 
--- The single write seam for a panel's fields. Every edit — settings widget, CLI, drag-stop — routes
--- through here, so validation, sanitizing, the debug trace and the repaint broadcast happen exactly
--- once and identically for all three.
+-- The write seam for one panel field. Every field control in the editor and the CLI `set` route
+-- through here (a drag-stop takes R:SetPosition below), so validation, sanitizing, the debug trace
+-- and the repaint broadcast happen exactly once and identically for both.
 function R:Set(key, field, value)
   local rec = R:Resolve(key)
   if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end

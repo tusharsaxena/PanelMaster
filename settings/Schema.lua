@@ -6,7 +6,7 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 -- One row per setting. This single table drives the AceDB defaults check, the panel widgets, and the
 -- slash get/set/list/reset dispatch (architecture-§5) — add a setting here and all three surfaces
--- pick it up with no other edit. Paths resolve against NS.db.profile (per-character).
+-- pick it up with no other edit. Paths resolve against NS.db.profile (the active profile).
 --
 -- `group` names the TAB (options-ui-§13): the General page draws itself with
 -- H.RenderTabbedSchema, which partitions these rows by `group` in DECLARATION ORDER and draws one

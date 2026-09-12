@@ -9,7 +9,7 @@ Schema-driven verbs: `config version get set list reset resetall debug help`.
 Panel verbs: `new delete rename panels panel unlock lock preview recover`.
 
 `/pm panel <name> [field] [value]` inspects and edits a single panel from the command line, using the
-same `Registry:Set` seam the settings widgets and the drag handler use.
+same `Registry:Set` seam the settings widgets use (the drag handler takes `Registry:SetPosition`).
 
 Two words in that grammar are **actions rather than fields**, and they are ordered oppositely.
 `fitart` is checked *before* the field table; `deleteall` is checked *after* the panel registry. `/pm panel <name> fitart` is the CLI half of the editor's **Fit to artwork**

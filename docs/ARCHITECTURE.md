@@ -56,10 +56,11 @@ names a panel's existence.
   behind `New` and `NewBatch`, mints `rec.id` from `nextID`, stamps `frameName` and appends; its
   local `destroy`, behind `Delete` and `DeleteBatch`, and `DeleteAll` remove; `Rename` relabels
   `name` and leaves `id` and `frameName` alone; there is no duplicate or reorder operation.
-- **Load pass.** `NS:SweepPreviewPanels` (`core/Database.lua`) drops orphaned preview records, and
-  is called only from `NS:InitDB`, right after `NS:RunMigrations` (whose v1 → v2 body backfills
-  `frameName`), and from the `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks,
-  never from a slash verb or a control.
+- **Load pass.** `NS:RunMigrations` and `NS:SweepPreviewPanels`, both in `core/Database.lua`. The
+  migration runner's v1 → v2 body backfills `frameName`, and it is called only from `NS:InitDB`.
+  The sweep drops orphaned preview records, and it is called from `NS:InitDB`, right after the
+  migrations, and from the `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks.
+  Neither is called from a slash verb or a control.
 
 Nothing else writes membership or bookkeeping, so the registry carries no `Documented deviations`
 row. `/pm resetall` and Profiles → Reset Profile (`db:ResetProfile()`), and AceDB's own profile
@@ -67,12 +68,17 @@ switch and copy, replace the store wholesale, which is not a registry write; the
 `NS.Registry:ReloadProfile` run after each of them.
 
 **Still open under `architecture-§5`: the fields on a panel.** A panel's appearance and position
-fields are preferences the player sets on a member, and none of them has a schema row. They are
-written through `NS.Registry:Set` and `:SetPosition`, which coerce, write, sanitize and send
-`PanelChanged` on their own rather than through `NS.Schema:Set`. Since standard v2.43.0 a preference
-with no row is a missing row: these need instance-relative rows the helper can address per panel,
-or a register row. That is an owner decision, still pending, and naming the writer above does not
-settle it.
+fields are preferences the player sets on a member, and none of them has a schema row. The field
+controls and `/pm panel <name> set` write them through `NS.Registry:Set`, which coerces, writes,
+sanitizes and sends `PanelChanged` on its own rather than through `NS.Schema:Set`. It is not the
+only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/Unlock.lua`) writes
+`point`/`relPoint` straight onto the live record before calling it, so a drag writes geometry.
+`:Reset`, `:CopyFrom` and `:FitToArtwork` rewrite fields and then sanitize. `:Recover` writes
+`x`/`y`, and `:ResetPositions` all four anchor fields, onto every record directly, with no
+per-record sanitize, and each sends `PanelsChanged` once if anything moved. None of these is the
+schema helper. Since standard v2.43.0 a preference with no row is a missing row: these need
+instance-relative rows the helper can address per panel, or a register row. That is an owner
+decision, still pending, and naming the writer above does not settle it.
 
 The panel record, every field on it, the artwork fields and the sanitizing pass are in
 **[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;

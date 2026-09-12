@@ -1,8 +1,8 @@
 local _, NS = ...
 
 -- Account-wide defaults. The persisted-DB version stamp is what this scope is FOR: everything the
--- user configures is per-character (defaults/Profile.lua), but the schema shape is a property of the
--- BUILD, not of a character, so a migration must run once per SavedVariables file rather than once
+-- user configures is profile-scoped (defaults/Profile.lua), but the schema shape is a property of
+-- the BUILD, not of a profile, so a migration must run once per SavedVariables file rather than once
 -- per profile.
 --
 -- `schemaVersion` IS DELIBERATELY NOT SEEDED HERE (savedvariables-§1).

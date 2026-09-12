@@ -1,13 +1,14 @@
 # Profiles
 
-Panel Master stores its panels **per character**, through AceDB profiles, and surfaces profile
-management as its own settings page. That makes profiles a first-class part of the addon's behavior
-rather than an AceDB detail.
+Panel Master stores its panels in **AceDB profiles**. Every character starts on the shared
+**"Default"** profile (`core/Database.lua:18`), so one layout follows the player to their alts until
+a character is given a profile of its own, and profile management is its own settings page. That
+makes profiles a first-class part of the addon's behavior rather than an AceDB detail.
 
 ## Where profiles sit in the data model
 
-`defaults/Profile.lua` carries the per-character defaults — the (empty) panel registry, `nextID`, and
-the settings block. `defaults/Global.lua` carries the one account-wide value, the `schemaVersion`
+`defaults/Profile.lua` carries the profile defaults — the (empty) panel registry, `nextID`, and the
+settings block. `defaults/Global.lua` carries the one account-wide value, the `schemaVersion`
 stamp. `core/Database.lua` opens AceDB on the shared **"Default"** profile and owns the
 profile-change callbacks.
 

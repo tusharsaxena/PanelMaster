@@ -10,9 +10,9 @@ NS.defaults.profile = {
   -- putting opaque blocks on the screen must never put one there uninvited. `/pm preview` is how a
   -- new user sees what a panel looks like without committing to one.
   --
-  -- A structural registry (architecture-§5): its one runtime writer is NS.Registry and its load
-  -- pass is NS:SweepPreviewPanels (core/Database.lua). Panels are not Schema rows and are never
-  -- written through Schema:Set.
+  -- A structural registry (architecture-§5): its one writer is NS.Registry and its load pass is
+  -- NS:RunMigrations plus NS:SweepPreviewPanels (core/Database.lua). Panels are not Schema rows
+  -- and are never written through Schema:Set.
   panels = {},
 
   -- Monotonic id source for panel records. Kept rather than derived from #panels so an id is never
