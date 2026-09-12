@@ -45,7 +45,7 @@ convention that forces the receiver. Next to the blanket sat nineteen files open
 `local addonName, NS = ...` over a folder name they never read, each behind an inline
 `-- luacheck: ignore addonName` — narrow by the letter of the other three rules, and hiding dead code
 in nineteen files. Those nineteen are fixed at source rather than re-parked; the one inline directive
-the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:183`).
+the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:203`).
 
 Adding a suppression is a two-minute job and removing one is an afternoon's. If a warning is genuine,
 fix the code; if the code is right, put the narrowest suppression the gate allows beside it and say

@@ -573,7 +573,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (59)
+### test_slash.lua (61)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -598,6 +598,8 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliSet: coerces booleans from words
 - Slash.CliSet: an unreadable boolean is refused, not stored as false (F-023)
 - Slash.CliSet: accepts a lower-case dropdown token
+- Slash.CliSet: a dropdown token followed by more words is refused, and the token alone takes
+- Slash.CliSet: an enum row matches its own values in any case and stores their spelling
 - Slash.CliSet: a non-number for a number row is refused
 - Slash.CliSet: an out-of-range number CLAMPS to the row's max (LIBKA0S-17)
 - Slash.CliReset: restores one setting's default
@@ -635,7 +637,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (60)
+### test_panel.lua (62)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -694,11 +696,13 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: the acts follow the picker rather than the panel they were built on
 - Panels page: the strip is drawn with ZERO panels, and the empty state is content
 - Panels page: the Master controls tab closes on the canonical button pair
+- Panels page: the Reset all settings tooltip says it resets this profile, as Profiles -> Reset Profile does
+- Options descriptor: resetProfile resets the live db's active profile, exactly once
 - Panels page: every color swatch is followed by a 'Use class color' companion
 - Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 
-### test_profiles.lua (23)
+### test_profiles.lua (24)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -723,6 +727,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page carries the framework contract like every other
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
+- AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
 ### test_sunnart.lua (53)
 
@@ -918,9 +923,9 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 28 |
-| test_slash.lua | 59 |
-| test_panel.lua | 60 |
-| test_profiles.lua | 23 |
+| test_slash.lua | 61 |
+| test_panel.lua | 62 |
+| test_profiles.lua | 24 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 42 |
 | test_surface_parity.lua | 4 |
@@ -933,4 +938,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **807** |
+| **Total** | **812** |

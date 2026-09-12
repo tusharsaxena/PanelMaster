@@ -432,8 +432,10 @@ return function()
           callbacks[event] = callbacks[event] or {}
           callbacks[event][target] = fn
         end,
+        -- CallbackHandler calls a registered function as fn(eventname, ...), never with the target it
+        -- was registered under, so neither does this. tests/test_profiles.lua pins the shape.
         __fire = function(event, ...)
-          for target, fn in pairs(callbacks[event] or {}) do fn(target, ...) end
+          for _, fn in pairs(callbacks[event] or {}) do fn(event, ...) end
         end,
       }
       -- RESET, the way AceDB does it, and it is a different motion from the swap below.
@@ -450,7 +452,8 @@ return function()
         local p = db.profile
         for k in pairs(p) do p[k] = nil end
         for k, v in pairs(deepcopy(defaults and defaults.profile or {})) do p[k] = v end
-        db.__fire("OnProfileReset", db, M.__profileName)
+        -- AceDB-3.0 ends ResetProfile with `self.callbacks:Fire("OnProfileReset", self)`: no key.
+        db.__fire("OnProfileReset", db)
       end
 
       -- Swap to a named profile the way AceDB does: a fresh defaults-shaped table, then the event.
