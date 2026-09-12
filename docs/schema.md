@@ -107,8 +107,13 @@ Schema rows either. The field controls and the CLI write them through `NS.Regist
 through `:SetPosition` plus a direct anchor write in `modules/Unlock.lua`, and the whole-record and
 bulk verbs (`:Reset`, `:CopyFrom`, `:FitToArtwork`, `:Recover`, `:ResetPositions`) write them in
 place. None of these is the schema helper, and `ARCHITECTURE.md` → Settings Schema lists them.
-Whether they get instance-relative rows or a register row is pending an owner ruling (standard
-v2.43.0), tracked as tusharsaxena/PanelMaster#49. This is no longer a settled carve-out.
+Under standard v2.43.0 they would need instance-relative rows or a register row, and the owner
+ruled for a register row on 2026-09-12
+([#49](https://github.com/tusharsaxena/PanelMaster/issues/49)): the schema helper addresses paths,
+not records. The row is `architecture-§5` (the fields on a panel) in
+[`ARCHITECTURE.md` → Documented deviations](ARCHITECTURE.md#documented-deviations). It retires when
+the schema helper gains instance addressing for registry records (an explicit record argument on
+`NS.Schema:Set`).
 
 #### The artwork fields
 

@@ -62,13 +62,14 @@ names a panel's existence.
   migrations, and from the `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks.
   Neither is called from a slash verb or a control.
 
-Nothing else writes membership or bookkeeping, so the registry carries no `Documented deviations`
-row. `/pm resetall` and Profiles → Reset Profile (`db:ResetProfile()`), and AceDB's own profile
+Nothing else writes membership or bookkeeping, so membership carries no `Documented deviations`
+row. The one `architecture-§5` row this addon has covers the fields on a panel, below. `/pm resetall` and Profiles → Reset Profile (`db:ResetProfile()`), and AceDB's own profile
 switch and copy, replace the store wholesale, which is not a registry write; the load pass and
 `NS.Registry:ReloadProfile` run after each of them.
 
-**Still open under `architecture-§5`: the fields on a panel.** A panel's appearance and position
-fields are preferences the player sets on a member, and none of them has a schema row. The field
+**The fields on a panel: a ratified `architecture-§5` register row.** A panel's appearance and
+position fields (`C.PANEL_FIELD_TYPE`, less `name`, which is the registry's own label and routes to
+`Rename`) are preferences the player sets on a member, and none of them has a schema row. The field
 controls and `/pm panel <name> set` write them through `NS.Registry:Set`, which coerces, writes,
 sanitizes and sends `PanelChanged` on its own rather than through `NS.Schema:Set`. It is not the
 only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/Unlock.lua`) writes
@@ -76,12 +77,18 @@ only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/U
 `:Reset`, `:CopyFrom` and `:FitToArtwork` rewrite fields and then sanitize. `:Recover` writes
 `x`/`y`, and `:ResetPositions` all four anchor fields, onto every record directly, with no
 per-record sanitize, and each sends `PanelsChanged` once if anything moved. None of these is the
-schema helper. Since standard v2.43.0 a preference with no row is a missing row: these need
-instance-relative rows the helper can address per panel, or a register row. That is an owner
-decision, still pending, and naming the writer above does not settle it. It is tracked as
-tusharsaxena/PanelMaster#49. The unlock-mode drag is part of the same question, not a separate
-one: every anchor field it writes (`point`, `relPoint`, `x`, `y`) is also set by the editor or
-`/pm`, so under v2.43.0 they are preferences, and a drag writing them follows whichever way #49 goes.
+schema helper. The drag is part of the same set, not a separate case: every anchor field it writes
+(`point`, `relPoint`, `x`, `y`) is also set by the editor or `/pm`, so they are preferences.
+
+Since standard v2.43.0 a preference with no row is a missing row. The owner ruled on 2026-09-12
+([#49](https://github.com/tusharsaxena/PanelMaster/issues/49)) for a register row rather than
+instance-relative rows, because the schema helper addresses paths, not records, and
+instance-addressing every per-panel field would be the largest change in the collection for fields
+the Registry already validates and announces. The row is `architecture-§5` (the fields on a panel)
+in [`## Documented deviations`](#documented-deviations). It retires when the schema helper gains
+instance addressing for registry records (an explicit record argument on `NS.Schema:Set`). The
+record-backed bind arm in `LibKa0s-Options-1.0` is not that trigger: it changes how a control
+binds to a record, not where the write goes.
 
 The panel record, every field on it, the artwork fields and the sanitizing pass are in
 **[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;
@@ -264,6 +271,7 @@ addon.
 | `options-ui-§16` (the border block) | The panel's own border group is typed out in `settings/PanelEditor.lua` rather than emitted by `O.BorderGroup`: `borderTexture` (*Border style*), `borderSize` (*Border thickness (px)*), `borderColor` and its `borderClassColor` companion, with this addon's own *Border offset* (`borderOffset`) appended after the mandated four rather than among them. | **No composer arm fits a record-backed bind.** `O.BorderGroup` emits path-keyed schema rows and a panel is a registry record with no path — see the ruling above this table. Ratified rather than fixed because the fix is a new upstream surface on `LibKa0s-Options-1.0`, cut for one page, and this cycle's library tags are already closed. Owner's decision, 2026-09-08, recorded as `M5-09` of the 2026-09-07 review-and-audit remediation plan. | 2026-09-08 | `O.BorderGroup` gaining a record-backed arm — a `get`/`set` pair per row in place of `path` — at which point this block composes and the row retires. Re-check unconditionally at the next `LibKa0s-Options` **major**, whatever it carries: a major is an interface break, and a row naming a surface that has moved must not survive one in silence. |
 | `options-ui-§16` (the bar block) | The accent bar's group is typed out in the same file rather than emitted by `O.BarGroup`: `accentTexture` (*Bar texture*), `accentAlpha` (*Bar opacity*), `accentColor` and its `accentClassColor` companion, with *Bar thickness* and *Bar offset* appended after the mandated four. | The same bind, the same ruling. The bar block is the one whose mandated set this addon had to GROW to honor — `accentAlpha` is a stored field added for it, because the panel-wide opacity fades background, border and bars together and could not have meant *Bar opacity* here without meaning something different from every other page in the collection. It is honored by hand today, and an addition of exactly that kind is what a composer keeps from drifting. Owner's decision, 2026-09-08 (`M5-09`). | 2026-09-08 | `O.BarGroup` gaining the record-backed arm, at which point this block composes and the row retires. Re-check unconditionally at the next `LibKa0s-Options` **major**. |
 | `options-ui-§16` (the bar's border block) | The accent bar's own border group, third and last of the three: `accentBorderTexture` (*Border style*), `accentBorderSize` (*Border thickness (px)*), `accentBorderColor` and its `accentBorderClassColor` companion, with *Border offset* (`accentBorderOffset`) after them. | The same bind and the same ruling, and it is a separate row rather than a clause of the first because it is a separate group over a separate surface — it outlines the strip, not the panel — and it composes, or does not, on its own. Owner's decision, 2026-09-08 (`M5-09`). | 2026-09-08 | `O.BorderGroup` gaining the record-backed arm, at which point this block composes and the row retires. Re-check unconditionally at the next `LibKa0s-Options` **major**. |
+| `architecture-§5` (the fields on a panel) | The per-panel appearance and position fields in `C.PANEL_FIELD_TYPE` (`core/Constants.lua`) are preferences the player sets on a member, and none has a schema row. That is every field except `name`, which routes to `R:Rename`: colors, the border, bar and bar-border blocks, textures, size, `strata`, `level`, `scale`, `alpha`, mouseover, `enabled`, the `art*` fields and the anchor (`point`, `relPoint`, `x`, `y`). They are written through `NS.Registry:Set` (the field controls in `settings/PanelEditor.lua` and `/pm panel <name> set`) and `:SetPosition`, and by the whole-record and bulk verbs: `R:Reset`, `R:CopyFrom`, `R:FitToArtwork` (through `R.ApplyArtSize`), `R:Recover`, `R:ResetPositions`, and the unlock-mode drag-stop in `modules/Unlock.lua`, which writes `point`/`relPoint` onto the live record and then calls `:SetPosition`. Each of these coerces, writes and notifies on its own (`PanelChanged` per record; `PanelsChanged` once for `Recover` and `ResetPositions`), none through `NS.Schema:Set`. | The schema helper addresses paths, not records: `NS.Schema:Set` writes a path under the profile, and a panel is a registry record reached by id. Instance-addressing every per-panel field would be the largest change in the collection, for fields the Registry already validates (the `C.PANEL_FIELD_TYPE` coercers plus `R.Sanitize`), logs once at the seam and announces on the bus. Owner's decision, 2026-09-12, over [#49](https://github.com/tusharsaxena/PanelMaster/issues/49). | 2026-09-12 | The schema helper gains instance addressing for registry records (an explicit record argument on `NS.Schema:Set`). The fields then take instance-relative rows, the verbs above become callers of the helper, and this row retires. |
 
 **Retired on 2026-09-08, three rows, three different reasons.**
 
