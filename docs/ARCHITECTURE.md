@@ -66,7 +66,8 @@ Nothing else writes membership or bookkeeping, so membership carries no `Documen
 row. The one `architecture-§5` row this addon has covers the fields on a panel, below.
 `/pm resetall` and Profiles → Reset Profile (`db:ResetProfile()`), and AceDB's own profile switch
 and copy, replace the store wholesale, which is not a registry write; the load pass and
-`NS.Registry:ReloadProfile` run after each of them.
+`NS.Registry:ReloadProfile` run after each of them. Each is logged once, by the profile handler in
+`core/Database.lua` and worded by the event (`debug-logging-§10`; `docs/debug.md`).
 
 **The fields on a panel: a ratified `architecture-§5` register row.** A panel's appearance and
 position fields (`C.PANEL_FIELD_TYPE`, less `name`, which is the registry's own label and routes to

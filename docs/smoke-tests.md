@@ -578,6 +578,14 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 3. Create, drag and recolor a panel → **Expect:** one `[Panel]` line per action, and the line counter
    climbing.
 4. Change a setting → **Expect:** exactly **one** `[Set]` line (not one per reactor).
+4a. Bulk acts (`debug-logging-§10`). Widen a panel, then press its **Reset** in the editor →
+   **Expect:** one `[Set] reset '<name>': N rows` line and no `[Panel]` line; press it again →
+   `…: 0 rows`. Copy settings from another panel, press Master controls ▸ **Reset position**, and
+   **Recover panels** → one `[Set]` line each, with a count (`copy from '…' to '…': N rows`,
+   `reset positions: N panels`, `recover positions: N panels`). `/pm resetall`, confirmed →
+   exactly one `[Set] reset profile '<name>' to defaults (N rows)` and no `[Profile] switched` line.
+   **A regression looks like** a line per field, a second line for the same act, or a reset-all
+   that reads as a switch. `[Canvas]` repaint lines after the `[Set]` line are expected.
 5. **Drag the scrollbar** → **Expect:** the log scrolls. **Wheel-scroll the log** → **Expect:** the
    thumb follows. No Lua error either way.
 6. Click the **copy mark** → **Expect:** a selectable window with the same lines, no color codes, and

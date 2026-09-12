@@ -305,7 +305,10 @@ are `OptionalDeps`, so their absence means no Profiles page rather than a broken
 Switching profile swaps `db.profile` wholesale, so `core/Database.lua` registers AceDB's
 `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks and delegates to
 `Registry:ReloadProfile` — in the registry rather than the database so `PanelsChanged` keeps exactly
-one sender. Without it the previous profile's panels would simply stay on screen.
+one sender. Without it the previous profile's panels would simply stay on screen. Each event is
+logged once, by its own handler: `[Set] reset profile '<name>' to defaults (N rows)`,
+`[Set] copied profile '<src>' → '<dst>'`, or the `[Profile] switched to …` trace
+(`debug-logging-§10`; `docs/debug.md` has the table).
 
 The reload does **not** re-run migrations, and `core/Database.lua` says why: the schema stamp lives
 in `db.global`, which is account-wide and already written by `InitDB` before any switch can happen,
