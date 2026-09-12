@@ -252,6 +252,33 @@ function Util.DeepCopy(v)
   return out
 end
 
+-- Value equality for plain data: numbers, strings, booleans and nested tables of them.
+function Util.DeepEqual(a, b)
+  if a == b then return true end
+  if type(a) ~= "table" or type(b) ~= "table" then return false end
+  for k, v in pairs(a) do
+    if not Util.DeepEqual(v, b[k]) then return false end
+  end
+  for k in pairs(b) do
+    if a[k] == nil then return false end
+  end
+  return true
+end
+
+-- How many keys `after` holds a different value under than `before` did: rewritten, added or
+-- removed. A bulk copy or reset logs this as its row count, because debug-logging-§10's N is the
+-- rows an act actually wrote, and a field it set to the value already there was not a write.
+function Util.CountChanged(before, after)
+  local n = 0
+  for k, v in pairs(after) do
+    if not Util.DeepEqual(before[k], v) then n = n + 1 end
+  end
+  for k in pairs(before) do
+    if after[k] == nil then n = n + 1 end
+  end
+  return n
+end
+
 -- Is `point` one of the nine anchor points? Kept here rather than inline so the CLI, the settings
 -- panel and the sanitizer all agree on what a valid anchor is.
 function Util.IsPoint(point)

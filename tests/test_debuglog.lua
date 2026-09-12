@@ -322,3 +322,190 @@ test("NS.DebugBuild: passes the builder's arguments through unbound", function()
   assertEqual(got[3], true)
   NS.State.debug = false
 end)
+
+-- ── Bulk copy and reset: one [Set] line per act (debug-logging-§10, standard v2.44.0) ──
+--
+-- A bulk copy or reset is ONE `[Set]` line naming the act, its scope and the rows it actually wrote,
+-- and never one line per row. A profile-wide reset, copy or switch is logged once, by the profile
+-- handler, worded by the event. Each case below counts every line of each tag, so a stray per-row
+-- line or a second line from another layer fails it.
+
+-- The message of every buffered line carrying `tag`, in order.
+local function tagged(tag)
+  local out, pat = {}, "%[" .. tag .. "%] (.*)$"
+  for _, line in ipairs(D.buffer) do
+    local msg = line:match(pat)
+    if msg then out[#out + 1] = msg end
+  end
+  return out
+end
+
+local function bulkFresh()
+  quiet()
+  NS.Registry:DeleteAll()
+end
+
+test("bulk log: R:Reset is one [Set] line counting the fields it rewrote", function()
+  bulkFresh()
+  local rec = NS.Registry:New("Bulky", { width = 500, borderSize = 6 })
+  NS.State.debug = true
+  assertTrue((NS.Registry:Reset(rec.id)))
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], "reset 'Bulky': 2 rows")
+  assertEqual(#tagged("Panel"), 0, "the reset still wrote a [Panel] line")
+  -- N is rows actually WRITTEN: a second reset finds every field already at its default.
+  D:Clear()
+  NS.Registry:Reset(rec.id)
+  assertEqual(tagged("Set")[1], "reset 'Bulky': 0 rows")
+  bulkFresh()
+end)
+
+test("bulk log: R:CopyFrom is one [Set] line counting the fields it rewrote", function()
+  bulkFresh()
+  local src = NS.Registry:New("Src", { width = 500, height = 300, borderSize = 6 })
+  local dst = NS.Registry:New("Dst")
+  NS.State.debug = true
+  assertTrue((NS.Registry:CopyFrom(dst.id, src.id)))
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], "copy from 'Src' to 'Dst': 3 rows")
+  assertEqual(#tagged("Panel"), 0, "the copy still wrote a [Panel] line")
+  -- N is rows actually WRITTEN: copying again finds every field already equal to the source's.
+  D:Clear()
+  NS.Registry:CopyFrom(dst.id, src.id)
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], "copy from 'Src' to 'Dst': 0 rows")
+  bulkFresh()
+end)
+
+test("bulk log: R:ResetPositions is one [Set] line counting the panels it moved", function()
+  bulkFresh()
+  NS.Registry:New("Off1", { x = 100, y = 50 })
+  NS.Registry:New("Off2", { point = "TOPLEFT", relPoint = "TOPLEFT", x = 10, y = -10 })
+  NS.Registry:New("Home")
+  NS.State.debug = true
+  assertEqual(NS.Registry:ResetPositions(), 2)
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], "reset positions: 2 panels")
+  assertEqual(#tagged("Panel"), 0)
+  D:Clear()
+  assertEqual(NS.Registry:ResetPositions(), 0)
+  assertEqual(tagged("Set")[1], "reset positions: 0 panels")
+  bulkFresh()
+end)
+
+test("bulk log: R:Recover is one [Set] line counting the panels it moved", function()
+  bulkFresh()
+  NS.Registry:New("Lost1", { x = 9000, y = -9000 })
+  NS.Registry:New("Lost2", { x = -9000, y = 9000 })
+  NS.Registry:New("Fine", { x = 100, y = 100 })
+  NS.State.debug = true
+  assertEqual(NS.Registry:Recover(), 2)
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], "recover positions: 2 panels")
+  assertEqual(#tagged("Panel"), 0)
+  D:Clear()
+  assertEqual(NS.Registry:Recover(), 0)
+  assertEqual(tagged("Set")[1], "recover positions: 0 panels")
+  bulkFresh()
+end)
+
+test("bulk log: the global reset is ONE line in total, counting the rows it changed", function()
+  bulkFresh()
+  local name = NS.db:GetCurrentProfile()
+  NS.Slash:DoResetAll()   -- start from the shipped profile
+  NS.Schema:Set("settings.gridSize", 8)
+  NS.Schema:Set("settings.snapToGrid", false)
+  quiet()
+  NS.State.debug = true
+  NS.Slash:DoResetAll()
+  -- A reactor's line (the canvas repainting) is not a [Set] line and stays; what the rule forbids is
+  -- a second line for the reset itself, from a bracket or from the switch trace.
+  assertEqual(#tagged("Set") + #tagged("Profile"), 1, "a reset-all logged the reset "
+    .. (#tagged("Set") + #tagged("Profile")) .. " times:\n" .. table.concat(D.buffer, "\n"))
+  assertEqual(tagged("Set")[1], ("reset profile '%s' to defaults (2 rows)"):format(name))
+  -- N is rows CHANGED: a reset of a profile already at its defaults logs 0, and still one line.
+  D:Clear()
+  NS.Slash:DoResetAll()
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], ("reset profile '%s' to defaults (0 rows)"):format(name))
+  -- The Profiles page's own Reset Profile takes no snapshot: still one line, with no count.
+  D:Clear()
+  NS.db:ResetProfile()
+  assertEqual(#tagged("Set") + #tagged("Profile"), 1)
+  assertEqual(tagged("Set")[1], ("reset profile '%s' to defaults"):format(name))
+  bulkFresh()
+end)
+
+test("bulk log: a profile copy and a profile switch are each worded by their event", function()
+  bulkFresh()
+  local name = NS.db:GetCurrentProfile()
+  NS.State.debug = true
+  T.mocks.__db.__fire("OnProfileCopied", NS.db, "Elsewhere")
+  assertEqual(#tagged("Set") + #tagged("Profile"), 1)
+  assertEqual(tagged("Set")[1], ("copied profile 'Elsewhere' \226\134\146 '%s'"):format(name))
+  D:Clear()
+  T.mocks.__switchProfile("BulkAlt")
+  assertEqual(#tagged("Set"), 0, "a switch rewrote no rows and must not log a [Set] line")
+  assertEqual(#tagged("Profile"), 1)
+  assertTrue(tagged("Profile")[1]:find("switched to 'BulkAlt'", 1, true) ~= nil)
+  quiet()
+  T.mocks.__switchProfile(name)
+  bulkFresh()
+end)
+
+test("bulk log: an act inside another logs once, the outermost, with the total", function()
+  bulkFresh()
+  local rec = NS.Registry:New("Nested", { width = 500 })
+  NS.Helpers.RestoreDefaults("general", nil)
+  NS.Schema:Set("settings.gridSize", 8)
+  quiet()
+  NS.State.debug = true
+  NS.Schema.BulkBegin("reset", "everything")
+  NS.Helpers.RestoreDefaults("general", nil)   -- a library bracket inside: one row changes
+  NS.Registry:Reset(rec.id)                     -- a Registry act inside: one field changes
+  NS.Schema.BulkEnd("reset", "everything", nil, nil, { profileReset = false })
+  assertEqual(#tagged("Set"), 1, "a nested act logged its own line:\n" .. table.concat(D.buffer, "\n"))
+  assertEqual(tagged("Set")[1], "reset everything: 2 rows")
+  -- A level that reset the whole profile leaves the line to the profile handler, however deep.
+  D:Clear()
+  NS.Schema.BulkBegin("reset", "outer")
+  NS.Schema.BulkBegin("reset", "all")
+  NS.Schema.BulkEnd("reset", "all", 0, nil, { profileReset = true })
+  NS.Schema.BulkEnd("reset", "outer", nil, nil, { profileReset = false })
+  assertEqual(#tagged("Set"), 0, "a bracket that saw a profile reset logged a line")
+  bulkFresh()
+end)
+
+test("bulk log: the Options page reset is one [Set] line, N the rows it changed", function()
+  bulkFresh()
+  NS.Helpers.RestoreDefaults("general", nil)   -- every row at its default first
+  NS.Schema:Set("settings.gridSize", 8)
+  NS.Schema:Set("settings.snapToGrid", false)
+  quiet()
+  NS.State.debug = true
+  NS.Helpers.RestoreDefaults("general", nil)
+  assertEqual(#tagged("Set"), 1, "the page walk logged per row:\n" .. table.concat(D.buffer, "\n"))
+  assertEqual(tagged("Set")[1], "reset general: 2 rows")
+  -- An all-default Defaults press still logs its one line, with 0, and never a line per row.
+  D:Clear()
+  NS.Helpers.RestoreDefaults("general", nil)
+  assertEqual(#tagged("Set"), 1)
+  assertEqual(tagged("Set")[1], "reset general: 0 rows")
+  D:Clear()
+  NS.Schema:Set("settings.gridSize", 8)
+  assertEqual(tagged("Set")[1], "settings.gridSize = 8", "the seam stayed muted after the bracket")
+  NS.Schema:Set("settings.gridSize", NS.Schema:Default("settings.gridSize"))
+  bulkFresh()
+end)
+
+test("bulk log: bulkEnd adds nothing when the act was a whole-profile reset", function()
+  bulkFresh()
+  NS.State.debug = true
+  NS.Schema.BulkBegin("reset", "all")
+  NS.Schema:Set("settings.gridSize", 8)
+  NS.Schema.BulkEnd("reset", "all", 1, nil, { profileReset = true })
+  assertEqual(#tagged("Set"), 0, "a profile-reset bracket logged a line of its own")
+  NS.Schema:Set("settings.gridSize", NS.Schema:Default("settings.gridSize"))
+  assertEqual(#tagged("Set"), 1, "the seam stayed muted after the bracket")
+  bulkFresh()
+end)

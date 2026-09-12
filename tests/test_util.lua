@@ -4,6 +4,22 @@ local test, assertEqual, assertTrue, assertFalse, assertNear =
   T.test, T.assertEqual, T.assertTrue, T.assertFalse, T.assertNear
 local Util = NS.Util
 
+test("Util.DeepEqual: compares plain data by value, nested tables included", function()
+  assertTrue(Util.DeepEqual({ 1, { a = 2 } }, { 1, { a = 2 } }))
+  assertFalse(Util.DeepEqual({ 1, { a = 2 } }, { 1, { a = 3 } }))
+  assertFalse(Util.DeepEqual({ a = 1 }, { a = 1, b = 2 }), "an extra key on the right was missed")
+  assertFalse(Util.DeepEqual({ a = 1, b = 2 }, { a = 1 }), "an extra key on the left was missed")
+  assertFalse(Util.DeepEqual(1, "1"))
+end)
+
+test("Util.CountChanged: counts keys written, added or removed, and not keys left alone", function()
+  -- The count a bulk copy or reset logs (debug-logging-§10): rows actually written.
+  local before = { a = 1, b = { 1, 2 }, c = 3, same = { 9 } }
+  local after  = { a = 1, b = { 1, 3 }, d = 4, same = { 9 } }
+  assertEqual(Util.CountChanged(before, after), 3)   -- b changed, c removed, d added
+  assertEqual(Util.CountChanged(before, Util.DeepCopy(before)), 0)
+end)
+
 test("Util.SplitPath: splits a dotted path", function()
   local parts = Util.SplitPath("settings.gridSize")
   assertEqual(#parts, 2)

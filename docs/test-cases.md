@@ -6,8 +6,10 @@ badge and any count quoted in the docs must agree with it.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (29)
+### test_util.lua (31)
 
+- Util.DeepEqual: compares plain data by value, nested tables included
+- Util.CountChanged: counts keys written, added or removed, and not keys left alone
 - Util.SplitPath: splits a dotted path
 - Util.SplitPath: a single segment is one part
 - Util.Clamp: passes a value already in range
@@ -499,7 +501,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (27)
+### test_debuglog.lua (36)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -528,6 +530,15 @@ badge and any count quoted in the docs must agree with it.
 - NS.DebugBuild: does not call its builder when logging is off
 - NS.DebugBuild: calls the builder and logs when logging is on
 - NS.DebugBuild: passes the builder's arguments through unbound
+- bulk log: R:Reset is one [Set] line counting the fields it rewrote
+- bulk log: R:CopyFrom is one [Set] line counting the fields it rewrote
+- bulk log: R:ResetPositions is one [Set] line counting the panels it moved
+- bulk log: R:Recover is one [Set] line counting the panels it moved
+- bulk log: the global reset is ONE line in total, counting the rows it changed
+- bulk log: a profile copy and a profile switch are each worded by their event
+- bulk log: an act inside another logs once, the outermost, with the total
+- bulk log: the Options page reset is one [Set] line, N the rows it changed
+- bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
 ### test_schema.lua (28)
 
@@ -891,7 +902,7 @@ badge and any count quoted in the docs must agree with it.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 29 |
+| test_util.lua | 31 |
 | test_compat.lua | 11 |
 | test_constants.lua | 17 |
 | test_mediasetup.lua | 10 |
@@ -903,7 +914,7 @@ badge and any count quoted in the docs must agree with it.
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
-| test_debuglog.lua | 27 |
+| test_debuglog.lua | 36 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
 | test_panel.lua | 60 |
@@ -920,4 +931,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **794** |
+| **Total** | **805** |

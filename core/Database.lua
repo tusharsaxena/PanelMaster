@@ -63,6 +63,12 @@ end
 -- the same thing to this addon — "the panel set you were showing is no longer the panel set that is
 -- stored" — so all three take the same path.
 --
+-- They are LOGGED by event, once each (debug-logging-§10): AceDB replacing the profile is wholesale
+-- replacement, not a batch through the write seam, so the handler says what happened. A reset is
+-- `[Set] reset profile 'X' to defaults (N rows)`, N being the rows the profile stores; a copy is
+-- `[Set] copied profile 'A' → 'B'`; a switch rewrites no rows and keeps the `[Profile]` trace. The
+-- global reset (`Sl:DoResetAll`, the Profiles page's Reset Profile) logs nothing else.
+--
 -- The reload is delegated to NS.Registry so that the panels message keeps a single sender
 -- (architecture-§4).
 --
@@ -79,9 +85,29 @@ function NS:RegisterProfileCallbacks()
     NS:SweepPreviewPanels()   -- a copied profile can carry someone else's preview orphans
     if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
   end
-  NS.db.RegisterCallback(NS, "OnProfileChanged", reload)
-  NS.db.RegisterCallback(NS, "OnProfileCopied", reload)
-  NS.db.RegisterCallback(NS, "OnProfileReset", reload)
+  local function current()
+    return (NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?"
+  end
+  NS.db.RegisterCallback(NS, "OnProfileChanged", function()
+    reload()
+    NS.Debug("Profile", "switched to '%s', %s panels", current(), NS.Registry:Count())
+  end)
+  -- AceDB passes (event, db, key) to all three; for a copy the key is the SOURCE profile.
+  NS.db.RegisterCallback(NS, "OnProfileCopied", function(_, _, source)
+    NS.Debug("Set", "copied profile '%s' \226\134\146 '%s'", tostring(source), current())
+    reload()
+  end)
+  NS.db.RegisterCallback(NS, "OnProfileReset", function()
+    local S = NS.Schema
+    local snap = S and S.resetSnapshot
+    if snap then
+      S.resetSnapshot = nil
+      NS.Debug("Set", "reset profile '%s' to defaults (%d rows)", current(), S:CountChangedSince(snap))
+    else
+      NS.Debug("Set", "reset profile '%s' to defaults", current())
+    end
+    reload()
+  end)
 end
 
 -- Schema-migration runner (savedvariables-§1). Reads/writes db.global.schemaVersion and ships even

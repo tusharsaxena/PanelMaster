@@ -171,6 +171,14 @@ NS.Helpers = lib:New({
   applyDefault = function(row) NS.Schema:Set(row.path, NS.Schema:Default(row.path)) end,
   allRows      = function() return NS.Schema.Schema end,
 
+  -- The bulk bracket (debug-logging-§10, Options minor 16), and it is DEFENSIVE. Neither of this
+  -- addon's own reset controls reaches a library walk: the global reset is `db:ResetProfile()`
+  -- (below), and the Registry's bulk verbs write records. But a page left on the library's own
+  -- Defaults would reach O.RestoreDefaults, and unbracketed that is one [Set] line per row. The pair
+  -- is settings/Schema.lua's, which loads before this file.
+  bulkBegin    = NS.Schema.BulkBegin,
+  bulkEnd      = NS.Schema.BulkEnd,
+
   -- ADAPTER. This addon's schema has no `page` field: every settings row belongs to the one General
   -- page, and the groups within it are section headings rather than pages.
   --

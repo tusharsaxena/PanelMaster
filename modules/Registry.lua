@@ -467,16 +467,17 @@ function R:Reset(key)
   end
 
   local id, name, frameName = rec.id, rec.name, rec.frameName
+  local before = Util.DeepCopy(rec)
   for k in pairs(rec) do rec[k] = nil end
   for k, v in pairs(C.PANEL_TEMPLATE) do rec[k] = Util.DeepCopy(v) end
   rec.id, rec.name, rec.frameName = id, name, frameName
   applyNewPanelDefaults(rec, p)
   R.Sanitize(rec)
 
-  NS.Debug("Panel", "reset '%s' (id %s)", rec.name, rec.id)
+  -- A bulk reset: ONE [Set] line, N the fields it changed (debug-logging-§10, settings/Schema.lua).
+  NS.Schema.BulkLine("reset", ("'%s'"):format(rec.name), Util.CountChanged(before, rec))
   -- A field-level change, not a structural one: the SET of panels is unchanged, so the targeted
-  -- repaint is the honest message. The settings editor rebuilds itself separately — its widgets all
-  -- hold stale values now, which is a UI concern rather than something the bus should imply.
+  -- repaint is the honest message, and the settings editor refreshes its stale widgets itself.
   fire(MSG_PANEL, rec.id)
   return true, rec.name
 end
@@ -511,14 +512,14 @@ function R:CopyFrom(targetKey, sourceKey)
   if not source then return false, ("no panel called '%s'"):format(tostring(sourceKey)) end
   if source.id == target.id then return false, "a panel cannot copy from itself" end
 
+  local before = Util.DeepCopy(target)
   for field, value in pairs(source) do
-    if not COPY_EXCLUDED[field] then
-      target[field] = Util.DeepCopy(value)
-    end
+    if not COPY_EXCLUDED[field] then target[field] = Util.DeepCopy(value) end
   end
   R.Sanitize(target)
 
-  NS.Debug("Panel", "'%s' copied settings from '%s'", target.name, source.name)
+  NS.Schema.BulkLine("copy", ("from '%s' to '%s'"):format(source.name, target.name),
+    Util.CountChanged(before, target))   -- a bulk copy: ONE [Set] line (debug-logging-§10)
   fire(MSG_PANEL, target.id)
   return true, source.name
 end
@@ -576,11 +577,10 @@ local function dropSessionIDs()
   if NS.PanelEditor and NS.PanelEditor.ForgetSelection then NS.PanelEditor:ForgetSelection() end
 end
 
+-- Logs nothing: the profile handler (core/Database.lua) words the line by the event that got here.
 function R:ReloadProfile()
   dropSessionIDs()
   for _, rec in ipairs(R:All()) do R.Sanitize(rec) end
-  NS.Debug("Profile", "switched to '%s', %s panels",
-    (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?", R:Count())
   fire(MSG_PANELS)
 end
 
@@ -914,12 +914,10 @@ end
 -- ── Off-screen recovery ─────────────────────────────────────────────────────────
 
 -- Drag a panel back into view if its anchor has ended up outside the screen — after a resolution
--- change, a UI-scale change, or a copied profile from a different monitor.
---
--- Returns the number of panels moved, so the caller can report "recovered 2 panels" rather than
--- silently rearranging the user's layout. Nothing here runs automatically: a panel deliberately
--- parked mostly off-screen is a legitimate design, so recovery is `/pm recover` and the settings
--- button, never a login-time sweep.
+-- change, a UI-scale change, or a copied profile from a different monitor. Returns the number of
+-- panels moved, which the caller reports and the log carries as one [Set] line. Nothing here runs
+-- automatically: a panel deliberately parked mostly off-screen is a legitimate design, so recovery
+-- is `/pm recover` and the settings button, never a login-time sweep.
 -- The legal offset range depends on WHICH point the offset is measured from: a CENTER-anchored
 -- panel runs -w/2..+w/2, a LEFT-anchored one 0..w, a RIGHT-anchored one -w..0. Using the CENTER
 -- range for all nine points is what let `recover` drag a perfectly visible TOPLEFT panel inward.
@@ -962,6 +960,7 @@ function R:Recover()
       moved = moved + 1
     end
   end
+  NS.Schema.BulkLine("recover", "positions", moved, "panels")   -- ONE counted [Set] line
   if moved > 0 then fire(MSG_PANELS) end
   return moved
 end
@@ -994,6 +993,7 @@ function R:ResetPositions()
       moved = moved + 1
     end
   end
+  NS.Schema.BulkLine("reset", "positions", moved, "panels")   -- ONE counted [Set] line
   if moved > 0 then fire(MSG_PANELS) end
   return moved
 end
