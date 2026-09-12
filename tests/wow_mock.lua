@@ -27,7 +27,8 @@
 --      timers that can be canceled, and a Print mixin that RETURNS its string so the reclaim is
 --      assertable.
 --   5. AceEvent-3.0 + the bus — callbacks keyed by (message, target), so same-target clobbering
---      (architecture-§4) is catchable.
+--      (architecture-§4) is catchable. Only the message half: Embed delegates the event half to
+--      the kit's (revision 16) and replaces the message functions after it.
 --   6. DEFAULT_CHAT_FRAME — a capture table feeding __chat. The base's is a plain stub frame whose
 --      AddMessage no-ops, which would silence every chat assertion in the suite.
 --   7. Settings — __settingsPanels / __openedCategory, the canvas-contract evidence (options-ui-§1).
@@ -562,10 +563,15 @@ return function()
     return fired
   end
 
+  -- Only the MESSAGE half is overridden. The event half is the kit's (revision 16): the base Embed
+  -- stamps RegisterEvent / UnregisterEvent / UnregisterAllEvents, recorded on `obj.__events` and
+  -- validated as CallbackHandler validates. It runs first, and embedBus then replaces the base's
+  -- message functions so the bus keeps routing through `msgRegistry` above, which
+  -- tests/test_canvas.lua reads as `T.mocks.__msgRegistry`.
+  local baseEmbed = libs["AceEvent-3.0"].Embed
   libs["AceEvent-3.0"] = {
-    Embed = function(_, obj)
-      obj.RegisterEvent = obj.RegisterEvent or function() end
-      obj.UnregisterEvent = obj.UnregisterEvent or function() end
+    Embed = function(self, obj)
+      baseEmbed(self, obj)
       return embedBus(obj)
     end,
   }

@@ -71,6 +71,31 @@ test("Harness: wow_mock extends the kit's mock_base rather than replacing it", f
     "the AceGUI mock is not fireable — the schema -> widget -> write path stays untestable")
 end)
 
+test("Harness: a bus target carries the kit's recorded event half (kit revision 16)", function()
+  -- tests/wow_mock.lua overrides AceEvent's Embed for the MESSAGE half only and hands the event
+  -- half to the kit's. Before revision 16 the local override stamped two no-ops and no
+  -- UnregisterAllEvents, so a module registering its own game events on NS.NewBusTarget() could
+  -- not be observed headlessly. This pins both halves: events recorded and validated as the kit
+  -- records them, messages still routed through the local registry the canvas cases read.
+  local t = T.NS.NewBusTarget()
+  assertTrue(t ~= nil, "NS.NewBusTarget returned nil — AceEvent-3.0 is missing from the mock")
+  assertTrue(type(t.__events) == "table", "the bus target has no recorded event registry")
+
+  local handler = function() end
+  t:RegisterEvent("PLAYER_TARGET_CHANGED", handler)
+  assertEqual(t.__events.PLAYER_TARGET_CHANGED, handler, "RegisterEvent did not record the handler")
+  t:UnregisterAllEvents()
+  assertEqual(next(t.__events), nil, "UnregisterAllEvents left an event registered")
+  assertTrue(not pcall(t.RegisterEvent, t, "PLAYER_FOCUS_CHANGED"),
+    "RegisterEvent with no handler and no same-named method passed; the client raises")
+
+  t:RegisterMessage("PM_TEST_PROBE", handler)
+  local subs = T.mocks.__msgRegistry.PM_TEST_PROBE
+  assertTrue(subs ~= nil and subs[t] == handler,
+    "the message half left the local registry that tests/test_canvas.lua reads")
+  t:UnregisterMessage("PM_TEST_PROBE")
+end)
+
 test("Harness: the runner derives the addon's load list from the TOC", function()
   -- A second hand-maintained load order is a second thing that can be wrong, and only one of them
   -- is what the client reads.
