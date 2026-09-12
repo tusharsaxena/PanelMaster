@@ -108,7 +108,7 @@ through `:SetPosition` plus a direct anchor write in `modules/Unlock.lua`, and t
 bulk verbs (`:Reset`, `:CopyFrom`, `:FitToArtwork`, `:Recover`, `:ResetPositions`) write them in
 place. None of these is the schema helper, and `ARCHITECTURE.md` → Settings Schema lists them.
 Whether they get instance-relative rows or a register row is pending an owner ruling (standard
-v2.43.0). This is no longer a settled carve-out.
+v2.43.0), tracked as tusharsaxena/PanelMaster#49. This is no longer a settled carve-out.
 
 #### The artwork fields
 

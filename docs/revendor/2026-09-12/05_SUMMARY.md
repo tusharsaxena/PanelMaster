@@ -32,7 +32,7 @@
   a harness migration (`tests/test_panel.lua:60`, `tests/test_slash.lua:22-23`, the `__badEvents`
   raise, and cancellable timers). There is no live exposure, because this addon has no `NS.Printf`.
   **No issue was filed.** It went back to the orchestrator as a proposed issue, per its standing
-  instruction not to file.
+  instruction not to file. The orchestrator later filed it as tusharsaxena/PanelMaster#50.
 
 ## Skipped or unreached
 

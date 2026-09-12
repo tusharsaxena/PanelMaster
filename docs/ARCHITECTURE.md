@@ -78,7 +78,10 @@ only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/U
 per-record sanitize, and each sends `PanelsChanged` once if anything moved. None of these is the
 schema helper. Since standard v2.43.0 a preference with no row is a missing row: these need
 instance-relative rows the helper can address per panel, or a register row. That is an owner
-decision, still pending, and naming the writer above does not settle it.
+decision, still pending, and naming the writer above does not settle it. It is tracked as
+tusharsaxena/PanelMaster#49. The drag-written anchor needs an `architecture-§5` register row
+whichever way that goes, because a drag is not a control; that is tracked as
+tusharsaxena/PanelMaster#51.
 
 The panel record, every field on it, the artwork fields and the sanitizing pass are in
 **[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;

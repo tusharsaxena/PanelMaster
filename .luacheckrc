@@ -136,9 +136,9 @@ files["modules/Canvas.lua"] = {
 }
 
 -- The panel registry's one writer (architecture-§5, named in docs/ARCHITECTURE.md -> Settings
--- Schema), and the most-called table in the addon. Records live in `NS.db.profile`, which every method reaches through the
--- file's `NS` upvalue, so the receiver is spare in all nineteen; the colon is what the call sites
--- and the probe at core/Database.lua:80 are written with.
+-- Schema), and the most-called table in the addon. Records live in `NS.db.profile`, which every
+-- method reaches through the file's `NS` upvalue, so the receiver is spare in all nineteen; the
+-- colon is what the call sites and the probe at core/Database.lua:80 are written with.
 files["modules/Registry.lua"] = {
   ignore = { "212/self" },
 }
