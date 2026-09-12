@@ -56,6 +56,6 @@ None. No module is new at this tag.
   stores `always`, `inCombat`, `outOfCombat` and `never`. The `parse` adapter upper-cases every
   `string` row that declares `values`, not just the strata row, so `always` becomes `ALWAYS` and
   matches nothing. A probe at v1.34.0 refused all three of `always`, `always junk` and `inCombat`
-  with `allowed values: always, inCombat, outOfCombat, never`. Minor 9 up-cased and matched the
-  first token the same way, so this predates the release. The panel dropdown is unaffected. Not
+  with `allowed values: always, inCombat, outOfCombat, never`. The same probe with minor 9's
+  `Slash.lua` swapped in refused them too, so this predates the release. The panel dropdown is unaffected. Not
   fixed here; reported to the owner.

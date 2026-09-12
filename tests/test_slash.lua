@@ -223,6 +223,23 @@ test("Slash.CliSet: accepts a lower-case dropdown token", function()
   Sl:CliReset("settings.defaultStrata")
 end)
 
+test("Slash.CliSet: a dropdown token followed by more words is refused, and the token alone takes", function()
+  -- LibKa0s-Slash-1.0 minor 10 matches an enum row against the WHOLE value rather than its first
+  -- word, so the adapter's up-cased "LOW JUNK" matches nothing. Through minor 9 this stored LOW and
+  -- dropped "junk" without a word. Moved off LOW first, so a silent partial write would show.
+  Sl:CliSet("settings.defaultStrata HIGH")
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "HIGH", "the precondition did not take")
+  local lines = capture(function() Sl:CliSet("settings.defaultStrata low junk") end)
+  assertTrue(lines[1] and lines[1]:find("Invalid value for settings.defaultStrata", 1, true) ~= nil,
+    "the refusal does not name the setting: " .. tostring(lines[1]))
+  assertTrue(lines[2] and lines[2]:find("allowed values:", 1, true) ~= nil,
+    "the refusal does not list the allowed values: " .. tostring(lines[2]))
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "HIGH", "a token with trailing words was stored")
+  Sl:CliSet("settings.defaultStrata low")
+  assertEqual(NS.Schema:Get("settings.defaultStrata"), "LOW", "the token on its own was refused")
+  Sl:CliReset("settings.defaultStrata")
+end)
+
 test("Slash.CliSet: a non-number for a number row is refused", function()
   local before = NS.Schema:Get("settings.gridSize")
   local lines = capture(function() Sl:CliSet("settings.gridSize banana") end)
