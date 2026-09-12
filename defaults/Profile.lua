@@ -1,7 +1,8 @@
 local _, NS = ...
 
--- Per-character defaults. Everything the user configures lives here; `global` (defaults/Global.lua)
--- carries only the schema stamp.
+-- Profile defaults; every character starts on the shared "Default" profile (core/Database.lua).
+-- Everything the user configures lives here; `global` (defaults/Global.lua) carries only the
+-- schema stamp.
 NS.defaults = NS.defaults or {}
 NS.defaults.profile = {
   -- The panel registry: an array of panel records, in creation order. Ships EMPTY on purpose — a
@@ -9,9 +10,9 @@ NS.defaults.profile = {
   -- putting opaque blocks on the screen must never put one there uninvited. `/pm preview` is how a
   -- new user sees what a panel looks like without committing to one.
   --
-  -- A storage carve-out (architecture-§5): panel records are mutated through NS.Registry, not
-  -- through Schema:Set, because each one is a variable-length user-created object rather than a
-  -- fixed setting with a widget.
+  -- A structural registry (architecture-§5): its one writer is NS.Registry and its load pass is
+  -- NS:RunMigrations plus NS:SweepPreviewPanels (core/Database.lua). Panels are not Schema rows
+  -- and are never written through Schema:Set.
   panels = {},
 
   -- Monotonic id source for panel records. Kept rather than derived from #panels so an id is never

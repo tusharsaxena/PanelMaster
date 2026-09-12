@@ -817,11 +817,12 @@ badge and any count quoted in the docs must agree with it.
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
 
-### test_harness.lua (14)
+### test_harness.lua (15)
 
 - Harness: the suite list and tests/test_*.lua agree in both directions
 - Harness: the shared kit is present and is reached through tests/_kit
 - Harness: wow_mock extends the kit's mock_base rather than replacing it
+- Harness: a bus target carries the kit's recorded event half (kit revision 16)
 - Harness: the runner derives the addon's load list from the TOC
 - Harness: the runner derives the vendored library's load list from LibKa0s.xml
 - Harness: every module LibKa0s.xml declares is live in the loaded environment
@@ -840,10 +841,11 @@ badge and any count quoted in the docs must agree with it.
 - Spelling: the matcher catches the British verb and spares the US noun
 - Spelling: authored English is US English
 
-### test_vendor_sync.lua (2)
+### test_vendor_sync.lua (3)
 
 - libs/LibKa0s is the LibKa0s release CLAUDE.md says this addon bundles
 - tests/_kit is the test kit that shipped with that release
+- the automated-test runner is recorded executable (100755)
 
 ### test_layout_cap.lua (3)
 
@@ -900,13 +902,13 @@ badge and any count quoted in the docs must agree with it.
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 42 |
 | test_surface_parity.lua | 4 |
-| test_harness.lua | 14 |
+| test_harness.lua | 15 |
 | test_spelling.lua | 3 |
-| test_vendor_sync.lua | 2 |
+| test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 3 |
 | test_options_groups.lua | 3 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **783** |
+| **Total** | **785** |

@@ -6,7 +6,7 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 -- One row per setting. This single table drives the AceDB defaults check, the panel widgets, and the
 -- slash get/set/list/reset dispatch (architecture-§5) — add a setting here and all three surfaces
--- pick it up with no other edit. Paths resolve against NS.db.profile (per-character).
+-- pick it up with no other edit. Paths resolve against NS.db.profile (the active profile).
 --
 -- `group` names the TAB (options-ui-§13): the General page draws itself with
 -- H.RenderTabbedSchema, which partitions these rows by `group` in DECLARATION ORDER and draws one
@@ -22,9 +22,9 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 -- else numeric is a slider), so a second field naming the widget was a second selector to keep in
 -- step and nothing read it. options-ui-§1 argues against exactly that shape.
 --
--- NOTE: these are the addon's settings. The PANELS themselves are not rows here — each is a
--- variable-length user-created object with no fixed widget, so the registry owns them
--- (modules/Registry.lua) as an architecture-§5 storage carve-out.
+-- NOTE: these are the addon's settings. The PANELS themselves are not rows here — the panel set is
+-- a structural registry, and its one writer is modules/Registry.lua (architecture-§5, named in
+-- docs/ARCHITECTURE.md → Settings Schema).
 
 -- Sole sender (architecture-§4): every settings mutation that the renderer must react to broadcasts
 -- this one message, from this file only.

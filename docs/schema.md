@@ -98,9 +98,17 @@ the renderer, the CLI and the settings page from that one row — nothing re-dec
 support class color?" at a call site. The accent bar proved this out: adding a third class-colorable
 color was one `COLOR_FIELDS` row and no new class-color logic anywhere.
 
-**Panel records are an `architecture-§5` storage carve-out.** They are not Schema rows: a schema row
-is a fixed setting with one widget, and a panel is a variable-length user-created object. They are
-mutated only through `NS.Registry`, which is the equivalent single write seam.
+**The panel set is a structural registry (`architecture-§5`), and `NS.Registry` is its one writer.**
+Membership and bookkeeping (`db.profile.panels`, `nextID`, and each record's `id` and `frameName`)
+are written by `modules/Registry.lua` at runtime and by the load pass, `NS:SweepPreviewPanels` with
+`NS:RunMigrations`' frame-name backfill, at init and on a profile change. `ARCHITECTURE.md` →
+Settings Schema names all three. The fields **on** a panel are a separate question. They are not
+Schema rows either. The field controls and the CLI write them through `NS.Registry:Set`, a drag
+through `:SetPosition` plus a direct anchor write in `modules/Unlock.lua`, and the whole-record and
+bulk verbs (`:Reset`, `:CopyFrom`, `:FitToArtwork`, `:Recover`, `:ResetPositions`) write them in
+place. None of these is the schema helper, and `ARCHITECTURE.md` → Settings Schema lists them.
+Whether they get instance-relative rows or a register row is pending an owner ruling (standard
+v2.43.0), tracked as tusharsaxena/PanelMaster#49. This is no longer a settled carve-out.
 
 #### The artwork fields
 
