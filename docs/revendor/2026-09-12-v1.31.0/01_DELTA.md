@@ -74,3 +74,17 @@ grep -n 'Kit.VERSION' <tag>/testkit/framework.lua tests/_kit/framework.lua
 
 `Kit.VERSION` **16 → 17**. Both payloads are copied whole in one commit with the provenance line, so
 the pairing rule (a consumer on v1.9.0 or newer takes kit 11 or later with it) holds by construction.
+
+## Addendum: the tag was re-taken during this run
+
+```
+git -C ../LibKa0s rev-parse v1.31.0^{commit}   # e7e1962 now; 30db4ed when 3a-3f were taken
+git -C ../LibKa0s log --oneline 30db4ed..v1.31.0
+```
+
+At 15:18 the library re-took `v1.31.0` on its review-fixed tree (`bab743c` Perf minor 11, `1f1790c`
+the review, `e7e1962` the release record). Against the first copy, five files differ:
+`Perf.lua` (**MINOR 10 → 11**), `OptionsCompose.lua` and `OptionsWidgets.lua` (changed **inside**
+minors 4 and 15, which did not move), `testkit/mock_base.lua` and `testkit/README.md` (changed inside
+kit revision 17). This addon's own vendor gate caught it: `test_vendor_sync` went red on the stale
+bytes after the #50 commit. `05_SUMMARY.md` records the second copy.
