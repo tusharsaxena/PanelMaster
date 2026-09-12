@@ -437,7 +437,8 @@ for _, spec in ipairs(TABS) do
       -- The whole tab's control sequence, so a block moving, or a control appearing inside one, is red.
       -- Exact labels. The typed-out swatch gained a gray " (opacity)" while its companion was ticked
       -- (the accent bar's is ticked out of the box); the composed swatch keeps the canonical label and
-      -- says it in its tooltip. That is the one label change the swap made, and it is named here.
+      -- says it in its tooltip. That was the one label change the swap made, and the hand-drawn
+      -- swatches have since dropped the suffix as well (owner's decision 2026-09-12).
       local labels = {}
       for i, w in ipairs(controls) do labels[i] = w.labelText end
       local want = {}

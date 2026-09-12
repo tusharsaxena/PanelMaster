@@ -251,7 +251,8 @@ library rather than the old code, because no row field can express them. A compo
 label while its companion is ticked instead of gaining a gray `(opacity)` suffix; its tooltip already
 says the alpha still applies, in `O.CLASS_COLOR_NOTE`'s words. And a live color drag commits through
 the library's 50 ms throttle. The two swatches still drawn by hand, **Background color** and
-**Artwork color**, keep the suffix.
+**Artwork color**, follow the composed ones: no swatch on the page carries the suffix (owner's
+decision, 2026-09-12), and every swatch's tooltip says the opacity still applies.
 
 The library-less stub in `settings/OptionsSetup.lua` answers `BorderGroup` and `BarGroup` with an
 empty row list, so a degraded install draws none of the three blocks rather than raising, which is

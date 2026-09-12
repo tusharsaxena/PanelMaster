@@ -229,17 +229,17 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
 ## 5c. Class color
 
 1. Tick **Use class color** next to **Background color**. **Expect:** the panel takes your class
-   color. The picker beside it stays **enabled**, its label gaining an `(opacity)` suffix, and its
-   tooltip ends with the collection's own sentence: *not read while Use class color is on, except
-   for its opacity, which always applies*.
+   color. The picker beside it stays **enabled**, its label stays **Background color** with no
+   `(opacity)` suffix, and its tooltip ends with the collection's own sentence: *not read while Use
+   class color is on, except for its opacity, which always applies*.
 2. Check the panel's **opacity is unchanged** — class color replaces the hue, not the alpha. Drag
    **Panel opacity** and confirm it still works.
 3. Tick **Use class color** next to **Border color** too, and confirm the two are independent: untick
    the background one and the border stays class-colored.
 4. Untick both. **Expect:** the original colors come back exactly — they were never overwritten.
 4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker is
-   still **enabled**. **Background color** and **Artwork color** read `… (opacity)`; **Border color**
-   and **Bar color** keep their label, because they are composed (#48), and their tooltip says the
+   still **enabled**. All five swatches (**Background color**, **Border color** twice, **Bar color**,
+   **Artwork color**) keep their plain label, with no `(opacity)` suffix, and their tooltip says the
    opacity still applies. Open one and drag the opacity slider →
    **Expect:** the class-colored border/fill gets more or less solid. This is the only control that
    sets opacity, so it must not be grayed out.
@@ -249,7 +249,9 @@ The BenikUI-style strip. Everything below is per panel, under **Accent bar** in 
    **Bar offset**). **Expect:** each applies to the panel at once. A newly picked style or texture
    name shows in its dropdown straight away rather than the old one. **Border thickness (px)**
    reaches **32**. **Bar opacity** reads as a 0–1 value, not a percentage. Hovering each control shows
-   the same tooltip it did when the blocks were typed out. `/reload`, and every value persisted.
+   the same tooltip it did when the blocks were typed out. The one player-visible label change: no
+   color swatch gains a gray `(opacity)` suffix when **Use class color** is ticked, on these blocks
+   or on **Background color** and **Artwork color**. `/reload`, and every value persisted.
 4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
    color mode produced it. Compare a picked bright color against your class color at the **same
    opacity and size** — a darker class color will legitimately look softer. If they differ at

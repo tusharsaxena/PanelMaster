@@ -622,7 +622,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
 
-### test_panel.lua (59)
+### test_panel.lua (60)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -682,6 +682,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: the strip is drawn with ZERO panels, and the empty state is content
 - Panels page: the Master controls tab closes on the canonical button pair
 - Panels page: every color swatch is followed by a 'Use class color' companion
+- Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 
 ### test_profiles.lua (23)
@@ -905,7 +906,7 @@ badge and any count quoted in the docs must agree with it.
 | test_debuglog.lua | 27 |
 | test_schema.lua | 28 |
 | test_slash.lua | 59 |
-| test_panel.lua | 59 |
+| test_panel.lua | 60 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 42 |
@@ -919,4 +920,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **793** |
+| **Total** | **794** |

@@ -393,21 +393,15 @@ end
 -- The picker stays ENABLED while the class color is on, and it is now forbidden to be anything
 -- else: `disabledIf` on a color row is anti-pattern #74. A color's ALPHA is not overridden — it
 -- still decides how solid the result is, and the picker is the only control that sets it — so
--- graying it would tell the player something untrue. The label suffix says which half is live and
--- the tooltip says it in the collection's words.
+-- graying it would tell the player something untrue. The tooltip says so in the collection's words;
+-- the label carries no `(opacity)` suffix, like the composed swatches (owner's decision 2026-09-12).
 local function makeColorPair(ctx, row, rec, field, label)
   local flag = C.COLOR_FIELDS[field]
   local usingClass = flag and rec[flag] and true or false
   local classCheck   -- the companion checkbox, built below when the field has a class-color flag
 
-  -- What the control actually governs right now: everything, or only the opacity.
-  local function labelFor(classOn)
-    if classOn then return label .. " |cff808080(opacity)|r" end
-    return label
-  end
-
   local picker = AceGUI:Create("ColorPicker")
-  picker:SetLabel(labelFor(usingClass))
+  picker:SetLabel(label)
   picker:SetRelativeWidth(0.5)
   picker:SetHasAlpha(true)
   local col = NS.Util.Color(rec[field])
@@ -444,9 +438,7 @@ local function makeColorPair(ctx, row, rec, field, label)
   addRefresher(ctx, rec, function(live)
     local c = NS.Util.Color(live[field])
     picker:SetColor(c[1], c[2], c[3], c[4])
-    local classOn = flag and live[flag] and true or false
-    picker:SetLabel(labelFor(classOn))
-    if classCheck then classCheck:SetValue(classOn) end
+    if classCheck then classCheck:SetValue(live[flag] and true or false) end
   end)
 
   if not flag then return end
@@ -459,7 +451,6 @@ local function makeColorPair(ctx, row, rec, field, label)
   cb:SetValue(usingClass)
   cb:SetCallback("OnValueChanged", function(_, _, v)
     NS.Registry:Set(rec.id, flag, v and true or false)
-    picker:SetLabel(labelFor(v and true or false))
   end)
   attachTooltip(cb, "Use class color",
     "Use your class color for " .. label:lower() .. ". The opacity from the color picker still "

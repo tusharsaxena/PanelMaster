@@ -215,7 +215,9 @@ widget type, width, row pairing, slider range and percent flag, media list and o
 tooltip title and body, a write landing through `NS.Registry:Set`, and a write made elsewhere reaching
 the control through the page's refreshers. They were written against the typed-out blocks first and
 passed across the swap. The one assertion tightened afterwards is the swatch label: the typed-out
-swatch gained a gray `(opacity)` suffix under class color, and the composed one does not.
+swatch gained a gray `(opacity)` suffix under class color, and the composed one does not. The two
+hand-drawn swatches dropped the suffix too (owner's decision, 2026-09-12), and a case in
+`tests/test_panel.lua` holds every swatch on the page to its plain label in both class-color states.
 
 ## Automated test records — the consolidated run
 
