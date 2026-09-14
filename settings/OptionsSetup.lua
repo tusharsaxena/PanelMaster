@@ -84,6 +84,14 @@ if not lib then
     -- stub answers an empty one rather than nil: a host that iterates the result gets a page with
     -- no tabs, which is exactly what a degraded install has, instead of an error.
     RenderTabbedSchema = function() return {} end,
+    -- The id-list and choice-grid widgets and their resolvers (LibKa0s v1.35.0). No page in this
+    -- addon builds one, so each is INERT: the makers draw nothing and the resolvers answer nil,
+    -- and ID_NAME_HINT is an empty table for the reason FONT_FLAGS above is -- a copy of the
+    -- library's hint text here would be the one that goes stale. They are present for the parity
+    -- case, so a future page that does build one degrades to nothing drawn rather than a raise.
+    ChoiceGrid = noop, IdInput = noop, IdList = noop,
+    ResolveId = function() return nil end, UnnamedCandidates = function() return nil end,
+    ID_NAME_HINT = {},
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
