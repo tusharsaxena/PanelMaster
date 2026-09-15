@@ -2,8 +2,13 @@
 
 `/pm` (and the `/panelmaster` alias) via AceConsole. Every verb comes from `NS.COMMANDS` in
 `settings/Slash.lua`, so the help index and the settings landing page's command list are generated
-from one table and cannot drift. This file describes the dispatch, not the list: `/pm` prints the
-list itself.
+from one table and cannot drift. This file describes the dispatch, not the list: `/pm help` prints
+the list itself.
+
+A bare `/pm` (nothing typed, or only whitespace) runs the `config` row with an empty argument and
+opens the settings landing page; `/pm help` prints the index (`slash-commands-§4`). That rule is the
+library's dispatcher. The degraded stub in `settings/Slash.lua`, used when LibKa0s is missing, follows
+it too, and prints help only if the table has no `config` row.
 
 Schema-driven verbs: `config version get set list reset resetall debug help`.
 Panel verbs: `new delete rename panels panel unlock lock recover`.

@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-795%2F795_passing-green)
+![Tests](https://img.shields.io/badge/Tests-798%2F798_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -64,7 +64,8 @@ panels out of the box, so an alt that should differ wants a profile of its own, 
 layout copied in as a starting point.
 
 Everything else is configuration, and it lives in two places: the addon's own page under Settings ▸
-AddOns in game, and `/pm` (or `/panelmaster`), which prints the full command list.
+AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare `/pm` opens that settings page,
+and `/pm help` prints the full command list.
 
 ## How panels work
 

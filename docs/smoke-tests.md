@@ -20,8 +20,9 @@ reset** and takes the panels with it, so `/pm panel deleteall` is no longer need
 ## 1. Load and first contact
 
 1. Log in. **Expect:** no Lua error, and nothing at all on screen — a fresh install draws no panels.
-2. `/pm` → **Expect:** the help index, every line prefixed with a cyan `[PM]`, one row per command,
-   no trailing colons.
+2. `/pm` → **Expect:** the settings window opens on the **Ka0s Panel Master** landing page, not a
+   sub-page, and nothing prints. `/pm help` → **Expect:** the help index, every line prefixed with a
+   cyan `[PM]`, one row per command, no trailing colons.
 3. `/pm version` → **Expect:** `[PM] v1.1.0`, matching the TOC.
 4. `/pm panels` → **Expect:** "No panels yet", suggesting `/pm new`.
 
@@ -723,6 +724,7 @@ addon still *works*.
 13. `/pm config` → `…, so the settings panel is unavailable.` Run it **three times**: it must answer
     every time. Unlike step 8's console notice, which rides other output, this line *is* the verb's
     whole answer, and a second invocation that printed nothing would read as a broken command.
+13b. A bare `/pm` → the same answer as step 13, because a bare command runs `config`.
 14. **The cause clause is word-for-word the same in every one of those four**, differing only after
     the comma. Compare against any other adopted Ka0s addon on the same install; a user with a
     broken install must not get a different sentence depending on which addon they open.

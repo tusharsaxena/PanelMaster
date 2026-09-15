@@ -56,11 +56,48 @@ test("Slash: no `test` or `preview` verb — `/pm lock` and `/pm unlock` are the
   assertTrue(have.lock == true and have.unlock == true, "`/pm lock` or `/pm unlock` is missing")
 end)
 
-test("Slash.OnSlash: a bare command prints help", function()
-  local bare = capture(function() Sl:OnSlash("") end)
-  local nilled = capture(function() Sl:OnSlash(nil) end)
-  assertEqual(#bare, #NS.COMMANDS + 1)
-  assertEqual(#nilled, #NS.COMMANDS + 1)
+-- Swap the `config` row's handler for a probe while `fn` runs, and return what reached it: the
+-- argument of each call, in order. Restored afterwards, so a failing assertion leaves no probe behind.
+local function probeConfig(fn)
+  local row
+  for _, cmd in ipairs(NS.COMMANDS) do if cmd[1] == "config" then row = cmd end end
+  assertTrue(row ~= nil, "NS.COMMANDS has no `config` row for a bare /pm to reach")
+  local real, got = row[3], {}
+  row[3] = function(a) got[#got + 1] = a end
+  local ok, err = pcall(fn)
+  row[3] = real
+  if not ok then error(err, 0) end
+  return got
+end
+
+test("Slash.OnSlash: a bare command runs `config` (slash-commands-§4)", function()
+  -- Bare `/pm` opens the settings page; it used to print the help index. The library hands the
+  -- `config` row an empty string, and nil input (AceConsole with nothing typed) takes the same road.
+  local lines
+  local got = probeConfig(function()
+    lines = capture(function() Sl:OnSlash("") end)
+    Sl:OnSlash(nil)
+  end)
+  assertEqual(#got, 2, "a bare /pm did not reach `config`")
+  assertEqual(got[1], "")
+  assertEqual(got[2], "")
+  assertEqual(#lines, 0, "a bare /pm still printed something alongside opening settings")
+end)
+
+test("Slash.OnSlash: a whitespace-only command is bare too", function()
+  local got = probeConfig(function() Sl:OnSlash("   \t ") end)
+  assertEqual(#got, 1, "whitespace-only input did not reach `config`")
+  assertEqual(got[1], "")
+end)
+
+test("Slash.OnSlash: `help` prints the index", function()
+  local lines
+  local got = probeConfig(function()
+    lines = capture(function() Sl:OnSlash("help") end)
+  end)
+  assertEqual(#got, 0, "`/pm help` opened settings")
+  assertEqual(#lines, #NS.COMMANDS + 1)
+  assertTrue(lines[1]:find("v" .. NS.Version(), 1, true) ~= nil, "the index lost its header")
 end)
 
 test("Slash.OnSlash: dispatches from the COMMANDS table", function()

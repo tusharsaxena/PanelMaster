@@ -379,13 +379,23 @@ if not lib then
   -- Not because it walks the schema -- it does not, here or on the live arm -- but because
   -- ConfirmResetAll ends in `db:ResetProfile()`, which is AceDB's and needs nothing of LibKa0s.
   function Sl:CliResetAll() Sl:ConfirmResetAll() end
+  -- A bare `/pm` runs the `config` row, the same rule the library's dispatcher follows
+  -- (slash-commands-§4): bare opens the settings page and `help` prints the list. The row is looked
+  -- up rather than called directly, so a table with no `config` falls back to the help answer.
+  local function run(verb, rest)
+    for _, cmd in ipairs(NS.COMMANDS) do
+      if cmd[1] == verb then cmd[3](rest); return true end
+    end
+    return false
+  end
   function Sl:OnSlash(input)
-    if input == nil or input:match("^%s*$") then return explain() end
+    if input == nil or input:match("^%s*$") then
+      if not run("config", "") then explain() end
+      return
+    end
     local verb, rest = input:match("^(%S+)%s*(.-)$")
     verb = verb and verb:lower()
-    for _, cmd in ipairs(NS.COMMANDS) do
-      if cmd[1] == verb then return cmd[3](rest) end
-    end
+    if run(verb, rest) then return end
     print("unknown command '" .. tostring(verb) .. "'")
     explain()
   end

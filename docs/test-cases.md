@@ -556,14 +556,16 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (62)
+### test_slash.lua (64)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
 - Slash.PrintHelp: one row per command, plus a header
 - Slash.PrintHelp: no line ends in a colon (slash-commands-§4)
 - Slash: no `test` or `preview` verb — `/pm lock` and `/pm unlock` are the switch
-- Slash.OnSlash: a bare command prints help
+- Slash.OnSlash: a bare command runs `config` (slash-commands-§4)
+- Slash.OnSlash: a whitespace-only command is bare too
+- Slash.OnSlash: `help` prints the index
 - Slash.OnSlash: dispatches from the COMMANDS table
 - Slash.OnSlash: the verb is case-insensitive
 - Slash.OnSlash: an unknown verb reports it and prints help
@@ -768,7 +770,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (42)
+### test_libka0s.lua (43)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -807,6 +809,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: /pm debug dump still answers
 - Degraded install: the fallback printer renders the same bytes as the library's
 - Degraded install: /pm config answers on EVERY invocation, not once
+- Degraded install: a bare /pm runs `config`, and falls back to help without one
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
 - L trap: no seam file hands a descriptor this addon's locale table
@@ -906,11 +909,11 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 30 |
-| test_slash.lua | 62 |
+| test_slash.lua | 64 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 42 |
+| test_libka0s.lua | 43 |
 | test_surface_parity.lua | 4 |
 | test_harness.lua | 18 |
 | test_spelling.lua | 3 |
@@ -921,4 +924,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **795** |
+| **Total** | **798** |

@@ -812,6 +812,34 @@ test("Degraded install: /pm config answers on EVERY invocation, not once", funct
     "the /pm config notice does not lead with the shared cause clause")
 end)
 
+test("Degraded install: a bare /pm runs `config`, and falls back to help without one", function()
+  -- The stub dispatcher follows the library's rule (slash-commands-§4): bare runs the `config` row
+  -- with an empty string, and only a table with no `config` row gets the help answer, which here is
+  -- the unavailable notice.
+  local ns, m = loadDegraded()
+  local index, row
+  for i, cmd in ipairs(ns.COMMANDS) do if cmd[1] == "config" then index, row = i, cmd end end
+  assertTrue(row ~= nil, "the degraded install has no `config` row")
+
+  local real, got = row[3], {}
+  row[3] = function(a) got[#got + 1] = a end
+  ns.Slash:OnSlash("")
+  ns.Slash:OnSlash("  ")
+  ns.Slash:OnSlash(nil)
+  row[3] = real
+  assertEqual(#got, 3, "a bare /pm did not reach `config` in a degraded install")
+  for _, a in ipairs(got) do assertEqual(a, "") end
+
+  ns.Print("warm up the Core notice")
+  table.remove(ns.COMMANDS, index)
+  local before = #m.__chat
+  ns.Slash:OnSlash("")
+  table.insert(ns.COMMANDS, index, row)
+  assertEqual(#m.__chat, before + 1, "a bare /pm with no `config` row printed nothing")
+  assertTrue(m.__chat[before + 1]:find("so the slash help index", 1, true) ~= nil,
+    "a bare /pm with no `config` row did not fall back to the help answer")
+end)
+
 -- ── the `L` trap ───────────────────────────────────────────────────────────────
 --
 -- Three of the five majors take a descriptor `L` and can render raw keys if handed a table whose
