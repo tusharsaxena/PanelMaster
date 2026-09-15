@@ -150,7 +150,7 @@ S.Schema = {
 -- mode" included (it comes from `testModePath`, below). The stub's composers answer an empty list
 -- (settings/OptionsSetup.lua explains why a hand-copied set there would be the copy that goes
 -- stale), so `/pm list|get|set` in a degraded install reaches the Editing and New panels rows
--- only, and `/pm preview` is the one way into test mode there. tests/test_schema.lua pins that
+-- only, and `/pm test` is the one way into test mode there. tests/test_schema.lua pins that
 -- count by name so it can never widen silently.
 
 -- Wire this addon's half onto one composed row, found by the path the composer gave it.

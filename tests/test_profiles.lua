@@ -201,7 +201,7 @@ test("Database: a profile switch drops preview's tracked ids BEFORE they can del
   -- THE DESTRUCTIVE ONE. `nextID` lives in db.profile, so every profile allocates ids from 1: the
   -- ids preview parked in session state name DIFFERENT panels in the profile you switch to. Turning
   -- preview off then called DeleteBatch with them, and DeleteBatch resolves against the CURRENT
-  -- profile — so `/pm preview on`, switch profile, `/pm preview off` deleted the panels the user
+  -- profile — so test mode on, switch profile, test mode off deleted the panels the user
   -- had made in the profile they switched to.
   fresh()
   NS.State.previewIDs = { 1, 2 }

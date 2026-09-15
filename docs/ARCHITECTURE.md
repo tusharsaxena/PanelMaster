@@ -137,7 +137,7 @@ structure its own prose, and that is the only list of them outside the table.
 Schema-driven verbs: `config version get set list reset resetall debug help` — `resetall` is a
 **profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it
 takes the player's panels with it because `db.profile.panels` is in the profile. Panel verbs: `new
-delete rename panels panel unlock lock preview recover`. Verb detail and the host/library split in
+delete rename panels panel unlock lock test recover`. Verb detail and the host/library split in
 **[slash-dispatch.md](slash-dispatch.md)**.
 
 ## Event Subscriptions

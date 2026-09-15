@@ -551,7 +551,7 @@ end
 -- not stale-but-harmless after a switch, it is a live reference to somebody else's panel. Three
 -- tables held one:
 --
---   NS.State.previewIDs   — the destructive one. `/pm preview` on, switch profile, `/pm preview` off
+--   NS.State.previewIDs   — the destructive one. Test mode on, switch profile, test mode off
 --                           called DeleteBatch with the OLD profile's ids, which resolved against
 --                           the NEW profile and destroyed real user panels. Cleared with the
 --                           `preview` flag itself, because a flag left true makes SetPreview(true)

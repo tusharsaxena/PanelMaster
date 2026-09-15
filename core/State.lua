@@ -27,6 +27,6 @@ State.unlockedPanels = {}
 -- like before creating one. Never persisted, never written to the panel registry.
 State.preview = false
 
--- Panel ids created by preview mode, so `/pm preview` off can withdraw exactly what it added and
+-- Panel ids created by preview mode, so `/pm test off` can withdraw exactly what it added and
 -- nothing else.
 State.previewIDs = {}

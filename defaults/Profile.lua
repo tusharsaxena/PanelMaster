@@ -7,7 +7,7 @@ NS.defaults = NS.defaults or {}
 NS.defaults.profile = {
   -- The panel registry: an array of panel records, in creation order. Ships EMPTY on purpose — a
   -- fresh install draws nothing until the user makes a panel, because an addon whose whole job is
-  -- putting opaque blocks on the screen must never put one there uninvited. `/pm preview` is how a
+  -- putting opaque blocks on the screen must never put one there uninvited. Test mode is how a
   -- new user sees what a panel looks like without committing to one.
   --
   -- A structural registry (architecture-§5): its one writer is NS.Registry and its load pass is

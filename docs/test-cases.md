@@ -186,7 +186,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas.RenderForCombat: repaints only for the two settings that depend on combat
 - Canvas: leaving and entering combat both reach the renderer
 
-### test_unlock.lua (36)
+### test_unlock.lua (37)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
@@ -212,8 +212,9 @@ badge and any count quoted in the docs must agree with it.
 - Unlock.SetPreview: every placeholder carries the preview marker
 - Unlock.SetPreview: each transition broadcasts the panel set ONCE
 - Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked
-- Unlock.SetPreview: preview during combat applies whole, it is never queued (F-014)
-- Unlock.SetPreview: previewing while already unlocked in combat queues nothing (F-014)
+- Unlock.SetPreview: a start during combat is refused, with one line (options-ui-§15)
+- Unlock.SetPreview: leaving test mode during combat is immediate and queues nothing (F-014)
+- Unlock.SetPreview: leaving test mode in combat keeps a prior unlock, queues nothing (F-014)
 - Unlock: the global combat gate still defers a plain unlock (F-014)
 - Unlock.TogglePreview: alternates
 - Unlock: combat starting ends test mode, unticks the box and restores the lock
@@ -546,7 +547,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (30)
+### test_schema.lua (31)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -576,16 +577,19 @@ badge and any count quoted in the docs must agree with it.
 - Schema: Master controls is the FIRST tab, and holds exactly the rows it is entitled to
 - Schema: Test mode is the COMPOSER's row, directly below the debug console (options-ui-§15)
 - Schema: S:Set and S:Get on state.preview start and end test mode
+- Schema: ticking Test mode during combat is refused, and the box re-syncs unticked
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (62)
+### test_slash.lua (64)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
 - Slash.PrintHelp: one row per command, plus a header
 - Slash.PrintHelp: no line ends in a colon (slash-commands-§4)
-- Slash: `/pm preview on|off` sets test mode, and bare `/pm preview` toggles it
+- Slash: `/pm test on|off` sets test mode, and bare `/pm test` toggles it
+- Slash: `/pm preview` is gone — the verb is `/pm test`, with no alias
+- Slash: `/pm test on` during combat is refused with one line, and starts nothing
 - Slash.OnSlash: a bare command prints help
 - Slash.OnSlash: dispatches from the COMMANDS table
 - Slash.OnSlash: the verb is case-insensitive
@@ -923,14 +927,14 @@ badge and any count quoted in the docs must agree with it.
 | test_envsetup.lua | 4 |
 | test_registry.lua | 50 |
 | test_canvas.lua | 36 |
-| test_unlock.lua | 36 |
+| test_unlock.lua | 37 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 30 |
-| test_slash.lua | 62 |
+| test_schema.lua | 31 |
+| test_slash.lua | 64 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 24 |
 | test_sunnart.lua | 53 |
@@ -945,4 +949,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **819** |
+| **Total** | **823** |

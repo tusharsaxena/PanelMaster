@@ -180,18 +180,19 @@ unconditionally.
 Both transitions go through `U:SetUnlocked`, never a direct write to `NS.State.unlocked`, so leaving
 preview clears the per-panel unlock and pending sets the same way any other lock does. The order is
 **registry first, lock second**: `SetUnlocked` repaints, so the placeholders have to exist before it
-runs. Preview's implied unlock passes `SetUnlocked`'s private `immediate` flag, which skips the
-combat gate: the placeholders are non-secure frames preview has just created itself, so no secure
-write is involved, and deferring only that half would leave the user mid-pull with three anonymous,
-mouse-transparent rectangles under a message that never mentions preview.
+runs. Both transitions pass `SetUnlocked`'s private `immediate` flag, which skips the combat gate.
+Only the way out can meet a fight, because a start during combat is refused: restoring the lock
+the player had is not something they should wait out a pull for, and a lock is never deferred
+anyway.
 
 **Test mode ends when combat starts** (`options-ui-§15`). `PLAYER_REGEN_DISABLED` calls
 `U:EndPreviewForCombat`, which turns preview off through the same `SetPreview(false)` the checkbox
 uses and prints one line, *Test mode off — combat started*. The event fires while secure writes are
 still allowed, and the way out restores the prior lock past the gate regardless, so nothing is
-deferred. Starting test mode mid-fight is still allowed (the bypass above) and lasts until the next
-pull or until it is turned off. Every start and stop re-syncs the General page, so the **Test mode**
-box never disagrees with the screen.
+deferred. For the same reason a start during combat is refused, from the checkbox or
+`/pm test on`, with one gray line, *cannot start test mode during combat*. Nothing is queued, and
+the box re-syncs unticked. Every start and stop re-syncs the General page, so the **Test mode** box
+never disagrees with the screen.
 
 Panels are **non-secure** frames, so the render path is not combat-gated at all: creating, moving,
 recoloring and hiding a plain backdrop frame is legal in combat, and gating it would mean a panel
@@ -208,8 +209,8 @@ Two things are gated, in the two different shapes the standard defines:
   it would be the one case where the gate made things worse. An explicit lock also clears a queued
   unlock, or the queue would undo the user's own decision the moment combat ended. Per-panel unlocks
   queue and replay the same way, and a panel deleted mid-combat is dropped from the queue rather
-  than resurrecting an unlock entry for a record that has gone. **Preview is the one documented
-  bypass** — see the preview section above.
+  than resurrecting an unlock entry for a record that has gone. **Test mode's way out is the one
+  documented bypass** — see the preview section above. Its way in is refused in combat outright.
 - **The options panel refuses** (`options-ui-§2`). `Settings.OpenToCategory` is protected, so
   `/pm config` in combat prints a gray notice and returns. It does **not** replay: a panel that pops
   itself open the instant combat drops steals focus during recovery.

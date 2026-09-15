@@ -253,40 +253,55 @@ test("Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked"
   assertFalse(U.__hasPending(rec.id), "a queued per-panel unlock survived the preview")
 end)
 
-test("Unlock.SetPreview: preview during combat applies whole, it is never queued (F-014)", function()
+test("Unlock.SetPreview: a start during combat is refused, with one line (options-ui-§15)", function()
   fresh()
+  -- Test mode ends when combat starts, and for the same reason it cannot START in one: no
+  -- placeholder may cover the screen in a fight. Refused, not queued — nothing is left waiting to
+  -- put sample panels up when the fight ends.
+  local chat = T.mocks.__chat
+  local before = #chat
   T.mocks.__inCombat = true
-  -- The implied unlock goes through SetUnlocked, but with the combat gate deliberately bypassed:
-  -- the placeholders are plain non-secure frames that this call has just put on screen, so no
-  -- secure write is involved (events-frames-taint-§2 is not in play). Deferring only this half
-  -- would leave the user mid-pull with three anonymous, mouse-transparent rectangles they cannot
-  -- label, move or dismiss — the "worthless locked" state preview exists to avoid.
-  U:SetPreview(true)
-  assertTrue(NS.State.preview, "preview did not turn on during combat")
-  assertTrue(NS.State.unlocked, "preview during combat left its own placeholders locked")
-  assertFalse(U.__hasPending(), "preview queued its implied unlock instead of applying it")
-
-  -- And leaving again is symmetrical: the lock lands now, not on the next PLAYER_REGEN_ENABLED,
-  -- and it does not leave a stray "panels unlocked" queued behind it.
-  U:SetPreview(false)
-  assertFalse(NS.State.preview)
-  assertFalse(NS.State.unlocked, "leaving preview during combat left the screen unlocked")
-  assertFalse(U.__hasPending(), "leaving preview during combat queued an unlock")
+  local ret = U:SetPreview(true)
   T.mocks.__inCombat = false
+  local lines = {}
+  for i = before + 1, #chat do lines[#lines + 1] = chat[i] end
+  assertEqual(ret, nil, "a refused start did not answer nil")
+  assertFalse(NS.State.preview, "test mode started during combat")
+  assertEqual(R:Count(), 0, "a refused start put sample panels up")
+  assertFalse(NS.State.unlocked, "a refused start unlocked the screen")
+  assertFalse(U.__hasPending(), "a refused start queued an unlock")
+  assertEqual(#lines, 1, "a refused start did not print exactly one line")
+  assertTrue(lines[1]:lower():find("cannot start test mode during combat", 1, true) ~= nil,
+    "the refusal does not say why: " .. tostring(lines[1]))
 end)
 
-test("Unlock.SetPreview: previewing while already unlocked in combat queues nothing (F-014)", function()
-  fresh()
-  U:SetUnlocked(true)
-  T.mocks.__inCombat = true
-  U:SetPreview(true)
-  U:SetPreview(false)
-  -- The user was unlocked before preview, so they are unlocked after it — and no phantom unlock is
-  -- sitting in the queue to print "panels unlocked" at them when the fight ends.
-  assertTrue(NS.State.unlocked, "preview took away an unlock the user already had")
-  assertFalse(U.__hasPending(), "a preview round-trip queued a redundant unlock")
-  T.mocks.__inCombat = false
-end)
+test("Unlock.SetPreview: leaving test mode during combat is immediate and queues nothing (F-014)",
+  function()
+    fresh()
+    U:SetPreview(true)
+    T.mocks.__inCombat = true
+    -- The lock lands now, not on the next PLAYER_REGEN_ENABLED, and no stray "panels unlocked" is
+    -- queued behind it.
+    U:SetPreview(false)
+    T.mocks.__inCombat = false
+    assertFalse(NS.State.preview)
+    assertFalse(NS.State.unlocked, "leaving test mode during combat left the screen unlocked")
+    assertFalse(U.__hasPending(), "leaving test mode during combat queued an unlock")
+  end)
+
+test("Unlock.SetPreview: leaving test mode in combat keeps a prior unlock, queues nothing (F-014)",
+  function()
+    fresh()
+    U:SetUnlocked(true)
+    U:SetPreview(true)
+    T.mocks.__inCombat = true
+    U:SetPreview(false)
+    T.mocks.__inCombat = false
+    -- The user was unlocked before test mode, so they are unlocked after it — and no phantom unlock
+    -- is sitting in the queue to print "panels unlocked" at them when the fight ends.
+    assertTrue(NS.State.unlocked, "test mode took away an unlock the user already had")
+    assertFalse(U.__hasPending(), "a test mode round-trip queued a redundant unlock")
+  end)
 
 test("Unlock: the global combat gate still defers a plain unlock (F-014)", function()
   -- The bypass belongs to preview alone. A bare /pm unlock mid-pull must still be deferred.

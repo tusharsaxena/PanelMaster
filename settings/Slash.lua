@@ -302,15 +302,17 @@ NS.COMMANDS = {
   { "lock",     "Lock panels again", function()
       if NS.Unlock and NS.Unlock:SetUnlocked(false) ~= nil then NS.Print("panels locked") end
     end },
-  { "preview",  "Test mode (sample panels); 'on'/'off' set it, bare toggles",
+  { "test",     "Test mode (sample panels); 'on'/'off' set it, bare toggles",
     function(rest)
-      -- Drives the same switch as Master controls' Test mode box (options-ui-§15).
+      -- Drives the same switch as Master controls' Test mode box (options-ui-§15). A start refused
+      -- during combat answers nil and has already said why, so nothing more is printed.
       if not NS.Unlock then return end
       local arg = rest and tostring(rest):lower():match("^%s*(%S*)") or ""
       local on
       if arg == "on" then on = NS.Unlock:SetPreview(true)
       elseif arg == "off" then on = NS.Unlock:SetPreview(false)
       else on = NS.Unlock:TogglePreview() end
+      if on == nil then return end
       NS.Print("Test mode " .. (on and "on" or "off"))
     end },
   { "recover",  "Bring off-screen panels back into view",

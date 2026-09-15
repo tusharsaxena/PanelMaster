@@ -6,7 +6,10 @@ from one table and cannot drift. This file describes the dispatch, not the list:
 list itself.
 
 Schema-driven verbs: `config version get set list reset resetall debug help`.
-Panel verbs: `new delete rename panels panel unlock lock preview recover`.
+Panel verbs: `new delete rename panels panel unlock lock test recover`.
+
+`/pm test [on|off]` drives the same switch as the **Test mode** checkbox; bare `test` toggles it. A
+start during combat is refused with one gray line, and there is no `preview` alias.
 
 `/pm panel <name> [field] [value]` inspects and edits a single panel from the command line, using the
 same `Registry:Set` seam the settings widgets use (the drag handler takes `Registry:SetPosition`).

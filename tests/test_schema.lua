@@ -408,6 +408,26 @@ test("Schema: S:Set and S:Get on state.preview start and end test mode", functio
   assertEqual(NS.db.profile.state, nil, "test mode wrote itself into the profile")
 end)
 
+test("Schema: ticking Test mode during combat is refused, and the box re-syncs unticked", function()
+  local U = NS.Unlock
+  if NS.State.preview then U:SetPreview(false) end
+  U:SetUnlocked(false)
+  local P = NS.Panel
+  local orig, n = P.Refresh, 0
+  P.Refresh = function() n = n + 1 end
+  T.mocks.__inCombat = true
+  local ok, err = pcall(function()
+    S:Set("state.preview", true)
+    assertFalse(NS.State.preview, "the Test mode box started test mode during combat")
+    assertTrue(S:Get("state.preview") == false, "the Test mode box reads ticked after a refusal")
+    -- The widget ticked itself on the click; the refresh is what puts it back.
+    assertTrue(n >= 1, "a refused start did not re-sync the settings panel")
+  end)
+  T.mocks.__inCombat = false
+  P.Refresh = orig
+  if not ok then error(err, 0) end
+end)
+
 test("Schema: the Master controls rows are the COMPOSER's, not eight literals here", function()
   -- options-ui-§15/§16: a hand-written copy of a composed block is anti-pattern #73, and the whole
   -- point is that nine addons cannot drift into nine orders. Two halves, because either alone

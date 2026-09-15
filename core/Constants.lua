@@ -539,7 +539,7 @@ C.MEDIA_FALLBACK = {
 }
 
 -- ── Preview mode ────────────────────────────────────────────────────────────────
--- The placeholder panels `/pm preview` stands up (preview-mode). Deliberately three, deliberately
+-- The placeholder panels test mode (`/pm test`) stands up (preview-mode). Deliberately three, deliberately
 -- offset from center and from each other: one panel proves the render path, three prove that
 -- position, size and color are all really being applied.
 -- The field a preview placeholder carries in the registry. Preview panels are REAL records (that is

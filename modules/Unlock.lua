@@ -227,10 +227,9 @@ end
 -- Locking is never deferred — it only ever makes the UI quieter, and refusing to lock during combat
 -- would be the one case where the gate made things worse.
 --
--- `immediate` skips the gate. It has exactly one caller — preview mode, which is bypassing the gate
--- deliberately (see U:SetPreview): its frames are plain non-secure placeholders it has just created
--- itself, so there is no secure write for the gate to protect and events-frames-taint-§2 is not in
--- play. Deferring only preview's half would leave the user mid-pull with unlabeled scenery. It is a
+-- `immediate` skips the gate. It has exactly one caller — test mode (U:SetPreview), in both
+-- directions. Only its way OUT can meet a fight, since a start during combat is refused, and
+-- restoring the lock the player had is not a request they should wait out a pull for. It is a
 -- private argument, not part of the lock surface: the CLI, the schema switch and Toggle all go
 -- through the gated path.
 function U:SetUnlocked(on, immediate)
@@ -323,6 +322,14 @@ end
 function U:SetPreview(on)
   on = not not on
   if on == NS.State.preview then return on end
+  -- Refused, not queued, during combat (options-ui-§15): test mode ends when a fight starts, so it
+  -- cannot start inside one. Answers nil, like a deferred SetUnlocked. The re-sync puts back a
+  -- Test mode box the click already ticked.
+  if on and InCombatLockdown and InCombatLockdown() then
+    print("|cff808080cannot start test mode during combat|r")
+    if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
+    return nil
+  end
 
   if on then
     -- Remember whether the screen was already unlocked, so turning preview off can put it back.
@@ -351,10 +358,8 @@ function U:SetPreview(on)
     -- a state the matching lock can undo. Writing NS.State directly was what let preview leave the
     -- screen unlocked with nothing tracking it.
     --
-    -- The combat gate is bypassed on purpose (`immediate`). These placeholders are non-secure frames
-    -- this call has just put on screen, so no secure write is involved and events-frames-taint-§2 is
-    -- not in play. Queueing this half would apply preview and defer its unlock — three anonymous,
-    -- mouse-transparent rectangles mid-pull, under a message that never mentions preview.
+    -- Past the gate (`immediate`) to match the way out. A start in combat never reaches here — it is
+    -- refused above — so this only skips a check that could not fire.
     U:SetUnlocked(true, true)
   else
     NS.Registry:DeleteBatch(NS.State.previewIDs)
@@ -370,7 +375,7 @@ function U:SetPreview(on)
 
   NS.Debug("Preview", "preview %s", on and "on" or "off")
   -- Master controls' Test mode checkbox reads NS.State.preview (settings/Schema.lua), so it follows
-  -- every start and stop from here, whoever caused it: the box, `/pm preview`, or combat. The
+  -- every start and stop from here, whoever caused it: the box, `/pm test`, or combat. The
   -- Lock frame box rides the same re-sync, since the way in and the way out both move the lock.
   if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
   return on
