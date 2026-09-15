@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-812%2F812_passing-green)
+![Tests](https://img.shields.io/badge/Tests-819%2F819_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -58,8 +58,10 @@ panel's entire look without touching this one's position, which is what stops yo
 panels from being the first one built again by hand. All of it is reachable from the command line too, and for a small
 adjustment that is quicker than opening the page: `/pm panel ChatBG width 420`.
 
-`/pm preview` drops three sample panels on screen so you can judge a color or a texture against your
-real UI without building anything to try it on. Same command clears them. `/pm panels` lists what
+**Test mode**, on the first settings tab, drops three sample panels on screen so you can judge a
+color or a texture against your real UI without building anything to try it on. `/pm preview on`
+and `/pm preview off` do the same from chat. The samples also go away the moment you enter combat,
+so they never sit over your screen in a fight. `/pm panels` lists what
 you have, with anything switched off shown in gray. **Show on mouseover only** fades a panel away
 until your cursor crosses it, and it still never claims the click. Every character shares one set of
 panels out of the box, so an alt that should differ wants a profile of its own, with your existing

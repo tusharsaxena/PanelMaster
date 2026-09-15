@@ -41,7 +41,7 @@ game's own Settings ▸ AddOns list.
 | Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
 | Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
 | Master controls | Debug console | Show the debug window. Resets when you reload. |
-| Master controls | Test mode | Put three sample panels on screen. |
+| Master controls | Test mode | Put three sample panels on screen, unlocked, until you untick it. Ends by itself when combat starts, and is off again when you reload. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
 | Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not affected."* |
 | Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
@@ -195,8 +195,13 @@ panel and reloads comes back to a locked UI, which is what this addon has always
 stored value behind it, so the sense change is not a migration; the negation is pinned in both
 directions in `tests/test_schema.lua`.
 
-**Test mode** is *not* canonical. It is this addon's own, and it rides the composer's `extra`, which
-appends after the mandated block and never interleaves with it.
+**Test mode** is canonical as well (`options-ui-§15`): every addon with a positionable display
+ships one. The composer emits the row from `testModePath = "state.preview"`, session-only and on
+its own line directly below *Debug console*, and `settings/Schema.lua` wires it the way it wires the
+console row: `default = false`, this addon's tooltip, and a `get`/`set` over `NS.State.preview` and
+`Unlock:SetPreview`. The mode ends when combat starts (`Unlock:EndPreviewForCombat`, from
+`PLAYER_REGEN_DISABLED`), and the box follows every start and stop because `SetPreview` and the
+registry's session sweep both re-sync the page.
 
 **Reset all settings** is `options-ui-§12`'s global reset, verbatim and confirm-gated, and it is the
 same entry point the header **Defaults** button and `/pm resetall` already share — `Sl:ConfirmResetAll`.

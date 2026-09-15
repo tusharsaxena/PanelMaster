@@ -146,7 +146,7 @@ delete rename panels panel unlock lock preview recover`. Verb detail and the hos
 |---|---|---|
 | `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
 | `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat()` | Replays a combat-deferred unlock, and repaints if `settings.visibility` is one of the two modes that depend on the combat state. |
-| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat()` | The other half of the general-visibility rule (`options-ui-§15`). Panels are non-secure, so showing or hiding one at the start of a pull needs no gate. |
+| `PLAYER_REGEN_DISABLED` | `Unlock:EndPreviewForCombat()`, then `Canvas:RenderForCombat()` | Ends test mode (`options-ui-§15`) while secure writes are still allowed: the sample panels come down, the prior lock goes back, and one chat line says so. Then the other half of the general-visibility rule. Panels are non-secure, so showing or hiding one at the start of a pull needs no gate. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration. Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing. |
 
 The render pipeline these drive, and the combat gating around unlock and the options panel, are in

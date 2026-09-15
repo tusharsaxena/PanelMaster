@@ -46,6 +46,27 @@ test("Slash.PrintHelp: no line ends in a colon (slash-commands-§4)", function()
   end
 end)
 
+test("Slash: `/pm preview on|off` sets test mode, and bare `/pm preview` toggles it", function()
+  fresh()
+  local U = NS.Unlock
+  if NS.State.preview then U:SetPreview(false) end
+  Sl:OnSlash("preview on")
+  assertTrue(NS.State.preview, "`/pm preview on` did not start test mode")
+  Sl:OnSlash("preview on")
+  assertTrue(NS.State.preview, "a second `/pm preview on` turned test mode off")
+  local lines = capture(function() Sl:OnSlash("preview off") end)
+  assertFalse(NS.State.preview, "`/pm preview off` did not end test mode")
+  assertTrue(lines[#lines]:find("Test mode off", 1, true) ~= nil,
+    "`/pm preview off` did not say test mode is off: " .. tostring(lines[#lines]))
+  Sl:OnSlash("preview off")
+  assertFalse(NS.State.preview, "a second `/pm preview off` turned test mode on")
+  Sl:OnSlash("preview")
+  assertTrue(NS.State.preview, "bare `/pm preview` did not toggle test mode on")
+  Sl:OnSlash("preview")
+  assertFalse(NS.State.preview, "bare `/pm preview` did not toggle test mode off")
+  U:SetUnlocked(false)
+end)
+
 test("Slash.OnSlash: a bare command prints help", function()
   local bare = capture(function() Sl:OnSlash("") end)
   local nilled = capture(function() Sl:OnSlash(nil) end)

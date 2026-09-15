@@ -328,8 +328,8 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
     -- Deriving it would agree with any set in any order — including the one where a row has been
     -- dropped or two have swapped — which is the whole failure the standard's fixed order exists to
     -- prevent. The set is canonical, not a menu: this addon is not frameless (modules/Unlock.lua
-    -- calls SetMovable), so every row applies, and `Test mode` is the only non-canonical one and
-    -- comes LAST, after the mandated block.
+    -- calls SetMovable), so every row applies, `Test mode` included — options-ui-§15 made it
+    -- canonical for every addon with a positionable display, the row directly below Debug console.
     local EXPECTED = {
       { path = "settings.enabled",    label = "Enable Ka0s Panel Master" },
       { path = "settings.visibility", label = "General visibility" },
@@ -356,6 +356,57 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
           :format(i, tostring(rows[i].label), want.label))
     end
   end)
+
+test("Schema: Test mode is the COMPOSER's row, directly below the debug console (options-ui-§15)",
+  function()
+    -- It used to ride the composer's `extra` as a hand-written row. §15 made it canonical, and a
+    -- canonical row is emitted from `testModePath`, never written out here (anti-pattern #80).
+    local at
+    for i, row in ipairs(S.Schema) do
+      if row.path == "state.debugConsole" then at = i end
+    end
+    assertTrue(at ~= nil, "no debug console row to sit under")
+    local row = S.Schema[at + 1]
+    assertEqual(row.path, "state.preview", "the row below Debug console is not Test mode")
+    assertEqual(row.label, "Test mode")
+    assertEqual(row.type, "bool")
+    assertEqual(row.group, "Master controls")
+    assertTrue(row.sessionOnly == true, "Test mode is persisted — it must be session-only")
+    assertTrue(row.startsLine == true, "Test mode does not start its own line")
+    -- The composer gives it no default; the host's `false` is what lets a reset end it.
+    assertTrue(row.default == false, "Test mode has no default = false, so a reset cannot end it")
+    assertEqual(type(row.get), "function", "Test mode's get was never bound")
+    assertEqual(type(row.set), "function", "Test mode's set was never bound")
+
+    local f = assert(io.open("settings/Schema.lua", "r"))
+    local body = f:read("*a")
+    f:close()
+    assertTrue(body:find('testModePath%s*=%s*"state%.preview"') ~= nil,
+      "settings/Schema.lua does not hand the composer testModePath")
+    assertEqual(body:find('"Test mode"', 1, true), nil,
+      "settings/Schema.lua writes the Test mode label itself — the composer owns it")
+    assertEqual(body:find("extra%s*=%s*{"), nil,
+      "settings/Schema.lua still appends a row through the composer's extra")
+  end)
+
+test("Schema: S:Set and S:Get on state.preview start and end test mode", function()
+  local U = NS.Unlock
+  if NS.State.preview then U:SetPreview(false) end
+  U:SetUnlocked(false)
+  local panels = NS.Registry:Count()
+
+  assertTrue((S:Set("state.preview", true)))
+  assertTrue(S:Get("state.preview") == true, "S:Get does not read the live mode")
+  assertTrue(NS.State.preview, "S:Set did not start test mode")
+  assertTrue(NS.Registry:Count() > panels, "starting test mode put no sample panels up")
+
+  assertTrue((S:Set("state.preview", false)))
+  assertTrue(S:Get("state.preview") == false)
+  assertEqual(NS.Registry:Count(), panels, "ending test mode left sample panels behind")
+  assertFalse(NS.State.unlocked, "ending test mode left the screen unlocked")
+  -- Session-only: nothing lands in the profile.
+  assertEqual(NS.db.profile.state, nil, "test mode wrote itself into the profile")
+end)
 
 test("Schema: the Master controls rows are the COMPOSER's, not eight literals here", function()
   -- options-ui-§15/§16: a hand-written copy of a composed block is anti-pattern #73, and the whole

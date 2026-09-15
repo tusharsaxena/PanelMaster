@@ -276,7 +276,8 @@ NS.Helpers = lib:New({
   --                them. What a reset DOES sweep is the durable
   --                half: `OnProfileReset` reaches the `reload` closure in core/Database.lua, which
   --                clears preview placeholder RECORDS out of the profile and reloads the registry.
-  --                The session flags themselves are cleared by their own `set`, or by a /reload.
+  --                The session flags themselves are cleared by their own `set`, or by a /reload —
+  --                except `state.preview`, whose flag the registry's reload sweep clears as well.
   --   sliderCommit — the default (commit on release) is what this addon has always done. Neither
   --                slider drives anything the user can see mid-drag: grid size applies to the next
   --                drag, and default opacity applies to the next panel created.

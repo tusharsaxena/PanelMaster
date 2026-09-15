@@ -185,6 +185,14 @@ combat gate: the placeholders are non-secure frames preview has just created its
 write is involved, and deferring only that half would leave the user mid-pull with three anonymous,
 mouse-transparent rectangles under a message that never mentions preview.
 
+**Test mode ends when combat starts** (`options-ui-§15`). `PLAYER_REGEN_DISABLED` calls
+`U:EndPreviewForCombat`, which turns preview off through the same `SetPreview(false)` the checkbox
+uses and prints one line, *Test mode off — combat started*. The event fires while secure writes are
+still allowed, and the way out restores the prior lock past the gate regardless, so nothing is
+deferred. Starting test mode mid-fight is still allowed (the bypass above) and lasts until the next
+pull or until it is turned off. Every start and stop re-syncs the General page, so the **Test mode**
+box never disagrees with the screen.
+
 Panels are **non-secure** frames, so the render path is not combat-gated at all: creating, moving,
 recoloring and hiding a plain backdrop frame is legal in combat, and gating it would mean a panel
 that visibly failed to follow a settings change mid-pull. That is also what lets the combat
@@ -210,5 +218,5 @@ Two things are gated, in the two different shapes the standard defines:
 |---|---|---|
 | `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
 | `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat()` | Replays a combat-deferred unlock, and repaints for the general-visibility rule. |
-| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat()` | The entering-combat half of the same rule. |
+| `PLAYER_REGEN_DISABLED` | `Unlock:EndPreviewForCombat()`, then `Canvas:RenderForCombat()` | Ends test mode, then the entering-combat half of the same rule. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration, for the load order where `Settings`/AceGUI were not there yet in `OnInitialize`. `Register` is idempotent, so it is a no-op on a normal login. Not a deferral to first `/pm config` (anti-pattern #22). Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing — the only one a non-LoD addon gets. |

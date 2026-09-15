@@ -302,10 +302,16 @@ NS.COMMANDS = {
   { "lock",     "Lock panels again", function()
       if NS.Unlock and NS.Unlock:SetUnlocked(false) ~= nil then NS.Print("panels locked") end
     end },
-  { "preview",  "Toggle sample panels", function()
+  { "preview",  "Test mode (sample panels); 'on'/'off' set it, bare toggles",
+    function(rest)
+      -- Drives the same switch as Master controls' Test mode box (options-ui-§15).
       if not NS.Unlock then return end
-      local on = NS.Unlock:TogglePreview()
-      NS.Print("preview " .. (on and "on" or "off"))
+      local arg = rest and tostring(rest):lower():match("^%s*(%S*)") or ""
+      local on
+      if arg == "on" then on = NS.Unlock:SetPreview(true)
+      elseif arg == "off" then on = NS.Unlock:SetPreview(false)
+      else on = NS.Unlock:TogglePreview() end
+      NS.Print("Test mode " .. (on and "on" or "off"))
     end },
   { "recover",  "Bring off-screen panels back into view",
     function() NS.Slash:CliRecover() end },

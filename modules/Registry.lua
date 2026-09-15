@@ -524,16 +524,16 @@ function R:CopyFrom(targetKey, sourceKey)
   return true, source.name
 end
 
--- Everything the session holds that is keyed on a panel id, dropped in one act. Two callers,
--- opposite reasons, one state: a profile switch makes every id name a different panel, `DeleteAll`
--- makes every id name no panel at all. The FLAG belongs in here with the two tables and is the
--- point of the extraction — `SetPreview` opens with `if on == NS.State.preview`, so a flag left
--- true over an empty id list makes `SetPreview(true)` a no-op and the user cannot restart preview
--- to clear it. `NS.State.unlocked` stays out, for the reason dropSessionIDs gives below.
+-- Everything the session holds that is keyed on a panel id, dropped in one act: a profile switch
+-- makes every id name a different panel, `DeleteAll` makes every id name none. The FLAG goes too —
+-- `SetPreview` opens with `if on == NS.State.preview`, so a flag left true over an empty id list
+-- could never be restarted — and clearing it ends test mode, so Master controls' Test mode box is
+-- re-synced (options-ui-§15). `NS.State.unlocked` stays out, for the reason dropSessionIDs gives.
 local function clearPanelSessionState()
   for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
   for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
   NS.State.preview = false
+  if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
 end
 
 -- Re-read the registry after the active AceDB profile changed underneath it.

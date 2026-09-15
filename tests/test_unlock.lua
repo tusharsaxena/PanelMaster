@@ -306,6 +306,77 @@ test("Unlock.TogglePreview: alternates", function()
   assertEqual(R:Count(), 0)
 end)
 
+-- ── Test mode ends when combat starts (options-ui-§15, preview-mode) ─────────────
+
+-- The lines printed while running `fn`.
+local function chatDuring(fn)
+  local chat = T.mocks.__chat
+  local before = #chat
+  fn()
+  local out = {}
+  for i = before + 1, #chat do out[#out + 1] = chat[i] end
+  return out
+end
+
+test("Unlock: combat starting ends test mode, unticks the box and restores the lock", function()
+  fresh()
+  U:SetPreview(true)
+  -- PLAYER_REGEN_DISABLED fires while secure writes are still allowed, so InCombatLockdown() is
+  -- still false at this moment — which is the state the mock is left in.
+  local lines = chatDuring(function() NS.addon:OnRegenDisabled() end)
+  assertFalse(NS.State.preview, "test mode survived the start of combat")
+  assertTrue(NS.Schema:Get("state.preview") == false, "the Test mode box still reads ticked")
+  assertEqual(R:Count(), 0, "the sample panels survived the start of combat")
+  assertFalse(NS.State.unlocked, "ending test mode for combat left the screen unlocked")
+  assertFalse(U.__hasPending(), "ending test mode for combat queued an unlock")
+  assertEqual(#lines, 1, "ending test mode for combat did not print exactly one line")
+  assertTrue(lines[1]:find("Test mode off", 1, true) ~= nil and
+             lines[1]:find("combat started", 1, true) ~= nil,
+    "the combat line does not say test mode ended because combat started: " .. tostring(lines[1]))
+end)
+
+test("Unlock: combat ending test mode keeps an unlock the player already had", function()
+  fresh()
+  U:SetUnlocked(true)
+  U:SetPreview(true)
+  NS.addon:OnRegenDisabled()
+  assertFalse(NS.State.preview)
+  assertTrue(NS.State.unlocked, "combat took away an unlock the player had before test mode")
+  U:SetUnlocked(false)
+end)
+
+test("Unlock: a pull with test mode off says nothing about it", function()
+  fresh()
+  local lines = chatDuring(function() NS.addon:OnRegenDisabled() end)
+  assertEqual(#lines, 0, "a pull with test mode off printed something")
+  assertFalse(NS.State.preview)
+end)
+
+test("Unlock: every test mode start and stop re-syncs the settings panel", function()
+  -- The Test mode checkbox follows the mode, whoever moved it: the verb, combat, or a wipe.
+  fresh()
+  local P = NS.Panel
+  local orig, n = P.Refresh, 0
+  P.Refresh = function() n = n + 1 end
+  local ok, err = pcall(function()
+    U:SetPreview(true)
+    assertTrue(n >= 1, "starting test mode did not refresh the settings panel")
+    local was = n
+    U:SetPreview(false)
+    assertTrue(n > was, "stopping test mode did not refresh the settings panel")
+    U:SetPreview(true)
+    was = n
+    NS.addon:OnRegenDisabled()
+    assertTrue(n > was, "combat ending test mode did not refresh the settings panel")
+    U:SetPreview(true)
+    was = n
+    R:DeleteAll()
+    assertTrue(n > was, "a delete-all that ended test mode did not refresh the settings panel")
+  end)
+  P.Refresh = orig
+  if not ok then error(err, 0) end
+end)
+
 test("Unlock: the overlay outranks every rung of the panel's own ladder", function()
   -- The outline and the name label used to live on the panel frame itself, above its art by DRAW
   -- LAYER alone. That stopped being enough the moment the fill, border, accent and artwork became

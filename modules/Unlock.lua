@@ -369,9 +369,25 @@ function U:SetPreview(on)
   end
 
   NS.Debug("Preview", "preview %s", on and "on" or "off")
+  -- Master controls' Test mode checkbox reads NS.State.preview (settings/Schema.lua), so it follows
+  -- every start and stop from here, whoever caused it: the box, `/pm preview`, or combat. The
+  -- Lock frame box rides the same re-sync, since the way in and the way out both move the lock.
+  if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
   return on
 end
 
 function U:TogglePreview()
   return U:SetPreview(not NS.State.preview)
+end
+
+-- Test mode ends when combat starts (options-ui-§15, preview-mode). Called from
+-- PLAYER_REGEN_DISABLED (core/PanelMaster.lua), which fires while secure writes are still allowed,
+-- so no sample panel is left covering the screen in a fight. The restore of the prior lock needs
+-- no gate at that moment: SetPreview's way out already goes past it (`immediate`), and a lock is
+-- never deferred anyway. Answers whether there was a test mode to end.
+function U:EndPreviewForCombat()
+  if not NS.State.preview then return false end
+  U:SetPreview(false)
+  print("Test mode off \226\128\148 combat started")
+  return true
 end

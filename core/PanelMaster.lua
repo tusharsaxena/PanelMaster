@@ -94,10 +94,13 @@ function addon:OnRegenEnabled()
   if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
 end
 
--- Leaving combat has a second job above; entering it has only this one. Both go through
--- RenderForCombat, which repaints only when the general-visibility setting is one of the two that
--- actually depend on the combat state — so the overwhelmingly common "Always" costs one table read
--- per pull rather than a repaint of every panel.
+-- Entering combat has two jobs, as leaving it does. First, test mode ends (options-ui-§15): this
+-- event fires while secure writes are still allowed, so the sample panels come down and the prior
+-- lock goes back before the fight. Then both events go through RenderForCombat, which repaints
+-- only when the general-visibility setting is one of the two that actually depend on the combat
+-- state — so the overwhelmingly common "Always" costs one table read per pull rather than a
+-- repaint of every panel.
 function addon:OnRegenDisabled()
+  if NS.Unlock and NS.Unlock.EndPreviewForCombat then NS.Unlock:EndPreviewForCombat() end
   if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
 end

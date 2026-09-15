@@ -41,6 +41,11 @@ reset** and takes the panels with it, so `/pm panel deleteall` is no longer need
 7. Turn test mode off → **Expect:** all three placeholders go, including the one you tried to reset.
    Then `/reload` with test mode ON, and `/pm panels` after → **Expect:** no `Preview: *` panels
    survive. Reset must never be able to promote a placeholder into a permanent panel.
+8. Turn test mode on (the **Test mode** box in **General ▸ Master controls**, or `/pm preview on`)
+   with the settings window open, then pull a training dummy. **Expect:** the moment combat starts
+   the three placeholders go, panels are **locked** again (unless you had unlocked before starting),
+   chat says *Test mode off — combat started*, and the **Test mode** box reads unticked. Repeat
+   after `/pm unlock` → **Expect:** you are left **unlocked**.
 
 ## 3. Creating and placing a panel
 
@@ -449,7 +454,8 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    jump width when you tab between pages.
 4. Toggle **Lock frame** and **Test mode** → **Expect:** they do exactly what the slash commands do,
    with **Lock frame** the *inverse* of `/pm unlock`: unticking it unlocks. Ticked is the shipped
-   state, and it is ticked again after every `/reload`.
+   state, and it is ticked again after every `/reload`. With the page open, `/pm preview on` and
+   `/pm preview off` tick and untick **Test mode** as they run.
 5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
    border | Accent bar | Artwork | Opacity and fade** — with **General** active, and **above** it in
    the page's chrome band a **single row**: the **Panel** picker on the left, **Create new panel** on
