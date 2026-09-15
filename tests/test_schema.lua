@@ -255,7 +255,7 @@ test("Schema: the General page's tabs are the designed partition, in strip order
   -- point: a derived expectation agrees with any arrangement of rows, including the one where a row
   -- has quietly drifted into the wrong tab. Adding a row means adding it here too, deliberately.
   local EXPECTED = {
-    { tab = "Master controls", count = 7 },
+    { tab = "Master controls", count = 6 },
     { tab = "Editing",         count = 4 },
     { tab = "New panels",      count = 4 },
   }
@@ -328,8 +328,8 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
     -- Deriving it would agree with any set in any order — including the one where a row has been
     -- dropped or two have swapped — which is the whole failure the standard's fixed order exists to
     -- prevent. The set is canonical, not a menu: this addon is not frameless (modules/Unlock.lua
-    -- calls SetMovable), so every row applies, `Test mode` included — options-ui-§15 made it
-    -- canonical for every addon with a positionable display, the row directly below Debug console.
+    -- calls SetMovable), so every frame row applies. `Test mode` does not: unlocking already shows
+    -- every panel with its outline and name, so options-ui-§15 exempts it and Lock frame is its switch.
     local EXPECTED = {
       { path = "settings.enabled",    label = "Enable Ka0s Panel Master" },
       { path = "settings.visibility", label = "General visibility" },
@@ -337,7 +337,6 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
       { path = "settings.alpha",      label = "Master alpha" },
       { path = "state.locked",        label = "Lock frame" },
       { path = "state.debugConsole",  label = "Debug console" },
-      { path = "state.preview",       label = "Test mode" },
     }
 
     assertEqual(S.Schema[1].group, "Master controls",
@@ -357,75 +356,34 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
     end
   end)
 
-test("Schema: Test mode is the COMPOSER's row, directly below the debug console (options-ui-§15)",
-  function()
-    -- It used to ride the composer's `extra` as a hand-written row. §15 made it canonical, and a
-    -- canonical row is emitted from `testModePath`, never written out here (anti-pattern #80).
-    local at
-    for i, row in ipairs(S.Schema) do
-      if row.path == "state.debugConsole" then at = i end
-    end
-    assertTrue(at ~= nil, "no debug console row to sit under")
-    local row = S.Schema[at + 1]
-    assertEqual(row.path, "state.preview", "the row below Debug console is not Test mode")
-    assertEqual(row.label, "Test mode")
-    assertEqual(row.type, "bool")
-    assertEqual(row.group, "Master controls")
-    assertTrue(row.sessionOnly == true, "Test mode is persisted — it must be session-only")
-    assertTrue(row.startsLine == true, "Test mode does not start its own line")
-    -- The composer gives it no default; the host's `false` is what lets a reset end it.
-    assertTrue(row.default == false, "Test mode has no default = false, so a reset cannot end it")
-    assertEqual(type(row.get), "function", "Test mode's get was never bound")
-    assertEqual(type(row.set), "function", "Test mode's set was never bound")
-
-    local f = assert(io.open("settings/Schema.lua", "r"))
-    local body = f:read("*a")
-    f:close()
-    assertTrue(body:find('testModePath%s*=%s*"state%.preview"') ~= nil,
-      "settings/Schema.lua does not hand the composer testModePath")
-    assertEqual(body:find('"Test mode"', 1, true), nil,
-      "settings/Schema.lua writes the Test mode label itself — the composer owns it")
-    assertEqual(body:find("extra%s*=%s*{"), nil,
-      "settings/Schema.lua still appends a row through the composer's extra")
-  end)
-
-test("Schema: S:Set and S:Get on state.preview start and end test mode", function()
-  local U = NS.Unlock
-  if NS.State.preview then U:SetPreview(false) end
-  U:SetUnlocked(false)
-  local panels = NS.Registry:Count()
-
-  assertTrue((S:Set("state.preview", true)))
-  assertTrue(S:Get("state.preview") == true, "S:Get does not read the live mode")
-  assertTrue(NS.State.preview, "S:Set did not start test mode")
-  assertTrue(NS.Registry:Count() > panels, "starting test mode put no sample panels up")
-
-  assertTrue((S:Set("state.preview", false)))
-  assertTrue(S:Get("state.preview") == false)
-  assertEqual(NS.Registry:Count(), panels, "ending test mode left sample panels behind")
-  assertFalse(NS.State.unlocked, "ending test mode left the screen unlocked")
-  -- Session-only: nothing lands in the profile.
-  assertEqual(NS.db.profile.state, nil, "test mode wrote itself into the profile")
+test("Schema: no Test mode row — Lock frame is this addon's switch (options-ui-§15)", function()
+  -- Unlocking already shows every panel with its outline and name, so the unlocked view IS the
+  -- test mode, and §15 (standard v2.49.0) exempts an addon like that from a second switch.
+  for _, row in ipairs(S.Schema) do
+    assertTrue(row.label ~= "Test mode", "a Test mode row is back at " .. tostring(row.path))
+    assertTrue(row.path ~= "state.preview", "the state.preview row is back")
+  end
+  local f = assert(io.open("settings/Schema.lua", "r"))
+  local body = f:read("*a")
+  f:close()
+  -- An assignment, not the word: the spec's comment names the field to say why it is absent.
+  assertEqual(body:find("testModePath%s*="), nil,
+    "settings/Schema.lua hands the composer a testModePath again")
 end)
 
-test("Schema: ticking Test mode during combat is refused, and the box re-syncs unticked", function()
-  local U = NS.Unlock
-  if NS.State.preview then U:SetPreview(false) end
-  U:SetUnlocked(false)
-  local P = NS.Panel
-  local orig, n = P.Refresh, 0
-  P.Refresh = function() n = n + 1 end
-  T.mocks.__inCombat = true
-  local ok, err = pcall(function()
-    S:Set("state.preview", true)
-    assertFalse(NS.State.preview, "the Test mode box started test mode during combat")
-    assertTrue(S:Get("state.preview") == false, "the Test mode box reads ticked after a refusal")
-    -- The widget ticked itself on the click; the refresh is what puts it back.
-    assertTrue(n >= 1, "a refused start did not re-sync the settings panel")
-  end)
-  T.mocks.__inCombat = false
-  P.Refresh = orig
-  if not ok then error(err, 0) end
+test("Preview: the sample-panel machinery is gone, and only the sweep's marker remains", function()
+  local C = NS.Constants
+  assertEqual(NS.Unlock.SetPreview, nil, "U:SetPreview is back")
+  assertEqual(NS.Unlock.TogglePreview, nil, "U:TogglePreview is back")
+  assertEqual(NS.Unlock.EndPreviewForCombat, nil, "U:EndPreviewForCombat is back")
+  assertEqual(NS.State.preview, nil, "NS.State.preview is back")
+  assertEqual(NS.State.previewIDs, nil, "NS.State.previewIDs is back")
+  assertEqual(C.PREVIEW_PANELS, nil, "C.PREVIEW_PANELS is back")
+  assertEqual(NS.Registry.NewBatch, nil, "R:NewBatch is back, with no caller")
+  assertEqual(NS.Registry.DeleteBatch, nil, "R:DeleteBatch is back, with no caller")
+  -- Kept: an older build's SavedVariables can still hold marked sample panels, and the load sweep
+  -- (NS:SweepPreviewPanels) finds them by this field.
+  assertEqual(C.PREVIEW_FIELD, "preview", "the sweep's marker field went with the machinery")
 end)
 
 test("Schema: the Master controls rows are the COMPOSER's, not eight literals here", function()

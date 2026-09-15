@@ -323,7 +323,7 @@ override one by one; the *Mock fidelity that is load-bearing* list below is the 
   and because it called `Canvas:Enable()` directly, every bus test passed against wiring `OnEnable`
   did not actually do. In-game the result was that nothing was live: no settings change or panel edit
   reached the renderer, and only the two paths calling `Canvas:RenderAll()` directly (lock/unlock and
-  test mode) repainted anything. Calling the real functions means a step dropped from either entry
+  the test mode it had then) repainted anything. Calling the real functions means a step dropped from either entry
   point fails the suite instead of hiding in it.
 - `_kit/loader.lua` reproduces the TOC's two varargs by calling each chunk as
   `chunk("PanelMaster", NS)` under an environment where WoW globals resolve to the mock table first

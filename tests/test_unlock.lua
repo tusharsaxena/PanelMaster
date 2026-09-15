@@ -5,7 +5,6 @@ local U, R, Canvas = NS.Unlock, NS.Registry, NS.Canvas
 
 local function fresh()
   T.mocks.__inCombat = false
-  if NS.State.preview then U:SetPreview(false) end
   U:SetUnlocked(false)
   R:DeleteAll()
   Canvas:RenderAll()
@@ -155,156 +154,8 @@ test("Unlock: the drag handler ignores a frame whose record is gone", function()
   U:SetUnlocked(false)
 end)
 
-test("Unlock.SetPreview: adds the sample panels and turns unlock on", function()
-  fresh()
-  assertEqual(U:SetPreview(true), true)
-  assertEqual(R:Count(), #NS.Constants.PREVIEW_PANELS)
-  assertTrue(NS.State.unlocked, "preview is useless locked")
-  U:SetPreview(false)
-end)
-
-test("Unlock.SetPreview: off removes exactly what it added", function()
-  fresh()
-  R:New("Mine")
-  U:SetPreview(true)
-  U:SetPreview(false)
-  -- The user's own panel must survive; only the tracked preview ids go.
-  assertEqual(R:Count(), 1)
-  assertTrue(R:FindByName("Mine") ~= nil)
-  assertFalse(NS.State.preview)
-end)
-
-test("Unlock.SetPreview: preview panels really render", function()
-  fresh()
-  U:SetPreview(true)
-  for _, rec in ipairs(R:All()) do
-    assertTrue(Canvas:FrameFor(rec.id) ~= nil, rec.name .. " never reached the renderer")
-  end
-  U:SetPreview(false)
-end)
-
-test("Unlock.SetPreview: a name collision skips that placeholder, not the whole preview", function()
-  fresh()
-  local taken = NS.Constants.PREVIEW_PANELS[1].name
-  R:New(taken)
-  U:SetPreview(true)
-  -- One placeholder is skipped; the other two still appear, alongside the user's panel.
-  assertEqual(R:Count(), #NS.Constants.PREVIEW_PANELS)
-  assertTrue(R:FindByName(taken) ~= nil)
-  U:SetPreview(false)
-  assertEqual(R:Count(), 1, "preview removal took the user's panel with it")
-end)
-
-test("Unlock.SetPreview: turning it on twice is a no-op", function()
-  fresh()
-  U:SetPreview(true)
-  local count = R:Count()
-  U:SetPreview(true)
-  assertEqual(R:Count(), count, "preview panels were added twice")
-  U:SetPreview(false)
-end)
-
-test("Unlock.SetPreview: every placeholder carries the preview marker", function()
-  fresh()
-  local mine = R:New("Mine")
-  U:SetPreview(true)
-  local marked = 0
-  for _, rec in ipairs(R:All()) do
-    if rec.id ~= mine.id then
-      -- The marker is the durable half of the pair whose session half is NS.State.previewIDs: it is
-      -- what lets a reload find these records again.
-      assertTrue(rec[NS.Constants.PREVIEW_FIELD] == true, rec.name .. " was not marked as preview")
-      marked = marked + 1
-    end
-  end
-  assertEqual(marked, #NS.Constants.PREVIEW_PANELS)
-  assertEqual(mine[NS.Constants.PREVIEW_FIELD], nil, "a normally-created panel carries the marker")
-  U:SetPreview(false)
-end)
-
-test("Unlock.SetPreview: each transition broadcasts the panel set ONCE", function()
-  fresh()
-  local target, count = {}, 0
-  NS.bus.RegisterMessage(target, R.MSG_PANELS, function() count = count + 1 end)
-
-  U:SetPreview(true)
-  assertEqual(count, 1, "preview on broadcast the panel set more than once")
-  count = 0
-  U:SetPreview(false)
-  assertEqual(count, 1, "preview off broadcast the panel set more than once")
-
-  NS.bus.UnregisterMessage(target, R.MSG_PANELS)
-end)
-
-test("Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked", function()
-  fresh()
-  U:SetPreview(true)
-  -- A per-panel unlock taken while previewing must not outlive the preview: leaving goes through
-  -- SetUnlocked, which is the one place that clears the per-panel sets.
-  local rec = R:New("Mine")
-  U:SetPanelUnlocked(rec.id, true)
-  T.mocks.__inCombat = true
-  U:SetPanelUnlocked(rec.id, true)   -- queued rather than applied
-  T.mocks.__inCombat = false
-
-  U:SetPreview(false)
-  assertFalse(NS.State.unlocked)
-  assertEqual(next(NS.State.unlockedPanels), nil, "a per-panel unlock survived the preview")
-  assertFalse(U.__hasPending(rec.id), "a queued per-panel unlock survived the preview")
-end)
-
-test("Unlock.SetPreview: a start during combat is refused, with one line (options-ui-§15)", function()
-  fresh()
-  -- Test mode ends when combat starts, and for the same reason it cannot START in one: no
-  -- placeholder may cover the screen in a fight. Refused, not queued — nothing is left waiting to
-  -- put sample panels up when the fight ends.
-  local chat = T.mocks.__chat
-  local before = #chat
-  T.mocks.__inCombat = true
-  local ret = U:SetPreview(true)
-  T.mocks.__inCombat = false
-  local lines = {}
-  for i = before + 1, #chat do lines[#lines + 1] = chat[i] end
-  assertEqual(ret, nil, "a refused start did not answer nil")
-  assertFalse(NS.State.preview, "test mode started during combat")
-  assertEqual(R:Count(), 0, "a refused start put sample panels up")
-  assertFalse(NS.State.unlocked, "a refused start unlocked the screen")
-  assertFalse(U.__hasPending(), "a refused start queued an unlock")
-  assertEqual(#lines, 1, "a refused start did not print exactly one line")
-  assertTrue(lines[1]:lower():find("cannot start test mode during combat", 1, true) ~= nil,
-    "the refusal does not say why: " .. tostring(lines[1]))
-end)
-
-test("Unlock.SetPreview: leaving test mode during combat is immediate and queues nothing (F-014)",
-  function()
-    fresh()
-    U:SetPreview(true)
-    T.mocks.__inCombat = true
-    -- The lock lands now, not on the next PLAYER_REGEN_ENABLED, and no stray "panels unlocked" is
-    -- queued behind it.
-    U:SetPreview(false)
-    T.mocks.__inCombat = false
-    assertFalse(NS.State.preview)
-    assertFalse(NS.State.unlocked, "leaving test mode during combat left the screen unlocked")
-    assertFalse(U.__hasPending(), "leaving test mode during combat queued an unlock")
-  end)
-
-test("Unlock.SetPreview: leaving test mode in combat keeps a prior unlock, queues nothing (F-014)",
-  function()
-    fresh()
-    U:SetUnlocked(true)
-    U:SetPreview(true)
-    T.mocks.__inCombat = true
-    U:SetPreview(false)
-    T.mocks.__inCombat = false
-    -- The user was unlocked before test mode, so they are unlocked after it — and no phantom unlock
-    -- is sitting in the queue to print "panels unlocked" at them when the fight ends.
-    assertTrue(NS.State.unlocked, "test mode took away an unlock the user already had")
-    assertFalse(U.__hasPending(), "a test mode round-trip queued a redundant unlock")
-  end)
-
 test("Unlock: the global combat gate still defers a plain unlock (F-014)", function()
-  -- The bypass belongs to preview alone. A bare /pm unlock mid-pull must still be deferred.
+  -- A bare /pm unlock mid-pull is deferred; nothing in this addon bypasses the gate.
   fresh()
   T.mocks.__inCombat = true
   assertEqual(U:SetUnlocked(true), nil, "the combat gate stopped deferring a plain unlock")
@@ -314,84 +165,6 @@ test("Unlock: the global combat gate still defers a plain unlock (F-014)", funct
   U:SetUnlocked(false)
 end)
 
-test("Unlock.TogglePreview: alternates", function()
-  fresh()
-  assertEqual(U:TogglePreview(), true)
-  assertEqual(U:TogglePreview(), false)
-  assertEqual(R:Count(), 0)
-end)
-
--- ── Test mode ends when combat starts (options-ui-§15, preview-mode) ─────────────
-
--- The lines printed while running `fn`.
-local function chatDuring(fn)
-  local chat = T.mocks.__chat
-  local before = #chat
-  fn()
-  local out = {}
-  for i = before + 1, #chat do out[#out + 1] = chat[i] end
-  return out
-end
-
-test("Unlock: combat starting ends test mode, unticks the box and restores the lock", function()
-  fresh()
-  U:SetPreview(true)
-  -- PLAYER_REGEN_DISABLED fires while secure writes are still allowed, so InCombatLockdown() is
-  -- still false at this moment — which is the state the mock is left in.
-  local lines = chatDuring(function() NS.addon:OnRegenDisabled() end)
-  assertFalse(NS.State.preview, "test mode survived the start of combat")
-  assertTrue(NS.Schema:Get("state.preview") == false, "the Test mode box still reads ticked")
-  assertEqual(R:Count(), 0, "the sample panels survived the start of combat")
-  assertFalse(NS.State.unlocked, "ending test mode for combat left the screen unlocked")
-  assertFalse(U.__hasPending(), "ending test mode for combat queued an unlock")
-  assertEqual(#lines, 1, "ending test mode for combat did not print exactly one line")
-  assertTrue(lines[1]:find("Test mode off", 1, true) ~= nil and
-             lines[1]:find("combat started", 1, true) ~= nil,
-    "the combat line does not say test mode ended because combat started: " .. tostring(lines[1]))
-end)
-
-test("Unlock: combat ending test mode keeps an unlock the player already had", function()
-  fresh()
-  U:SetUnlocked(true)
-  U:SetPreview(true)
-  NS.addon:OnRegenDisabled()
-  assertFalse(NS.State.preview)
-  assertTrue(NS.State.unlocked, "combat took away an unlock the player had before test mode")
-  U:SetUnlocked(false)
-end)
-
-test("Unlock: a pull with test mode off says nothing about it", function()
-  fresh()
-  local lines = chatDuring(function() NS.addon:OnRegenDisabled() end)
-  assertEqual(#lines, 0, "a pull with test mode off printed something")
-  assertFalse(NS.State.preview)
-end)
-
-test("Unlock: every test mode start and stop re-syncs the settings panel", function()
-  -- The Test mode checkbox follows the mode, whoever moved it: the verb, combat, or a wipe.
-  fresh()
-  local P = NS.Panel
-  local orig, n = P.Refresh, 0
-  P.Refresh = function() n = n + 1 end
-  local ok, err = pcall(function()
-    U:SetPreview(true)
-    assertTrue(n >= 1, "starting test mode did not refresh the settings panel")
-    local was = n
-    U:SetPreview(false)
-    assertTrue(n > was, "stopping test mode did not refresh the settings panel")
-    U:SetPreview(true)
-    was = n
-    NS.addon:OnRegenDisabled()
-    assertTrue(n > was, "combat ending test mode did not refresh the settings panel")
-    U:SetPreview(true)
-    was = n
-    R:DeleteAll()
-    assertTrue(n > was, "a delete-all that ended test mode did not refresh the settings panel")
-  end)
-  P.Refresh = orig
-  if not ok then error(err, 0) end
-end)
-
 test("Unlock: the overlay outranks every rung of the panel's own ladder", function()
   -- The outline and the name label used to live on the panel frame itself, above its art by DRAW
   -- LAYER alone. That stopped being enough the moment the fill, border, accent and artwork became
@@ -399,7 +172,7 @@ test("Unlock: the overlay outranks every rung of the panel's own ladder", functi
   -- on a child at base+2 buries an OVERLAY texture on the parent at base.
   --
   -- The symptom was a gold outline and a panel name rendered underneath the panel's own 85%-opaque
-  -- fill on every unlock and every preview — i.e. exactly the panels a user is trying to find.
+  -- fill on every unlock — i.e. exactly the panels a user is trying to find.
   fresh()
   local C = NS.Constants
   R:New("ZOrder")

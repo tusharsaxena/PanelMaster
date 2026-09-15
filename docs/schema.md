@@ -53,7 +53,8 @@ profile renders differently:
 `id`, `name` and `frameName` are the record's **identity** — what the panel *is* rather than how it
 looks — and the three seams that rewrite a record wholesale all preserve them: `R:Reset` restores
 them after the template rewrite, `COPY_EXCLUDED` keeps `CopyFrom` off them, and `R:Rename` writes
-only `name`. `frameName` and the preview marker are deliberately absent from `PANEL_TEMPLATE` and
+only `name`. `frameName` and the legacy preview marker (which only the load sweep reads, to remove
+an older build's sample panels) are deliberately absent from `PANEL_TEMPLATE` and
 from `PANEL_FIELD_TYPE`, so neither is a settable field.
 
 `core/Constants.lua`'s `PANEL_TEMPLATE` is the single definition of that shape — the shipped default

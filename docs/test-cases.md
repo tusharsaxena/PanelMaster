@@ -54,7 +54,7 @@ badge and any count quoted in the docs must agree with it.
 - Compat.MouseIsOver: answers without the frame taking mouse input
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
-### test_constants.lua (17)
+### test_constants.lua (16)
 
 - Constants: the strata list runs lowest to highest and starts at BACKGROUND
 - Constants: new panels default to LOW
@@ -68,7 +68,6 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the template's own values are valid by its own rules
 - Constants: the editor's offset reach is named, symmetric and wide enough to be useful
 - Constants: no slider in the panel editor decides its own bounds
-- Constants: preview panels are valid panel overrides
 - Constants: the mono font and logo point at this addon's folder
 - Constants: the logo file named by LOGO_PATH exists
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
@@ -94,7 +93,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (50)
+### test_registry.lua (43)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -107,7 +106,6 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Delete: an unknown panel is an error, not a silent no-op
 - Registry.DeleteAll: empties the registry and reports the count
 - Registry.DeleteAll: drops the session state keyed on the panels it removed (F-020)
-- Registry.DeleteAll: the preview flag goes with the ids it belongs to (PANELMASTER-R-02)
 - Registry.Resolve: finds by name and by id
 - Registry.Resolve: a name wins over an id that looks like it
 - Registry.Rename: renames and reports the old name
@@ -129,12 +127,6 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Set: clamps out-of-range input rather than rejecting it
 - Registry.SetPosition: writes both coordinates at once
 - Registry.FormatField: renders each field type readably
-- Registry.Reset: refuses a preview placeholder rather than stripping its marker
-- Registry.Reset: a reset placeholder is still swept, so preview leaves no litter
-- Registry: a preview placeholder cannot lose its marker through any write seam
-- Registry.CopyFrom: never spreads the preview marker onto a real panel
-- Registry.NewBatch: creates every spec and broadcasts once
-- Registry.NewBatch: skips a spec whose name is taken, keeping the rest
 - Registry.Recover: leaves an on-screen TOPLEFT panel alone
 - Registry.Recover: still rescues a genuinely off-screen TOPLEFT panel
 - Registry.Recover: survives a record whose anchor is missing or junk (F-006)
@@ -186,7 +178,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas.RenderForCombat: repaints only for the two settings that depend on combat
 - Canvas: leaving and entering combat both reach the renderer
 
-### test_unlock.lua (37)
+### test_unlock.lua (21)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
@@ -204,23 +196,7 @@ badge and any count quoted in the docs must agree with it.
 - Unlock: a DISABLED panel is still shown while unlocked
 - Unlock: the drag handler writes the dropped position back to the record
 - Unlock: the drag handler ignores a frame whose record is gone
-- Unlock.SetPreview: adds the sample panels and turns unlock on
-- Unlock.SetPreview: off removes exactly what it added
-- Unlock.SetPreview: preview panels really render
-- Unlock.SetPreview: a name collision skips that placeholder, not the whole preview
-- Unlock.SetPreview: turning it on twice is a no-op
-- Unlock.SetPreview: every placeholder carries the preview marker
-- Unlock.SetPreview: each transition broadcasts the panel set ONCE
-- Unlock.SetPreview: leaving preview puts the lock back through SetUnlocked
-- Unlock.SetPreview: a start during combat is refused, with one line (options-ui-§15)
-- Unlock.SetPreview: leaving test mode during combat is immediate and queues nothing (F-014)
-- Unlock.SetPreview: leaving test mode in combat keeps a prior unlock, queues nothing (F-014)
 - Unlock: the global combat gate still defers a plain unlock (F-014)
-- Unlock.TogglePreview: alternates
-- Unlock: combat starting ends test mode, unticks the box and restores the lock
-- Unlock: combat ending test mode keeps an unlock the player already had
-- Unlock: a pull with test mode off says nothing about it
-- Unlock: every test mode start and stop re-syncs the settings panel
 - Unlock: the overlay outranks every rung of the panel's own ladder
 - Unlock: the overlay follows the panel's level when the panel's level changes
 - Unlock: the outline thickness comes from the setting, and ships at the old literal
@@ -547,7 +523,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (31)
+### test_schema.lua (30)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -575,21 +551,18 @@ badge and any count quoted in the docs must agree with it.
 - Schema: a group's rows are contiguous, so no tab's heading prints twice
 - Schema: the Panels page's tab strip is the designed one, in strip order
 - Schema: Master controls is the FIRST tab, and holds exactly the rows it is entitled to
-- Schema: Test mode is the COMPOSER's row, directly below the debug console (options-ui-§15)
-- Schema: S:Set and S:Get on state.preview start and end test mode
-- Schema: ticking Test mode during combat is refused, and the box re-syncs unticked
+- Schema: no Test mode row — Lock frame is this addon's switch (options-ui-§15)
+- Preview: the sample-panel machinery is gone, and only the sweep's marker remains
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (64)
+### test_slash.lua (62)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
 - Slash.PrintHelp: one row per command, plus a header
 - Slash.PrintHelp: no line ends in a colon (slash-commands-§4)
-- Slash: `/pm test on|off` sets test mode, and bare `/pm test` toggles it
-- Slash: `/pm preview` is gone — the verb is `/pm test`, with no alias
-- Slash: `/pm test on` during combat is refused with one line, and starts nothing
+- Slash: no `test` or `preview` verb — `/pm lock` and `/pm unlock` are the switch
 - Slash.OnSlash: a bare command prints help
 - Slash.OnSlash: dispatches from the COMMANDS table
 - Slash.OnSlash: the verb is case-insensitive
@@ -713,7 +686,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 
-### test_profiles.lua (24)
+### test_profiles.lua (23)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -730,7 +703,6 @@ badge and any count quoted in the docs must agree with it.
 - Database: switching profile re-renders the panels
 - Database: an incoming profile is repaired per RECORD, not by re-running migrations
 - Database: switching profile sanitizes the incoming records
-- Database: a profile switch drops preview's tracked ids BEFORE they can delete a real panel
 - Database: a profile switch drops per-panel unlocks rather than reissuing them
 - Database: the profile reload goes through Registry, keeping one sender
 - Panel: the Profiles subcategory is registered
@@ -922,21 +894,21 @@ badge and any count quoted in the docs must agree with it.
 |-------|------:|
 | test_util.lua | 31 |
 | test_compat.lua | 11 |
-| test_constants.lua | 17 |
+| test_constants.lua | 16 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 50 |
+| test_registry.lua | 43 |
 | test_canvas.lua | 36 |
-| test_unlock.lua | 37 |
+| test_unlock.lua | 21 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 31 |
-| test_slash.lua | 64 |
+| test_schema.lua | 30 |
+| test_slash.lua | 62 |
 | test_panel.lua | 62 |
-| test_profiles.lua | 24 |
+| test_profiles.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 42 |
 | test_surface_parity.lua | 4 |
@@ -949,4 +921,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **823** |
+| **Total** | **795** |

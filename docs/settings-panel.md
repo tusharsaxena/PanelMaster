@@ -41,7 +41,6 @@ game's own Settings ▸ AddOns list.
 | Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
 | Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
 | Master controls | Debug console | Show the debug window. Resets when you reload. |
-| Master controls | Test mode | Put three sample panels on screen, unlocked, until you untick it. Ends by itself when combat starts, cannot be started during combat, and is off again when you reload. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
 | Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not affected."* |
 | Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
@@ -64,7 +63,7 @@ the same size whether you have two panels or twenty. The controls, in full:
 |---|---|
 | Enabled | Draw this panel at all. |
 | Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
-| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. Test mode's sample panels cannot be reset. |
+| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. |
 | Delete | Remove the panel. |
 | Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to — renaming does not change it. |
 | Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
@@ -148,7 +147,7 @@ this bug for a strip that never re-wraps), and it answers only a **change** in w
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
+| General | **Master controls**, **Editing**, **New panels** | 6, 4, 4 — 14 schema rows |
 | Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 
@@ -167,7 +166,6 @@ library's, so nine addons cannot drift into nine versions of the same tab.
 | Enable Ka0s Panel Master | General visibility |
 | Master scale | Master alpha |
 | Lock frame | Debug console |
-| Test mode | |
 | *Reset position* | *Reset all settings* |
 
 The last row is the group's closing **button pair**, drawn by the `afterGroup` hook the composer
@@ -195,14 +193,12 @@ panel and reloads comes back to a locked UI, which is what this addon has always
 stored value behind it, so the sense change is not a migration; the negation is pinned in both
 directions in `tests/test_schema.lua`.
 
-**Test mode** is canonical as well (`options-ui-§15`): every addon with a positionable display
-ships one. The composer emits the row from `testModePath = "state.preview"`, session-only and on
-its own line directly below *Debug console*, and `settings/Schema.lua` wires it the way it wires the
-console row: `default = false`, this addon's tooltip, and a `get`/`set` over `NS.State.preview` and
-`Unlock:SetPreview`. The mode ends when combat starts (`Unlock:EndPreviewForCombat`, from
-`PLAYER_REGEN_DISABLED`), and a start during combat is refused with one gray line. The box follows
-every start and stop, a refused one included, because `SetPreview` and the registry's session
-sweep both re-sync the page. `/pm test [on|off]` drives the same switch.
+**There is no Test mode row.** Unlocking already shows every panel, disabled ones included, with
+its gold outline and name, so the unlocked view *is* this addon's test mode. `options-ui-§15`
+(standard v2.49.0) exempts an addon like that from a second switch: *Lock frame* is the switch, and
+`/pm unlock` / `/pm lock` are its verbs. `settings/Schema.lua` therefore hands the composer no
+`testModePath`. The three sample panels older builds put up went with it; a profile saved
+mid-preview is still cleaned at load (`NS:SweepPreviewPanels`).
 
 **Reset all settings** is `options-ui-§12`'s global reset, verbatim and confirm-gated, and it is the
 same entry point the header **Defaults** button and `/pm resetall` already share — `Sl:ConfirmResetAll`.
@@ -329,10 +325,8 @@ current build, or have been copied from one that did.
 
 **It also drops every session table keyed by panel id, before it sanitizes or broadcasts.** Ids are
 allocated per profile (`nextID` lives in `db.profile` and a fresh profile starts at 1), so an id held
-across a switch is not stale-but-harmless — it is a live reference to a *different* panel. Four
-things held one: `NS.State.previewIDs` (the destructive case — turning test mode off called
-`DeleteBatch` with the outgoing profile's ids, which resolve against the incoming one and destroyed
-real panels), `NS.State.preview` itself, `NS.State.unlockedPanels`, `NS.Unlock`'s deferred
+across a switch is not stale-but-harmless — it is a live reference to a *different* panel. Three
+things hold one: `NS.State.unlockedPanels`, `NS.Unlock`'s deferred
 `pendingPanels` (via `Unlock:ForgetPending`), and the Panels editor's own selection (via
 `PanelEditor:ForgetSelection`). The global unlock flag is deliberately kept: it is a mode the user
 put the screen in, not a claim about any particular panel.

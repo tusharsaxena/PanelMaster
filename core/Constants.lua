@@ -538,27 +538,16 @@ C.MEDIA_FALLBACK = {
   statusbar  = C.SOLID_MEDIA_NAME,
 }
 
--- ── Preview mode ────────────────────────────────────────────────────────────────
--- The placeholder panels test mode (`/pm test`) stands up (preview-mode). Deliberately three, deliberately
--- offset from center and from each other: one panel proves the render path, three prove that
--- position, size and color are all really being applied.
--- The field a preview placeholder carries in the registry. Preview panels are REAL records (that is
--- what makes preview exercise the real render path, preview-mode) but they are not the user's work,
--- so they must not survive a reload. The marker is the durable half of the pair whose session half
--- is NS.State.previewIDs: ids are lost on /reload, this is not.
+-- ── Preview marker (legacy) ─────────────────────────────────────────────────────
+-- The field an older build's sample panels carried in the registry. Test mode and its samples are
+-- gone (options-ui-§15 exempts an addon whose unlocked view is its preview), but a profile saved
+-- mid-preview by an older build can still hold marked records, so NS:SweepPreviewPanels
+-- (core/Database.lua) removes them at load and on every profile reload. This constant is all that
+-- sweep needs, and all that is left of the machinery.
 --
 -- Deliberately absent from PANEL_FIELD_TYPE, PANEL_FIELD_ORDER and PANEL_TEMPLATE, so the CLI cannot
 -- set it, `/pm panel <name>` does not print it, and a normally-created panel never carries it.
 C.PREVIEW_FIELD = "preview"
-
-C.PREVIEW_PANELS = {
-  { name = "Preview: Chat",    width = 380, height = 160, point = "BOTTOMLEFT",
-    relPoint = "BOTTOMLEFT", x = 40,  y = 40,  bgColor = { 0.10, 0.14, 0.22, 0.80 } },
-  { name = "Preview: Bars",    width = 460, height = 80,  point = "BOTTOM",
-    relPoint = "BOTTOM",     x = 0,   y = 24,  bgColor = { 0.18, 0.10, 0.20, 0.80 } },
-  { name = "Preview: Minimap", width = 180, height = 180, point = "TOPRIGHT",
-    relPoint = "TOPRIGHT",   x = -30, y = -30, bgColor = { 0.10, 0.20, 0.14, 0.80 } },
-}
 
 -- ── Global frame names ──────────────────────────────────────────────────────────
 -- Every panel frame is created with a deterministic global name, `PanelMaster_Panel_<slug>`, so

@@ -55,9 +55,9 @@ end
 
 function addon:OnEnable()
   -- Subscribe the renderer to the message bus. Without this NOTHING is live: every settings change
-  -- and every panel edit broadcasts into a bus with no listener, and the only things that repaint
-  -- are the two paths that call Canvas:RenderAll() directly (lock/unlock and test mode). That was
-  -- the shape of the bug — panels appeared frozen until test mode was toggled.
+  -- and every panel edit broadcasts into a bus with no listener, and the only thing that repaints
+  -- is the lock/unlock path, which calls Canvas:RenderAll() directly. That was the shape of the
+  -- bug — panels appeared frozen until something unlocked or locked them.
   if NS.Canvas and NS.Canvas.Enable then NS.Canvas:Enable() end
 
   -- Discover user-installed Sunn - Viewport Art packs and add them to the artwork catalog. Here in
@@ -94,13 +94,10 @@ function addon:OnRegenEnabled()
   if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
 end
 
--- Entering combat has two jobs, as leaving it does. First, test mode ends (options-ui-§15): this
--- event fires while secure writes are still allowed, so the sample panels come down and the prior
--- lock goes back before the fight. Then both events go through RenderForCombat, which repaints
--- only when the general-visibility setting is one of the two that actually depend on the combat
--- state — so the overwhelmingly common "Always" costs one table read per pull rather than a
--- repaint of every panel.
+-- Leaving combat has a second job above; entering it has only this one. Both go through
+-- RenderForCombat, which repaints only when the general-visibility setting is one of the two that
+-- actually depend on the combat state — so the overwhelmingly common "Always" costs one table read
+-- per pull rather than a repaint of every panel.
 function addon:OnRegenDisabled()
-  if NS.Unlock and NS.Unlock.EndPreviewForCombat then NS.Unlock:EndPreviewForCombat() end
   if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
 end

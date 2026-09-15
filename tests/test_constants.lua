@@ -104,13 +104,6 @@ test("Constants: no slider in the panel editor decides its own bounds", function
   end
 end)
 
-test("Constants: preview panels are valid panel overrides", function()
-  for _, spec in ipairs(C.PREVIEW_PANELS) do
-    assertTrue(NS.Util.IsPoint(spec.point), spec.name .. " has a bad anchor")
-    assertTrue(spec.width >= C.MIN_SIZE and spec.height >= C.MIN_SIZE)
-  end
-end)
-
 test("Constants: the mono font and logo point at this addon's folder", function()
   -- Both paths are absolute from Interface\AddOns\, so both have to name THIS folder — the font's
   -- by way of the vendored payload underneath it (libs/LibKa0s/media/fonts/), the logo's directly.

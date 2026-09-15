@@ -40,7 +40,7 @@ Loader.loadAll(Loader.tocFiles("PanelMaster.toc"), NS, mocks)
 -- (InitDB, Schema:Register, Slash:Register, Panel:Register, Canvas:Enable) — and because it called
 -- Canvas:Enable() directly, every bus test passed against wiring that OnEnable never actually
 -- performed. In-game, no settings change or panel edit ever reached the renderer: only the two paths
--- that call Canvas:RenderAll() directly (lock/unlock and test mode) repainted anything.
+-- that call Canvas:RenderAll() directly (lock/unlock and the test mode of the time) repainted anything.
 --
 -- A harness that reproduces the lifecycle by hand can drift from it silently. Calling the real
 -- functions means a step dropped from OnInitialize or OnEnable fails the suite instead of hiding

@@ -46,49 +46,14 @@ test("Slash.PrintHelp: no line ends in a colon (slash-commands-§4)", function()
   end
 end)
 
-test("Slash: `/pm test on|off` sets test mode, and bare `/pm test` toggles it", function()
-  fresh()
-  local U = NS.Unlock
-  if NS.State.preview then U:SetPreview(false) end
-  Sl:OnSlash("test on")
-  assertTrue(NS.State.preview, "`/pm test on` did not start test mode")
-  Sl:OnSlash("test on")
-  assertTrue(NS.State.preview, "a second `/pm test on` turned test mode off")
-  local lines = capture(function() Sl:OnSlash("test off") end)
-  assertFalse(NS.State.preview, "`/pm test off` did not end test mode")
-  assertTrue(lines[#lines]:find("Test mode off", 1, true) ~= nil,
-    "`/pm test off` did not say test mode is off: " .. tostring(lines[#lines]))
-  Sl:OnSlash("test off")
-  assertFalse(NS.State.preview, "a second `/pm test off` turned test mode on")
-  Sl:OnSlash("test")
-  assertTrue(NS.State.preview, "bare `/pm test` did not toggle test mode on")
-  Sl:OnSlash("test")
-  assertFalse(NS.State.preview, "bare `/pm test` did not toggle test mode off")
-  U:SetUnlocked(false)
-end)
-
-test("Slash: `/pm preview` is gone — the verb is `/pm test`, with no alias", function()
-  fresh()
-  if NS.State.preview then NS.Unlock:SetPreview(false) end
-  for _, cmd in ipairs(NS.COMMANDS) do
-    assertTrue(cmd[1] ~= "preview", "the old `preview` verb is still in NS.COMMANDS")
-  end
-  Sl:OnSlash("preview on")
-  assertFalse(NS.State.preview, "`/pm preview on` still starts test mode")
-end)
-
-test("Slash: `/pm test on` during combat is refused with one line, and starts nothing", function()
-  fresh()
-  if NS.State.preview then NS.Unlock:SetPreview(false) end
-  T.mocks.__inCombat = true
-  local lines = capture(function() Sl:OnSlash("test on") end)
-  local bare = capture(function() Sl:OnSlash("test") end)
-  T.mocks.__inCombat = false
-  assertFalse(NS.State.preview, "`/pm test` started test mode during combat")
-  assertEqual(#lines, 1, "a refused `/pm test on` did not print exactly one line")
-  assertTrue(lines[1]:lower():find("cannot start test mode during combat", 1, true) ~= nil,
-    "the refusal does not say why: " .. tostring(lines[1]))
-  assertEqual(#bare, 1, "a refused bare `/pm test` did not print exactly one line")
+test("Slash: no `test` or `preview` verb — `/pm lock` and `/pm unlock` are the switch", function()
+  -- options-ui-§15's exemption: the unlocked view is this addon's test mode, so it ships no test
+  -- verb and the lock verbs drive it.
+  local have = {}
+  for _, cmd in ipairs(NS.COMMANDS) do have[cmd[1]] = true end
+  assertFalse(have.test == true, "a `test` verb is back in NS.COMMANDS")
+  assertFalse(have.preview == true, "a `preview` verb is back in NS.COMMANDS")
+  assertTrue(have.lock == true and have.unlock == true, "`/pm lock` or `/pm unlock` is missing")
 end)
 
 test("Slash.OnSlash: a bare command prints help", function()

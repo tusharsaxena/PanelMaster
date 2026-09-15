@@ -17,16 +17,17 @@ local addonName, NS = ...
 function NS:InitDB()
   NS.db = LibStub("AceDB-3.0"):New(addonName .. "DB", NS.defaults, true)
   NS:RunMigrations()          -- normalize the persisted schema before any panel is read
-  NS:SweepPreviewPanels()     -- orphans from a /reload with test mode on
+  NS:SweepPreviewPanels()     -- sample panels an older build's test mode left behind
   NS:RegisterProfileCallbacks()
 end
 
--- Remove every preview placeholder left in the profile, and report how many went.
+-- Remove every sample panel an older build's test mode left in the profile, and report how many went.
 --
--- Preview panels are real records (that is what makes preview exercise the real render path), and
--- they are withdrawn on the way out of preview — but a /reload with test mode on never gets to that
--- exit, and the ids that tracked them died with the session. The marker on the record is the
--- durable half of that pair, so this is the only thing that can find them afterwards.
+-- Test mode is gone: unlocking already shows every panel, so options-ui-§15 exempts this addon and
+-- Lock frame is its switch. But older builds wrote their three samples into the registry as real
+-- records and withdrew them on the way out of test mode, and a /reload with it on never got to that
+-- exit. The marker on the record (C.PREVIEW_FIELD) is the only thing that can find them, so this
+-- sweep, and that one constant, stay after the rest of the machinery went.
 --
 -- Walks BACKWARDS so removing an entry cannot make the loop skip the one after it. Runs in
 -- OnInitialize, i.e. before Canvas:Enable and before the first RenderAll, so no orphan is ever
@@ -36,8 +37,8 @@ end
 -- this point in the lifecycle, and a per-record broadcast here would be N rebuilds of a UI that does
 -- not exist.
 --
--- Known trade-off: a preview panel the user ran `/pm panel <name> reset` on has lost its marker and
--- survives as a real panel. Strictly better than every preview panel surviving.
+-- Known trade-off: a sample panel an older build let the user reset has lost its marker and
+-- survives as a real panel. Strictly better than every sample panel surviving.
 function NS:SweepPreviewPanels()
   local p = NS.db and NS.db.profile
   if not (p and p.panels) then return 0 end

@@ -146,12 +146,11 @@ S.Schema = {
 -- cannot exist at this file's load time, and the seam that CAN build them calls in.
 --
 -- WHAT A LIBRARY-LESS INSTALL LOSES, said out loud because options-ui-§1 requires it measured
--- rather than assumed: these seven rows, and nothing else — all seven are the composer's, "Test
--- mode" included (it comes from `testModePath`, below). The stub's composers answer an empty list
--- (settings/OptionsSetup.lua explains why a hand-copied set there would be the copy that goes
--- stale), so `/pm list|get|set` in a degraded install reaches the Editing and New panels rows
--- only, and `/pm test` is the one way into test mode there. tests/test_schema.lua pins that
--- count by name so it can never widen silently.
+-- rather than assumed: these six rows, and nothing else — all six are the composer's. The stub's
+-- composers answer an empty list (settings/OptionsSetup.lua explains why a hand-copied set there
+-- would be the copy that goes stale), so `/pm list|get|set` in a degraded install reaches the
+-- Editing and New panels rows only. tests/test_schema.lua pins that count by name so it can never
+-- widen silently.
 
 -- Wire this addon's half onto one composed row, found by the path the composer gave it.
 --
@@ -204,9 +203,9 @@ function S:InstallMaster(H)
     -- the composer's own default is the other way round, and adopting it would hand every
     -- install a screen full of draggable, labeled panels on the next login.
     defaults  = { enabled = true, visibility = "always", scale = 1, alpha = 1, locked = true },
-    -- Test mode (options-ui-§15): the composer emits the row, verbatim at this path, directly below
-    -- Debug console. Session state, so outside the block's `settings.` prefix like the console's.
-    testModePath = "state.preview",
+    -- No `testModePath`, on purpose (options-ui-§15, standard v2.49.0): unlocking already shows
+    -- every panel with its outline and name, so the unlocked view IS this addon's test mode and
+    -- Lock frame is its switch. A second switch would only duplicate it.
     onResetPosition = function()
       local n = NS.Registry:ResetPositions()
       print(("moved %d %s back to the middle of the screen."):format(n, n == 1 and "panel" or "panels"))
@@ -262,17 +261,6 @@ function S:InstallMaster(H)
       if not NS.DebugLog then return end
       if v then NS.DebugLog:Show() else NS.DebugLog:Hide() end
     end,
-  })
-  -- Bound the way the console row is. The composer gives the row no default; `false` is this
-  -- addon's, and it is what lets a reset end the mode. Ending it on combat is modules/Unlock.lua's
-  -- U:EndPreviewForCombat, and U:SetPreview re-syncs this box on every start and stop.
-  wire(rows, "state.preview", {
-    default = false,
-    tooltip = "Put three sample panels on screen so you can see what a panel looks like. They are "
-      .. "removed again when you turn this off, and when combat starts. Session-only \226\128\148 "
-      .. "off after a reload.",
-    get = function() return NS.State.preview end,
-    set = function(v) if NS.Unlock then NS.Unlock:SetPreview(v) end end,
   })
 
   -- Range and membership validation for the composed rows, built from each row's OWN bounds rather

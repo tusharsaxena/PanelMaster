@@ -268,16 +268,16 @@ NS.Helpers = lib:New({
   --                and with `resetProfile` supplied it would visit only the session-only rows, so
   --                there is nothing for either hook to shape.
   --
-  --                The session-only rows -- `state.locked`, `state.preview`, `state.debugConsole` --
+  --                The session-only rows -- `state.locked` and `state.debugConsole` --
   --                are outside `Sl:DoResetAll`, and that is deliberate rather than an oversight. They
   --                store nothing in the DB (settings/Schema.lua's `S:Set` sends a sessionOnly row
   --                to its own `set` and never to WritePath), so a profile reset has nothing of
   --                theirs to reset. Only the library's unreached walk would call `applyDefault` on
   --                them. What a reset DOES sweep is the durable
   --                half: `OnProfileReset` reaches the `reload` closure in core/Database.lua, which
-  --                clears preview placeholder RECORDS out of the profile and reloads the registry.
-  --                The session flags themselves are cleared by their own `set`, or by a /reload —
-  --                except `state.preview`, whose flag the registry's reload sweep clears as well.
+  --                sweeps leftover sample-panel RECORDS (an older build's test mode) out of the
+  --                profile and reloads the registry. The session flags themselves are cleared by
+  --                their own `set`, or by a /reload.
   --   sliderCommit — the default (commit on release) is what this addon has always done. Neither
   --                slider drives anything the user can see mid-drag: grid size applies to the next
   --                drag, and default opacity applies to the next panel created.
@@ -292,8 +292,8 @@ NS.Helpers = lib:New({
 -- Before settings/Panel.lua, which reads NS.Schema.MasterAfterGroup at render time — but the
 -- ordering that actually binds is NS.addon:OnInitialize's `NS.Schema:Register()`, which validates
 -- every path against the defaults and can only reach the composed rows once this has run. Four of
--- the seven are db-backed and resolve against defaults/Profile.lua; the other three are
--- session-only (state.locked, state.debugConsole, state.preview) and Register exempts those by
+-- the six are db-backed and resolve against defaults/Profile.lua; the other two are
+-- session-only (state.locked, state.debugConsole) and Register exempts those by
 -- design. Run this any later and the rows are simply not in the array yet — nothing is reported
 -- because nothing is checked.
 NS.Schema:InstallMaster(NS.Helpers)

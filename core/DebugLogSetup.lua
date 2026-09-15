@@ -39,8 +39,8 @@ local UNAVAILABLE = NS.LIBKA0S_MISSING .. ", so the debug console window is unav
 -- The two lines describing the addon's own switches and the screen they are drawn on.
 local function addHeader(add)
   local settings = (NS.db and NS.db.profile and NS.db.profile.settings) or {}
-  add("master=%s unlocked=%s preview=%s snap=%s/%s",
-    tostring(settings.enabled), tostring(NS.State.unlocked), tostring(NS.State.preview),
+  add("master=%s unlocked=%s snap=%s/%s",
+    tostring(settings.enabled), tostring(NS.State.unlocked),
     tostring(settings.snapToGrid), tostring(settings.gridSize))
 
   local w, h = NS.Compat.GetScreenSize()

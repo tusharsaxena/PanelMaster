@@ -23,9 +23,9 @@ callbacks in `core/Database.lua` therefore drive a full registry reload and a
 `Ka0s_PanelMaster_PanelsChanged` broadcast, which rebuilds every consumer, rather than any targeted
 repaint. See [data-flow.md](data-flow.md).
 
-`NS:SweepPreviewPanels` runs on the same path: preview placeholders are session scaffolding, and a
-profile carrying orphaned preview records from an interrupted session must not resurrect them as real
-panels.
+`NS:SweepPreviewPanels` runs on the same path: an older build's test mode wrote sample panels into
+the profile, and a profile still carrying them from an interrupted session must not resurrect them
+as real panels.
 
 ## The Profiles page
 

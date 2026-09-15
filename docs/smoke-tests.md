@@ -25,30 +25,16 @@ reset** and takes the panels with it, so `/pm panel deleteall` is no longer need
 3. `/pm version` → **Expect:** `[PM] v1.1.0`, matching the TOC.
 4. `/pm panels` → **Expect:** "No panels yet", suggesting `/pm new`.
 
-## 2. Preview mode
+## 2. No separate test mode
 
-1. `/pm test` → **Expect:** three sample panels appear (bottom-left, bottom-center, top-right),
-   each outlined in gold with its name across the middle, and panels are now unlocked.
-2. Confirm each is a **different color and size** — that is what proves color, size and position
-   are all really being applied rather than one default being drawn three times.
-3. `/pm test` again → **Expect:** all three vanish, the registry is empty (`/pm panels`), and
-   panels are **locked** again — test mode undoes the unlock it turned on.
-4. Now `/pm unlock` first, then test mode on and off. **Expect:** you are left **unlocked**, because
-   you already were before test mode started.
-5. Make a panel of your own, then `/pm test` on and off again → **Expect:** your panel survives.
-6. With test mode on, open **Panels ▸ Edit**, select a `Preview: *` panel and press **Reset**.
-   **Expect:** a cyan-tagged refusal naming test mode, and the placeholder is unchanged.
-7. Turn test mode off → **Expect:** all three placeholders go, including the one you tried to reset.
-   Then `/reload` with test mode ON, and `/pm panels` after → **Expect:** no `Preview: *` panels
-   survive. Reset must never be able to promote a placeholder into a permanent panel.
-8. Turn test mode on (the **Test mode** box in **General ▸ Master controls**, or `/pm test on`)
-   with the settings window open, then pull a training dummy. **Expect:** the moment combat starts
-   the three placeholders go, panels are **locked** again (unless you had unlocked before starting),
-   chat says *Test mode off — combat started*, and the **Test mode** box reads unticked. Repeat
-   after `/pm unlock` → **Expect:** you are left **unlocked**.
-9. Still in combat, tick **Test mode**, then try `/pm test on`. **Expect:** each prints one gray
-   line, *cannot start test mode during combat*, no sample panels appear, and the box stays
-   unticked. Leave combat and tick it again → **Expect:** it starts normally.
+Unlocking is this addon's test mode (`options-ui-§15`): it shows every panel with its outline and
+name, so **Lock frame** is the switch.
+
+1. `/pm test` → **Expect:** nothing appears on screen; it is not a verb. `/pm config` → **General ▸
+   Master controls** has no **Test mode** row.
+2. Upgrade check, only if you have SavedVariables from a build that still had test mode, saved with
+   it on: `/pm debug on`, `/reload` → **Expect:** a `[Preview] swept …` line, and `/pm panels`
+   lists no `Preview: *` panels.
 
 ## 3. Creating and placing a panel
 
@@ -365,7 +351,8 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    **Expect:** the gold outline and the panel's name are clearly visible **on top of** the
    background fill. If they are dim or invisible, the unlock overlay has fallen behind the fill
    again.
-2. `/pm test` → **Expect:** all three sample panels show their gold outline and name legibly.
+2. Make two more panels with different colors, then `/pm unlock` → **Expect:** every panel shows its
+   gold outline and name legibly.
 3. Create two overlapping panels, same strata. Set one to **Level** `0` and the other to `1`.
    **Expect:** the level-1 panel draws entirely in front — its background covers the other panel's
    accent bar and border, not just part of them. Repeat with levels `0` and `3`; the result must be
@@ -428,12 +415,12 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    Blizzard's red stone button. (A red button means it was created too early; see `options-ui-§5`.)
 2b. **Click each tab.** **Expect:** only that tab's controls are on the page, the strip stays put,
    and clicking the tab you are already on does nothing at all (the active tab is drawn disabled).
-   Master controls has 7 rows plus a **Reset position | Reset all settings** button pair under them,
+   Master controls has 6 rows plus a **Reset position | Reset all settings** button pair under them,
    Editing 4 plus a **Recover panels** button, New panels 4.
 2c. **Master controls, in the canonical order** (`options-ui-§15`): **Enable Ka0s Panel Master |
-   General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then
-   **Test mode** alone, then the button pair. Two per line, in that order, with nothing else on the
-   tab. This tab reads identically in every Ka0s addon — compare it against one.
+   General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then the
+   button pair. Two per line, in that order, with nothing else on the tab and no **Test mode** row.
+   This tab reads identically in every Ka0s addon — compare it against one.
 2d. **The four new controls actually do something.**
    - **General visibility** → `Only out of combat`, then pull a training dummy. **Expect:** every
      panel disappears the instant you enter combat and comes back the instant you leave it. Try
@@ -455,10 +442,9 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
      still the separate, separately-confirmed **Defaults** button on the **Panels** page.
 3. Confirm the scrollbar is **present but grayed out** on a page that fits, and that the body does not
    jump width when you tab between pages.
-4. Toggle **Lock frame** and **Test mode** → **Expect:** they do exactly what the slash commands do,
-   with **Lock frame** the *inverse* of `/pm unlock`: unticking it unlocks. Ticked is the shipped
-   state, and it is ticked again after every `/reload`. With the page open, `/pm test on` and
-   `/pm test off` tick and untick **Test mode** as they run.
+4. Toggle **Lock frame** → **Expect:** it does exactly what the slash commands do, the *inverse* of
+   `/pm unlock`: unticking it unlocks. Ticked is the shipped state, and it is ticked again after
+   every `/reload`.
 5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
    border | Accent bar | Artwork | Opacity and fade** — with **General** active, and **above** it in
    the page's chrome band a **single row**: the **Panel** picker on the left, **Create new panel** on
@@ -665,20 +651,12 @@ The addon's public contract, and the one thing no unit test can prove works in a
 
 Panel ids are handed out **per profile** — a fresh profile starts at 1 — so anything the session
 remembers by id names a *different* panel after a switch. These are the checks that it is dropped
-rather than carried, and the first is the one that could destroy a layout.
+rather than carried.
 
-1. `/pm test on` → **Expect:** the three sample panels appear, unlocked.
-2. Without turning test mode off, switch to another profile from the **Profiles** page, and make a
-   real panel there if it has none.
-3. `/pm test off`. **Expect:** **your real panel is still there.** It used to be deleted: preview
-   held the previous profile's ids, and turning it off resolved them against the profile you had
-   switched to.
-4. `/pm test on` again. **Expect:** it starts — test mode is genuinely off, not merely claiming to
-   be. A stale "on" flag made this a no-op with nothing on screen.
-5. Unlock a single panel with the per-panel control, switch profile, and look at the incoming
+1. Unlock a single panel with the per-panel control, switch profile, and look at the incoming
    profile's panels. **Expect:** none of them is unlocked. No stray drag handle or gold outline on a
    panel you never touched.
-6. Do the same while a per-panel unlock is **queued by combat** (unlock during a fight, then switch
+2. Do the same while a per-panel unlock is **queued by combat** (unlock during a fight, then switch
    profile before it drops). **Expect:** on leaving combat nothing unlocks. The queued request named
    a panel that no longer exists; the *global* `/pm unlock` request is deliberately kept and does
    still fire.
@@ -828,18 +806,6 @@ proves nothing about the verb.
 3. `/pm config` → **Panels** → **Defaults** → the **same** popup appears. Choose **No**. Both
    panels survive.
 4. Now choose **Yes** from either. Both panels are gone, and chat says `deleted 2 panels.`
-4a. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-18`; the plan gives this item no numbered
-   session, so fold it into any convenient login). What the wipe does to preview, which is the
-   session state it could not see: `/pm test on` (three placeholders appear), then **without
-   turning it off** run `/pm panel deleteall` and choose **Yes** — the placeholders go with
-   everything else. Now `/pm test on` again → **Expect:** the three placeholders **come back**.
-   Before the fix this was a silent no-op with nothing on screen: `DeleteAll` emptied the tracked id
-   list but left the `preview` flag standing, and `SetPreview` returns early when the flag already
-   matches, so the only way back was to turn off a preview that was not running. Finish with
-   `/pm test off`. ⚠ **Also expect the screen to stay unlocked** across the wipe — preview's
-   *implied* unlock outlives the preview that caused it here, exactly as it does across a profile
-   switch (12b-2), because the global unlock is a mode you put the screen in and no sweep clears it.
-   A panel made after the wipe comes up with its drag handle; `/pm lock` puts it back.
 5. `/pm resetall` → the **confirm popup** appears first, carrying the collection's one wording
    (`options-ui-§12`), verbatim: *"Reset this profile to the addon's defaults? Everything you have
    configured or added in it is discarded — your other profiles are not affected."* Choose **No**:

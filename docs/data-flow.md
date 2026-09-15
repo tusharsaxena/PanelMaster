@@ -65,7 +65,7 @@ f                       base          the panel frame
 The unlock overlay is on the ladder at all because of this change. It used to be textures on the
 panel frame itself, kept above the panel's art by *draw layer*; that works only while the art is
 also a region of `f`. Once the fill became a child frame, frame level took precedence over draw
-layer and the fill drew straight over the outline — so on every unlock and every preview, the gold
+layer and the fill drew straight over the outline — so on every unlock, the gold
 outline and the panel name vanished under the panel's own 85%-opaque background. It now has its own
 frame above every other rung, which is what its job requires: nothing may cover the thing that makes
 an invisible panel findable.
@@ -148,51 +148,18 @@ the upgrade moves nobody's anchors. `R.Sanitize` fills the field the same way fo
 by another route (an imported profile, a test), which is what covers profiles other than the one
 active when the migration ran.
 
-Preview writes its placeholders into the registry as **real records**, which is what makes the
-preview exercise the real render path rather than a mock that can drift from it. Two things track
-them, and both are needed:
-
-| Half | Lives in | Survives a `/reload`? |
-|---|---|---|
-| `NS.State.previewIDs` | session state | no — the fast in-session path |
-| `rec[C.PREVIEW_FIELD]` (`preview = true`) | the record itself | yes — the recovery path |
-
-`NS:SweepPreviewPanels()` walks `db.profile.panels` backwards, removes every marked record and
-returns the count. It runs from `NS:InitDB` — after `NS:RunMigrations`, before
-`NS:RegisterProfileCallbacks`, therefore before `Canvas:Enable` and the first `RenderAll`, so an
-orphan is never drawn — and again on the profile-reload path, since a copied profile can carry
-someone else's orphans. It is idempotent, and the marker is additive, so it needed no schema bump of
-its own.
-
-The marker is deliberately **not** in `PANEL_FIELD_TYPE`, `PANEL_FIELD_ORDER` or `PANEL_TEMPLATE` —
-the CLI cannot set it, `/pm panel <name>` does not print it, and a normally-created panel never has
-it — and it is in the registry's `COPY_EXCLUDED`, so `CopyFrom` cannot smear it onto a real panel.
-
-`R:Reset` **refuses** a marked record outright, with a reason the caller prints. It rewrites the
-record from `C.PANEL_TEMPLATE`, which carries no marker, so a reset used to strip it and promote a
-throwaway placeholder into a permanent panel the user then had to delete by hand — the one remaining
-path by which preview could leave litter in a saved layout. Refusing rather than re-stamping:
-resetting a placeholder to the shipped template is not a meaningful thing to want, and a tagged
-notice explains why more usefully than silently doing nothing. With that closed, the marker survives
-every registry write seam, which is what makes "preview off removes exactly what preview added" true
-unconditionally.
-
-Both transitions go through `U:SetUnlocked`, never a direct write to `NS.State.unlocked`, so leaving
-preview clears the per-panel unlock and pending sets the same way any other lock does. The order is
-**registry first, lock second**: `SetUnlocked` repaints, so the placeholders have to exist before it
-runs. Both transitions pass `SetUnlocked`'s private `immediate` flag, which skips the combat gate.
-Only the way out can meet a fight, because a start during combat is refused: restoring the lock
-the player had is not something they should wait out a pull for, and a lock is never deferred
-anyway.
-
-**Test mode ends when combat starts** (`options-ui-§15`). `PLAYER_REGEN_DISABLED` calls
-`U:EndPreviewForCombat`, which turns preview off through the same `SetPreview(false)` the checkbox
-uses and prints one line, *Test mode off — combat started*. The event fires while secure writes are
-still allowed, and the way out restores the prior lock past the gate regardless, so nothing is
-deferred. For the same reason a start during combat is refused, from the checkbox or
-`/pm test on`, with one gray line, *cannot start test mode during combat*. Nothing is queued, and
-the box re-syncs unticked. Every start and stop re-syncs the General page, so the **Test mode** box
-never disagrees with the screen.
+**Leftover sample panels.** Older builds had a test mode that wrote three sample panels into the
+registry as real records, each marked `rec[C.PREVIEW_FIELD]` (`preview = true`). It is gone:
+unlocking already shows every panel with its outline and name, so `options-ui-§15` (standard
+v2.49.0) exempts this addon from a separate test mode and *Lock frame* is its switch. A profile an
+older build saved mid-preview can still hold marked records, so `NS:SweepPreviewPanels()` stays. It
+walks `db.profile.panels` backwards, removes every marked record and returns the count. It runs
+from `NS:InitDB` — after `NS:RunMigrations`, before `NS:RegisterProfileCallbacks`, therefore before
+`Canvas:Enable` and the first `RenderAll`, so a leftover is never drawn — and again on the
+profile-reload path, since a copied profile can carry someone else's. It is idempotent. The marker
+constant is all that is left of the machinery, and it is deliberately **not** in
+`PANEL_FIELD_TYPE`, `PANEL_FIELD_ORDER` or `PANEL_TEMPLATE`, so the CLI cannot set it and a
+normally-created panel never has it.
 
 Panels are **non-secure** frames, so the render path is not combat-gated at all: creating, moving,
 recoloring and hiding a plain backdrop frame is legal in combat, and gating it would mean a panel
@@ -209,8 +176,7 @@ Two things are gated, in the two different shapes the standard defines:
   it would be the one case where the gate made things worse. An explicit lock also clears a queued
   unlock, or the queue would undo the user's own decision the moment combat ended. Per-panel unlocks
   queue and replay the same way, and a panel deleted mid-combat is dropped from the queue rather
-  than resurrecting an unlock entry for a record that has gone. **Test mode's way out is the one
-  documented bypass** — see the preview section above. Its way in is refused in combat outright.
+  than resurrecting an unlock entry for a record that has gone. Nothing bypasses the gate.
 - **The options panel refuses** (`options-ui-§2`). `Settings.OpenToCategory` is protected, so
   `/pm config` in combat prints a gray notice and returns. It does **not** replay: a panel that pops
   itself open the instant combat drops steals focus during recovery.
@@ -219,5 +185,5 @@ Two things are gated, in the two different shapes the standard defines:
 |---|---|---|
 | `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
 | `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat()` | Replays a combat-deferred unlock, and repaints for the general-visibility rule. |
-| `PLAYER_REGEN_DISABLED` | `Unlock:EndPreviewForCombat()`, then `Canvas:RenderForCombat()` | Ends test mode, then the entering-combat half of the same rule. |
+| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat()` | The entering-combat half of the same rule. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration, for the load order where `Settings`/AceGUI were not there yet in `OnInitialize`. `Register` is idempotent, so it is a no-op on a normal login. Not a deferral to first `/pm config` (anti-pattern #22). Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing — the only one a non-LoD addon gets. |

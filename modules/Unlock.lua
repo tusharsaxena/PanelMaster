@@ -5,7 +5,9 @@ local C = NS.Constants
 local Util = NS.Util
 local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-frames-taint-§8)
 
--- Unlock mode and preview mode: the two ways a panel becomes visible and grabbable.
+-- Unlock mode: how a panel becomes visible and grabbable. It is also this addon's test mode
+-- (options-ui-§15): unlocking shows every panel, disabled ones included, with its outline and name,
+-- so Lock frame is the switch and there is no separate preview.
 --
 -- A locked panel is deliberately inert scenery — mouse-transparent, unlabeled, often nearly
 -- invisible. That is the product, and it is also why it needs an explicit editing mode: you cannot
@@ -56,7 +58,7 @@ local function ensureOverlay(f)
   -- texture on a child at base+2 draws straight over an OVERLAY texture on the parent at base.
   --
   -- Left alone, the gold outline and the panel name would be buried under the panel's own 85%-opaque
-  -- fill on every unlock and every preview, which is precisely the one thing the overlay exists to
+  -- fill on every unlock, which is precisely the one thing the overlay exists to
   -- prevent: you cannot drag a panel you cannot find.
   o.frame = CreateFrame("Frame", nil, f)
   o.frame:EnableMouse(false)   -- the PANEL takes the drag, not this; see U:ArmDrag
@@ -225,16 +227,11 @@ end
 -- Combat gate: unlocking hands the user draggable frames, which is a bad thing to do mid-pull, so
 -- the request is DEFERRED to PLAYER_REGEN_ENABLED (events-frames-taint-§2) rather than refused.
 -- Locking is never deferred — it only ever makes the UI quieter, and refusing to lock during combat
--- would be the one case where the gate made things worse.
---
--- `immediate` skips the gate. It has exactly one caller — test mode (U:SetPreview), in both
--- directions. Only its way OUT can meet a fight, since a start during combat is refused, and
--- restoring the lock the player had is not a request they should wait out a pull for. It is a
--- private argument, not part of the lock surface: the CLI, the schema switch and Toggle all go
--- through the gated path.
-function U:SetUnlocked(on, immediate)
+-- would be the one case where the gate made things worse. Nothing bypasses the gate: the CLI, the
+-- schema switch and Toggle all come through here.
+function U:SetUnlocked(on)
   on = not not on
-  if on and not immediate and InCombatLockdown and InCombatLockdown() then
+  if on and InCombatLockdown and InCombatLockdown() then
     pendingUnlock = true
     print("|cff808080unlock queued \226\128\148 panels unlock when you leave combat|r")
     return nil
@@ -309,90 +306,4 @@ end
 function U.__hasPending(id)
   if id ~= nil then return pendingPanels[id] == true end
   return pendingUnlock
-end
-
--- ── Preview mode (preview-mode) ─────────────────────────────────────────────────
-
--- Stand up a few placeholder panels through the REAL render path, so what the user sees while
--- previewing is exactly what a real panel looks like — not a mock-up that can drift from it.
---
--- The placeholders are written into the registry like any other panel and removed again on the way
--- out, which is what keeps the render path singular. Their ids are tracked in session state so
--- turning preview off withdraws exactly what it added, never a panel the user made in the meantime.
-function U:SetPreview(on)
-  on = not not on
-  if on == NS.State.preview then return on end
-  -- Refused, not queued, during combat (options-ui-§15): test mode ends when a fight starts, so it
-  -- cannot start inside one. Answers nil, like a deferred SetUnlocked. The re-sync puts back a
-  -- Test mode box the click already ticked.
-  if on and InCombatLockdown and InCombatLockdown() then
-    print("|cff808080cannot start test mode during combat|r")
-    if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
-    return nil
-  end
-
-  if on then
-    -- Remember whether the screen was already unlocked, so turning preview off can put it back.
-    -- Preview implies unlock (below), and without this the implied unlock outlived the preview that
-    -- caused it — you turned test mode off and were left with every panel still draggable.
-    U.__unlockBeforePreview = NS.State.unlocked
-    NS.State.previewIDs = {}
-    -- Marked on the way in, so a /reload that never reaches the exit below can still find them
-    -- (NS:SweepPreviewPanels). A name collision with a real panel is the user's, not ours: NewBatch
-    -- skips that placeholder rather than refusing the whole preview or overwriting their panel.
-    local specs = {}
-    for _, spec in ipairs(C.PREVIEW_PANELS) do
-      local marked = Util.DeepCopy(spec)
-      marked[C.PREVIEW_FIELD] = true
-      specs[#specs + 1] = marked
-    end
-    -- Registry first, lock second: SetUnlocked repaints, so the placeholders have to exist before it
-    -- runs or the repaint draws the screen as it was.
-    for _, rec in ipairs(NS.Registry:NewBatch(specs)) do
-      NS.State.previewIDs[#NS.State.previewIDs + 1] = rec.id
-    end
-    NS.State.preview = true
-    -- Preview is worthless locked — the placeholders would be unlabeled scenery — so it implies
-    -- unlock. Routed through SetUnlocked rather than writing the flag here, so the implied unlock is
-    -- the SAME unlock as every other one: it repaints, it logs, and it leaves the per-panel sets in
-    -- a state the matching lock can undo. Writing NS.State directly was what let preview leave the
-    -- screen unlocked with nothing tracking it.
-    --
-    -- Past the gate (`immediate`) to match the way out. A start in combat never reaches here — it is
-    -- refused above — so this only skips a check that could not fire.
-    U:SetUnlocked(true, true)
-  else
-    NS.Registry:DeleteBatch(NS.State.previewIDs)
-    NS.State.previewIDs = {}
-    NS.State.preview = false
-    -- Undo the implied unlock, unless the user had already unlocked before starting preview — in
-    -- which case they were mid-edit and leaving them locked would be just as surprising. Routed
-    -- through SetUnlocked so a lock also clears the per-panel unlocks it is supposed to clear, and
-    -- past the gate for the same reason the way in was: restoring the state the user was in is not
-    -- a request they should have to wait out a fight for.
-    U:SetUnlocked(U.__unlockBeforePreview and true or false, true)
-  end
-
-  NS.Debug("Preview", "preview %s", on and "on" or "off")
-  -- Master controls' Test mode checkbox reads NS.State.preview (settings/Schema.lua), so it follows
-  -- every start and stop from here, whoever caused it: the box, `/pm test`, or combat. The
-  -- Lock frame box rides the same re-sync, since the way in and the way out both move the lock.
-  if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
-  return on
-end
-
-function U:TogglePreview()
-  return U:SetPreview(not NS.State.preview)
-end
-
--- Test mode ends when combat starts (options-ui-§15, preview-mode). Called from
--- PLAYER_REGEN_DISABLED (core/PanelMaster.lua), which fires while secure writes are still allowed,
--- so no sample panel is left covering the screen in a fight. The restore of the prior lock needs
--- no gate at that moment: SetPreview's way out already goes past it (`immediate`), and a lock is
--- never deferred anyway. Answers whether there was a test mode to end.
-function U:EndPreviewForCombat()
-  if not NS.State.preview then return false end
-  U:SetPreview(false)
-  print("Test mode off \226\128\148 combat started")
-  return true
 end

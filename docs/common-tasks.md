@@ -42,7 +42,7 @@ This is the change with the most places to touch, and `core/Constants.lua` is ne
    headless test with no frames involved. `applySpec` stays a thin application of the result.
 6. If the field should **not** be reachable from the CLI, leave it out of `PANEL_FIELD_TYPE`,
    `PANEL_FIELD_ORDER` and `PANEL_TEMPLATE` — that omission is the mechanism, and
-   `core/Constants.lua:550` documents the existing case.
+   `core/Constants.lua:548` documents the existing case.
 
 ## Add a slash verb
 
@@ -82,10 +82,6 @@ what lets a drag repaint one frame instead of all of them.
 
 Consumers register on their **own** target via `NS.NewBusTarget()`. CallbackHandler keys callbacks by
 `(message, target)`, so two consumers sharing a target silently clobber each other.
-
-If a caller changes the set N times at once, use the **batch seams** — `Registry:NewBatch(specs)` and
-`Registry:DeleteBatch(keys)` mutate N records and broadcast once. Preview mode is the caller that
-needed them: standing up three placeholders used to rebuild every consumer three times.
 
 ## Add a migration
 

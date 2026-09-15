@@ -32,13 +32,13 @@ Two SavedVariables scopes: `defaults/Profile.lua` carries the panel registry, `n
 settings block, all profile-scoped (every character starts on the shared "Default" profile,
 `core/Database.lua:18`); `defaults/Global.lua` carries the account-wide `schemaVersion` stamp only.
 `settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
-carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
+carries **14 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
-the array's order is the strip a player sees on the General page — `Master controls` (7),
-`Editing` (4), `New panels` (4). Three of the fifteen are session-only `state.*` rows that route
+the array's order is the strip a player sees on the General page — `Master controls` (6),
+`Editing` (4), `New panels` (4). Two of the fourteen are session-only `state.*` rows that route
 through their own `get`/`set` and are never persisted.
 
-The **first** seven are not literals in that file. `Master controls` is COMPOSED, out of
+The **first** six are not literals in that file. `Master controls` is COMPOSED, out of
 `LibKa0s-Options-1.0`'s `MasterControls` (`options-ui-§15`), and spliced at the head of the array by
 `S:InstallMaster` — which `settings/OptionsSetup.lua` calls the moment the library instance exists,
 because that instance is what carries the composer and it is built after this file loads. A row
@@ -53,12 +53,13 @@ names a panel's existence.
   `db.profile.nextID` is the monotonic id counter; each record's stamped `id` and `frameName` are
   its identity, and `name` is a unique label.
 - **Writer.** `modules/Registry.lua` (`NS.Registry`) is the one registry writer: its local `create`,
-  behind `New` and `NewBatch`, mints `rec.id` from `nextID`, stamps `frameName` and appends; its
-  local `destroy`, behind `Delete` and `DeleteBatch`, and `DeleteAll` remove; `Rename` relabels
+  behind `New`, mints `rec.id` from `nextID`, stamps `frameName` and appends; its local
+  `destroy`, behind `Delete`, and `DeleteAll` remove; `Rename` relabels
   `name` and leaves `id` and `frameName` alone; there is no duplicate or reorder operation.
 - **Load pass.** `NS:RunMigrations` and `NS:SweepPreviewPanels`, both in `core/Database.lua`. The
   migration runner's v1 → v2 body backfills `frameName`, and it is called only from `NS:InitDB`.
-  The sweep drops orphaned preview records, and it is called from `NS:InitDB`, right after the
+  The sweep drops sample panels an older build's test mode left in a profile (the only use left of
+  `C.PREVIEW_FIELD`), and it is called from `NS:InitDB`, right after the
   migrations, and from the `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks.
   Neither is called from a slash verb or a control.
 
@@ -115,11 +116,6 @@ repaint every panel on each tick of the Grid size slider for no visible differen
 The split between the two panel messages is what lets a drag repaint one frame instead of all of
 them. A test asserts that no other file sends any of the three.
 
-A caller that changes the set N times at once uses the **batch seams** rather than N single calls:
-`Registry:NewBatch(specs)` and `Registry:DeleteBatch(keys)` mutate N records and broadcast
-`PanelsChanged` **once** — the shape `Registry:DeleteAll` already had. Preview mode is the caller
-that needs them: standing up three placeholders used to rebuild every consumer three times.
-
 `Canvas:Enable()` — which installs those subscriptions — is called from **`OnEnable`**. This is not
 incidental: an early build omitted it, so every message broadcast into a bus with no listener and
 nothing was live. The only repaints left were the two paths that call `Canvas:RenderAll()` directly
@@ -137,7 +133,8 @@ structure its own prose, and that is the only list of them outside the table.
 Schema-driven verbs: `config version get set list reset resetall debug help` — `resetall` is a
 **profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it
 takes the player's panels with it because `db.profile.panels` is in the profile. Panel verbs: `new
-delete rename panels panel unlock lock test recover`. Verb detail and the host/library split in
+delete rename panels panel unlock lock recover` — no `test` verb, because unlocking is this addon's
+test mode (`options-ui-§15`). Verb detail and the host/library split in
 **[slash-dispatch.md](slash-dispatch.md)**.
 
 ## Event Subscriptions
@@ -146,7 +143,7 @@ delete rename panels panel unlock lock test recover`. Verb detail and the host/l
 |---|---|---|
 | `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
 | `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat()` | Replays a combat-deferred unlock, and repaints if `settings.visibility` is one of the two modes that depend on the combat state. |
-| `PLAYER_REGEN_DISABLED` | `Unlock:EndPreviewForCombat()`, then `Canvas:RenderForCombat()` | Ends test mode (`options-ui-§15`) while secure writes are still allowed: the sample panels come down, the prior lock goes back, and one chat line says so. Then the other half of the general-visibility rule. Panels are non-secure, so showing or hiding one at the start of a pull needs no gate. |
+| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat()` | The other half of the general-visibility rule (`options-ui-§15`). Panels are non-secure, so showing or hiding one at the start of a pull needs no gate. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration. Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing. |
 
 The render pipeline these drive, and the combat gating around unlock and the options panel, are in
@@ -179,7 +176,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `module-map.md` | Every non-vendored file, what it publishes, and the load order the seams pin |
 | `schema.md` | The two SavedVariables scopes, the panel record, artwork fields, sanitizing |
 | `settings-panel.md` | The four canvas pages and the three AceGUI widget workarounds |
-| `data-flow.md` | Record → spec → frame, the frame ladder and pool, preview mode, combat, events |
+| `data-flow.md` | Record → spec → frame, the frame ladder and pool, the leftover-sample sweep, combat, events |
 | `common-tasks.md` | Add a setting, a verb, a panel field, an artwork entry, a migration |
 
 ### Conditional (documentation-§3, Tier 2)
@@ -268,7 +265,7 @@ record, not where the write goes, and that row's trigger is deliberately the sch
   under `docs/`, and the backlog is the issue store, which is what the rule asks for. A row for
   compliant behavior is the graveyard `documentation-§3` forbids. `PM-029`.
 
-- **`options-ui-§1` — the seven Master controls rows a library-less load does not get.** The row
+- **`options-ui-§1` — the Master controls rows a library-less load does not get.** The row
   argued that the stub cannot reproduce what `H.MasterControls` emits without holding a host copy
   of the library's canonical row data, and that the copy is the thing that goes stale.
   `options-ui-§1` now rules exactly that: when the missing content is **composed** the no-copy MUST

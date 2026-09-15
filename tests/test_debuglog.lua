@@ -257,7 +257,7 @@ end)
 test("NS.Debug: deleting every panel at once is traced, with the count (debug-logging-§8)",
 function()
   -- A user-initiated purge is a data mutation the log has to show, and a structural registry's
-  -- deletes are traced by its writer (debug-logging-§10). Delete and DeleteBatch go through
+  -- deletes are traced by its writer (debug-logging-§10). Delete goes through
   -- `destroy`, which logs each panel; DeleteAll empties the registry in one sweep, so it has to say
   -- so itself, or `/pm deleteall` and the Panels page's Defaults leave no line behind.
   quiet()

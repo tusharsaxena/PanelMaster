@@ -21,12 +21,3 @@ State.unlocked = false
 -- which with a dozen panels means unlocking eleven you did not want to touch to nudge the twelfth.
 -- Session-only for the same reason as the global flag.
 State.unlockedPanels = {}
-
--- Is PREVIEW mode showing placeholder panels (preview-mode)? Preview stands up a small set of
--- throwaway sample panels through the REAL render path, so a new user can see what a panel looks
--- like before creating one. Never persisted, never written to the panel registry.
-State.preview = false
-
--- Panel ids created by preview mode, so `/pm test off` can withdraw exactly what it added and
--- nothing else.
-State.previewIDs = {}

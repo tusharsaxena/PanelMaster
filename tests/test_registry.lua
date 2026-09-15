@@ -103,32 +103,12 @@ test("Registry.DeleteAll: drops the session state keyed on the panels it removed
   local a, b = R:New("A"), R:New("B")
   NS.State.unlockedPanels[a.id] = true
   NS.State.unlockedPanels[b.id] = true
-  NS.State.previewIDs = { a.id, b.id }
   R:DeleteAll()
   -- Ids are never reused, so a stale entry is never read again — but it accumulates for the session
   -- and shows up in a debug dump as an unlocked panel that does not exist. R:Delete already sweeps;
   -- DeleteAll must too, and for the same reason.
   assertEqual(NS.State.unlockedPanels[a.id], nil, "a deleted panel is still marked unlocked")
   assertEqual(NS.State.unlockedPanels[b.id], nil, "a deleted panel is still marked unlocked")
-  assertEqual(#NS.State.previewIDs, 0, "preview still claims ids that no longer exist")
-end)
-
-test("Registry.DeleteAll: the preview flag goes with the ids it belongs to (PANELMASTER-R-02)",
-  function()
-  -- The flag and the id list are one piece of state in two halves, and DeleteAll used to clear only
-  -- the half it could see. Left true with nothing tracking it, SetPreview(true) returns early on
-  -- `on == NS.State.preview` and the user cannot restart preview at all -- the exact failure
-  -- dropSessionIDs' own comment names, on the other caller of the same sweep.
-  fresh()
-  R:New("A")
-  NS.State.previewIDs = { 1 }
-  NS.State.preview = true
-  R:DeleteAll()
-  -- Read, restore, then assert: the harness pcalls a body, so a raise here would otherwise leave
-  -- the flag true in the shared namespace for every suite that runs after this one.
-  local flag = NS.State.preview
-  NS.State.preview = false
-  assertFalse(flag, "DeleteAll left preview claiming to be on with nothing tracking it")
 end)
 
 test("Registry.Resolve: finds by name and by id", function()
@@ -300,76 +280,6 @@ test("Registry.FormatField: renders each field type readably", function()
   assertTrue(R.FormatField(rec, "bgColor"):find(",", 1, true) ~= nil)
 end)
 
-test("Registry.Reset: refuses a preview placeholder rather than stripping its marker", function()
-  fresh()
-  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
-  local ok, err = R:Reset(ghost.id)
-  -- Reset rewrites the record from C.PANEL_TEMPLATE, which carries no marker — so a reset used to
-  -- PROMOTE a throwaway placeholder into a permanent panel that survived the next sweep. Refusing is
-  -- the fix: resetting a placeholder to the shipped template is not a meaningful thing to want.
-  assertFalse(ok)
-  assertTrue(err:find("test mode", 1, true) ~= nil, "the refusal should explain why: " .. tostring(err))
-  assertEqual(R:Get(ghost.id)[C.PREVIEW_FIELD], true, "the reset stripped the preview marker")
-end)
-
-test("Registry.Reset: a reset placeholder is still swept, so preview leaves no litter", function()
-  fresh()
-  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
-  R:New("Mine")
-  R:Reset(ghost.id)               -- refused, but the record must survive the attempt intact
-  R:Reset(R:FindByName("Mine").id)   -- and a real panel still resets normally
-  assertEqual(NS:SweepPreviewPanels(), 1, "the placeholder escaped the sweep after being reset")
-  assertTrue(R:FindByName("Mine") ~= nil, "the sweep took the user's own panel")
-end)
-
-test("Registry: a preview placeholder cannot lose its marker through any write seam", function()
-  fresh()
-  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
-
-  -- Every seam that writes a record, one after the other. The marker is what the reload sweep finds
-  -- these by, so any seam that dropped it would leave a placeholder behind permanently.
-  R:Set(ghost.id, "width", 400)
-  R:SetPosition(ghost.id, 10, 10)
-  R:Rename(ghost.id, "Ghost Renamed")
-  R:Reset(ghost.id)
-  R.Sanitize(R:Get(ghost.id))
-  local other = R:New("Real")
-  R:CopyFrom(ghost.id, other.id)
-
-  assertEqual(R:Get(ghost.id)[C.PREVIEW_FIELD], true, "a write seam dropped the preview marker")
-end)
-
-test("Registry.CopyFrom: never spreads the preview marker onto a real panel", function()
-  fresh()
-  local ghost = R:New("Ghost", { [C.PREVIEW_FIELD] = true })
-  local mine  = R:New("Mine")
-  assertTrue(R:CopyFrom(mine.id, ghost.id))
-  -- Copying appearance from a placeholder must not make the target disappear on the next sweep.
-  assertEqual(R:Get(mine.id)[C.PREVIEW_FIELD], nil, "the preview marker was copied across")
-end)
-
-test("Registry.NewBatch: creates every spec and broadcasts once", function()
-  fresh()
-  local target, count = {}, 0
-  NS.bus.RegisterMessage(target, R.MSG_PANELS, function() count = count + 1 end)
-
-  local recs = R:NewBatch({ { name = "Batch One" }, { name = "Batch Two" } })
-  assertEqual(#recs, 2)
-  assertEqual(R:Count(), 2)
-  assertEqual(count, 1, "a batch create broadcast once per record")
-
-  NS.bus.UnregisterMessage(target, R.MSG_PANELS)
-end)
-
-test("Registry.NewBatch: skips a spec whose name is taken, keeping the rest", function()
-  fresh()
-  R:New("Batch One")
-  local recs = R:NewBatch({ { name = "Batch One" }, { name = "Batch Two" } })
-  -- A name collision is the user's, not ours: skip that one rather than refuse the whole batch.
-  assertEqual(#recs, 1)
-  assertEqual(recs[1].name, "Batch Two")
-end)
-
 test("Registry.Recover: leaves an on-screen TOPLEFT panel alone", function()
   fresh()
   -- The bug this guards: a CENTER-shaped bound (±w/2) called this panel lost and dragged it to 960.
@@ -489,7 +399,7 @@ test("Registry: a new panel is born at the profile's default size", function()
   assertEqual(sized.width, 500, "a new panel ignored the default width")
   assertEqual(sized.height, 60, "a new panel ignored the default height")
 
-  -- An explicit override still wins: preview placeholders and the CLI both pass one.
+  -- An explicit override still wins: the CLI passes one.
   local overridden = R:New("Overridden", { width = 111 })
   assertEqual(overridden.width, 111, "an override lost to the default")
 

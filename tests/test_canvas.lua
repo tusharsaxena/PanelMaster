@@ -291,7 +291,7 @@ end)
 test("Canvas: OnEnable subscribes the renderer to the bus", function()
   -- The regression pin for the "nothing updates until you toggle test mode" bug. OnEnable must call
   -- Canvas:Enable(); without it every message broadcasts into a bus with no listener and the only
-  -- repaints left are the two that call RenderAll() directly (lock/unlock and test mode). run.lua
+  -- repaints left were the two that called RenderAll() directly (lock/unlock and test mode). run.lua
   -- drives the real OnInitialize/OnEnable, so this asserts the addon's own wiring, not the harness's.
   assertTrue(Canvas.__ev ~= nil, "OnEnable did not subscribe the renderer")
   for _, message in ipairs({ R.MSG_PANELS, R.MSG_PANEL, NS.Schema.MSG_SETTINGS }) do

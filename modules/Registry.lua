@@ -321,12 +321,10 @@ end
 -- Create a panel. Returns (record) on success, or (nil, reason) — never a bare nil, so every caller
 -- has something to print.
 --
--- `overrides` is an optional partial record (preview mode and the CLI both pass one). New panels
--- pick up the profile's four new-panel defaults (size, strata, opacity), which is what makes those
--- settings meaningful; an override still wins, because it is applied afterwards.
--- The create itself, WITHOUT the broadcast. Split out so a batch (preview mode stands up three
--- placeholders at once) can make every record and then announce the new set exactly once, rather
--- than making every consumer rebuild itself once per record.
+-- `overrides` is an optional partial record (the CLI passes one). New panels pick up the profile's
+-- four new-panel defaults (size, strata, opacity), which is what makes those settings meaningful; an
+-- override still wins, because it is applied afterwards.
+-- The create itself, WITHOUT the broadcast, which R:New sends.
 local function create(name, overrides)
   local p = NS.db and NS.db.profile
   if not p then return nil, "database not ready" end
@@ -357,7 +355,7 @@ local function create(name, overrides)
   rec.id = p.nextID or 1
   p.nextID = rec.id + 1
   -- Stamped AFTER the overrides loop, alongside the id and for the same reason: both are identity,
-  -- and neither is a caller's to supply. A preview spec or a CLI override that carried a frameName
+  -- and neither is a caller's to supply. A CLI override that carried a frameName
   -- would otherwise hand this panel another panel's global.
   rec.frameName = frameName
 
@@ -375,23 +373,7 @@ function R:New(name, overrides)
   return rec
 end
 
--- Create several panels as ONE structural change. Returns the records that were made, in order.
---
--- A spec that cannot be created (a name the user has already taken) is SKIPPED rather than failing
--- the batch: preview mode's placeholders are a convenience, and refusing all three because one name
--- collides would be the wrong trade. Callers that need the reason use R:New per record.
-function R:NewBatch(specs)
-  local made = {}
-  for _, spec in ipairs(specs or {}) do
-    local rec = create(spec.name, spec)
-    if rec then made[#made + 1] = rec end
-  end
-  if #made > 0 then fire(MSG_PANELS) end
-  return made
-end
-
--- The delete itself, WITHOUT the broadcast — the mirror of `create`, and there for the same reason:
--- withdrawing preview's placeholders is one structural change, not three.
+-- The delete itself, WITHOUT the broadcast, which R:Delete sends — the mirror of `create`.
 local function destroy(p, rec)
   for i, candidate in ipairs(p.panels) do
     if candidate.id == rec.id then
@@ -419,24 +401,6 @@ function R:Delete(key)
   return true, rec.name
 end
 
--- Remove several panels as ONE structural change. Returns how many went. Anything that no longer
--- resolves is skipped silently: the caller's list is a snapshot, and a panel the user deleted in the
--- meantime is not an error.
-function R:DeleteBatch(keys)
-  local p = NS.db and NS.db.profile
-  if not p then return 0 end
-  local gone = 0
-  for _, key in ipairs(keys or {}) do
-    local rec = R:Resolve(key)
-    if rec then
-      destroy(p, rec)
-      gone = gone + 1
-    end
-  end
-  if gone > 0 then fire(MSG_PANELS) end
-  return gone
-end
-
 -- Restore one panel to how a freshly created panel would look, keeping only its identity.
 --
 -- "Reset" means the whole record — size, position, anchor, strata, textures, colors, mouseover —
@@ -449,22 +413,11 @@ end
 -- The profile's New-Panel-Defaults are applied exactly as R:New applies them, so "reset" and "make a
 -- new one" land on the same state — otherwise the two would drift the moment a user changed their
 -- defaults.
---
--- A PREVIEW PLACEHOLDER is refused outright. The reset rewrites the record from C.PANEL_TEMPLATE,
--- which deliberately carries no preview marker (see C.PREVIEW_FIELD), so resetting one stripped its
--- marker and promoted a throwaway placeholder into a permanent panel that survived the next sweep —
--- the one path by which test mode could leave litter in a real layout. Refusing rather than
--- re-stamping, because resetting a placeholder to the shipped template is not a meaningful thing to
--- want, and a reason the caller can print is more use than silently doing nothing.
 function R:Reset(key)
   local p = NS.db and NS.db.profile
   if not p then return false, "database not ready" end
   local rec = R:Resolve(key)
   if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
-  if rec[C.PREVIEW_FIELD] then
-    return false, ("'%s' is a test-mode placeholder \226\128\148 turn test mode off to remove it")
-      :format(rec.name)
-  end
 
   local id, name, frameName = rec.id, rec.name, rec.frameName
   local before = Util.DeepCopy(rec)
@@ -492,13 +445,9 @@ end
 -- while staying where it is; a copy that also moved it would land the two exactly on top of each
 -- other, which is never what was wanted. Size IS copied: two panels of matching appearance usually
 -- want matching dimensions, and unlike position that does not make one of them disappear.
---
--- The preview marker is excluded for a different reason: it is not appearance at all but a lifetime
--- flag, and smearing it onto a real panel would make that panel vanish at the next sweep.
 local COPY_EXCLUDED = {
   id = true, name = true, frameName = true,
   point = true, relPoint = true, x = true, y = true,
-  [C.PREVIEW_FIELD] = true,
 }
 
 -- Copy every appearance setting from one panel onto another.
@@ -525,15 +474,10 @@ function R:CopyFrom(targetKey, sourceKey)
 end
 
 -- Everything the session holds that is keyed on a panel id, dropped in one act: a profile switch
--- makes every id name a different panel, `DeleteAll` makes every id name none. The FLAG goes too —
--- `SetPreview` opens with `if on == NS.State.preview`, so a flag left true over an empty id list
--- could never be restarted — and clearing it ends test mode, so Master controls' Test mode box is
--- re-synced (options-ui-§15). `NS.State.unlocked` stays out, for the reason dropSessionIDs gives.
+-- makes every id name a different panel, `DeleteAll` makes every id name none. `NS.State.unlocked`
+-- stays out, for the reason dropSessionIDs gives.
 local function clearPanelSessionState()
   for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
-  for i = #NS.State.previewIDs, 1, -1 do NS.State.previewIDs[i] = nil end
-  NS.State.preview = false
-  if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
 end
 
 -- Re-read the registry after the active AceDB profile changed underneath it.
@@ -548,14 +492,9 @@ end
 --
 -- Panel ids are allocated per PROFILE — `nextID` lives in `db.profile` and a fresh profile starts at
 -- 1 — so the same id names a different panel in every profile, and any id held in session state is
--- not stale-but-harmless after a switch, it is a live reference to somebody else's panel. Three
--- tables held one:
+-- not stale-but-harmless after a switch, it is a live reference to somebody else's panel. Two
+-- tables hold one:
 --
---   NS.State.previewIDs   — the destructive one. Test mode on, switch profile, test mode off
---                           called DeleteBatch with the OLD profile's ids, which resolved against
---                           the NEW profile and destroyed real user panels. Cleared with the
---                           `preview` flag itself, because a flag left true makes SetPreview(true)
---                           return early and the user cannot even restart preview to clear it.
 --   NS.State.unlockedPanels — a panel in the incoming profile came up individually unlocked, with a
 --                           drag handle the user never asked for, because it happened to inherit an
 --                           id someone unlocked in the profile they left.
@@ -593,9 +532,8 @@ function R:DeleteAll()
 
   -- Same sweep `destroy` does per panel, and for the same reason: an id that no longer exists would
   -- linger in the session state for the rest of the session and show up in a debug dump as an
-  -- unlocked (or previewed) panel that is not there. Nothing survives an empty registry, so the
-  -- whole sweep runs wholesale rather than id by id — including the preview FLAG, which this used
-  -- to leave standing over an empty id list.
+  -- unlocked panel that is not there. Nothing survives an empty registry, so the whole sweep runs
+  -- wholesale rather than id by id.
   clearPanelSessionState()
   -- One trace for the whole purge (debug-logging-§8): `destroy` is never called on this path.
   if n > 0 then NS.Debug("Panel", "deleted all %s panel(s)", n); fire(MSG_PANELS) end
