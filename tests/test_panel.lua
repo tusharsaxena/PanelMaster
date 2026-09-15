@@ -1239,7 +1239,7 @@ test("Panels page: the Reset all settings tooltip says it resets this profile, a
   assertTrue(ok, tostring(err))
   assertEqual(got.title, "Reset all settings")
   assertEqual(got.body, "Reset the current profile to its defaults \226\128\148 the same thing Profiles "
-    .. "\226\134\146 Reset Profile does. Your other profiles are not affected.")
+    .. "-> Reset Profile does. Your other profiles are not affected.")
 end)
 
 test("Options descriptor: resetProfile resets the live db's active profile, exactly once", function()
