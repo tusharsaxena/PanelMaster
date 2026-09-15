@@ -28,7 +28,7 @@ If you have used kgPanels, or the panels built into ElvUI, this will feel famili
 
 **_Panels with bundled artwork_**
 
-![Panels with bundled artwork](https://media.forgecdn.net/attachments/1936/707/panelmaster-screenshot-02-png.png)
+![Panels with bundled artwork](https://media.forgecdn.net/attachments/1950/134/artwork-poster-jpg.jpg)
 
 **_Panels with SunnArt artwork_**
 
