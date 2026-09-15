@@ -92,6 +92,9 @@ if not lib then
     ChoiceGrid = noop, IdInput = noop, IdList = noop,
     ResolveId = function() return nil end, UnnamedCandidates = function() return nil end,
     ID_NAME_HINT = {},
+    -- SelectTab, new at LibKa0s v1.36.0: reached only from a tab click on an already-rendered
+    -- page. No page here adopts tab-scoped refresh, so the same inert answer applies.
+    SelectTab = noop,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
