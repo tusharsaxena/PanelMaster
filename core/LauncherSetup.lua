@@ -144,9 +144,23 @@ NS.Launcher = lib:New({
   -- NS.PREFIX ("[PM]"), not the `## Title` ("Ka0s Panel Master"), not a hand-typed literal that goes
   -- stale the day the folder is renamed. Same rule core/MediaSetup.lua and core/EnvSetup.lua state.
   name  = addonName,
-  -- What a broker display prints beside the icon. The TITLE here rather than the folder name,
-  -- because this one IS cosmetic: it is read by a human in a row of other addons' names, and the
-  -- library defaults to `name` only because it has nothing better.
+  -- THE BRAND NAME IN PLAIN TEXT -- `Ka0s <Name>` (launcher-§1). This is what a broker display
+  -- prints in its own row, and it prints it BESIDE THE OTHER TEN, so it is the one field that
+  -- decides whether the collection reads as one collection in Titan Panel or as eleven unrelated
+  -- addons that happen to be installed together. Across the eleven adoptions it came out three ways
+  -- because nothing said what it was; standard v2.54.0 says what it is, and a display sorting its
+  -- plugins alphabetically now files all eleven together under K.
+  --
+  -- IT IS NOT THE TOC `## Title`, and the two are deliberately NOT wired to each other even though
+  -- this addon's Title happens to read the same. A Title MAY carry color escapes and one in the
+  -- collection does -- Ka0s Pretty Chat's is `Ka0s |cffff0000P|cffff9900r|cffffff00e|...` -- which a
+  -- display drawing the string raw splatters across a row where every other row is plain text, and
+  -- one stripping escapes delivers mangled. So: no escape sequence of any kind, and a literal here
+  -- rather than a read of the manifest, which is the wiring the rule forbids.
+  --
+  -- It is not the folder name either. That is `name` above, which LibDBIcon keys the saved position
+  -- by and which a player reads nowhere as prose: `PanelMaster` is an identifier,
+  -- `Ka0s Panel Master` is a name. Two fields, two jobs.
   label = "Ka0s Panel Master",
   -- The same file the TOC's `## IconTexture` names (launcher-§4) — one asset, three surfaces.
   icon  = C.ICON_PATH,

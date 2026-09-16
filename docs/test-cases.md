@@ -721,10 +721,11 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
-### test_launcher.lua (22)
+### test_launcher.lua (23)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
 - Launcher: the object is type 'launcher' and wears the addon's own icon
+- Launcher: the label is the BRAND NAME in plain text, not the Title and not the folder
 - Launcher.Register: a second call builds no second button
 - Launcher: LEFT-click toggles the addon's lock, which is its preview
 - Launcher: the left click drives the SAME state the Lock frame checkbox drives
@@ -945,7 +946,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 68 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
-| test_launcher.lua | 22 |
+| test_launcher.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
 | test_surface_parity.lua | 5 |
@@ -958,4 +959,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **828** |
+| **Total** | **829** |

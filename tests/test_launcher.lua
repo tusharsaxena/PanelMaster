@@ -74,8 +74,33 @@ test("Launcher: the object is type 'launcher' and wears the addon's own icon", f
   assertEqual(object.icon, NS.Constants.ICON_PATH)
   assertFalse(object.icon:find("Interface\\Icons", 1, true) ~= nil,
     "the launcher wears a Blizzard icon, so the addon looks like something else")
-  assertEqual(object.label, "Ka0s Panel Master")
 end)
+
+test("Launcher: the label is the BRAND NAME in plain text, not the Title and not the folder",
+  function()
+    -- launcher-§1, as it became explicit at standard v2.54.0. `label` is what a broker display
+    -- prints in its row, beside the other ten Ka0s addons, so it is the one field that decides
+    -- whether the collection reads as one collection or as eleven unrelated addons. Across the
+    -- eleven adoptions it came out three ways -- "Absorb Tracker", "Ka0s KickCD", "Ka0s Pretty
+    -- Chat" -- because nothing said what it was, and a display sorting alphabetically filed one of
+    -- them under A while the rest sat under K.
+    local object = NS.Launcher:Object()
+    assertEqual(object.label, "Ka0s Panel Master")
+
+    -- NO ESCAPE SEQUENCE OF ANY KIND, which is the half of the rule that cannot be read off the
+    -- string above. A Title MAY carry color escapes and one in the collection does (Ka0s Pretty
+    -- Chat's), and handed to a display that draws the string raw it splatters across a row in which
+    -- every other row is plain text. This is what goes red if `label` is ever wired to `## Title`.
+    assertEqual(object.label:find("|c", 1, true), nil, "the label carries a color escape")
+    assertEqual(object.label:find("|r", 1, true), nil, "the label carries an escape sequence")
+    assertEqual(object.label:find("|T", 1, true), nil, "the label carries a texture escape")
+
+    -- And it is not the folder name, which is a different field with a different job: `name` is
+    -- what LibDBIcon keys the saved position by, and a player reads it nowhere as prose.
+    assertTrue(object.label ~= NAME, "the label is the folder name, which is an identifier")
+    assertEqual(mocks.__brokerObjects[NAME], object,
+      "the registration name stopped being the folder name")
+  end)
 
 test("Launcher.Register: a second call builds no second button", function()
   -- A host may call this from OnInitialize and again from a login handler. LibDBIcon's Register on

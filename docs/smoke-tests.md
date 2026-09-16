@@ -429,8 +429,11 @@ worth doing in full after any change to the icon or the seam.
    it to.
 8. Right-click the button and use **LibDBIcon's own menu** to hide it → **Expect:** the **Minimap
    button** checkbox is now unticked. They are one setting.
-9. Only if you run Titan Panel, ElvUI or Bazooka: **Expect:** a **PanelMaster** row in its plugin
-   list, wearing the same logo, whose left and right clicks do the same two things as steps 3 and 4.
+9. Only if you run Titan Panel, ElvUI or Bazooka: **Expect:** a row labeled **Ka0s Panel Master**
+   in its plugin list -- the brand name in plain text, not `PanelMaster` and not a string with color
+   escapes in it (`launcher-§1`) -- wearing the same logo, whose left and right clicks do the same
+   two things as steps 3 and 4. **Fail:** the row reads as the folder name, or is splattered with
+   `|cff...` escapes, either of which files this addon away from its ten siblings in the list.
    The row has **no** enable/disable setting of this addon's — the display's own per-plugin toggle
    is where that belongs.
 
