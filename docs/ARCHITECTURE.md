@@ -374,8 +374,9 @@ git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l |
 
 **Nothing is over the cap.** The largest authored file in the repository,
 `settings/PanelEditor.lua`, is twenty-four lines under it (1476 lines on 2026-09-16), and
-the four rows above are the whole band. `modules/Registry.lua` at 937 is the nearest file outside the
-table and is sixty-three lines from needing a row of its own. `M4-18` put a private sweep in it and was
+the four rows above are the whole band. `tests/test_libka0s.lua` at 971 is the nearest file outside
+the table and is twenty-nine lines from needing a row of its own, with `tests/test_sunnart.lua` at 955
+and `modules/Registry.lua` at 937 behind it. `M4-18` put a private sweep in `Registry` and was
 trimmed to stay under the trigger deliberately: crossing the band as a side effect of a Low-severity
 boundary fix would have bought a census row that said nothing.
 
