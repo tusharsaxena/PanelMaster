@@ -48,7 +48,8 @@ on a busy screen. `/pm lock` puts it all back. The outline and the label go away
 taking the mouse entirely, and clicks, tooltips and keybinds pass straight through to whatever is on
 top of it. Unlocking mid-fight is queued, with a gray notice saying so, and happens by itself the
 second you drop out of combat. A panel that has wandered past a screen edge comes back with
-`/pm recover`.
+`/pm recover`. A panel you are done with goes away with `/pm delete <name>`, which takes
+the panel and its settings with it.
 
 How it looks is the Panels page in the settings window. Pick a panel from the picker at the top and
 it opens underneath, one tab at a time: **General** first — its name, the two switches, and the
@@ -66,6 +67,12 @@ layout copied in as a starting point.
 Everything else is configuration, and it lives in two places: the addon's own page under Settings ▸
 AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare `/pm` opens that settings page,
 and `/pm help` prints the full command list.
+
+Those settings are readable from chat too, if that suits you better than clicking: `/pm list`
+prints every setting with its current value, `/pm get <setting>` answers for one, and
+`/pm reset <setting>` puts one back to its default. `/pm resetall` returns the whole profile to
+defaults and asks before it does. `/pm version` prints the version, which is the thing to quote in
+a bug report.
 
 ## How panels work
 
