@@ -136,17 +136,18 @@ S.Schema = {
 -- ── Master controls (options-ui-§15) ────────────────────────────────────────────
 --
 -- Tab 1 of the General page, and the array above does NOT declare it: it is COMPOSED, out of
--- LibKa0s-Options-1.0's `MasterControls`, and spliced at the head by S:InstallMaster below. Nine
--- addons were about to hand-write the same eight rows in eight orders; the composer is what makes
--- them identical without nine people agreeing to be careful, and it owns the set, the order, the
--- labels and the ranges outright.
+-- LibKa0s-Options-1.0's `MasterControls`, and spliced at the head by S:InstallMaster below. Eleven
+-- addons were about to hand-write the same canonical set in eleven orders; the composer is what
+-- makes them identical without eleven people agreeing to be careful, and it owns the set, the
+-- order, the labels and the ranges outright. The set is EIGHT rows at its fullest; this addon
+-- takes seven of them, being exempt from Test mode (options-ui-§15 -- unlocking is its preview).
 --
 -- WHY IT IS NOT IN THE ARRAY. The composer lives on NS.Helpers, and settings/OptionsSetup.lua —
 -- which builds that instance — loads AFTER this file (the descriptor reads NS.Schema). So the rows
 -- cannot exist at this file's load time, and the seam that CAN build them calls in.
 --
 -- WHAT A LIBRARY-LESS INSTALL LOSES, said out loud because options-ui-§1 requires it measured
--- rather than assumed: these six rows, and nothing else — all six are the composer's. The stub's
+-- rather than assumed: these seven rows, and nothing else — all seven are the composer's. The stub's
 -- composers answer an empty list (settings/OptionsSetup.lua explains why a hand-copied set there
 -- would be the copy that goes stale), so `/pm list|get|set` in a degraded install reaches the
 -- Editing and New panels rows only. tests/test_schema.lua pins that count by name so it can never
