@@ -286,6 +286,22 @@ NS.COMMANDS = {
   { "config",   "Open settings", function()
       if NS.Panel then NS.Panel:Open() end
     end },
+  -- THE RESERVED PAIR (slash-commands-§2), and they are ALIASES rather than a second switch. Both
+  -- write `NS.Schema.ENABLED_PATH` -- the very path the Master controls *Enable Ka0s Panel Master*
+  -- checkbox writes -- through the very seam it writes through, so the two surfaces can never show
+  -- the player two different answers and `settings/Schema.lua`'s `announce("enabled")` runs
+  -- whichever one was used. They hold NO state of their own: no second key, no session flag, no
+  -- `NS.enabled` local.
+  --
+  -- Routed through `CliSet` rather than calling `NS.Schema:Set` directly, and that is the point
+  -- rather than a shortcut. `/pm enable` is then LITERALLY `/pm set settings.enabled true` -- the
+  -- same parse, the same write, and the same canonical `path = value` echo read back from the
+  -- STORE after the write (slash-commands-§5). Formatting the acknowledgment here instead would be
+  -- a private variant of the one shared formatter, which §5 forbids in as many words.
+  { "enable",   "Turn the addon on",
+    function() NS.Slash:CliSet(NS.Schema.ENABLED_PATH .. " true") end },
+  { "disable",  "Turn the addon off without unloading it",
+    function() NS.Slash:CliSet(NS.Schema.ENABLED_PATH .. " false") end },
   { "new",      "Create a panel: /pm new <name>",
     function(a) NS.Slash:CliNew(a) end },
   { "delete",   "Delete a panel: /pm delete <name>",

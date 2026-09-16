@@ -2,6 +2,10 @@ local T = _G.PM_TEST
 local NS = T.NS
 local test, assertEqual, assertTrue, assertFalse = T.test, T.assertEqual, T.assertTrue, T.assertFalse
 local Sl, R = NS.Slash, NS.Registry
+-- The schema and the mocks, for the reserved enable/disable pair at the foot of this file:
+-- those two verbs are ALIASES onto a schema path (slash-commands-§2), so asserting they hold
+-- no state of their own means reading the row they write from both ends.
+local S, mocks = NS.Schema, T.mocks
 
 -- Capture what the addon printed while running `fn`.
 local function capture(fn)
@@ -603,7 +607,7 @@ test("COMMANDS: the standard's required verbs are present (slash-commands-§3)",
   local have = {}
   for _, cmd in ipairs(NS.COMMANDS) do have[cmd[1]] = true end
   for _, required in ipairs({ "config", "version", "get", "set", "list",
-                              "reset", "resetall", "debug", "help" }) do
+                              "reset", "resetall", "debug", "enable", "disable", "help" }) do
     assertTrue(have[required], "missing the required '" .. required .. "' verb")
   end
 end)
@@ -670,3 +674,77 @@ test("Slash.CliPanel: artAutosize is no longer a field anyone can set", function
     "artAutosize was still accepted: " .. tostring(lines[1]))
 end)
 
+
+-- ── the reserved verbs (slash-commands-§2) ─────────────────────────────────────
+
+test("Verbs: /pm enable and /pm disable write the Enable row's own path", function()
+  -- ALIASES, never a second switch. They write `settings.enabled` -- the path the Master controls
+  -- *Enable Ka0s Panel Master* checkbox writes -- so the two surfaces cannot show the player two
+  -- different answers.
+  assertEqual(S.ENABLED_PATH, "settings.enabled")
+  NS.Slash:OnSlash("disable")
+  assertEqual(NS.db.profile.settings.enabled, false, "/pm disable did not write the stored path")
+  assertEqual(S:Get(S.ENABLED_PATH), false, "the checkbox disagrees with the verb")
+
+  NS.Slash:OnSlash("enable")
+  assertEqual(NS.db.profile.settings.enabled, true, "/pm enable did not write the stored path")
+  assertEqual(S:Get(S.ENABLED_PATH), true)
+end)
+
+test("Verbs: they hold no state of their own -- the checkbox drives them too", function()
+  -- Approached from the other end: write the ROW, then read what the verbs read. A verb keeping a
+  -- flag of its own agrees with the checkbox until one of the two is used twice.
+  S:Set(S.ENABLED_PATH, false)
+  assertEqual(S:Get(S.ENABLED_PATH), false)
+  NS.Slash:OnSlash("enable")
+  assertEqual(S:Get(S.ENABLED_PATH), true, "the verb toggled from a copy of its own")
+  assertEqual(NS.enabled, nil, "an NS.enabled flag is back")
+end)
+
+test("Verbs: the acknowledgment is the shared path = value echo, read back from the store",
+  function()
+    -- slash-commands-§5: one shared formatter for list/get/set/reset, never a private variant. The
+    -- echo reads the STORED value back after the write, which is why `/pm enable` is literally
+    -- `/pm set settings.enabled true` rather than a second implementation beside it.
+    local chat = mocks.__chat
+    NS.Slash:OnSlash("disable")
+    assertEqual(chat[#chat], NS.PREFIX .. " " .. NS.Slash.FormatKV(S.ENABLED_PATH, "false"),
+      "the disable acknowledgment is not the collection's shared key = value line")
+    NS.Slash:OnSlash("enable")
+    assertEqual(chat[#chat], NS.PREFIX .. " " .. NS.Slash.FormatKV(S.ENABLED_PATH, "true"))
+  end)
+
+test("Verbs: the dispatcher survives the disabled state, so the pair is never one-way", function()
+  -- The failure this prevents is a switch that only goes one way: the player turns the addon off,
+  -- the verb that turns it back on no longer exists, and the only route left is the settings panel
+  -- they were trying not to open. Disabled means the addon stands its FEATURES down. The chat
+  -- command, the COMMANDS table and the settings registration are SETUP and stay up.
+  S:Set(S.ENABLED_PATH, false)
+
+  local commands = mocks.LibStub("AceConsole-3.0").commands
+  assertTrue(commands["pm"] ~= nil, "the disabled addon unregistered its own slash command")
+  assertTrue(commands["panelmaster"] ~= nil, "the disabled addon unregistered its alias")
+
+  -- enable above all.
+  NS.Slash:OnSlash("enable")
+  assertEqual(S:Get(S.ENABLED_PATH), true, "/pm enable is unreachable once the addon is disabled")
+
+  -- and with it help, config and version.
+  S:Set(S.ENABLED_PATH, false)
+  local chat = mocks.__chat
+  local before = #chat
+  NS.Slash:OnSlash("help")
+  assertTrue(#chat > before, "/pm help answered nothing while disabled")
+  NS.Slash:OnSlash("version")
+  assertTrue(chat[#chat]:find("v", 1, true) ~= nil, "/pm version answered nothing while disabled")
+  mocks.__openedCategory = nil
+  mocks.__inCombat = false
+  NS.Slash:OnSlash("config")
+  assertEqual(mocks.__openedCategory, 1, "/pm config did not open the panel while disabled")
+  -- A bare /pm reaches the config row (slash-commands-§4), and it must reach it while disabled too.
+  mocks.__openedCategory = nil
+  NS.Slash:OnSlash("")
+  assertEqual(mocks.__openedCategory, 1, "a bare /pm answered nothing while disabled")
+
+  S:Set(S.ENABLED_PATH, true)
+end)
