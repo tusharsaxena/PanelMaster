@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-827%2F827_passing-green)
+![Tests](https://img.shields.io/badge/Tests-834%2F834_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -83,6 +83,11 @@ a bug report. `/pm disable` turns the whole addon off without unloading it — y
 exactly where they are, they just stop being drawn — and `/pm enable` brings it back. Both are the
 same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page, and `/pm`
 keeps answering while the addon is off, so `/pm enable` is always there.
+
+While it is off, the verbs that make and edit panels say so rather than acting — one line naming
+`/pm enable`, and nothing done. The settings verbs above are deliberately not among them: reading
+and repairing your settings, and opening the settings page, are exactly what you are most likely to
+want while the addon is standing down.
 
 ## How panels work
 
@@ -247,7 +252,7 @@ conversion guide, including how to pick good sources, is in
 
 | Symptom | Fix |
 |---------|-----|
-| I made a panel and cannot see it | Three usual causes. It might be behind something opaque: run `/pm unlock`, which outlines and names every panel regardless. It might be switched off; check `/pm panels`, where a disabled panel is listed in gray. Or the master switch is off, so `/pm set settings.enabled true`. |
+| I made a panel and cannot see it | Three usual causes. It might be behind something opaque: run `/pm unlock`, which outlines and names every panel regardless. It might be switched off; check `/pm panels`, where a disabled panel is listed in gray. Or the whole addon is off — in which case `/pm panels` will tell you so and name `/pm enable`. |
 | A panel has ended up off the edge of the screen | `/pm recover` brings every stray panel back into view. This never happens by itself, so a panel you deliberately parked half off-screen stays exactly where you put it. |
 | I unlocked panels but nothing became draggable | You were in combat, so the unlock was queued rather than applied, and you will have seen a gray notice saying so. It happens by itself the moment you leave combat. |
 | `/pm config` says it cannot open during combat | Blizzard's restriction, not a bug: the settings window cannot be switched to while you are fighting. Run it again once you are out. |

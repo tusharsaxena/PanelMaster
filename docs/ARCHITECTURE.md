@@ -143,7 +143,9 @@ delete rename panels panel unlock lock recover` — no `test` verb, because unlo
 test mode (`options-ui-§15`). `enable` and `disable` are **aliases** onto `settings.enabled`, the
 path the Master-controls checkbox writes, through the same write seam and holding no state of their
 own (`slash-commands-§2`); the dispatcher keeps answering while the addon is disabled, so the pair
-is never one-way. Verb detail and the host/library split in
+is never one-way. What a **disabled** addon does refuse is its **feature verbs**, on one tagged line
+naming `/pm enable` and nothing else — gated once over `NS.COMMANDS` rather than per handler, with
+the live set (`Sl.ALWAYS_LIVE`) named once as data. Verb detail and the host/library split in
 **[slash-dispatch.md](slash-dispatch.md)**.
 
 ## The launcher (`launcher-§1`)

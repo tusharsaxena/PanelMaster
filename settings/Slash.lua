@@ -350,6 +350,66 @@ NS.COMMANDS = {
   { "help",     "Show this help", function() NS.Slash:PrintHelp() end },
 }
 
+-- ── The disabled gate, in ONE place (slash-commands-§2) ─────────────────────────
+--
+-- A disabled addon answers a FEATURE verb by saying so and naming `/pm enable`, and does nothing
+-- else. That was a trailing SHOULD nobody implemented until standard v2.54.0 made it precise enough
+-- to audit; it is still a SHOULD, and this addon takes it because eight of its nineteen verbs create,
+-- delete, rename, list, edit, unlock, lock or recover the panels it is currently standing down from
+-- drawing, and a silent no-op on any of them leaves the player with no clue why nothing happened.
+--
+-- IT IS THE VERB TABLE THAT IS GATED, NOT THE VERBS. A guard pasted into each handler is eight
+-- places to keep in step and a ninth to forget, and the next verb added forgets it by DEFAULT --
+-- which is the wrong default for a courtesy nobody will notice is missing. `NS.COMMANDS` is the one
+-- seam every verb passes through: the library's dispatcher reads `entry[3]` out of this very table,
+-- and so does the degraded arm's own `run()` below, so wrapping the handlers HERE -- once, before
+-- either reader exists -- reaches both surfaces and every future verb. The cost of the choice is
+-- that a verb OPTS OUT by being named in ALWAYS_LIVE below, which is a list a reviewer can read.
+--
+-- ALWAYS_LIVE IS THE STANDARD'S OWN SET, spelled as data rather than as a chain of conditions: a
+-- player must be able to READ AND REPAIR SETTINGS and REACH THE PANEL while the addon is off --
+-- which is precisely when they are most likely to need to -- and `enable` above all, or the pair is
+-- one-way again. `debug` and `perf` are diagnostics rather than features, since the usual reason to
+-- reach for either is that the addon is misbehaving. `perf` is listed although this addon registers
+-- no such verb: the set is the rule, not an inventory of today's table, and a `perf` arriving later
+-- must not have to remember to come back here.
+local ALWAYS_LIVE = {
+  help = true, config = true, version = true, enable = true, disable = true,
+  debug = true, perf = true,
+  get = true, set = true, list = true, reset = true, resetall = true,
+}
+Sl.ALWAYS_LIVE = ALWAYS_LIVE
+
+-- ONE tagged line, and nothing else. No second line explaining the state: a paragraph is a lecture
+-- stapled to a command the player is about to re-run anyway. Through NS.L with the English source
+-- string as the key (localization-§1/§2) -- the FIRST string in this addon to route through the
+-- seam, which locales/enUS.lua records. The verb is a `%s` rather than part of the key so a
+-- translator never has to retype a slash command, and it is resolved at CALL time so a locale file
+-- loaded after this one still wins.
+local DISABLED_KEY = "the addon is disabled \226\128\148 %s turns it back on"
+
+--- Is the addon's own master switch off? Guarded on NS.db because a verb can be typed before
+--- `NS:InitDB()` has run on a client that failed to load the DB at all, and `S:Get` would index a
+--- nil profile. Read from the SCHEMA, never from a flag of this file's own: `settings.enabled` is
+--- the one path the checkbox and `/pm enable` both write (slash-commands-§2), and a second copy
+--- here would answer the player differently from the row they just ticked.
+local function isDisabled()
+  return NS.db ~= nil and NS.Schema:Get(NS.Schema.ENABLED_PATH) == false
+end
+
+for _, cmd in ipairs(NS.COMMANDS) do
+  if not ALWAYS_LIVE[cmd[1]] then
+    local act = cmd[3]
+    cmd[3] = function(rest)
+      if isDisabled() then
+        print(NS.L[DISABLED_KEY]:format("|cffffff00/pm enable|r"))
+        return
+      end
+      return act(rest)
+    end
+  end
+end
+
 -- ── LibKa0s-Slash-1.0 seam ──────────────────────────────────────────────────────
 --
 -- What moves to the library: the dispatcher, the help renderer, the landing-page row formatter, the

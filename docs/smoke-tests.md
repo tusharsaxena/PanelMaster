@@ -396,6 +396,16 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    the dispatcher stood down with the features, `disable` would be a one-way switch.
 7. `/pm config` → **General ▸ Master controls** → untick and re-tick **Enable Ka0s Panel Master**
    → **Expect:** the checkbox and the two verbs always agree, whichever you used last.
+8. **While disabled**, run a FEATURE verb and then check the world, not the chat. `/pm new Ghost`
+   → **Expect:** exactly one line, `the addon is disabled — /pm enable turns it back on`, and
+   **no new panel** — confirm with `/pm enable` then `/pm panels` (`slash-commands-§2`). Repeat
+   with `/pm unlock` → **Expect:** the same line, and the panels stay locked. **Fail:** the line
+   prints and the verb acts anyway, which is the failure a chat-only check walks straight past.
+9. **While disabled**, run the verbs that must never be refused: `/pm list`, `/pm get
+   settings.gridSize`, `/pm set settings.gridSize 8`, `/pm reset settings.gridSize`, `/pm debug`.
+   **Expect:** every one answers normally, and the `set` really writes — a player has to be able to
+   read and repair settings while the addon is off, which is when they are most likely to need to.
+   Re-enable when done.
 
 ## 7b. The launcher — the minimap button and the broker row
 

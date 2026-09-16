@@ -559,7 +559,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (68)
+### test_slash.lua (73)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -629,6 +629,11 @@ badge and any count quoted in the docs must agree with it.
 - Verbs: they hold no state of their own -- the checkbox drives them too
 - Verbs: the acknowledgment is the shared path = value echo, read back from the store
 - Verbs: the dispatcher survives the disabled state, so the pair is never one-way
+- Disabled: every feature verb refuses on ONE line naming /pm enable
+- Disabled: a feature verb does not ACT -- the refusal is instead of the work, not before it
+- Disabled: the live verbs are never refused (slash-commands-§2)
+- Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
+- Disabled: the refusal routes through NS.L, with a key in locales/enUS.lua
 
 ### test_panel.lua (62)
 
@@ -943,7 +948,7 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 30 |
-| test_slash.lua | 68 |
+| test_slash.lua | 73 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
 | test_launcher.lua | 23 |
@@ -959,4 +964,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **829** |
+| **Total** | **834** |

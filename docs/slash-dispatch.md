@@ -24,6 +24,21 @@ nothing else — while `Sl:Register` and `P:Register` run unconditionally from `
 bare `/pm`, and `enable`, `help`, `config` and `version` with it, all still answer once the addon is
 off. `tests/test_slash.lua` pins that, because a player who can turn the addon off and not back on
 has only the settings panel they were trying not to open.
+
+**A disabled addon refuses its FEATURE verbs**, on one tagged line naming `/pm enable`, and does
+nothing else (`slash-commands-§2`; a SHOULD, taken here). The gate is on the **verb table**, not on
+the verbs: `settings/Slash.lua` walks `NS.COMMANDS` once, before either reader of it exists, and
+wraps every handler whose name is not in `Sl.ALWAYS_LIVE`. One place, so the library's dispatcher
+and the degraded stub's own `run()` both get it and a verb added tomorrow is gated by default — a
+guard pasted into each handler would be eight places to keep in step and a ninth to forget.
+
+`ALWAYS_LIVE` is the standard's own set, spelled as data: `help config version enable disable debug
+perf get set list reset resetall`. The reason is that a player must be able to read and repair
+settings, and reach the panel, while the addon is off — and `enable` above all, or the pair is
+one-way again. `perf` is listed although this addon registers no such verb, so a later one does not
+have to remember to come back. Everything else — `new delete rename panels panel unlock lock
+recover` — refuses. The refusal is the one string in this addon that routes through `NS.L`
+(`docs/localization.md`).
 Panel verbs: `new delete rename panels panel unlock lock recover`.
 
 There is no `test` verb. Unlocking is this addon's test mode (`options-ui-§15`): it shows every

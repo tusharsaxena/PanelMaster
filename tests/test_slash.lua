@@ -748,3 +748,136 @@ test("Verbs: the dispatcher survives the disabled state, so the pair is never on
 
   S:Set(S.ENABLED_PATH, true)
 end)
+
+-- ── a disabled addon refuses its FEATURE verbs (slash-commands-§2) ─────────────
+--
+-- The trailing SHOULD that nobody implemented until standard v2.54.0 made it precise. The failure
+-- these cases prevent is the one a message-only assertion walks straight past: a verb that prints
+-- the refusal AND THEN ACTS ANYWAY. So every case below reads the world afterwards, not the chat.
+
+--- Run `fn` with the addon disabled, and put the switch back however it ends.
+local function whileDisabled(fn)
+  S:Set(S.ENABLED_PATH, false)
+  local ok, err = pcall(fn)
+  S:Set(S.ENABLED_PATH, true)
+  if not ok then error(err, 0) end
+end
+
+test("Disabled: every feature verb refuses on ONE line naming /pm enable", function()
+  -- DERIVED FROM THE TABLE, not from a list written out here, which is the whole point of gating
+  -- the verb table in one place: a verb added to NS.COMMANDS tomorrow is covered by this case the
+  -- day it lands, and a verb that quietly opted itself out is what turns it red.
+  fresh()
+  R:New("Probe")
+
+  whileDisabled(function()
+    for _, cmd in ipairs(NS.COMMANDS) do
+      if not Sl.ALWAYS_LIVE[cmd[1]] then
+        local lines = capture(function() NS.Slash:OnSlash(cmd[1] .. " Probe") end)
+        assertEqual(#lines, 1, "/pm " .. cmd[1] .. " answered " .. #lines .. " lines while "
+          .. "disabled -- the refusal is one line and nothing else")
+        assertTrue(lines[1]:find("/pm enable", 1, true) ~= nil,
+          "/pm " .. cmd[1] .. " did not name the verb that turns the addon back on: " .. lines[1])
+      end
+    end
+  end)
+  fresh()
+end)
+
+test("Disabled: a feature verb does not ACT -- the refusal is instead of the work, not before it",
+  function()
+    -- The half a chat assertion cannot see. Each verb below has a crisp observable effect, read
+    -- back from the registry and from the unlock state rather than from what was printed.
+    -- red under: a per-verb guard that prints and falls through.
+    fresh()
+    local rec = R:New("Probe")
+    local width = R:Get(rec.id).width
+    NS.Unlock:SetUnlocked(false)
+
+    whileDisabled(function()
+      NS.Slash:OnSlash("new Second")
+      assertEqual(R:Count(), 1, "/pm new created a panel while the addon was disabled")
+
+      NS.Slash:OnSlash("panel Probe width 500")
+      assertEqual(R:Get(rec.id).width, width, "/pm panel edited a panel while disabled")
+
+      NS.Slash:OnSlash("rename Probe Renamed")
+      assertEqual(R:Get(rec.id).name, "Probe", "/pm rename renamed a panel while disabled")
+
+      NS.Slash:OnSlash("unlock")
+      assertFalse(NS.State.unlocked, "/pm unlock unlocked the panels while the addon was disabled")
+
+      NS.Slash:OnSlash("delete Probe")
+      assertEqual(R:Count(), 1, "/pm delete deleted a panel while the addon was disabled")
+    end)
+
+    -- And the same verbs work the moment it is back on, so the gate is a gate and not a removal.
+    NS.Slash:OnSlash("delete Probe")
+    assertEqual(R:Count(), 0, "/pm delete stayed refused after the addon was re-enabled")
+    fresh()
+  end)
+
+test("Disabled: the live verbs are never refused (slash-commands-§2)", function()
+  -- The other side of the same rule, and the reason it is spelled out: "refuse while disabled",
+  -- read literally, takes the entire command surface down with it. A player must be able to read
+  -- and repair settings and reach the panel while the addon is off -- and `enable` above all.
+  fresh()
+  whileDisabled(function()
+    for _, cmd in ipairs(NS.COMMANDS) do
+      if Sl.ALWAYS_LIVE[cmd[1]] then
+        local lines = capture(function() NS.Slash:OnSlash(cmd[1]) end)
+        for _, line in ipairs(lines) do
+          assertFalse(line:find("/pm enable", 1, true) ~= nil and line:find("disabled", 1, true) ~= nil,
+            "/pm " .. cmd[1] .. " was refused, and it is on the live list: " .. line)
+        end
+      end
+    end
+
+    -- Read AND repair, not merely answer: the schema CLI has to still write.
+    NS.Slash:OnSlash("set settings.gridSize 16")
+    assertEqual(S:Get("settings.gridSize"), 16, "/pm set could not repair a setting while disabled")
+    NS.Slash:OnSlash("reset settings.gridSize")
+    assertEqual(S:Get("settings.gridSize"), 4, "/pm reset could not repair a setting while disabled")
+  end)
+  fresh()
+end)
+
+test("Disabled: the gate is the VERB TABLE's, so the live set is the standard's own", function()
+  -- ALWAYS_LIVE is data, named once, and this is what stops it drifting into an ad-hoc list. Every
+  -- name the standard puts on the live list is here whether or not this addon registers the verb --
+  -- `perf` does not exist in NS.COMMANDS today, and a `perf` arriving later must not have to
+  -- remember to come back and add itself.
+  for _, verb in ipairs({ "help", "config", "version", "enable", "disable", "debug", "perf",
+                          "get", "set", "list", "reset", "resetall" }) do
+    assertTrue(Sl.ALWAYS_LIVE[verb], "'" .. verb .. "' is a feature verb here, and the standard "
+      .. "says it may never be refused")
+  end
+  -- And nothing else has been quietly added to it: the live set is a carve-out, not a preference.
+  local extra = 0
+  for verb in pairs(Sl.ALWAYS_LIVE) do
+    local named = false
+    for _, ok in ipairs({ "help", "config", "version", "enable", "disable", "debug", "perf",
+                          "get", "set", "list", "reset", "resetall" }) do
+      if verb == ok then named = true end
+    end
+    if not named then extra = extra + 1 end
+  end
+  assertEqual(extra, 0, "a verb has been exempted from the disabled gate that the standard does not "
+    .. "exempt")
+end)
+
+test("Disabled: the refusal routes through NS.L, with a key in locales/enUS.lua", function()
+  -- localization-§1/§2: the key IS the English source string, and the `%s` is a contract -- the
+  -- call site substitutes the gold-wrapped `/pm enable`, so a translation dropping the placeholder
+  -- loses the one thing the line exists to name.
+  local key = "the addon is disabled \226\128\148 %s turns it back on"
+  assertEqual(rawget(NS.L, key), key, "the refusal has no enUS entry -- it rides the metatable only")
+
+  fresh()
+  whileDisabled(function()
+    local lines = capture(function() NS.Slash:OnSlash("panels") end)
+    assertEqual(lines[1], NS.PREFIX .. " " .. key:format("|cffffff00/pm enable|r"),
+      "the refusal is not the line locales/enUS.lua declares: " .. tostring(lines[1]))
+  end)
+  fresh()
+end)
