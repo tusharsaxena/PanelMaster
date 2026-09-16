@@ -43,8 +43,16 @@ local addonName, NS = ...
 --
 -- The scope is GLOBAL rather than profile, and that is the decision rather than an accident
 -- (launcher-§3): a minimap button belongs to the INSTALLATION. Switching profiles must not move a
--- player's buttons, and options-ui-§12's *Reset all settings* — a profile reset by definition —
--- must not un-hide a button the player deliberately hid. `defaults/Global.lua` declares it.
+-- player's buttons. `defaults/Global.lua` declares it.
+--
+-- SURVIVING A RESET IS A PROPERTY OF THE SETTING, NOT A CONSEQUENCE OF THAT SCOPE (launcher-§3, as
+-- amended at standard v2.54.0). Whether the button is shown is a per-installation display
+-- preference, in the same class as the POSITION the player dragged it to -- which LibDBIcon keeps in
+-- this very table and which no reset touches. So it must survive options-ui-§12's *Reset all
+-- settings* AND a page-scoped Defaults button, and the global store is not the argument for that:
+-- an addon with no profile at all resets its global store wholesale, and a page Defaults button
+-- that walks every Master-controls row with a `default` reaches the row wherever it is stored.
+-- What this addon's two resets actually do is in defaults/Global.lua, which owns the finding.
 --
 -- ── WHERE THIS FILE SITS ────────────────────────────────────────────────────────
 --

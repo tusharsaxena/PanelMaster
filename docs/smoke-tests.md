@@ -415,8 +415,15 @@ worth doing in full after any change to the icon or the seam.
 5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
    where you left it.
 6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move
-   or vanish. Then **Reset all settings** (it asks first) → **Expect:** it is still there and still
-   where you dragged it. Both are what storing it account-wide buys (`launcher-§3`).
+   or vanish. That is what storing it account-wide buys (`launcher-§3`).
+6b. **Hide** the button (untick **General ▸ Master controls ▸ Minimap button**), then run **both**
+   resets in turn, checking the button after each. **Reset all settings** (it asks first) →
+   **Expect:** still hidden, checkbox still unticked. Then the **Defaults** button in the General
+   page's own header → **Expect:** the same. Neither reset may un-hide it, and neither may re-hide a
+   shown one: a player's minimap-button choice is a per-installation display preference, in the same
+   class as the angle they dragged the button to, and no reset in the collection touches that
+   (`launcher-§3`, standard v2.54.0). **Failure:** the button comes back after either reset, or the
+   checkbox re-ticks itself. Tick it back on before moving on.
 7. Untick **General ▸ Master controls ▸ Minimap button** → **Expect:** the button goes at once, not
    at the next reload. `/reload` → it stays gone. Tick it → it comes back, at the angle you dragged
    it to.

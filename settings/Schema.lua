@@ -409,10 +409,11 @@ function S:SnapshotPersisted()
   local snap = {}
   for _, row in ipairs(S.Schema) do
     -- The minimap row is stored in db.GLOBAL, which AceDB's profile reset does not touch, so it is
-    -- out of the picture by definition rather than by luck -- and that is exactly why launcher-§3
-    -- puts it there (options-ui-§12's reset must not un-hide a button the player hid). Snapshotting
-    -- it against db.profile would read nil on both sides and compare equal, which is the right
-    -- answer reached by accident; skipping it says so.
+    -- out of the picture by definition rather than by luck. Snapshotting it against db.profile
+    -- would read nil on both sides and compare equal, which is the right answer reached by
+    -- accident; skipping it says so. (That the row SURVIVES the reset is a property of the setting
+    -- rather than of this store -- launcher-§3 as amended at v2.54.0, and defaults/Global.lua
+    -- carries the finding for this addon's two resets.)
     if not row.sessionOnly and row.path ~= S.MINIMAP_PATH then
       snap[row.path] = NS.Util.DeepCopy(S:ReadPath(NS.db.profile, row.path))
     end

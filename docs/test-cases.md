@@ -721,7 +721,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
-### test_launcher.lua (21)
+### test_launcher.lua (22)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
 - Launcher: the object is type 'launcher' and wears the addon's own icon
@@ -738,7 +738,8 @@ badge and any count quoted in the docs must agree with it.
 - Minimap row: set INVERTS and moves the button in the same act
 - Minimap row: the write seam inverts on its own, not only through the library
 - Minimap row: LibDBIcon holds the very table the row writes, not a copy
-- Minimap row: a profile reset does not un-hide the button
+- Minimap row: Reset all settings does not un-hide the button
+- Minimap row: the General page's Defaults button does not un-hide the button
 - Minimap row: Register validates it, rather than exempting it
 - Degraded install: no LibDataBroker and no LibDBIcon must not raise
 - Degraded install: LibDataBroker alone gets the broker plugin and no button
@@ -944,7 +945,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 68 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
-| test_launcher.lua | 21 |
+| test_launcher.lua | 22 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
 | test_surface_parity.lua | 5 |
@@ -957,4 +958,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **827** |
+| **Total** | **828** |

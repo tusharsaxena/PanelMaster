@@ -43,12 +43,16 @@ of ours beside them — a parallel `show` would be a copy of one state, free to 
 time either surface is used.
 
 It is **global** rather than profile-scoped because a minimap button belongs to the installation:
-switching profiles must not move a player's buttons, and `options-ui-§12`'s *Reset all settings* is
-a profile reset that must not un-hide one they hid. `defaults/Global.lua` declares `hide = false`,
+switching profiles must not move a player's buttons. `defaults/Global.lua` declares `hide = false`,
 and that declaration is what materializes the table — nothing seeds it at runtime
 (`architecture-§5`). The *Minimap button* settings row addresses `global.minimap.hide` and
 **inverts**: the row says shown, the key says hidden, and both halves of the negation live in
 `S:Get` and `S:Set`.
+
+That it **survives a reset** is a separate property of the setting rather than a consequence of that
+scope (`launcher-§3`, amended at standard v2.54.0): it must survive *Reset all settings* **and** a
+page-scoped **Defaults** button. Neither reaches it here — `docs/ARCHITECTURE.md` → *The launcher*
+has the per-reset finding and `defaults/Global.lua` carries the same note beside the declaration.
 
 #### The panel record
 

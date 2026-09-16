@@ -167,9 +167,23 @@ construction rather than by two implementations agreeing. The name is the **fold
 | The libraries | `libs/LibDataBroker-1.1`, `libs/LibDBIcon-1.0` | Vendored and listed in the TOC's `# Libraries` block. Both are resolved with `LibStub(..., true)` at Register time, so a client missing either degrades by name and raises nothing. |
 
 **The scope is global on purpose.** A minimap button belongs to the installation: a profile switch
-must not move a player's buttons, and `options-ui-§12`'s *Reset all settings* — a profile reset by
-definition — must not un-hide a button they deliberately hid. This addon owes **no migration**: it
-has never stored a minimap table anywhere, so nothing has to be carried out of `db.profile`.
+must not move a player's buttons. This addon owes **no migration**: it has never stored a minimap
+table anywhere, so nothing has to be carried out of `db.profile`.
+
+**Surviving a reset is a property of the setting, not a consequence of that scope** (`launcher-§3`,
+amended at standard v2.54.0). Whether the button is shown is a per-installation display preference,
+in the same class as the position LibDBIcon keeps in the same table, so it must survive **both**
+`options-ui-§12`'s *Reset all settings* **and** a page-scoped **Defaults** button. Read against this
+code, neither reaches it, and the two reasons are different:
+
+| Reset | Reaches `global.minimap.hide`? | Why |
+|---|---|---|
+| *Reset all settings* — `/pm resetall`, the header **Defaults** button, the composed *Reset all settings* button | no | All three funnel into `Sl:DoResetAll`, which is `db:ResetProfile()` on the active profile. This addon **has** a profile and keeps everything the player configures in it, so the store AceDB replaces is `db.profile`; `db.global` is a different table. |
+| The General page's **Defaults** button, and the Blizzard footer control that forwards to it | no | It is **not** the library's row walk here. `settings/Panel.lua` rebinds `ctx.panel.defaultsOnClick` to `P:RestoreDefaults`, which is the same profile reset, and `O.CreatePanel`'s `OnDefault` forwards to that same closure. `O.RestoreDefaults` *would* reach the row — `rowsForPage("general")` answers the whole schema and the composed row is spliced at its head — but nothing in this addon calls it. |
+
+No exemption is owed and none is invented. `tests/test_launcher.lua` drives **both** controls for
+real against a hidden button and asserts it is still hidden, so dropping the `defaultsOnClick`
+rebinding turns the suite red instead of quietly un-hiding buttons.
 
 ## Event Subscriptions
 

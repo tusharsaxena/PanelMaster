@@ -31,8 +31,39 @@ local _, NS = ...
 -- rows live. A minimap button belongs to the INSTALLATION: switching profiles is how a player
 -- changes what this addon DRAWS, while the ring of buttons around the minimap is furniture they
 -- arranged once, and profile-scoped it would appear and vanish on a switch made for an unrelated
--- reason. It also keeps options-ui-§12's *Reset all settings* -- a PROFILE reset by definition
--- (settings/Slash.lua's Sl:DoResetAll) -- from un-hiding a button the player deliberately hid.
+-- reason.
+--
+-- ── SURVIVING A RESET IS A PROPERTY, NOT A CONSEQUENCE OF THAT SCOPE ───────────
+--
+-- launcher-§3 used to DERIVE the survival from the scope: *Reset all settings* is a profile reset,
+-- this table is global, therefore the reset cannot reach it. Standard v2.54.0 withdrew that
+-- argument, because it is not universal -- an addon with no `profile` section at all resets its
+-- global store wholesale, and a page-scoped Defaults button that walks every Master-controls row
+-- carrying a `default` reaches the row wherever it is stored. The RULE is unchanged and is now
+-- stated outright: whether the button is shown is a per-installation display preference, in the
+-- same class as the POSITION LibDBIcon keeps two keys away in this same table, and it MUST survive
+-- BOTH options-ui-§12's *Reset all settings* AND a page Defaults button.
+--
+-- WHAT THIS ADDON'S TWO RESETS ACTUALLY DO, read rather than assumed, because both shapes the
+-- standard names are real addons in this collection and neither is this one:
+--
+--   * *Reset all settings* -- `/pm resetall`, the header **Defaults** button and the composed
+--     *Reset all settings* button -- all funnel through `Sl:ConfirmResetAll` into `Sl:DoResetAll`
+--     (settings/Slash.lua), which is `db:ResetProfile()` on the ACTIVE profile and nothing else.
+--     AceDB replaces `db.profile`; `db.global` is a different table and is not touched. This addon
+--     HAS a profile and keeps everything the player configures in it, so the first shape -- an
+--     addon whose global store is emptied wholesale -- does not apply here.
+--   * The page-scoped **Defaults** button on General is NOT the library's row walk here. The
+--     library's `O.RestoreDefaults(pageKey, ctx)` WOULD reach the row -- `rowsForPage("general")`
+--     answers `NS.Schema.Schema`, and the composed *Minimap button* row is spliced at its head --
+--     but nothing in this addon calls it. `settings/Panel.lua` rebinds `ctx.panel.defaultsOnClick`
+--     to `P:RestoreDefaults`, and `O.CreatePanel`'s `OnDefault` forwards the Blizzard footer
+--     control to the same closure, so both controls end in the profile reset above. The second
+--     shape does not apply either.
+--
+-- So no exemption is owed and none is invented. `tests/test_launcher.lua` drives BOTH controls for
+-- real against a hidden button and asserts it is still hidden afterwards, which is what goes red
+-- the day the Defaults rebinding is dropped and the library's walk takes the page over.
 --
 -- `hide = false` is DECLARED, not written. That is what materializes the table for the closure in
 -- core/LauncherSetup.lua to answer with, and declaring it here rather than seeding it at runtime is

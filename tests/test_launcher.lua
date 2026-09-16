@@ -260,16 +260,65 @@ test("Minimap row: LibDBIcon holds the very table the row writes, not a copy", f
   assertEqual(S:Get(S.MINIMAP_PATH), true)
 end)
 
-test("Minimap row: a profile reset does not un-hide the button", function()
-  -- The whole reason launcher-§3 puts the table in the global store. `Reset all settings` is a
-  -- PROFILE reset by definition (options-ui-§12, Sl:DoResetAll), and a profile-scoped `hide` would
-  -- come back false -- a reset reaching past the settings it warned about into the frame furniture.
-  S:Set(S.MINIMAP_PATH, false)
-  NS.Slash:DoResetAll()
+-- ── surviving a reset (launcher-§3, as amended at standard v2.54.0) ────────────
+--
+-- The rule is now a PROPERTY of the setting rather than something derived from where it is stored:
+-- a player's minimap-button choice is a per-installation display preference, like the ANGLE
+-- LibDBIcon keeps two keys away in the same table, and it must survive BOTH options-ui-§12's
+-- *Reset all settings* AND a page-scoped Defaults button. The old derivation -- global table,
+-- profile reset, therefore unreachable -- was withdrawn because it is not universal and because it
+-- only ever spoke about one of the two controls.
+--
+-- So both controls are driven HERE, for real, from the entry point a player's click reaches. Each
+-- case also asserts that the reset actually RAN: a case that only checks `hide` would pass over a
+-- reset that did nothing at all, which is the shape of vacuous coverage this pair exists to avoid.
+
+--- Hide the button, run `fn`, and assert it is still hidden and the reset genuinely happened.
+local function assertSurvivesReset(fn, what)
+  NS.Registry:DeleteAll()
+  S:Set(S.MINIMAP_PATH, false)          -- the player hides the button
+  S:Set("settings.gridSize", 16)        -- a profile row the reset must move, so it cannot no-op
+  assertEqual(NS.db.global.minimap.hide, true, "the fixture never hid the button")
+
+  fn()
+
+  assertEqual(S:Get("settings.gridSize"), 4, what .. " did not actually reset anything")
   assertEqual(NS.db.global.minimap.hide, true,
-    "the profile reset un-hid a button the player deliberately hid")
-  assertEqual(S:Get(S.MINIMAP_PATH), false)
+    what .. " un-hid a button the player deliberately hid")
+  assertEqual(S:Get(S.MINIMAP_PATH), false, what .. " left the checkbox disagreeing with the store")
   S:Set(S.MINIMAP_PATH, true)
+end
+
+test("Minimap row: Reset all settings does not un-hide the button", function()
+  -- Driven through the popup's own OnAccept, which is what `/pm resetall`, the header Defaults
+  -- button and the composed *Reset all settings* button all end in (Sl:ConfirmResetAll). That is
+  -- `db:ResetProfile()` on the active profile; `db.global` is a different table and is untouched.
+  assertSurvivesReset(function()
+    NS.Slash:ConfirmResetAll()
+    mocks.StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"].OnAccept()
+  end, "Reset all settings")
+end)
+
+test("Minimap row: the General page's Defaults button does not un-hide the button", function()
+  -- THE SECOND SHAPE launcher-§3 names, and the one the old derivation said nothing about: a page
+  -- Defaults button that walks every Master-controls row carrying a `default` reaches the row
+  -- wherever it is stored. The library's O.RestoreDefaults WOULD -- `rowsForPage("general")`
+  -- answers the whole schema and the composed *Minimap button* row is spliced at its head -- so
+  -- what keeps this addon safe is that settings/Panel.lua rebinds the page's `defaultsOnClick` to
+  -- P:RestoreDefaults, the same profile reset as above.
+  --
+  -- Driven through `ctx.panel.defaultsOnClick`, which is the field the button's OnClick is wired to
+  -- and the field O.CreatePanel's OnDefault forwards the Blizzard footer control to. Calling
+  -- P:RestoreDefaults directly instead would pass while the button was wired to the library's walk.
+  -- red under: dropping the rebinding in settings/Panel.lua.
+  local ctx = NS.Panel.general
+  assertTrue(ctx ~= nil and ctx.panel ~= nil, "the General page never built")
+  assertEqual(type(ctx.panel.defaultsOnClick), "function", "the Defaults button has no handler")
+
+  assertSurvivesReset(function()
+    ctx.panel.defaultsOnClick()
+    mocks.StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"].OnAccept()
+  end, "the General page's Defaults button")
 end)
 
 test("Minimap row: Register validates it, rather than exempting it", function()
