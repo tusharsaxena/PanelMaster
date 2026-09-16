@@ -23,10 +23,14 @@ Read only the section you need:
 
 - The TOC declares **no `## Dependencies`** — no other addon is required. Evidence:
   `PanelMaster.toc:1-13`.
-- `## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets`
-  (`PanelMaster.toc:8`) lists libraries that are **already vendored** under `libs/` and loaded from
-  there (`PanelMaster.toc:15-30`). The line only lets the client load a standalone copy first if one
-  is installed; a player installs none of it.
+- `## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets,
+  LibDataBroker-1.1, LibDBIcon-1.0` (`PanelMaster.toc:8`) lists libraries that are **already
+  vendored** under `libs/` and loaded from there (`PanelMaster.toc:15-36`). The line only lets the
+  client load a standalone copy first if one is installed; a player installs none of it.
+- `LibDataBroker-1.1` and `LibDBIcon-1.0` back the launcher (`launcher-§1`): one broker object,
+  registered twice. Both are resolved with `LibStub(..., true)` inside `LibKa0s-Launcher-1.0`, so a
+  client carrying neither loses the minimap button and the broker row and raises nothing — which is
+  what `tests/test_libka0s.lua` pins.
 - `LibSharedMedia-3.0` is genuinely optional at runtime — the addon has a tested soft-fallback path
   for its absence, which is why the headless mock deliberately omits it
   (`docs/testing.md` ▸ *Mock fidelity that is load-bearing*).

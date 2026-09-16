@@ -3,9 +3,9 @@
 ## Notes: Draws plain backdrop panels behind your UI, so separate frames read as deliberate groups.
 ## Author: add1kted2ka0s
 ## Version: 1.1.0
-## IconTexture: Interface\Icons\pvp_rune_random
+## IconTexture: Interface\AddOns\PanelMaster\media\logos\panelmaster.logo.128.tga
 ## SavedVariables: PanelMasterDB
-## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets
+## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets, LibDataBroker-1.1, LibDBIcon-1.0
 ## DefaultState: enabled
 ## Category-enUS: UI
 ## X-License: MIT
@@ -25,6 +25,12 @@ libs\AceConfig-3.0\AceConfig-3.0.xml
 libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
 libs\LibSharedMedia-3.0\lib.xml
 libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
+# The launcher's two libraries (launcher-§1), AFTER CallbackHandler-1.0 and LibStub, which
+# LibDataBroker resolves at its own file load. LibDBIcon reads the broker object this addon
+# registers, so the pair has to be present before core\LauncherSetup.lua runs; both are
+# resolved with LibStub(..., true) there, and a client missing either degrades by name.
+libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 # LibKa0s AFTER LibStub and after Ace3: Core resolves LibStub, and DebugLog/Slash/Options each
 # resolve LibKa0s-Core-1.0 before calling NewLibrary. Vendored whole-folder from ../LibKa0s.
 libs\LibKa0s\LibKa0s.xml

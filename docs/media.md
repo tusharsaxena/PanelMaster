@@ -1,10 +1,11 @@
 # Shipped media
 
-Four logo assets, one of which the game can actually load:
+Five logo assets, two of which the game can actually load:
 
 | File | Size | Ships to players | Purpose |
 |---|---|---|---|
 | `panelmaster.logo.tga` | 512×512, 24-bit RLE | **yes** | The runtime asset — `C.LOGO_PATH`, drawn on the settings landing page |
+| `panelmaster.logo.128.tga` | 128×128, uncompressed 32-bit | **yes** | The addon's icon — `## IconTexture` in the AddOns list, the minimap button and any broker display, one file for all three (`launcher-§4`, `layout-§4`) |
 | `panelmaster.logo.png` | 2000×2000 | no | Master art; the source the `.tga` and the 256 avatar are rendered from |
 | `panelmaster.logo.jpg` | 2000×2000 | no | Project page / CDN. Supplied alongside the master at full size, not downscaled from it |
 | `panelmaster.logo.256.jpg` | 256×256 | no | README, thumbnails |
@@ -12,6 +13,16 @@ Four logo assets, one of which the game can actually load:
 WoW cannot load `.png` or `.jpg` at runtime **at all**, and rescales any texture that is not a power
 of two — hence a 512 TGA rather than the 2000 master. `.pkgmeta` excludes the three non-runtime
 renders, so a player's download does not carry megabytes of files their client physically cannot use.
+
+The **128** file is the one exception to *whatever the export produced*, and `layout-§4` fixes both
+its format and its recipe. It MUST be TGA **image type 2 at 32 bpp** — uncompressed, which is what
+`convert("RGBA")` buys — because that is the one combination proven to render as an `IconTexture`,
+and the RLE-compressed logos the collection also ships are unproven in that role. 128×128 is a power
+of two, so nothing rescales it. It costs about 64 KB. Regenerate rather than hand-edit:
+
+```sh
+python3 -c "from PIL import Image; Image.open('media/logos/panelmaster.logo.png').convert('RGBA').resize((128,128), Image.LANCZOS).save('media/logos/panelmaster.logo.128.tga', format='TGA')"
+```
 
 The failure mode here is silent: a missing or wrongly-named texture renders **nothing** and raises
 **no error**, so it surfaces as a blank settings page that reads like a layout bug. A test therefore
