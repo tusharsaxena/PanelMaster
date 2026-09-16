@@ -23,6 +23,7 @@ The **Tests** cell reads `passed/skipped/total`.
 
 | Run | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20260916-184500`](20260916-184500/) | 1.1.0 | 0/0 | 59 | 834/0/834 | skip | 13887 | 1624 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260916-094518`](20260916-094518/) | 1.1.0 | 0/0 | 57 | 798/0/798 | skip | 13359 | 1554 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260910-234511`](20260910-234511/) | 1.0.0 → 1.1.0 | 0/0 | 57 | 783/0/783 | skip | 12825 | 1502 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260908-181416`](20260908-181416/) | 1.0.0 | 0/0 | 55 | 778/0/778 | skip | 12627 | 1494 | 7.4 | 2.0 | 15 | 0 | **green** |
@@ -37,18 +38,18 @@ The **Tests** cell reads `passed/skipped/total`.
 
 ## Test suite
 
-**798 cases** — 798 passed, 0 failed, 0 skipped. The generated inventory
-[`20260916-094518/test-cases.md`](20260916-094518/test-cases.md) is the authority on which cases existed at this run;
+**834 cases** — 834 passed, 0 failed, 0 skipped. The generated inventory
+[`20260916-184500/test-cases.md`](20260916-184500/test-cases.md) is the authority on which cases existed at this run;
 `docs/test-cases.md` is that same list at HEAD.
 
-Moved **783 → 798** since the previous run.
+Moved **798 → 834** since the previous run.
 
 No case reported a `skip`, so passed and total agree and nothing in this row claims coverage
 that was not exercised.
 
 ## Lint
 
-**0 warnings / 0 errors over 57 files** (`luacheck .`).
+**0 warnings / 0 errors over 59 files** (`luacheck .`).
 
 Read that figure with its scope attached: `.luacheckrc` sets `exclude_files = { "libs/", "docs/audits/", "docs/reviews/", "_dev/", "tests/_kit/" }`, so those paths
 are not in it. A `0/0` that never moves is partly a statement about what was never looked at, which
@@ -64,7 +65,7 @@ never asked.
 
 ## Complexity watch list
 
-Current as of [`20260916-094518`](20260916-094518/) — **this run's measurement, not its diff.** Max CCN **15** across 1554
+Current as of [`20260916-184500`](20260916-184500/) — **this run's measurement, not its diff.** Max CCN **15** across 1624
 functions, **0** of them warned on; 4 file(s) in the 1000–1500 band and 0 over the 1500 cap
 (`layout-§1`).
 
@@ -81,10 +82,10 @@ None.
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** The highest average CCN in the addon at 29 functions. Unchanged at 1188 since 2026-08-04 — six consecutive runs now, against 1087 at the baseline — and untouched by this whole cycle. Five flat runs is not a reversal while nothing is offsetting its growth: it is still 312 lines off the cap. Split along the catalog / geometry seam before the next feature lands in it. |
-| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1476 | **The trigger has fired, and it is tracked: issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47).** Not a re-accept — the split is the open issue. It grew again this run, **1414 → 1476**, leaving **24 lines of headroom** under `layout-§1`'s 1500 cap, and it is still the largest file in the repository. It also holds the addon's highest-CCN function, `refreshHeaderActs` at exactly 15. The next change that touches this file crosses the cap. |
+| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** The highest average CCN in the addon at 29 functions. Unchanged at 1188 since the 1.0.0 release run `20260807-160022`, against 1087 at the baseline, and untouched by the launcher cycle. A run of flat runs is not a reversal while nothing is offsetting its growth: it is still 312 lines off the cap. Split along the catalog / geometry seam before the next feature lands in it. |
+| 1000–1500 (on notice) | `settings/PanelEditor.lua` | 1476 | **The trigger has fired, and it is tracked: issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47).** Not a re-accept — the split is the open issue. Flat this run at **1476**, having grown **1414 → 1476** at `20260916-094518`, which leaves **24 lines of headroom** under `layout-§1`'s 1500 cap; it is still the largest authored file in the repository. Correcting a clause carried here from earlier runs: it does **not** hold the addon's densest function. `refreshHeaderActs` was deleted rather than moved (`docs/settings-panel.md:406`); this file's densest function is now CCN **8**, and the addon's two CCN-15 functions are `core/Compat.lua@27-45` and `modules/Registry.lua@607-635`. The next feature change that touches this file crosses the cap. |
 | 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** The largest suite here because it covers the largest, most branch-heavy module. Unchanged since 2026-08-03 — six consecutive runs — and no longer the largest file in the repository, which `settings/PanelEditor.lua` took this cycle. Split only when `modules/Artwork.lua` is, along the same seams; a suite that mirrors a module has no seam of its own. |
-| 1000–1500 (on notice) | `tests/test_panel.lua` | 1353 | **Accepted.** The settings work's shadow rather than a suite that drifted: it has tracked `settings/PanelEditor.lua` up almost line for line, and did so again this run, **1273 → 1353**. It mirrors that file, so it has no seam of its own and peels when #47 peels. The re-check-at-1400 trigger has not fired. |
+| 1000–1500 (on notice) | `tests/test_panel.lua` | 1353 | **Accepted.** The settings work's shadow rather than a suite that drifted: it has tracked `settings/PanelEditor.lua` up almost line for line, **1273 → 1353** at `20260916-094518`, and is flat at 1353 this run. It mirrors that file, so it has no seam of its own and peels when #47 peels. The re-check-at-1400 trigger has not fired. |
 
 `lizard` counts every `and`/`or` short-circuit as a decision, so in Lua a run of
 `t.k = rec.k or D.k` defaulting lines scores high with no visible branching at all: a large CCN
