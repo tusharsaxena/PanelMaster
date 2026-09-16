@@ -609,6 +609,21 @@ C.FONT_MONO = NS.MediaFont and NS.MediaFont(C.FONT_MONO_NAME) or _G.STANDARD_TEX
 -- and raises no error, so treat it as required rather than optional.
 C.LOGO_PATH = "Interface\\AddOns\\PanelMaster\\media\\logos\\panelmaster.logo.tga"
 
+-- The addon's ICON, and it is a DIFFERENT file from the logo above doing a different job
+-- (layout-§4). One file is the addon's face in three places at once -- the AddOns list, through
+-- the TOC's `## IconTexture`; the minimap button; and any broker display -- so a player who has
+-- seen this addon once recognizes it in all three. The landing page's logo is drawn at 300x300 and
+-- is unchanged by any of that.
+--
+-- 128x128, uncompressed 32-bit (TGA image type 2). Both facts are load-bearing: 128 is a power of
+-- two so nothing rescales it, and an RLE-compressed or 24-bit file is unproven in the IconTexture
+-- role and would draw NOTHING while raising nothing. `tests/test_constants.lua` reads the header
+-- bytes for exactly that reason.
+--
+-- THE STRING IS SPELLED OUT HERE AND AGAIN IN THE TOC, and that is unavoidable rather than sloppy:
+-- a TOC directive cannot read a Lua constant. `tests/test_constants.lua` asserts the two agree.
+C.ICON_PATH = "Interface\\AddOns\\PanelMaster\\media\\logos\\panelmaster.logo.128.tga"
+
 -- Solid color is the shipped default for both the background and the border on purpose: a backdrop
 -- panel's job is to be a quiet block behind other frames, and a decorative texture fights the UI it
 -- is meant to sit under. Anything else the user has installed is offered through LibSharedMedia (see

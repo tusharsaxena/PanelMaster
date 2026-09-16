@@ -63,6 +63,11 @@ core\CoreSetup.lua
 core\DebugLogSetup.lua
 core\PanelMaster.lua
 core\Database.lua
+# The LibKa0s-Launcher-1.0 seam: one LibDataBroker object, registered twice (launcher-§1). After
+# CoreSetup (NS.LIBKA0S_MISSING) and after Constants (C.ICON_PATH); everything else it touches --
+# NS.db, NS.Schema, NS.Panel -- is reached through a closure and resolved at call time, so the rest
+# of its position is conventional. Register() runs from OnInitialize, after NS:InitDB().
+core\LauncherSetup.lua
 
 # Defaults
 defaults\Profile.lua

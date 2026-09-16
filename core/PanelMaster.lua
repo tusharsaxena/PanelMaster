@@ -32,6 +32,11 @@ function addon:OnInitialize()
   NS:InitDB()
   if NS.Schema and NS.Schema.Register then NS.Schema:Register() end
   if NS.Slash and NS.Slash.Register then NS.Slash:Register() end
+  -- The launcher (launcher-§1), AFTER NS:InitDB() above and for one reason: the descriptor's
+  -- `minimap` closure answers `db.global.minimap`, and LibDBIcon is handed that table HERE, at
+  -- Register time, so it has to exist by now. Idempotent by the library's own design, so a second
+  -- call from anywhere cannot build a second button over the first.
+  if NS.Launcher then NS.Launcher:Register() end
   -- Eager settings-category registration (options-ui-§1): the entry is present in the Blizzard
   -- options list from load, even though each panel BODY is built lazily on its first OnShow.
   if NS.Panel and NS.Panel.Register then NS.Panel:Register() end

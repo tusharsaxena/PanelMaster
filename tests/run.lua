@@ -66,6 +66,7 @@ NS.addon:OnEnable()
 Kit.setSurfaceSource{
   ["LibKa0s-Options-1.0"]  = NS.Helpers,
   ["LibKa0s-DebugLog-1.0"] = NS.DebugLog,
+  ["LibKa0s-Launcher-1.0"] = NS.Launcher,
 }
 
 -- The kit's registry and assertions are MERGED into this addon's existing global test table, under
@@ -87,6 +88,7 @@ local SUITES = {
   "test_accent", "test_artwork",
   "test_database", "test_debuglog",
   "test_schema", "test_slash", "test_panel", "test_profiles",
+  "test_launcher",
   "test_sunnart",
   "test_libka0s", "test_surface_parity", "test_harness",
   "test_spelling",

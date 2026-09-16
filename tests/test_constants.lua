@@ -111,6 +111,7 @@ test("Constants: the mono font and logo point at this addon's folder", function(
   -- error, which is why it is worth pinning at all.
   assertTrue(C.FONT_MONO:find("PanelMaster", 1, true) ~= nil)
   assertTrue(C.LOGO_PATH:find("PanelMaster", 1, true) ~= nil)
+  assertTrue(C.ICON_PATH:find("PanelMaster", 1, true) ~= nil)
 end)
 
 -- The shipped media paths actually resolve to files on disk.
@@ -139,6 +140,62 @@ end)
 -- The face is the LIBRARY's now, so this maps into libs/LibKa0s/media/fonts/ rather than into this
 -- addon's own media/. That is the point of the case: a re-vendor that dropped the font leaves
 -- C.FONT_MONO naming a file nobody ships, and SetFont answers a missing file by drawing nothing.
+-- ── the addon's icon (launcher-§4, layout-§4) ───────────────────────────
+
+test("Constants: the icon file named by ICON_PATH exists", function()
+  local path = repoPathFor(C.ICON_PATH)
+  local f = io.open(path, "rb")
+  assertTrue(f ~= nil, "missing shipped asset: " .. path)
+  if f then f:close() end
+end)
+
+test("Constants: the icon is an uncompressed 32-bit 128x128 Targa, by its own header bytes",
+  function()
+    -- THE HEADER IS READ rather than the extension trusted, and this is the one case in this file
+    -- where that distinction is the whole point. layout-§4 fixes the format because an icon the
+    -- client cannot decode draws NOTHING and raises NOTHING -- no gate anywhere else would ever
+    -- report it, which is anti-pattern #82's subtler half. Only TGA image type 2 at 32 bpp is
+    -- proven to render in the IconTexture role; the RLE-compressed (type 10) logos this collection
+    -- also ships are unproven there. 128 is a power of two, so nothing rescales it.
+    local f = assert(io.open(repoPathFor(C.ICON_PATH), "rb"), "the icon is missing")
+    local header = f:read(18)
+    local size = f:seek("end")
+    f:close()
+    assertEqual(#header, 18, "the icon is too short to be a Targa at all")
+    local byte = string.byte
+    assertEqual(byte(header, 3), 2,
+      "TGA image type is not 2 -- an RLE or color-mapped icon draws nothing and raises nothing")
+    assertEqual(byte(header, 17), 32, "TGA is not 32 bpp -- convert('RGBA') is what buys that")
+    -- Little-endian 16-bit width and height, at offsets 12 and 14.
+    assertEqual(byte(header, 13) + byte(header, 14) * 256, 128, "the icon is not 128 wide")
+    assertEqual(byte(header, 15) + byte(header, 16) * 256, 128, "the icon is not 128 tall")
+    -- 128 * 128 * 4 pixel bytes, the 18-byte header and Pillow's 26-byte TGA 2.0 footer, which is
+    -- the trailing "TRUEVISION-XFILE." block the recipe's writer emits. Exact rather than a floor:
+    -- a compressed file of the same declared type is SMALLER, and that is the whole failure this
+    -- line catches. If the recipe is ever re-run with a writer that omits the footer, the number
+    -- moves by 26 and this case says so rather than going quiet.
+    assertEqual(size, 18 + 128 * 128 * 4 + 26,
+      "the icon is not the size an uncompressed 32-bit 128 is")
+  end)
+
+test("Constants: ICON_PATH and the TOC's ## IconTexture are the same file", function()
+  -- One asset, three surfaces: the AddOns list reads the TOC directive, the minimap button and any
+  -- broker display read C.ICON_PATH through core/LauncherSetup.lua. A TOC directive cannot read a
+  -- Lua constant, so the string is written twice and this is what keeps the two spellings one file.
+  local f = assert(io.open("PanelMaster.toc", "r"))
+  local toc = f:read("*a")
+  f:close()
+  local declared = toc:match("##%s*IconTexture:%s*([^\r\n]+)")
+  assertTrue(declared ~= nil, "the TOC declares no ## IconTexture at all")
+  assertEqual((declared:gsub("%s+$", "")), C.ICON_PATH,
+    "the AddOns list and the minimap button draw different files")
+  -- Never a Blizzard icon and never a numeric file id (anti-pattern #82): the addon has to look
+  -- like itself in the one list where the player is choosing what to turn off.
+  assertEqual(declared:find("Interface\\Icons", 1, true), nil,
+    "the TOC still points at a borrowed Blizzard icon")
+  assertEqual(tonumber(declared), nil, "the TOC points at a numeric file id")
+end)
+
 test("Constants: the debug console's mono font exists", function()
   local path = repoPathFor(C.FONT_MONO)
   local f = io.open(path, "rb")

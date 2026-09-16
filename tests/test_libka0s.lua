@@ -908,6 +908,7 @@ local SEAM_FILES = {
   "core/EnvSetup.lua",
   "core/MediaSetup.lua",
   "core/DebugLogSetup.lua",
+  "core/LauncherSetup.lua",
   "settings/Slash.lua",
   "settings/OptionsSetup.lua",
 }

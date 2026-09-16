@@ -127,6 +127,24 @@ test("Parity: the DebugLog seam's degraded surface matches the live one", functi
   assertTrue(type(degradedNS.DebugBuild) == "function", "the degraded NS.DebugBuild is missing")
 end)
 
+-- ── Launcher ────────────────────────────────────────────────────────────
+
+test("Parity: the Launcher seam's degraded surface matches the live one", function()
+  -- The live half is the LibKa0s-Launcher-1.0 instance core/LauncherSetup.lua builds, which
+  -- tests/run.lua registers under that name. The addon's own call sites are
+  --   grep -rn "NS\.Launcher[:.]" core modules settings
+  -- and there are two of them: Register from OnInitialize and SetShown from the Minimap button
+  -- row's write. The other three are published beside them by the library, and the stub answers
+  -- them so a future caller degrades to nothing happening rather than to a raise.
+  --
+  -- NO EXEMPTIONS, and that is worth saying: this is the one seam in the addon whose live surface
+  -- is small enough to mirror whole, so a member the stub is missing is a real gap rather than a
+  -- window internal with no caller.
+  local degradedNS = loadPartial({ Launcher = true })
+  assertTrue(degradedNS.Launcher ~= nil, "the Launcher degradation arm is missing")
+  assertSurfaceParity(degradedNS.Launcher, "LibKa0s-Launcher-1.0", {})
+end)
+
 -- ── Slash ──────────────────────────────────────────────────────────────────────
 
 test("Parity: the Slash seam's degraded surface matches the live one", function()

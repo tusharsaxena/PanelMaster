@@ -152,6 +152,37 @@ S.Schema = {
 -- Editing and New panels rows only. tests/test_schema.lua pins that count by name so it can never
 -- widen silently.
 
+-- ── The addon-wide switch's stored path (slash-commands-§2) ────────────────────
+--
+-- Named because THREE surfaces write it and the standard requires that they be the same write:
+-- the *Enable Ka0s Panel Master* checkbox composed below, and `/pm enable` and `/pm disable` in
+-- settings/Slash.lua. The verbs are ALIASES and hold no state of their own -- no second key, no
+-- session flag -- so the checkbox and the verbs can never show the player two different answers,
+-- and one `onChange` runs whichever surface was used.
+--
+-- It is the composer's own leaf under this block's `settings.` prefix, so the string is what
+-- `prefix .. "enabled"` produces. Spelled once here rather than at each of the three call sites.
+S.ENABLED_PATH = "settings.enabled"
+
+-- ── The minimap button's stored path (launcher-§3) ─────────────────────────────
+--
+-- The ONE path in this schema that is stored OUTSIDE `db.profile`, and it is named here because
+-- three places have to agree on it: `S:InstallMaster` hands it to the composer, and `S:Get` and
+-- `S:Set` below both branch on it. Three literals would be three chances to typo a path that reads
+-- and writes nowhere while raising nothing.
+--
+-- TAKEN VERBATIM BY THE COMPOSER, unprefixed -- like the debug console's, and for a stricter
+-- reason: the console's path is merely outside the block's `settings.` prefix, while this one is
+-- outside the PROFILE. The table is LibDBIcon's own and it lives in the global store, because a
+-- minimap button belongs to the installation rather than to a profile (defaults/Global.lua states
+-- the argument).
+--
+-- THE SENSE INVERTS. The row's label says *Minimap button* and its boolean says SHOWN; LibDBIcon's
+-- key says HIDDEN. That inversion is the HOST's, not the library's -- the composer emits an
+-- ordinary bool row and `S:Get`/`S:Set` negate at the single write seam, which is the same place
+-- Lock frame's un-inversion happens and for the same reason.
+S.MINIMAP_PATH = "global.minimap.hide"
+
 -- Wire this addon's half onto one composed row, found by the path the composer gave it.
 --
 -- The composers emit ordinary schema rows and NOTHING else — no get, no set, no onChange, no
@@ -198,6 +229,11 @@ function S:InstallMaster(H)
     -- every panel's own, and Lock frame is the all-or-nothing switch the per-panel Unlock tick
     -- sits under.
     debugConsolePath = "state.debugConsole",
+    -- The *Minimap button* row (launcher-§5, OptionsCompose minor 7). STORED, not session-only:
+    -- a button the player hid stays hidden across a reload, which is the difference between it and
+    -- the two rows above it. It opens its own line here, because this addon passes no
+    -- `testModePath` for the composer to pair beside it.
+    minimapPath = S.MINIMAP_PATH,
     -- The addon's shipped values, so the composer changes what is DECLARED and never what is
     -- stored. `locked` ships TRUE because a panel is locked until the player says otherwise —
     -- the composer's own default is the other way round, and adopting it would hand every
@@ -216,7 +252,7 @@ function S:InstallMaster(H)
   }
   if #rows == 0 then return false end
 
-  wire(rows, "settings.enabled", {
+  wire(rows, S.ENABLED_PATH, {
     tooltip = "Master switch. Turning this off hides every panel without deleting any of them.",
     onChange = function() announce("enabled") end,
   })
@@ -372,7 +408,12 @@ end
 function S:SnapshotPersisted()
   local snap = {}
   for _, row in ipairs(S.Schema) do
-    if not row.sessionOnly then
+    -- The minimap row is stored in db.GLOBAL, which AceDB's profile reset does not touch, so it is
+    -- out of the picture by definition rather than by luck -- and that is exactly why launcher-§3
+    -- puts it there (options-ui-§12's reset must not un-hide a button the player hid). Snapshotting
+    -- it against db.profile would read nil on both sides and compare equal, which is the right
+    -- answer reached by accident; skipping it says so.
+    if not row.sessionOnly and row.path ~= S.MINIMAP_PATH then
       snap[row.path] = NS.Util.DeepCopy(S:ReadPath(NS.db.profile, row.path))
     end
   end
@@ -401,6 +442,22 @@ function S:Set(path, value)
   if row.sessionOnly then
     -- Session-only rows never touch the DB; the row's own set() applies the value.
     if row.set then row.set(value) end
+  elseif path == S.MINIMAP_PATH then
+    -- THE INVERSION, and it happens HERE rather than on the row because this is the single write
+    -- seam every surface reaches (options-ui-§1): the checkbox, `/pm set global.minimap.hide true`
+    -- and LibDBIcon's own right-click menu all end up agreeing because there is one negation and
+    -- one store, never a second boolean beside `hide` (launcher-§3, anti-pattern #81).
+    --
+    -- `db.global`, not `db.profile`: the ONE stored row outside the profile. See S.MINIMAP_PATH.
+    -- The path is written whole from the DB ROOT, so `global.minimap.hide` resolves as itself and
+    -- there is no prefix to strip and get wrong.
+    S:WritePath(NS.db, path, not value)
+    -- Then the button follows immediately rather than at the next reload. SetShown writes `hide`
+    -- a second time with the same value, which is the library's own documented behavior and is
+    -- what lets a caller that is NOT this seam -- a migration, a future verb -- drive the button
+    -- without having to remember the inversion. It answers false where LibDBIcon is absent; the
+    -- store is still correct, and there is no button to move.
+    if NS.Launcher then NS.Launcher:SetShown(value) end
   else
     S:WritePath(NS.db.profile, path, NS.Util.DeepCopy(value))
   end
@@ -417,6 +474,16 @@ function S:Set(path, value)
 end
 
 function S:Get(path)
+  -- The other half of the inversion. Branched on the PATH rather than read through a row `get`,
+  -- so the two halves sit together and a reader cannot find one without the other -- and so the
+  -- composed row stays exactly what the composer emitted, which is what options-ui-§16 asks.
+  --
+  -- Answers SHOWN for a DB that is not up yet: `hide` absent means a button that was never hidden,
+  -- which is the same answer the library's own IsShown gives and the same one the declared default
+  -- in defaults/Global.lua produces the moment AceDB is there.
+  if path == S.MINIMAP_PATH then
+    return not S:ReadPath(NS.db, path)
+  end
   local row = S:FindRow(path)
   if row and row.get then return row.get() end
   return S:ReadPath(NS.db.profile, path)
@@ -450,7 +517,16 @@ function S:Register()
   for _, row in ipairs(S.Schema) do
     -- Session-only rows (state.*) are the ONE exemption: they route through their own get/set and
     -- are never persisted, so they have no db-backed home to resolve against by design.
-    if not row.sessionOnly and S:ReadPath(p, row.path) == nil then
+    --
+    -- The minimap row is CHECKED, not exempted, and only its ROOT differs. It is stored, so it has
+    -- somewhere it must be writable to; that somewhere is `NS.defaults.global` rather than
+    -- `NS.defaults.profile` (launcher-§3). Its path is spelled from the DB root and already begins
+    -- `global.`, so reading it against NS.defaults whole is the same check this loop performs on
+    -- every other row -- exempting it instead would be the escape hatch the header above this
+    -- function spent a paragraph removing.
+    local root, key = p, row.path
+    if row.path == S.MINIMAP_PATH then root = NS.defaults end
+    if not row.sessionOnly and S:ReadPath(root, key) == nil then
       unresolved = unresolved + 1
       print("schema path does not resolve against the defaults: " .. tostring(row.path))
     end

@@ -177,8 +177,17 @@ end)
 test("Schema: the defaults match the shipped profile", function()
   -- The row default and defaults/Profile.lua are two places one value is written down, so they are
   -- exactly the pair that drifts.
+  --
+  -- The minimap row is checked against the GLOBAL defaults and INVERTED, because both halves of
+  -- that row are different from every other stored row's: it lives in db.global (launcher-§3) and
+  -- its boolean says SHOWN where the stored key says hidden. Skipping it would leave the one row
+  -- whose default is written down twice AND negated between the two spellings unchecked, which is
+  -- the drift this case exists for.
   for _, row in ipairs(S.Schema) do
-    if not row.sessionOnly then
+    if row.path == S.MINIMAP_PATH then
+      assertEqual(S:ReadPath(NS.defaults, row.path), not row.default,
+        row.path .. " default disagrees with defaults/Global.lua, or the inversion has been dropped")
+    elseif not row.sessionOnly then
       local shipped = S:ReadPath(NS.defaults.profile, row.path)
       assertEqual(shipped, row.default,
         row.path .. " default disagrees with defaults/Profile.lua")
@@ -255,7 +264,7 @@ test("Schema: the General page's tabs are the designed partition, in strip order
   -- point: a derived expectation agrees with any arrangement of rows, including the one where a row
   -- has quietly drifted into the wrong tab. Adding a row means adding it here too, deliberately.
   local EXPECTED = {
-    { tab = "Master controls", count = 6 },
+    { tab = "Master controls", count = 7 },
     { tab = "Editing",         count = 4 },
     { tab = "New panels",      count = 4 },
   }
@@ -330,6 +339,8 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
     -- prevent. The set is canonical, not a menu: this addon is not frameless (modules/Unlock.lua
     -- calls SetMovable), so every frame row applies. `Test mode` does not: unlocking already shows
     -- every panel with its outline and name, so options-ui-§15 exempts it and Lock frame is its switch.
+    -- `Minimap button` is the seventh and it is UNCONDITIONAL (launcher-§3): every addon in the
+    -- collection has one. With no Test mode to pair beside it, it opens the fourth line alone.
     local EXPECTED = {
       { path = "settings.enabled",    label = "Enable Ka0s Panel Master" },
       { path = "settings.visibility", label = "General visibility" },
@@ -337,6 +348,7 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
       { path = "settings.alpha",      label = "Master alpha" },
       { path = "state.locked",        label = "Lock frame" },
       { path = "state.debugConsole",  label = "Debug console" },
+      { path = "global.minimap.hide", label = "Minimap button" },
     }
 
     assertEqual(S.Schema[1].group, "Master controls",

@@ -489,6 +489,56 @@ return function()
     Open = function() M.__profileDialogOpens = M.__profileDialogOpens + 1 end,
   }
 
+  -- ── the launcher's two libraries (launcher-§1) ──────────────────────────────────
+  --
+  -- PRESENT here, where LibSharedMedia below is deliberately absent, and the difference is what
+  -- each library's absence is supposed to prove. LibSharedMedia's nil path IS the tested path --
+  -- it is an OptionalDep with a shipped fallback. The launcher has no fallback: with no broker
+  -- libraries there is no object, no button and nothing to click, so a default environment missing
+  -- them could only ever assert that nothing happened. The degradation is a case of its own
+  -- (tests/test_libka0s.lua), built by handing tests/degraded_env.lua a `mutate` that takes these
+  -- two back out again.
+  --
+  -- MODELED, not stubbed, for the reason AceDB above is: the launcher's whole contract is that ONE
+  -- object reaches both surfaces and that the `minimap` table LibDBIcon holds is the same table the
+  -- settings row writes. A Register that recorded a name and dropped the object could not fail when
+  -- either of those stopped being true.
+  M.__brokerObjects = {}
+  libs["LibDataBroker-1.1"] = {
+    -- LibDataBroker answers NIL for a name already taken rather than replacing the object, which is
+    -- the behavior the library's idempotent Register leans on -- it falls back to
+    -- GetDataObjectByName and keeps the object the displays already hold.
+    NewDataObject = function(_, name, tbl)
+      if M.__brokerObjects[name] then return nil end
+      M.__brokerObjects[name] = tbl
+      return tbl
+    end,
+    GetDataObjectByName = function(_, name) return M.__brokerObjects[name] end,
+  }
+  -- The minimap button, as the three facts a test can assert on: which object was registered under
+  -- which name, which TABLE the library was handed (identity, not a copy), and whether the button
+  -- is currently shown. `hide` is written by Show/Hide exactly as LibDBIcon writes it, because that
+  -- is the key the Master-controls row inverts onto and a mock that only flipped a flag of its own
+  -- would let the two drift apart unnoticed.
+  M.__minimapButtons = {}
+  libs["LibDBIcon-1.0"] = {
+    Register = function(_, name, object, db)
+      M.__minimapButtons[name] = { object = object, db = db, shown = not (db and db.hide) }
+    end,
+    Show = function(_, name)
+      local b = M.__minimapButtons[name]
+      if not b then return end
+      b.shown = true
+      if b.db then b.db.hide = false end
+    end,
+    Hide = function(_, name)
+      local b = M.__minimapButtons[name]
+      if not b then return end
+      b.shown = false
+      if b.db then b.db.hide = true end
+    end,
+  }
+
   -- LibSharedMedia is deliberately ABSENT from this table. It is an OptionalDep, and the addon must
   -- run without it (library-stack-§6) — so the default headless environment is the one where it is
   -- missing, which is what makes Compat.FetchMedia's nil path the tested path.

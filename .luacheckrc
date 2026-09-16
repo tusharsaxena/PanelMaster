@@ -118,6 +118,17 @@ files["core/DebugLogSetup.lua"] = {
   ignore = { "212/self" },
 }
 
+-- The launcher's degradation arm, for the same reason and in the same shape. Five stubs stand in
+-- for the LibKa0s-Launcher-1.0 instance when the library is absent, and their member set is not
+-- this addon's to choose: `Register` (core/PanelMaster.lua:39), `SetShown` (the *Minimap button*
+-- row's set in settings/Schema.lua) and the three the live instance publishes beside them all
+-- reach whichever arm loaded through the same colon call. Only `L:IsShown` reads anything, and it
+-- reads the DB rather than its receiver, which is what makes it the right answer on a host where
+-- LibDBIcon never loaded.
+files["core/LauncherSetup.lua"] = {
+  ignore = { "212/self" },
+}
+
 -- AceEvent-3.0 invokes a handler registered by NAME as `self[handler](self, event, ...)`, so the
 -- three handlers registered at core/PanelMaster.lua:72-:76 receive the addon object they are
 -- already defined on. The two colon methods in this file that DO read `self` -- OnInitialize and
