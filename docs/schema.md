@@ -19,6 +19,7 @@ that has already been assigned a profile keeps it. This governs where *new* char
 ```
 PanelMasterDB
   global.schemaVersion    -- the build's DB shape; migrations run once per SV file
+  global.minimap          -- LibDBIcon's OWN table: `hide`, plus the `minimapPos` it writes itself
   profile.panels          -- array of panel records, creation order
   profile.nextID          -- monotonic id source; ids are never reused
   profile.settings        -- the schema-backed settings
@@ -33,6 +34,21 @@ profile renders differently:
   settings.scale          -- addon-wide multiplier over each panel's own scale
   settings.alpha          -- addon-wide multiplier over each panel's own opacity
 ```
+
+`global.minimap` is the one stored thing here that is not this addon's own shape. It is the table
+**LibDBIcon-1.0** reads and writes, handed to it whole by `core/LauncherSetup.lua` (`launcher-§3`):
+`hide` is the boolean the library writes when the player uses its right-click menu, and
+`minimapPos` is the angle it writes when they drag the button. There is deliberately no second key
+of ours beside them — a parallel `show` would be a copy of one state, free to disagree the first
+time either surface is used.
+
+It is **global** rather than profile-scoped because a minimap button belongs to the installation:
+switching profiles must not move a player's buttons, and `options-ui-§12`'s *Reset all settings* is
+a profile reset that must not un-hide one they hid. `defaults/Global.lua` declares `hide = false`,
+and that declaration is what materializes the table — nothing seeds it at runtime
+(`architecture-§5`). The *Minimap button* settings row addresses `global.minimap.hide` and
+**inverts**: the row says shown, the key says hidden, and both halves of the negation live in
+`S:Get` and `S:Set`.
 
 #### The panel record
 

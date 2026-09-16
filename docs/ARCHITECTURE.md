@@ -18,7 +18,8 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and four of the six LibKa0s seams;
+`core/` holds the bootstrap, the Compat firewall, the AceDB layer and five of the seven LibKa0s
+seams;
 `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer and unlock
 mode; `settings/` holds the schema, the other two seams and the four panel pages. Load order is
 fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin several
@@ -30,15 +31,20 @@ File-by-file table and the seam/load-order contract in **[module-map.md](module-
 
 Two SavedVariables scopes: `defaults/Profile.lua` carries the panel registry, `nextID` and the
 settings block, all profile-scoped (every character starts on the shared "Default" profile,
-`core/Database.lua:18`); `defaults/Global.lua` carries the account-wide `schemaVersion` stamp only.
+`core/Database.lua:18`); `defaults/Global.lua` carries the account-wide `schemaVersion` stamp and
+LibDBIcon's own `minimap` table.
 `settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
-carries **14 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
+carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
-the array's order is the strip a player sees on the General page — `Master controls` (6),
-`Editing` (4), `New panels` (4). Two of the fourteen are session-only `state.*` rows that route
-through their own `get`/`set` and are never persisted.
+the array's order is the strip a player sees on the General page — `Master controls` (7),
+`Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
+through their own `get`/`set` and are never persisted, and **one** — `global.minimap.hide`, the
+*Minimap button* row — is stored but lives in `db.global` rather than `db.profile`, which is the
+only row in the schema that does (`launcher-§3`). `S:Get` and `S:Set` branch on that path: they
+read and write it from the DB root, and they NEGATE, because the row's boolean says shown while
+LibDBIcon's key says hidden.
 
-The **first** six are not literals in that file. `Master controls` is COMPOSED, out of
+The **first** seven are not literals in that file. `Master controls` is COMPOSED, out of
 `LibKa0s-Options-1.0`'s `MasterControls` (`options-ui-§15`), and spliced at the head of the array by
 `S:InstallMaster` — which `settings/OptionsSetup.lua` calls the moment the library instance exists,
 because that instance is what carries the composer and it is built after this file loads. A row
@@ -130,12 +136,40 @@ test harness hid it by calling `Canvas:Enable()` itself; it now drives the real 
 from one table and cannot drift. No hand-kept copy of the descriptions is carried anywhere: `slash-dispatch.md` names the verbs to
 structure its own prose, and that is the only list of them outside the table.
 
-Schema-driven verbs: `config version get set list reset resetall debug help` — `resetall` is a
+Schema-driven verbs: `config version get set list reset resetall debug enable disable help` — `resetall` is a
 **profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it
 takes the player's panels with it because `db.profile.panels` is in the profile. Panel verbs: `new
 delete rename panels panel unlock lock recover` — no `test` verb, because unlocking is this addon's
-test mode (`options-ui-§15`). Verb detail and the host/library split in
+test mode (`options-ui-§15`). `enable` and `disable` are **aliases** onto `settings.enabled`, the
+path the Master-controls checkbox writes, through the same write seam and holding no state of their
+own (`slash-commands-§2`); the dispatcher keeps answering while the addon is disabled, so the pair
+is never one-way. Verb detail and the host/library split in
 **[slash-dispatch.md](slash-dispatch.md)**.
+
+## The launcher (`launcher-§1`)
+
+**Owner: `core/LauncherSetup.lua`**, which publishes `NS.Launcher` — a `LibKa0s-Launcher-1.0`
+instance. `NS.Launcher:Register()` is called once, from `addon:OnInitialize`, after `NS:InitDB()`.
+
+It is **one** LibDataBroker-1.1 object of `type = "launcher"`, registered twice: with
+LibDBIcon-1.0, which draws the minimap button, and under the same name for any broker display the
+player runs (Titan Panel, ElvUI data texts, Bazooka), which draws its own row from that same object.
+One `OnClick`, one icon, one label — so `launcher-§2`'s click rule holds on both surfaces by
+construction rather than by two implementations agreeing. The name is the **folder** name,
+`PanelMaster`, because LibDBIcon keys the button's saved position by it.
+
+| Part | Where it lives | Note |
+|---|---|---|
+| The object and its click | `core/LauncherSetup.lua` | Left-click toggles the lock (**rung (b)** — unlocking is this addon's preview, so there is no test mode to toggle instead). It writes `state.locked` through `NS.Schema:Set`, the same seam the *Lock frame* checkbox writes through, and holds no copy of that state. Right-click always opens the settings panel. |
+| The icon | `C.ICON_PATH` (`core/Constants.lua`) | `media/logos/panelmaster.logo.128.tga`, the same file the TOC's `## IconTexture` names (`launcher-§4`). `tests/test_constants.lua` asserts the two spellings name one file and reads its header bytes. |
+| The visibility row | `settings/Schema.lua` | *Minimap button*, composed by `MasterControls`' `minimapPath`. Stored at `db.global.minimap.hide` — LibDBIcon's own table, handed to the library whole. `S:Get`/`S:Set` **negate**: the row says shown, the key says hidden. |
+| The stored default | `defaults/Global.lua` | `minimap = { hide = false }`, **declared** rather than seeded, which is what materializes the table (`architecture-§5`). `minimapPos` is LibDBIcon's to write and has no row. |
+| The libraries | `libs/LibDataBroker-1.1`, `libs/LibDBIcon-1.0` | Vendored and listed in the TOC's `# Libraries` block. Both are resolved with `LibStub(..., true)` at Register time, so a client missing either degrades by name and raises nothing. |
+
+**The scope is global on purpose.** A minimap button belongs to the installation: a profile switch
+must not move a player's buttons, and `options-ui-§12`'s *Reset all settings* — a profile reset by
+definition — must not un-hide a button they deliberately hid. This addon owes **no migration**: it
+has never stored a minimap table anywhere, so nothing has to be carried out of `db.profile`.
 
 ## Event Subscriptions
 
@@ -183,7 +217,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 
 | Doc | Status | Trigger |
 |---|---|---|
-| `slash-dispatch.md` | Present | 17 verbs in `NS.COMMANDS` (threshold is 8) |
+| `slash-dispatch.md` | Present | 19 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
 | `debug.md` | Present | `D:Diagnose()` and `NS.DebugBuild` are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message bus` |

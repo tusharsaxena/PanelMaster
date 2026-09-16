@@ -41,6 +41,7 @@ game's own Settings ▸ AddOns list.
 | Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
 | Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
 | Master controls | Debug console | Show the debug window. Resets when you reload. |
+| Master controls | Minimap button | Show this addon's button on the minimap. Unlike the two rows above it, this one is **remembered** — a button you hide stays hidden across a reload, and across a profile switch, because it belongs to the installation rather than to a profile. Untick it and the button goes at once; LibDBIcon's own right-click menu writes the same setting, so the two always agree. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
 | Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not affected."* |
 | Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
@@ -147,7 +148,7 @@ this bug for a strip that never re-wraps), and it answers only a **change** in w
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Editing**, **New panels** | 6, 4, 4 — 14 schema rows |
+| General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
 | Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 

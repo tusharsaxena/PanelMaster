@@ -408,6 +408,15 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
 - **LibSharedMedia is deliberately absent** from the mock library table. It is an `OptionalDep`, so
   the default headless environment is the one without it — which makes the soft-fallback path the
   tested path (`library-stack-§6`).
+- **LibDataBroker-1.1 and LibDBIcon-1.0 are present**, and modeled rather than stubbed — the
+  opposite call from LibSharedMedia's above, for a stated reason. LibSharedMedia has a shipped
+  fallback, so its absence is a real code path worth being the default. The launcher has none: with
+  no broker libraries there is no object, no button and nothing to click, so a default environment
+  missing them could only assert that nothing happened. `LibDBIcon`'s `Show`/`Hide` write `hide`
+  exactly as the real library does, because that is the key the *Minimap button* row inverts onto
+  and a mock that flipped a flag of its own would let the two drift apart unseen. The degradation is
+  its own case, built by handing `tests/degraded_env.lua` a `mutate` that takes the two back out
+  (`tests/test_launcher.lua`).
 
 A suite reads:
 

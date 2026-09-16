@@ -389,6 +389,43 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
    you cannot move what you cannot see.
 3. `/pm lock` → **Expect:** it disappears again.
 4. `/pm set settings.enabled false` → **Expect:** every panel vanishes. `true` → all return.
+5. `/pm disable` → **Expect:** the same thing, and the same `settings.enabled = false` echo as
+   step 4 printed — they are one switch, not two (`slash-commands-§2`).
+6. **While disabled**, run `/pm`, `/pm help` and `/pm version` → **Expect:** all three answer
+   normally. Then `/pm enable` → **Expect:** the panels return. This is the case that matters: if
+   the dispatcher stood down with the features, `disable` would be a one-way switch.
+7. `/pm config` → **General ▸ Master controls** → untick and re-tick **Enable Ka0s Panel Master**
+   → **Expect:** the checkbox and the two verbs always agree, whichever you used last.
+
+## 7b. The launcher — the minimap button and the broker row
+
+The whole of `launcher`, and every step of it fails **silently** in the client, so this section is
+worth doing in full after any change to the icon or the seam.
+
+1. Log in. **Expect:** a round button on the minimap ring wearing **this addon's logo** — not a
+   Blizzard icon, and not a blank square. A blank square means the `.tga` is missing or is not
+   uncompressed 32-bit; nothing will be printed and no error raised.
+2. Open the AddOns list (Esc ▸ AddOns). **Expect:** the same logo beside **Ka0s Panel Master**. One
+   file, three places.
+3. **Left-click** the button → **Expect:** panels unlock, exactly as `/pm unlock` does — outlines and
+   name labels. Left-click again → they lock. Open `/pm config` → **General ▸ Master controls** and
+   check **Lock frame** agrees with what you just did.
+4. **Right-click** the button → **Expect:** the settings page opens on its landing page, and the
+   lock does **not** move.
+5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
+   where you left it.
+6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move
+   or vanish. Then **Reset all settings** (it asks first) → **Expect:** it is still there and still
+   where you dragged it. Both are what storing it account-wide buys (`launcher-§3`).
+7. Untick **General ▸ Master controls ▸ Minimap button** → **Expect:** the button goes at once, not
+   at the next reload. `/reload` → it stays gone. Tick it → it comes back, at the angle you dragged
+   it to.
+8. Right-click the button and use **LibDBIcon's own menu** to hide it → **Expect:** the **Minimap
+   button** checkbox is now unticked. They are one setting.
+9. Only if you run Titan Panel, ElvUI or Bazooka: **Expect:** a **PanelMaster** row in its plugin
+   list, wearing the same logo, whose left and right clicks do the same two things as steps 3 and 4.
+   The row has **no** enable/disable setting of this addon's — the display's own per-plugin toggle
+   is where that belongs.
 
 ## 8. Combat gating
 

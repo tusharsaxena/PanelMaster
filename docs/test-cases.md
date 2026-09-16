@@ -54,7 +54,7 @@ badge and any count quoted in the docs must agree with it.
 - Compat.MouseIsOver: answers without the frame taking mouse input
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
-### test_constants.lua (16)
+### test_constants.lua (19)
 
 - Constants: the strata list runs lowest to highest and starts at BACKGROUND
 - Constants: new panels default to LOW
@@ -71,6 +71,9 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the mono font and logo point at this addon's folder
 - Constants: the logo file named by LOGO_PATH exists
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
+- Constants: the icon file named by ICON_PATH exists
+- Constants: the icon is an uncompressed 32-bit 128x128 Targa, by its own header bytes
+- Constants: ICON_PATH and the TOC's ## IconTexture are the same file
 - Constants: the debug console's mono font exists
 
 ### test_mediasetup.lua (10)
@@ -556,7 +559,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (64)
+### test_slash.lua (68)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -622,6 +625,10 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: fitart is an action in the field slot, and reshapes the panel
 - Slash.CliPanel: fitart explains itself when there is nothing to fit to
 - Slash.CliPanel: artAutosize is no longer a field anyone can set
+- Verbs: /pm enable and /pm disable write the Enable row's own path
+- Verbs: they hold no state of their own -- the checkbox drives them too
+- Verbs: the acknowledgment is the shared path = value echo, read back from the store
+- Verbs: the dispatcher survives the disabled state, so the pair is never one-way
 
 ### test_panel.lua (62)
 
@@ -713,6 +720,30 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
+
+### test_launcher.lua (21)
+
+- Launcher: one object is registered with BOTH libraries, under the FOLDER name
+- Launcher: the object is type 'launcher' and wears the addon's own icon
+- Launcher.Register: a second call builds no second button
+- Launcher: LEFT-click toggles the addon's lock, which is its preview
+- Launcher: the left click drives the SAME state the Lock frame checkbox drives
+- Launcher: the left click goes through the write seam, so it is traced once
+- Launcher: the left click respects the unlock's combat deferral
+- Launcher: RIGHT-click opens the settings panel
+- Launcher: RIGHT-click does not touch the lock, and LEFT-click does not open the panel
+- Minimap row: it is a STORED row in the canonical position, not a session flag
+- Minimap row: the path is LibDBIcon's own key, in the GLOBAL store
+- Minimap row: get INVERTS, so the label and the stored key disagree on purpose
+- Minimap row: set INVERTS and moves the button in the same act
+- Minimap row: the write seam inverts on its own, not only through the library
+- Minimap row: LibDBIcon holds the very table the row writes, not a copy
+- Minimap row: a profile reset does not un-hide the button
+- Minimap row: Register validates it, rather than exempting it
+- Degraded install: no LibDataBroker and no LibDBIcon must not raise
+- Degraded install: LibDataBroker alone gets the broker plugin and no button
+- Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
+- Degraded install: the launcher stub announces nothing at login
 
 ### test_sunnart.lua (53)
 
@@ -816,10 +847,11 @@ badge and any count quoted in the docs must agree with it.
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (4)
+### test_surface_parity.lua (5)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
+- Parity: the Launcher seam's degraded surface matches the live one
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
 
@@ -897,7 +929,7 @@ badge and any count quoted in the docs must agree with it.
 |-------|------:|
 | test_util.lua | 31 |
 | test_compat.lua | 11 |
-| test_constants.lua | 16 |
+| test_constants.lua | 19 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
 | test_registry.lua | 43 |
@@ -909,12 +941,13 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 30 |
-| test_slash.lua | 64 |
+| test_slash.lua | 68 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
+| test_launcher.lua | 21 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
-| test_surface_parity.lua | 4 |
+| test_surface_parity.lua | 5 |
 | test_harness.lua | 18 |
 | test_spelling.lua | 3 |
 | test_vendor_sync.lua | 3 |
@@ -924,4 +957,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **798** |
+| **Total** | **827** |

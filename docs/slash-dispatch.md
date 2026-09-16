@@ -10,7 +10,20 @@ opens the settings landing page; `/pm help` prints the index (`slash-commands-§
 library's dispatcher. The degraded stub in `settings/Slash.lua`, used when LibKa0s is missing, follows
 it too, and prints help only if the table has no `config` row.
 
-Schema-driven verbs: `config version get set list reset resetall debug help`.
+Schema-driven verbs: `config version get set list reset resetall debug enable disable help`.
+
+`enable` and `disable` are **aliases, not a second switch** (`slash-commands-§2`). Both write
+`NS.Schema.ENABLED_PATH` — `settings.enabled`, the very path the *Enable Ka0s Panel Master*
+checkbox writes — through the very seam it writes through, and hold no state of their own. They go
+through `Sl:CliSet`, so `/pm enable` is literally `/pm set settings.enabled true`: the same write
+and the same canonical `path = value` echo, read back from the store after the write.
+
+**The dispatcher survives the disabled state**, which is what stops the pair being one-way. Disabled
+stands the addon's *features* down — `settings.enabled` is read by `modules/Canvas.lua` and by
+nothing else — while `Sl:Register` and `P:Register` run unconditionally from `OnInitialize`. So a
+bare `/pm`, and `enable`, `help`, `config` and `version` with it, all still answer once the addon is
+off. `tests/test_slash.lua` pins that, because a player who can turn the addon off and not back on
+has only the settings panel they were trying not to open.
 Panel verbs: `new delete rename panels panel unlock lock recover`.
 
 There is no `test` verb. Unlocking is this addon's test mode (`options-ui-§15`): it shows every

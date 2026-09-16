@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-798%2F798_passing-green)
+![Tests](https://img.shields.io/badge/Tests-827%2F827_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -64,15 +64,25 @@ until your cursor crosses it, and it still never claims the click. Every charact
 panels out of the box, so an alt that should differ wants a profile of its own, with your existing
 layout copied in as a starting point.
 
-Everything else is configuration, and it lives in two places: the addon's own page under Settings ▸
-AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare `/pm` opens that settings page,
-and `/pm help` prints the full command list.
+Everything else is configuration, and it lives in three places now: the button on your minimap, the
+addon's own page under Settings ▸ AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare
+`/pm` opens that settings page, and `/pm help` prints the full command list.
+
+The **minimap button** wears the addon's own logo. Left-click unlocks your panels, and click it
+again to lock them; right-click opens the settings page. Drag it anywhere around the ring you like
+and it stays there. If you would rather not have it, untick **Minimap button** under General ▸
+Master controls and it goes — and stays gone, on every character, until you tick it back. The same
+button shows up as a row in Titan Panel, ElvUI's data texts or Bazooka if you run one of those, and
+clicks there do the same two things.
 
 Those settings are readable from chat too, if that suits you better than clicking: `/pm list`
 prints every setting with its current value, `/pm get <setting>` answers for one, and
 `/pm reset <setting>` puts one back to its default. `/pm resetall` returns the whole profile to
 defaults and asks before it does. `/pm version` prints the version, which is the thing to quote in
-a bug report.
+a bug report. `/pm disable` turns the whole addon off without unloading it — your panels stay
+exactly where they are, they just stop being drawn — and `/pm enable` brings it back. Both are the
+same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page, and `/pm`
+keeps answering while the addon is off, so `/pm enable` is always there.
 
 ## How panels work
 
