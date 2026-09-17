@@ -92,8 +92,36 @@ end
 ---
 --- Through `NS.Schema:Set`, never through `NS.Unlock` directly: see the header. The row's sense is
 --- LOCKED, so toggling it is a plain negation of what the row reads back.
+---
+--- REFUSED WHILE THE ADDON IS DISABLED (launcher-§2, slash-commands-§7), on one line and with no
+--- other effect. This rung drives a PREVIEW SWITCH -- unlocking is this addon's preview -- and a
+--- preview of panels that are not drawn is not a coherent request. The refusal is placed before the
+--- write and not after it, which is the whole of the rule: the audit's live example is a minimap
+--- button with no disabled gate at all, writing the stored tree of an addon the player switched off,
+--- and a click is a game event in every sense that matters.
+---
+--- RUNG (c)'s CARVE-OUT DOES NOT REACH THIS ADDON, and it is worth saying so rather than leaving it
+--- to be re-derived: a rung-(c) left-click opens the settings panel, which §7 lists among the things
+--- that SURVIVE, so refusing it would decline one button for doing exactly what the right button
+--- beside it is required to keep doing. This addon is on rung (b) (the standard's own `ADDONS.md`
+--- records it), its left button drives a feature, and so it is refused. RIGHT-click is untouched in
+--- either state -- `openSettings` above carries no gate, deliberately, because §7 nominates that
+--- click as one of the two routes to the panel and a mouse click is not a slash command.
+---
+--- The line is the DISPATCHER'S (`Sl:DisabledLine()`), not a second copy worded here: the refusal is
+--- one shape collection-wide, and eleven addons each spelling it slightly differently is the drift
+--- the shared printer exists to end. Guarded on the forwarder existing so a client with no LibKa0s
+--- at all -- where this file is already the stub above -- cannot raise inside a button click.
 local function toggleLock()
   if not NS.Schema then return end
+  -- The MASTER SWITCH, not `NS.Lifecycle:IsDown()`. The latch answers "is the addon stood down for
+  -- any reason", which a `perf` hold also makes true; launcher-§2's refusal is about the DISABLED
+  -- state specifically, and the line it prints names `/pm enable`, which would be the wrong advice
+  -- to a player mid-capture. Same question the slash gate asks, through the same seam.
+  if NS.IsAddonEnabled and not NS.IsAddonEnabled() then
+    if NS.Slash and NS.Slash.DisabledLine then NS.Print(NS.Slash:DisabledLine()) end
+    return
+  end
   NS.Schema:Set("state.locked", not NS.Schema:Get("state.locked"))
 end
 
@@ -161,7 +189,13 @@ NS.Launcher = lib:New({
   -- It is not the folder name either. That is `name` above, which LibDBIcon keys the saved position
   -- by and which a player reads nowhere as prose: `PanelMaster` is an identifier,
   -- `Ka0s Panel Master` is a name. Two fields, two jobs.
-  label = "Ka0s Panel Master",
+  --
+  -- READ FROM `NS.BRAND` (core/Namespace.lua) rather than re-typed here, and that is the point of
+  -- the constant rather than a tidy-up: slash-commands-§7 requires the refusal line a disabled addon
+  -- prints to carry THE SAME string this field takes, precisely because launcher-§1 already forbids
+  -- escapes in it. Two literals is two spellings, and the day one of them is edited the button and
+  -- the chat line name two different addons. It is still a literal -- just one of them.
+  label = NS.BRAND,
   -- The same file the TOC's `## IconTexture` names (launcher-§4) — one asset, three surfaces.
   icon  = C.ICON_PATH,
 

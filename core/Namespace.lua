@@ -18,4 +18,18 @@ NS.SCHEMA_VERSION = 2
 -- MUST NOT be substituted with another color.
 NS.PREFIX = "|cff00ffff[PM]|r"
 
+-- The BRAND NAME in plain text — `Ka0s <Name>`, no escape sequence of any kind (launcher-§1). Three
+-- surfaces have to spell it identically and one string is what makes that true: the LDB object's
+-- `label`, which a broker display prints beside the other ten rows (core/LauncherSetup.lua); the
+-- LibKa0s-Slash-1.0 descriptor's `brandName`, which builds the one refusal line a disabled addon
+-- prints (settings/Slash.lua, slash-commands-§7); and the composed *Enable Ka0s Panel Master* row's
+-- own label (settings/Schema.lua).
+--
+-- It is NOT the TOC's `## Title` and the two are deliberately not wired to each other, although this
+-- addon's Title happens to read the same. A Title MAY carry color escapes and one in the collection
+-- does, which a broker display drawing the string raw splatters across a row where every other row
+-- is plain text. It is not the folder name either: `PanelMaster` is an identifier, `Ka0s Panel
+-- Master` is a name.
+NS.BRAND = "Ka0s Panel Master"
+
 -- Modules publish themselves idempotently (`NS.X = NS.X or {}`); nothing to wire here yet.

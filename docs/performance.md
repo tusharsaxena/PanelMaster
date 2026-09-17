@@ -25,6 +25,17 @@ below — why `§12` does not apply — is unchanged and still load-bearing.
 | `docs/perf-analysis/` | not present |
 | `performance-§12` exemption | **not claimed, and not claimable** — see below. The deviation below does not rest on it |
 | `## Documented deviations` row | **present** since 2026-08-25, citing `performance-§1` directly |
+| `suspend` / `resume` | **not a second mechanism.** `performance-§6`'s suspended arm is the `perf` hold on the one `LibKa0s-Lifecycle-1.0` latch (`core/LifecycleSetup.lua`). Nothing takes that hold here, because there is no harness to take it — but the latch and `NS.StandDown` / `NS.StandUp` are built, wired and exercised, so arming the harness later is a caller rather than a teardown path |
+
+**What changed on 2026-09-17, and why it does not reopen this decision.** `slash-commands-§7` made
+the disabled state total and required it to be built on the suspend/resume seam every addon already
+ships. This addon shipped no such seam, because it declines `Perf` — so the seam was built here for
+the DISABLED hold and the `perf` hold sits beside it with no caller. That is the right way round:
+`§7` is explicit that a second teardown path beside the first is the anti-pattern (#85), and the
+cost this row declines to pay was never the teardown, it was the measurement harness around it — a
+setup file, a second SavedVariables global, a slash verb and an offline scenario. Those are still
+absent and this row still stands. `tests/test_disabled.lua` takes and releases the `perf` hold
+directly, so the two-hold rule is asserted before any harness relies on it.
 
 `Perf` is the one LibKa0s major this addon declines. The decline is reasoned in
 [`PLAN-06`](https://github.com/tusharsaxena/PanelMaster/issues/24), which carried `performance-§1`–`§4`
@@ -38,7 +49,7 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:644-650` is the
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:650-656` is the
 tick and `:660` installs it on a single shared driver, the first time any panel is tracked for
 mouseover:
 
@@ -119,7 +130,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:644-650` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:650-656` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
 
 ### `RegisterEvent` — 4 hits
 

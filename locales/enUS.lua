@@ -12,17 +12,23 @@ NS.L = setmetatable(NS.L or {}, { __index = function(_, k) return k end })
 -- Keys are the English source strings (localization-§2); only overrides need listing, e.g.:
 -- NS.L["Enable panels"] = "Enable panels"
 --
--- ── THE ONE STRING THAT ROUTES THROUGH THE SEAM TODAY ──────────────────────────
+-- ── THE ONE STRING THAT IS DELIBERATELY NOT HERE ───────────────────────────────
 --
--- The disabled-verb refusal (settings/Slash.lua, slash-commands-§2): while the addon is off, a verb
--- that drives its FEATURES answers on this one line and does nothing else. It is listed here rather
--- than left to the metatable -- which would resolve it identically -- because it is the only entry
--- a translator has to find, and because the `%s` is a CONTRACT: the call site substitutes the
--- gold-wrapped `/pm enable`, so a translation that drops the placeholder loses the one thing the
--- line exists to name. The slash command is not part of the key for the same reason: nobody should
--- have to retype a command to translate a sentence.
-NS.L["the addon is disabled \226\128\148 %s turns it back on"] =
-  "the addon is disabled \226\128\148 %s turns it back on"
+-- The disabled-verb refusal used to be listed here, in this addon's own wording, as the single
+-- string routing through the seam. It is gone, and its absence is the entry.
+--
+-- slash-commands-§7 fixes that line's shape for the whole collection -- `<BrandName> is disabled —
+-- enable it with /<slash> enable`, the command in the help index's gold and carrying its leading
+-- slash, an em dash with a single space either side, no trailing period -- and LibKa0s-Slash-1.0
+-- builds it from `lib.DISABLED_LINE_FORMAT`. The library's own contract says so in as many words:
+-- the locale override a host passes DOES NOT REACH the refusal line, because that wording is the
+-- collection's and not the addon's. Eleven addons each translating it slightly differently is the
+-- drift the one shared formatter exists to end.
+--
+-- So nothing in this file overrides it, and settings/Slash.lua asks the dispatcher for the line
+-- rather than composing one. What a translator gets instead is the brand name -- which launcher-§1
+-- already forbids escapes in, which is exactly what makes it safe to drop into a colored line --
+-- and that is a NAME, so localization-§4 keeps it untranslated too.
 --
 -- Note for a future pass: panel NAMES are user-supplied data, not UI strings, and must never be run
 -- through NS.L. Neither must the stored `point` / `strata` tokens — those are matched on stable

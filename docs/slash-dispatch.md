@@ -18,31 +18,49 @@ checkbox writes — through the very seam it writes through, and hold no state o
 through `Sl:CliSet`, so `/pm enable` is literally `/pm set settings.enabled true`: the same write
 and the same canonical `path = value` echo, read back from the store after the write.
 
-**The dispatcher survives the disabled state**, which is what stops the pair being one-way. Disabled
-stands the addon's *features* down — `settings.enabled` is read by `modules/Canvas.lua` and by
-nothing else — while `Sl:Register` and `P:Register` run unconditionally from `OnInitialize`. So a
-bare `/pm`, and `enable`, `help`, `config` and `version` with it, all still answer once the addon is
-off. `tests/test_slash.lua` pins that, because a player who can turn the addon off and not back on
-has only the settings panel they were trying not to open.
+**The whole reserved surface survives the disabled state**, and that is the ruling rather than a
+convenience. `Sl:Register` and `P:Register` run unconditionally from `OnInitialize`, so while the
+addon is off a bare `/pm` **opens the settings panel** and `help`, `config`, `version`, `enable`,
+`disable`, `debug`, `perf`, `get`, `set`, `list`, `reset` and `resetall` all answer normally —
+reading and repairing settings included, which is precisely when a player most needs them.
+
+Standard v2.56.0 narrowed that to `enable` and `help`; v2.57.0 **reversed it**, on the case that
+`/pm` on a disabled addon answered with a refusal instead of the one surface a player uses to switch
+it back on by hand. This addon carries the restored set and narrows nothing: the descriptor passes
+**no `liveVerbs`**, so the live set is `lib.LIVE_VERBS` — the standard's twelve reserved verbs at
+Slash minor 13 — and `Sl.ALWAYS_LIVE` is a *read* of that array rather than a second source for it.
 
 **A disabled addon refuses its FEATURE verbs**, on one tagged line naming `/pm enable`, and does
-nothing else (`slash-commands-§2`; a SHOULD, taken here). The gate is on the **verb table**, not on
-the verbs: `settings/Slash.lua` walks `NS.COMMANDS` once, before either reader of it exists, and
-wraps every handler whose name is not in `Sl.ALWAYS_LIVE`. One place, so the library's dispatcher
-and the degraded stub's own `run()` both get it and a verb added tomorrow is gated by default — a
-guard pasted into each handler would be eight places to keep in step and a ninth to forget.
+nothing else (`slash-commands-§2`; a SHOULD, taken here). Everything else — `new delete rename
+panels panel unlock lock recover` — refuses. **The gate is the library's**: the descriptor passes
+`isEnabled` (asked at dispatch time, never cached) and `brandName`, and at Slash 13 the dispatcher
+gates *after* the `COMMANDS` lookup, so only a verb this addon actually ships is refused and a
+**typo still falls through** to `unknown command` and the help index (`slash-commands-§3`). The
+degraded stub, which has no library to route to, keeps a host-side wrap of `NS.COMMANDS` and
+reproduces the format string byte for byte; `tests/test_libka0s.lua` compares the two.
 
-`ALWAYS_LIVE` is the standard's own set, spelled as data: `help config version enable disable debug
-perf get set list reset resetall`. The reason is that a player must be able to read and repair
-settings, and reach the panel, while the addon is off — and `enable` above all, or the pair is
-one-way again. `perf` is listed although this addon registers no such verb, so a later one does not
-have to remember to come back. Everything else — `new delete rename panels panel unlock lock
-recover` — refuses. The refusal is the one string in this addon that routes through `NS.L`
-(`docs/localization.md`).
+The refusal line is **the collection's, not this addon's** — `Ka0s Panel Master is disabled — enable
+it with /pm enable`, built by `lib.DISABLED_LINE_FORMAT` from `NS.BRAND`, which is the same string
+the LDB object takes as its `label` (`launcher-§1`). It used to be this addon's own wording routed
+through `NS.L`; it is not translated now, because the library's contract is that a host locale
+override does not reach it (`docs/localization.md`).
+
+`/pm help` while disabled prints the **whole index**, headed by that same line as a state note. That
+is an answer with a note above it, not a refusal.
 Panel verbs: `new delete rename panels panel unlock lock recover`.
 
 There is no `test` verb. Unlocking is this addon's test mode (`options-ui-§15`): it shows every
 panel with its outline and name, so `/pm unlock` and `/pm lock` are the switch.
+
+`lock` and `unlock` are **reserved** and the pair is a **MAY** this addon takes (`slash-commands-§8`,
+the canonical full-pair shape). Like `enable` / `disable` they are aliases and hold no state of
+their own: both write `state.locked` through `NS.Schema:Set` — the same path and the same seam the
+Master-controls *Lock frame* checkbox and the minimap button's left click write through — so
+`/pm unlock` is literally `/pm set state.locked false` and confirms in the shared `path = value`
+shape. The echo is read back **after** the write, which matters here: `NS.Unlock:SetUnlocked`
+defers an unlock requested in combat, so the line reports `state.locked = true` rather than claiming
+something that did not happen. They are **feature verbs**, so a disabled addon refuses them —
+unlocking a frame that is not drawn is not a coherent request.
 
 `/pm panel <name> [field] [value]` inspects and edits a single panel from the command line, using the
 same `Registry:Set` seam the settings widgets use (the drag handler takes `Registry:SetPosition`).

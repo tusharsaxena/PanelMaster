@@ -608,7 +608,13 @@ local function applySpec(f, spec)
   -- cannot place a panel you cannot see — so the mouseover fade is an editing-mode-off behavior.
   f.__spec = spec
   f:SetAlpha(spec.mouseover and spec.mouseoverAlpha or spec.alpha)
-  Canvas.SetMouseoverTracked(spec.id, f, spec.mouseover)
+  -- `spec.shown and` is the stand-down half (slash-commands-§7), and it is not a tidy-up. A panel
+  -- that is not drawn has no mouseover to fade, so tracking one is a per-frame cursor test over a
+  -- frame nobody can see -- and because this is the ONLY caller that adds to the tracked set, the
+  -- set empties as the last visible panel goes and SetMouseoverTracked takes the shared 10Hz
+  -- OnUpdate off the driver frame. That is how the ticker is canceled when the addon stands down:
+  -- through the show ladder, not through a second sweep that would have to agree with it.
+  Canvas.SetMouseoverTracked(spec.id, f, spec.shown and spec.mouseover)
 
   f:SetShown(spec.shown)
 end
@@ -779,6 +785,21 @@ function Canvas:Render(id)
     return nil
   end
   local spec = Canvas.BuildSpec(rec, currentSettings(), NS.Compat.InCombat())
+  -- THE STAND-DOWN RUNG (slash-commands-§7). Hiding while the addon is stood down is enforced HERE,
+  -- inside the one show decision every frame passes through, rather than by an imperative sweep of
+  -- Hide() from core/LifecycleSetup.lua -- because a hidden frame comes back. A combat transition, a
+  -- profile switch or a settings change re-renders the panel, and an addon that hid imperatively is
+  -- visibly running again while it still claims to be off.
+  --
+  -- It sits in Render rather than in BuildSpec because BuildSpec is PURE -- record + settings +
+  -- combat state in, spec out, no globals -- and the latch is none of those three. Putting it here
+  -- keeps the whole of "what does this panel render as" unit-testable headlessly and still catches
+  -- every path, because nothing shows a panel frame except this function.
+  --
+  -- It is NOT the same rung as `settings.enabled`, which BuildSpec already folds into `spec.shown`.
+  -- That one answers the player's master switch; this one answers the latch, whose `perf` hold has
+  -- nothing to do with the master switch at all.
+  if NS.Lifecycle and NS.Lifecycle:IsDown() then spec.shown = false end
   local f = active[id]
   -- A frame can only ever answer to the name it was created with, so a frame holding the wrong name
   -- has to be retired and the one belonging to the right name brought in.
@@ -857,4 +878,22 @@ function Canvas:Enable()
   ev:RegisterMessage(NS.Registry.MSG_PANELS, function() Canvas:RenderAll() end)
   ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id) Canvas:Render(id) end)
   ev:RegisterMessage(NS.Schema.MSG_SETTINGS, function() Canvas:RenderAll() end)
+end
+
+-- The other half of the seam, and the reason Enable's guard is on `__ev` rather than on a boolean:
+-- the renderer's three subscriptions are ACTUALLY UNREGISTERED when the addon stands down, never
+-- gated (slash-commands-§7, anti-pattern #85). A handler that early-returns has not stopped
+-- watching, it has stopped reacting, and it still pays the dispatch every time the message goes out.
+--
+-- The TARGET goes with them. NS.NewBusTarget() hands back a fresh AceEvent-embedded table each call,
+-- so dropping this one and taking a new one on the next Enable costs one table and removes the whole
+-- question of whether a stale target is still keyed in CallbackHandler.
+--
+-- Called only from NS.StandDown (core/LifecycleSetup.lua), which the latch calls on the edge.
+function Canvas:Disable()
+  local ev = Canvas.__ev
+  if not ev then return false end
+  Canvas.__ev = nil
+  if ev.UnregisterAllMessages then ev:UnregisterAllMessages() end
+  return true
 end

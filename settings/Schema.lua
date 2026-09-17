@@ -220,7 +220,7 @@ function S:InstallMaster(H)
   local rows, tail = H.MasterControls{
     prefix    = "settings.",
     page      = "general",
-    addonName = "Ka0s Panel Master",
+    addonName = NS.BRAND,
     -- NOT frameless: every panel this addon draws is positionable, and modules/Unlock.lua calls
     -- SetMovable on each one. The frame-only rows therefore all apply.
     --
@@ -254,8 +254,25 @@ function S:InstallMaster(H)
   if #rows == 0 then return false end
 
   wire(rows, S.ENABLED_PATH, {
-    tooltip = "Master switch. Turning this off hides every panel without deleting any of them.",
-    onChange = function() announce("enabled") end,
+    tooltip = "Master switch. Turning this off stands the addon down: every panel is hidden, every "
+      .. "event and message it watches is unregistered and the mouseover ticker stops. No panel is "
+      .. "deleted, and the slash commands and this page keep working.",
+    -- THE LATCH, not a repaint (slash-commands-§7). This row is the one stored path the *Enable Ka0s
+    -- Panel Master* checkbox, `/pm enable` and `/pm disable` all write, so this onChange is where
+    -- all three arrive -- and what they arrive at is a stand-down or a stand-up, not a hide.
+    --
+    -- IT DOES NOT `announce`, and that is the change rather than an omission. Every other row here
+    -- broadcasts SettingsChanged because the renderer is the thing that has to react; this row's
+    -- reaction is the LATCH, and NS.StandDown / NS.StandUp repaint as part of standing the addon
+    -- down and back up. An announce beside them would be a second repaint path for one switch, and
+    -- the two would have to agree about ordering -- the bus is torn down inside StandDown, so on the
+    -- way down it would fire into nothing, and on the way up it would paint a second time. Worse,
+    -- it would paint on the BOOT stand-up, which deliberately leaves the first paint to
+    -- PLAYER_ENTERING_WORLD (core/LifecycleSetup.lua's NS.StandUp says why).
+    --
+    -- A write with no edge -- the value already stored -- correctly does nothing at all: nothing
+    -- changed, so there is nothing to repaint.
+    onChange = function() NS.RefreshEnabled() end,
   })
   wire(rows, "settings.visibility", {
     tooltip = "When your panels are drawn at all. Combat is the game's own in-combat state, so "

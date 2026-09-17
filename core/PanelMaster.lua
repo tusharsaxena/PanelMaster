@@ -53,38 +53,57 @@ function addon:OnInitialize()
   -- OnInitialize runs at ADDON_LOADED, strictly before PLAYER_LOGIN. Registering from a
   -- PLAYER_LOGIN bootstrap is exactly what options-ui-§1 sanctions; waiting for the user's first
   -- /pm config is what anti-pattern #22 forbids.
+  --
+  -- IT IS SETUP, SO IT SURVIVES THE DISABLED STATE (slash-commands-§7's own survivor list). This
+  -- registration is the settings-category registration's deferred half and nothing else -- it
+  -- registers a page and reads nothing about panels -- so NS.StandDown leaves it alone. Standing it
+  -- down would be the addon deciding, while it is off, to make the one surface a player uses to
+  -- switch it back on unreachable on the load order that lost the race. It is one of exactly three
+  -- registrations tests/test_disabled.lua names as the survivor set; a fourth fails that suite.
   self:RegisterEvent("PLAYER_LOGIN", function()
     if NS.Panel and NS.Panel.Register then NS.Panel:Register() end
   end)
 end
 
 function addon:OnEnable()
-  -- Subscribe the renderer to the message bus. Without this NOTHING is live: every settings change
-  -- and every panel edit broadcasts into a bus with no listener, and the only thing that repaints
-  -- is the lock/unlock path, which calls Canvas:RenderAll() directly. That was the shape of the
-  -- bug — panels appeared frozen until something unlocked or locked them.
-  if NS.Canvas and NS.Canvas.Enable then NS.Canvas:Enable() end
-
   -- Discover user-installed Sunn - Viewport Art packs and add them to the artwork catalog. Here in
   -- OnEnable rather than at file scope because a pack addon is a SEPARATE addon: its Lua has not
   -- necessarily run when modules/SunnArt.lua loads, and the globals it leaves behind are only
   -- guaranteed to exist once every addon has loaded. Adds nothing when no pack is installed.
+  --
+  -- Above the latch and outside the stand-down on purpose: it mutates an in-memory CATALOG, takes no
+  -- registration, arms no timer and draws nothing, so there is nothing here for a stand-down to
+  -- reclaim. What reads the catalog is the renderer, and the renderer is what stands down.
   if NS.SunnArt and NS.SunnArt.Inject then NS.SunnArt.Inject() end
 
-  -- Panels are drawn on PLAYER_ENTERING_WORLD rather than here. UIParent's size is what the
-  -- registry's off-screen recovery measures against, and it is not final at OnEnable — reading it
-  -- too early would judge every stored position against the wrong screen.
-  self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnterWorld")
-  self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnRegenEnabled")
-  -- The other half of the general-visibility rule (options-ui-§15). A panel is a non-secure frame,
-  -- so showing and hiding one at the start of a pull is legal and needs no gate.
-  self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnRegenDisabled")
+  -- THE LATCH, and this is where the addon's features are wired up or not wired up at all
+  -- (slash-commands-§7). Everything OnEnable used to do here -- Canvas:Enable and the three event
+  -- registrations -- moved into NS.StandUp, because a disabled addon must not register them in the
+  -- first place. Registering and then tearing down one frame later would be the draw gate with extra
+  -- steps: the addon would still have watched, however briefly.
+  --
+  -- `Set` then the explicit first stand-up, rather than Reevaluate: the latch starts UP with an
+  -- empty hold set and has never fired a callback, so there is no edge for Reevaluate to find. This
+  -- is the one moment a host has to say "and if nothing is holding you down, come up".
+  NS.Lifecycle:Set(NS.HOLD_DISABLED, not NS.IsAddonEnabled())
+  if not NS.Lifecycle:IsDown() then NS.StandUp() end
+  -- LAST, and after that stand-up rather than before it. It is what tells NS.StandUp that the boot
+  -- one is over: from here on a stand-up repaints immediately, because there is no
+  -- PLAYER_ENTERING_WORLD still to come. See NS.StandUp's own note for why it is not "have we seen
+  -- that event" -- an addon disabled at login never registers it.
+  NS.__booted = true
 
   -- No [Init] line here: the debug flag is session-only and off at login, so a boot-time summary
   -- would always be gated off and never render. It rides the DebugLog:SetEnabled seam instead,
   -- emitted when capture is actually enabled (debug-logging-§5/§8).
 end
 
+-- Panels are drawn on PLAYER_ENTERING_WORLD rather than at OnEnable. UIParent's size is what the
+-- registry's off-screen recovery measures against, and it is not final at OnEnable — reading it too
+-- early would judge every stored position against the wrong screen.
+--
+-- Registered by NS.StandUp and unregistered by NS.StandDown, so a disabled addon does not watch for
+-- it at all (slash-commands-§7).
 function addon:OnEnterWorld()
   if NS.Canvas and NS.Canvas.RenderAll then NS.Canvas:RenderAll() end
 end

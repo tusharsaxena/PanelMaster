@@ -85,6 +85,14 @@ end
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
+    -- THE LATCH FIRST, and before anything repaints (slash-commands-§7). `settings.enabled` is a
+    -- stored setting like any other, so a profile switch can flip it with no checkbox and no verb
+    -- being touched -- a player switching to a profile where the addon is enabled expects it to come
+    -- up, and one switching away from it expects it to go down. This is why AceDB's three callbacks
+    -- are on the disabled state's SURVIVOR list: drop them and the addon cannot re-evaluate the
+    -- switch at all. NS.RefreshEnabled re-reads the path and fires a callback only on an actual
+    -- edge, so a switch between two profiles that agree is silent.
+    NS.RefreshEnabled()
     NS:SweepPreviewPanels()   -- a copied profile can carry someone else's preview orphans
     if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
   end

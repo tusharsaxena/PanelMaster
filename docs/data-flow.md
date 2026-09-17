@@ -18,6 +18,15 @@ an input rather than something read inside, which is what keeps the rule asserta
 omits it gets the out-of-combat answer, which is what every profile written before `visibility`
 existed already meant.
 
+**A fourth switch sits one level up, in `Canvas:Render` rather than in `BuildSpec`, and it is the
+stand-down rung** (`slash-commands-§7`): `NS.Lifecycle:IsDown()` forces `spec.shown` false whenever
+any hold is taken. It is not in `BuildSpec` because the latch is not one of that function's three
+pure inputs, and it is not an imperative sweep of `Hide()` because a hidden frame comes back — the
+next combat transition or settings change re-renders it, and the addon is visibly running again
+while it claims to be off. It is a different question from `settings.enabled`, which answers the
+player's master switch; the latch's other hold has nothing to do with that switch. Nothing shows a
+panel frame except `Canvas:Render`, so one rung there reaches every path.
+
 The other two addon-wide rows on the **Master controls** tab are honored in the same place, as
 **multipliers** rather than replacements: `settings.scale` multiplies each panel's own `scale` and
 `settings.alpha` its own `alpha`, so the editor's per-panel sliders keep showing what the player

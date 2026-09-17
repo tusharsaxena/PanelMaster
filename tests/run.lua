@@ -89,6 +89,10 @@ local SUITES = {
   "test_database", "test_debuglog",
   "test_schema", "test_slash", "test_panel", "test_profiles",
   "test_launcher",
+  -- The stand-down conformance suite slash-commands-§7 MUSTs. Listed here like any other suite,
+  -- inside the green gate, and placed AFTER test_launcher because step 8 drives the launcher's own
+  -- OnClick and reads better beside the file that builds it.
+  "test_disabled",
   "test_sunnart",
   "test_libka0s", "test_surface_parity", "test_harness",
   "test_spelling",

@@ -392,20 +392,39 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 5. `/pm disable` → **Expect:** the same thing, and the same `settings.enabled = false` echo as
    step 4 printed — they are one switch, not two (`slash-commands-§2`).
 6. **While disabled**, run `/pm`, `/pm help` and `/pm version` → **Expect:** all three answer
-   normally. Then `/pm enable` → **Expect:** the panels return. This is the case that matters: if
-   the dispatcher stood down with the features, `disable` would be a one-way switch.
+   normally, and the bare `/pm` opens the settings panel. Then `/pm enable` → **Expect:** the panels
+   return. This is the case that matters: if the dispatcher stood down with the features, `disable`
+   would be a one-way switch.
 7. `/pm config` → **General ▸ Master controls** → untick and re-tick **Enable Ka0s Panel Master**
    → **Expect:** the checkbox and the two verbs always agree, whichever you used last.
 8. **While disabled**, run a FEATURE verb and then check the world, not the chat. `/pm new Ghost`
-   → **Expect:** exactly one line, `the addon is disabled — /pm enable turns it back on`, and
-   **no new panel** — confirm with `/pm enable` then `/pm panels` (`slash-commands-§2`). Repeat
+   → **Expect:** exactly one line, `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`,
+   and **no new panel** — confirm with `/pm enable` then `/pm panels` (`slash-commands-§2`). Repeat
    with `/pm unlock` → **Expect:** the same line, and the panels stay locked. **Fail:** the line
    prints and the verb acts anyway, which is the failure a chat-only check walks straight past.
+   **Fail:** the wording differs from that line by a word or a color — it is the collection's, built
+   by the library, and every Ka0s addon prints it identically (`slash-commands-§7`).
 9. **While disabled**, run the verbs that must never be refused: `/pm list`, `/pm get
-   settings.gridSize`, `/pm set settings.gridSize 8`, `/pm reset settings.gridSize`, `/pm debug`.
-   **Expect:** every one answers normally, and the `set` really writes — a player has to be able to
-   read and repair settings while the addon is off, which is when they are most likely to need to.
-   Re-enable when done.
+   settings.gridSize`, `/pm set settings.gridSize 8`, `/pm reset settings.gridSize`, `/pm debug`,
+   `/pm config`, `/pm version` and a **bare `/pm`**. **Expect:** every one answers normally, the
+   `set` really writes, and the bare command **opens the settings panel** — that last one is the
+   case standard v2.57.0 was written on. A player has to be able to read and repair settings and
+   reach the panel while the addon is off, which is when they are most likely to need to.
+   `/pm help` prints the whole index headed by the disabled line, which is a note above an answer
+   rather than a refusal. Re-enable when done.
+10. **While disabled**, a typo: `/pm nwe Ghost` → **Expect:** `unknown command 'nwe'` and the help
+   index, **not** the disabled line. A misspelling is a misspelling in either state
+   (`slash-commands-§3`).
+11. **The stand-down is total, and this is the step that checks it rather than the drawing**
+   (`slash-commands-§7`). With a panel that has *Show on mouseover only* ticked, disable the addon
+   and then: enter and leave combat, switch zones, and switch profiles back and forth. **Expect:**
+   nothing is drawn, **nothing is printed**, and `/pm enable` afterwards brings back exactly the
+   panels and settings as they are **now** — including anything you changed while it was off.
+   **Fail:** any chat line at all from a combat transition or a zone change while disabled; that is
+   a registration that survived, and it is the failure this whole section exists to catch.
+12. **The profile route.** While disabled, switch to a profile where the addon is **enabled**
+   (Profiles page) → **Expect:** the panels come up without touching a checkbox or a verb. Switch
+   back → **Expect:** they go down again.
 
 ## 7b. The launcher — the minimap button and the broker row
 
@@ -422,6 +441,14 @@ worth doing in full after any change to the icon or the seam.
    check **Lock frame** agrees with what you just did.
 4. **Right-click** the button → **Expect:** the settings page opens on its landing page, and the
    lock does **not** move.
+4b. **While the addon is DISABLED** (`/pm disable`), **left-click** the button → **Expect:** exactly
+   one line, `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`, the panels stay
+   locked, and **nothing is written** — check **Lock frame** on the settings page is where it was.
+   This addon is on rung (b), so its left button drives a feature and is refused; the rung-(c)
+   carve-out (a left click that only opens the panel) does not apply here. **Right-click** in the
+   same state → **Expect:** the settings page opens exactly as it does when enabled, because the
+   ruling narrows the slash surface and a mouse click is not a slash command (`launcher-§2`,
+   `slash-commands-§7`). `/pm enable` when done.
 5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
    where you left it.
 6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move

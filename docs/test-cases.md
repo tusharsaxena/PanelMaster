@@ -559,13 +559,14 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
 
-### test_slash.lua (73)
+### test_slash.lua (74)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
 - Slash.PrintHelp: one row per command, plus a header
 - Slash.PrintHelp: no line ends in a colon (slash-commands-§4)
 - Slash: no `test` or `preview` verb — `/pm lock` and `/pm unlock` are the switch
+- Slash: `/pm lock` and `/pm unlock` write the checkbox's path through the ONE seam (§8)
 - Slash.OnSlash: a bare command runs `config` (slash-commands-§4)
 - Slash.OnSlash: a whitespace-only command is bare too
 - Slash.OnSlash: `help` prints the index
@@ -633,7 +634,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: a feature verb does not ACT -- the refusal is instead of the work, not before it
 - Disabled: the live verbs are never refused (slash-commands-§2)
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
-- Disabled: the refusal routes through NS.L, with a key in locales/enUS.lua
+- Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 
 ### test_panel.lua (62)
 
@@ -751,6 +752,23 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: LibDataBroker alone gets the broker plugin and no button
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
+
+### test_disabled.lua (14)
+
+- Disabled 1: enabled, the addon registers, draws and arms its ticker
+- Disabled 3: every registration the addon owns is UNREGISTERED, not gated
+- Disabled 4: no timer, ticker or OnUpdate is left armed
+- Disabled 5: every frame that was shown is hidden, and stays hidden
+- Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing
+- Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
+- Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
+- Disabled 8: left-click is refused and writes nothing; right-click still opens the panel
+- Disabled 9: re-enabling restores the registration set, from state as it is NOW
+- Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
+- Disabled 10: releasing one hold does not resurrect an addon the other still holds down
+- Disabled 10b: the hold keys are the library's exported constants, not local literals
+- Disabled: a profile switch that flips the enable path re-evaluates the latch
+- Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
 
 ### test_sunnart.lua (53)
 
@@ -948,10 +966,11 @@ badge and any count quoted in the docs must agree with it.
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 30 |
-| test_slash.lua | 73 |
+| test_slash.lua | 74 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
 | test_launcher.lua | 23 |
+| test_disabled.lua | 14 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
 | test_surface_parity.lua | 5 |
@@ -964,4 +983,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 1 |
-| **Total** | **834** |
+| **Total** | **849** |

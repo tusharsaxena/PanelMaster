@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-834%2F834_passing-green)
+![Tests](https://img.shields.io/badge/Tests-849%2F849_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -81,13 +81,18 @@ prints every setting with its current value, `/pm get <setting>` answers for one
 defaults and asks before it does. `/pm version` prints the version, which is the thing to quote in
 a bug report. `/pm disable` turns the whole addon off without unloading it — your panels stay
 exactly where they are, they just stop being drawn — and `/pm enable` brings it back. Both are the
-same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page, and `/pm`
-keeps answering while the addon is off, so `/pm enable` is always there.
+same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page.
 
-While it is off, the verbs that make and edit panels say so rather than acting — one line naming
-`/pm enable`, and nothing done. The settings verbs above are deliberately not among them: reading
-and repairing your settings, and opening the settings page, are exactly what you are most likely to
-want while the addon is standing down.
+**Off means off.** Not hidden: the addon stops watching the game's events as well as drawing, stops
+its mouseover ticker, and writes nothing while it is off. It costs you what unticking it in
+Blizzard's own AddOns list would, without the `/reload`.
+
+What stays is the way back in. `/pm` still opens the settings page, and `help`, `version`, `config`,
+`debug` and the whole settings CLI above still answer and still write — reading and repairing your
+settings is exactly what you are most likely to want while the addon is standing down. Only the
+verbs that make and edit panels say so rather than acting, on one line naming `/pm enable`. The
+minimap button stays where it is: right-click still opens the settings page, and left-click says the
+same line instead of unlocking panels that are not drawn.
 
 ## How panels work
 

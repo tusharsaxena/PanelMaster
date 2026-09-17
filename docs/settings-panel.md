@@ -35,7 +35,7 @@ game's own Settings ▸ AddOns list.
 
 | Tab | Setting | What it does |
 |---|---|---|
-| Master controls | Enable Ka0s Panel Master | Master switch. Off hides every panel without deleting any. |
+| Master controls | Enable Ka0s Panel Master | Master switch. Off **stands the addon down** (`slash-commands-§7`): every panel hidden, every event and message unregistered, the mouseover ticker stopped. No panel is deleted, and the slash commands and this page keep working. |
 | Master controls | General visibility | When your panels are drawn at all: always, only in combat, only out of combat, or never. |
 | Master controls | Master scale | Magnifies every panel at once, on top of each panel's own scale. |
 | Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |

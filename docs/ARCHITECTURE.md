@@ -18,7 +18,7 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and five of the seven LibKa0s
+`core/` holds the bootstrap, the Compat firewall, the AceDB layer and six of the eight LibKa0s
 seams;
 `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer and unlock
 mode; `settings/` holds the schema, the other two seams and the four panel pages. Load order is
@@ -142,11 +142,14 @@ takes the player's panels with it because `db.profile.panels` is in the profile.
 delete rename panels panel unlock lock recover` — no `test` verb, because unlocking is this addon's
 test mode (`options-ui-§15`). `enable` and `disable` are **aliases** onto `settings.enabled`, the
 path the Master-controls checkbox writes, through the same write seam and holding no state of their
-own (`slash-commands-§2`); the dispatcher keeps answering while the addon is disabled, so the pair
-is never one-way. What a **disabled** addon does refuse is its **feature verbs**, on one tagged line
-naming `/pm enable` and nothing else — gated once over `NS.COMMANDS` rather than per handler, with
-the live set (`Sl.ALWAYS_LIVE`) named once as data. Verb detail and the host/library split in
-**[slash-dispatch.md](slash-dispatch.md)**.
+own (`slash-commands-§2`). While the addon is **disabled** the whole reserved surface still answers
+— a bare `/pm` opens the settings panel, and `help config version enable disable debug perf get set
+list reset resetall` behave normally, which standard v2.57.0 restored after v2.56.0 briefly narrowed
+it. The only refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`,
+and that gate is **the library's**: `settings/Slash.lua` passes `isEnabled` and `brandName` and
+narrows nothing (no `liveVerbs`). Verb detail and the host/library split in
+**[slash-dispatch.md](slash-dispatch.md)**; what *disabled* actually means in
+**[The disabled state](#the-disabled-state-is-total-slash-commands-7)** below.
 
 ## The launcher (`launcher-§1`)
 
@@ -199,6 +202,58 @@ rebinding turns the suite red instead of quietly un-hiding buttons.
 
 The render pipeline these drive, and the combat gating around unlock and the options panel, are in
 **[data-flow.md](data-flow.md)**.
+
+**The first three are registered by `NS.StandUp` and unregistered by `NS.StandDown`, not by
+`OnEnable`** — see the next section. `PLAYER_LOGIN` is the exception, because it is setup.
+
+## The disabled state is total (`slash-commands-§7`)
+
+**Disabled means the addon is not running.** Not hidden, not quiet, not skipping a repaint. Until
+this was adopted, *disabled* here was a **draw gate**: `settings.enabled ~= false` was one rung of
+`Canvas.BuildSpec`'s show ladder and one condition on the slash verbs, and nothing else changed —
+every bus subscription stayed registered, all three game events above stayed registered, and the
+shared 10Hz mouseover `OnUpdate` kept ticking over panels nobody could see. The addon had stopped
+*reacting*; it had not stopped *watching*, and it went on paying the dispatch for both.
+
+**Owner: `core/LifecycleSetup.lua`**, which publishes `NS.Lifecycle` — one `LibKa0s-Lifecycle-1.0`
+instance — plus `NS.StandDown`, `NS.StandUp`, `NS.IsAddonEnabled` and `NS.RefreshEnabled`.
+
+**Two named holds on one latch.** The addon is stood down whenever at least one hold is taken and
+stood up only when the last is released, so **releasing one hold cannot resurrect an addon the other
+still holds down**. `disabled` is taken from `settings.enabled`; `perf` is the hold
+`LibKa0s-Perf-1.0`'s suspended arm takes — nothing takes it here today, because this addon declines
+`Perf` (the ratified `performance-§1` row below), and the latch is still the right shape because a
+second teardown path beside the first is the anti-pattern (#85), not an implementation detail.
+
+| Stands down | How |
+|---|---|
+| The renderer's three bus subscriptions | `Canvas:Disable()` — actually unregistered, and the target dropped. Not gated: a handler that early-returns still pays the dispatch. |
+| `PLAYER_ENTERING_WORLD`, `PLAYER_REGEN_ENABLED`, `PLAYER_REGEN_DISABLED` | `NS.StandDown` unregisters each by name; `NS.StandUp` re-registers them. |
+| The shared 10Hz mouseover `OnUpdate` | Through the show ladder: `Canvas:Render` passes `spec.shown and spec.mouseover`, so the tracked set empties and `SetMouseoverTracked` takes the script off the driver frame. |
+| Every panel frame | **At the source** — one rung in `Canvas:Render` reading `NS.Lifecycle:IsDown()`. Never an imperative sweep of `Hide()`: a hidden frame comes back on the next combat transition or settings change. |
+
+| Survives, because it is SETUP | Why |
+|---|---|
+| The chat command, the dispatcher and `NS.COMMANDS` | Without them `/pm enable` does not exist and the switch goes one way. |
+| The settings-category registration and the panel body | Including the `PLAYER_LOGIN` bootstrap above, which is that registration's deferred half and reads nothing about panels, and the Panels page's own two bus subscriptions (`NS.PanelEditor.__evPanels`), which keep an **open** page in step with the store and are addon messages the client never dispatches. |
+| The AceDB handle, `NS.Schema:Set`, and AceDB's three profile callbacks | A profile switch can flip `settings.enabled` with no checkbox and no verb touched, so the addon must be able to re-evaluate the latch there (`core/Database.lua` calls `NS.RefreshEnabled` first, before anything repaints). |
+| The launcher's registration | The button stays on the minimap and the broker row stays in the display. What the **left** click does changes: this addon is on rung (b), so it prints the refusal line and writes nothing (`launcher-§2`). Right-click still opens the panel, in either state. |
+
+**Those three survivors are the whole list, and `tests/test_disabled.lua` asserts it by name** — a
+fourth registration reddens the suite rather than joining the exemption quietly.
+
+**No secure work, so no pending completion.** `slash-commands-§7` lets a disabled addon keep one
+`PLAYER_REGEN_ENABLED` so that secure-attribute and state-driver work refused under lockdown can
+finish. This addon has none to hold: every panel is a plain non-secure `CreateFrame("Frame")`, it
+calls no `SetAttribute`, registers no state or attribute driver and installs no secure hook. The
+stand-down therefore completes in the same turn as the write, every time.
+
+**Restoration is from current state, never from a snapshot** (`performance-§6`): `NS.StandUp`
+re-registers and repaints from the registry and the settings *as they are now*, so a panel created
+or a setting changed while the addon was off comes back correct.
+
+`tests/test_disabled.lua` is the conformance suite the standard MUSTs, asserting on the
+**registration set** rather than on any handler's return value.
 
 ## Taint
 
@@ -275,7 +330,7 @@ now mandated or permitted outright — is **retired**, not kept for the history.
 **The `Perf` decline IS a row here, as of 2026-08-25, and it cites `performance-§1` directly.**
 It was deliberately withheld until then, on reasoning worth keeping: the obvious row would have
 cited `performance-§12`'s no-combat-path exemption, and **this addon does not qualify for it** —
-criterion (a) requires no `OnUpdate` handler, and `modules/Canvas.lua:660` installs a shared 10Hz
+criterion (a) requires no `OnUpdate` handler, and `modules/Canvas.lua:666` installs a shared 10Hz
 driver the moment any panel has *Show on mouseover only* ticked, with no combat gate. A `§12` row
 would have been a false row, so no row was written and an audit re-filed `performance-§1` every
 cycle, which was the correct outcome for as long as the choice was unmade.
@@ -287,7 +342,7 @@ See [`performance.md`](performance.md) for the cost argument and the committed s
 
 | Rule | What differs | Why | Decided | Re-check trigger |
 |---|---|---|---|---|
-| `performance-§1` (the wiring MUST) | No `core/PerfSetup.lua`, no `PanelMasterPerfDB`, no `perf` verb, no `tests/perf.lua`. The `perf` verb stays **reserved** so it can never mean anything else here. | **Ratified as a deviation from `§1`, NOT as a `§12` exemption — `§12` does not apply and is not claimed.** The addon's one in-combat path is a single shared 10Hz `OnUpdate` (`modules/Canvas.lua:644-650`) whose whole body is, per mouseover-tracked panel, one `NS.Compat.MouseIsOver` and one `SetAlpha`. The cost is bounded by a number the player sets: panels with *Show on mouseover only* ticked, which defaults to `false` (`core/Constants.lua:306`). With none ticked the driver is never created; with the set emptied afterwards the frame survives but its script does not — `SetMouseoverTracked` clears the `OnUpdate` on the untrack that empties the set, and `ensureMouseoverDriver` re-installs it when the set refills, so the dormant cost is no per-frame callback at all. There is no per-record work, no allocation, no scan that grows with saved data, and nothing whose cost a raid can change. Wiring the full harness — a setup file, a second SavedVariables global, a slash verb, a `suspend`/`resume` contract and an offline scenario — to bracket two API calls at 10Hz is a cost the measurement could not repay. Owner's decision, 2026-08-25, over [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). | 2026-08-25 | Any of: a second `OnUpdate` or repeating ticker; `updateMouseover` growing work that is not O(tracked panels) of two API calls; a panel count that stops being player-bounded; or `performance-§12` gaining a bounded-cost clause upstream, at which point the exemption becomes claimable and this row is replaced by one that cites it. |
+| `performance-§1` (the wiring MUST) | No `core/PerfSetup.lua`, no `PanelMasterPerfDB`, no `perf` verb, no `tests/perf.lua`. The `perf` verb stays **reserved** so it can never mean anything else here. | **Ratified as a deviation from `§1`, NOT as a `§12` exemption — `§12` does not apply and is not claimed.** The addon's one in-combat path is a single shared 10Hz `OnUpdate` (`modules/Canvas.lua:650-656`) whose whole body is, per mouseover-tracked panel, one `NS.Compat.MouseIsOver` and one `SetAlpha`. The cost is bounded by a number the player sets: panels with *Show on mouseover only* ticked, which defaults to `false` (`core/Constants.lua:306`). With none ticked the driver is never created; with the set emptied afterwards the frame survives but its script does not — `SetMouseoverTracked` clears the `OnUpdate` on the untrack that empties the set, and `ensureMouseoverDriver` re-installs it when the set refills, so the dormant cost is no per-frame callback at all. There is no per-record work, no allocation, no scan that grows with saved data, and nothing whose cost a raid can change. Wiring the full harness — a setup file, a second SavedVariables global, a slash verb, a `suspend`/`resume` contract and an offline scenario — to bracket two API calls at 10Hz is a cost the measurement could not repay. Owner's decision, 2026-08-25, over [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). | 2026-08-25 | Any of: a second `OnUpdate` or repeating ticker; `updateMouseover` growing work that is not O(tracked panels) of two API calls; a panel count that stops being player-bounded; or `performance-§12` gaining a bounded-cost clause upstream, at which point the exemption becomes claimable and this row is replaced by one that cites it. |
 | `events-frames-taint-§8` (the pre-formatting **SHOULD**) | Roughly 25 chat and slash lines build their text with `("…"):format(…)` or `..` before handing it to `NS.Print` — `settings/Slash.lua`, `settings/PanelEditor.lua`, `settings/Schema.lua` — rather than the preferred `print("count", n)` varargs form. | **The MUST does not engage here, and this was re-graded, not waived.** §8 scopes the MUST NOT to call sites whose arguments are, or derive from, a return of a named combat-protected API. This addon reads **none** of them: a whole-repo sweep of `core/ modules/ settings/ defaults/ locales/` for the trigger set (`UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`, `UnitGetIncomingHeals`, `UnitHealth`, `UnitHealthMax`, `UnitThreatSituation`, `UnitDetailedThreatSituation`, the aura amount/`points` fields, `UNIT_AURA`) returns nothing, and the only unit/client APIs it calls at all are `UnitClass` and `C_AddOns.GetAddOnMetadata`. Every one of these lines formats values the addon owns — a panel name, a stored geometry field, a count it computed, a literal — so none can be handed a secret and the residue is the SHOULD, graded Info. Neither of §8's two unrelaxed points is touched: no site calls the global `print()` (every file takes `local print = NS.Print`), and the seam's guarantee is unconditional — `core/CoreSetup.lua` publishes the library's `IsConcatSafe` / `SafeToString` and builds the printer from `lib:New`, so every argument is stringified through the `table.concat` probe whatever a call site hands it. Converting the sites is therefore a readability change with no reachable behavior, and is declined at `1.0.0`. | 2026-08-05 | The first chat or debug line whose arguments include, or derive from, a return of any API in §8's trigger set — that site converts as a MUST, and an audit files it as one. Re-check also when §8's trigger list grows upstream. |
 | `localization-§1` | No user-facing string routes through `NS.L`: every label, tooltip, slash line and message is hardcoded English. | `1.0.0` ships **English-only** — the second of the two terminal compliant states `localization-§3` names, not an open routing gap. Both MUSTs are met unconditionally: the `NS.L` seam is exported with the key-returning metatable fallback (`locales/enUS.lua:6`) and `enUS.lua` ships, so a later pass wraps strings without touching call sites. Reasoned at `locales/enUS.lua:8-14`. Panel **names** are user data and must never route through `NS.L`; neither must the stored `point` / `strata` tokens (`localization-§4`). | 2026-08-05 | The first non-English locale file added to `locales/` — that change routes the strings and retires this row |
 | `architecture-§5` (the fields on a panel) | The per-panel appearance and position fields in `C.PANEL_FIELD_TYPE` (`core/Constants.lua`) are preferences the player sets on a member, and none has a schema row. That is every field except `name`, which routes to `R:Rename`: colors, the border, bar and bar-border blocks, textures, size, `strata`, `level`, `scale`, `alpha`, mouseover, `enabled`, the `art*` fields and the anchor (`point`, `relPoint`, `x`, `y`). They are written through `NS.Registry:Set` (the field controls in `settings/PanelEditor.lua` and `/pm panel <name> set`) and `:SetPosition`, and by the whole-record and bulk verbs: `R:Reset`, `R:CopyFrom`, `R:FitToArtwork` (through `R.ApplyArtSize`), `R:Recover`, `R:ResetPositions`, and the unlock-mode drag-stop in `modules/Unlock.lua`, which writes `point`/`relPoint` onto the live record and then calls `:SetPosition`. Each of these coerces, writes and notifies on its own (`PanelChanged` per record; `PanelsChanged` once for `Recover` and `ResetPositions`), none through `NS.Schema:Set`. | The schema helper addresses paths, not records: `NS.Schema:Set` writes a path under the profile, and a panel is a registry record reached by id. Instance-addressing every per-panel field would be the largest change in the collection, for fields the Registry already validates (the `C.PANEL_FIELD_TYPE` coercers plus `R.Sanitize`), logs once at the seam and announces on the bus. Owner's decision, 2026-09-12, over [#49](https://github.com/tusharsaxena/PanelMaster/issues/49). | 2026-09-12 | The schema helper gains instance addressing for registry records (an explicit record argument on `NS.Schema:Set`). The fields then take instance-relative rows, the verbs above become callers of the helper, and this row retires. |

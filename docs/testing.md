@@ -452,6 +452,26 @@ A few suites assert against the **source files** rather than behavior — one se
 no `WOW_PROJECT_ID` branching. Those rules only break when someone adds a line years later, which is
 exactly when nobody is looking.
 
+### `tests/test_disabled.lua`, and what it may never be
+
+`slash-commands-§7` MUSTs a stand-down conformance suite in every addon, and this is it. It is
+listed in `tests/run.lua`'s suite list like any other and sits inside the green gate.
+
+**Every assertion is on the registration set, never on a handler's return value.** The kit's
+`M.__registrations()` (revision 22) answers over the LIVE set and loses entries when the addon gives
+something up. "Call the handler and assert it returned early" would be the *draw gate* passing its
+own test — an early return is precisely what a draw gate does — so a suite written that way
+certifies the thing it exists to catch.
+
+Two shapes it also avoids. `__fire` over an empty registry dispatches nothing whether the addon
+stood down or the harness lost the ability to dispatch at all, so step 6 fires at the dropped bus
+target with `__fireUnconditional` and calls the addon's own handler methods directly beside it.
+And the SETUP survivors §7 exempts are asserted **by name and by count**, so a feature that joins the
+exemption reddens the suite instead of passing quietly.
+
+Steps 3, 5, 6 and 10 carry `testing-§12` falsification comments naming the mutation that reddens
+each; all four have been run against that mutation.
+
 ## The case inventory
 
 [`test-cases.md`](test-cases.md) is the **generated**, authoritative enumeration of every case and

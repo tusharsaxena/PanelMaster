@@ -60,6 +60,36 @@ test("Slash: no `test` or `preview` verb — `/pm lock` and `/pm unlock` are the
   assertTrue(have.lock == true and have.unlock == true, "`/pm lock` or `/pm unlock` is missing")
 end)
 
+test("Slash: `/pm lock` and `/pm unlock` write the checkbox's path through the ONE seam (§8)",
+  function()
+    -- slash-commands-§8 makes the PAIR a MAY and this addon takes it -- but once taken, both verbs
+    -- MUST write the same stored path, through the same single write seam, as the *Lock frame*
+    -- checkbox and the launcher's left click. They used to call NS.Unlock:SetUnlocked directly,
+    -- which was the one surface in this addon that went round the seam: no validation, no single
+    -- `[Set]` line, and a wording of its own for the acknowledgment.
+    --
+    -- Asserted from BOTH ends, because "one state" is what the rule is actually about: the verb's
+    -- effect is read back off NS.State (what the world does) and off the row (what the checkbox
+    -- shows), and those two can never disagree if there is only one value.
+    NS.Slash:OnSlash("unlock")
+    assertTrue(NS.State.unlocked, "/pm unlock did not unlock")
+    assertEqual(S:Get("state.locked"), false, "the Lock frame row disagrees with /pm unlock")
+
+    local lines = capture(function() NS.Slash:OnSlash("lock") end)
+    assertFalse(NS.State.unlocked, "/pm lock did not lock")
+    assertEqual(S:Get("state.locked"), true, "the Lock frame row disagrees with /pm lock")
+    -- §8's confirmation SHOULD, in §5's `set` shape -- the same acknowledgment `enable` / `disable`
+    -- print, because it is the same write by another name.
+    assertEqual(#lines, 1, "/pm lock answered " .. #lines .. " lines")
+    assertEqual(lines[1], NS.PREFIX .. " " .. Sl.FormatKV("state.locked", "true"),
+      "/pm lock did not confirm in the shared `path = value` shape: " .. tostring(lines[1]))
+
+    -- And no second state anywhere: the verbs hold nothing of their own.
+    S:Set("state.locked", false)
+    assertTrue(NS.State.unlocked, "the checkbox's own write did not reach the verbs' state")
+    S:Set("state.locked", true)
+  end)
+
 -- Swap the `config` row's handler for a probe while `fn` runs, and return what reached it: the
 -- argument of each call, in order. Restored afterwards, so a failing assertion leaves no probe behind.
 local function probeConfig(fn)
@@ -821,15 +851,19 @@ test("Disabled: the live verbs are never refused (slash-commands-§2)", function
   -- The other side of the same rule, and the reason it is spelled out: "refuse while disabled",
   -- read literally, takes the entire command surface down with it. A player must be able to read
   -- and repair settings and reach the panel while the addon is off -- and `enable` above all.
+  --
+  -- "NOT REFUSED" IS TESTED AS "DID NOT ANSWER WITH THE REFUSAL AND NOTHING ELSE", not as "printed
+  -- no line mentioning the state". The two differ on `help`, which the library heads with the
+  -- disabled line before printing the whole index -- a state NOTE above an answer, not a refusal
+  -- instead of one. A blanket string ban would redden that and would be the narrowing standard
+  -- v2.57.0 reversed, arriving through the back door of an assertion.
   fresh()
   whileDisabled(function()
     for _, cmd in ipairs(NS.COMMANDS) do
       if Sl.ALWAYS_LIVE[cmd[1]] then
         local lines = capture(function() NS.Slash:OnSlash(cmd[1]) end)
-        for _, line in ipairs(lines) do
-          assertFalse(line:find("/pm enable", 1, true) ~= nil and line:find("disabled", 1, true) ~= nil,
-            "/pm " .. cmd[1] .. " was refused, and it is on the live list: " .. line)
-        end
+        assertFalse(#lines == 1 and lines[1] == NS.PREFIX .. " " .. Sl:DisabledLine(),
+          "/pm " .. cmd[1] .. " answered the refusal and nothing else, and it is on the live list")
       end
     end
 
@@ -866,18 +900,31 @@ test("Disabled: the gate is the VERB TABLE's, so the live set is the standard's 
     .. "exempt")
 end)
 
-test("Disabled: the refusal routes through NS.L, with a key in locales/enUS.lua", function()
-  -- localization-§1/§2: the key IS the English source string, and the `%s` is a contract -- the
-  -- call site substitutes the gold-wrapped `/pm enable`, so a translation dropping the placeholder
-  -- loses the one thing the line exists to name.
-  local key = "the addon is disabled \226\128\148 %s turns it back on"
-  assertEqual(rawget(NS.L, key), key, "the refusal has no enUS entry -- it rides the metatable only")
+test("Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)",
+  function()
+    -- One shape, collection-wide: `<BrandName> is disabled — enable it with /<slash> enable`, the
+    -- brand name in plain text, an em dash with a single space either side, the command in the help
+    -- index's gold and carrying its leading slash, no trailing colon and no trailing period.
+    --
+    -- It used to be this addon's own wording, routed through NS.L. That was right under the rule as
+    -- it stood and is wrong now: the wording is not the addon's to spell, which is why
+    -- LibKa0s-Slash-1.0's own contract says the host's locale override does not reach this line.
+    -- So the assertion is against the LIBRARY's format string rather than against a copy here --
+    -- a copy would pass while the library moved underneath it.
+    local lib = T.mocks.LibStub("LibKa0s-Slash-1.0", true)
+    assertEqual(Sl:DisabledLine(), lib.DISABLED_LINE_FORMAT:format(NS.BRAND, "/pm enable"),
+      "the refusal line is not the library's, built from this addon's brand name")
+    -- The brand name is the ONE spelling launcher-§1 already pins as the LDB label, not a second
+    -- one invented for this message.
+    assertEqual(NS.BRAND, T.mocks.__brokerObjects["PanelMaster"].label,
+      "the refusal names a different brand from the one the broker row prints")
 
-  fresh()
-  whileDisabled(function()
-    local lines = capture(function() NS.Slash:OnSlash("panels") end)
-    assertEqual(lines[1], NS.PREFIX .. " " .. key:format("|cffffff00/pm enable|r"),
-      "the refusal is not the line locales/enUS.lua declares: " .. tostring(lines[1]))
+    fresh()
+    whileDisabled(function()
+      local lines = capture(function() NS.Slash:OnSlash("panels") end)
+      assertEqual(#lines, 1, "the refusal is one line and nothing else")
+      assertEqual(lines[1], NS.PREFIX .. " " .. Sl:DisabledLine(),
+        "the refusal is not the line the dispatcher builds: " .. tostring(lines[1]))
+    end)
+    fresh()
   end)
-  fresh()
-end)

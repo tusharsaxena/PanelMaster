@@ -9,22 +9,24 @@ renaming one later means moving every key and every call site in a single change
 `locales/PostLoad.lua` loads after every locale file and holds derived-key aliases — strings whose
 translation always matches another key's — so a translator never does the same work twice.
 
-**English-only remains the shipped scope, and one string now routes through the seam.** Almost every
-label, tooltip and message is still hardcoded English — a scope decision rather than an oversight,
-and precisely what made the US-English sweep cheap, since there were no keys to move alongside the
-strings. The exception is the **disabled-verb refusal** (`settings/Slash.lua`, `slash-commands-§2`),
-declared in `locales/enUS.lua` as:
+**English-only remains the shipped scope, and `locales/enUS.lua` carries no keys.** Almost every
+label, tooltip and message is hardcoded English — a scope decision rather than an oversight, and
+precisely what made the US-English sweep cheap, since there were no keys to move alongside the
+strings. A later pass can wrap them (`NS.L["Show names while unlocked"]`) without touching call
+sites, because the seam and its key-returning metatable are already here.
 
-```lua
-NS.L["the addon is disabled \226\128\148 %s turns it back on"]
-```
+**The one key that used to be here is gone, and its absence is the entry.** The **disabled-verb
+refusal** (`settings/Slash.lua`) was declared in `locales/enUS.lua` in this addon's own wording.
+`slash-commands-§7` then fixed that line's shape for the whole collection — `<BrandName> is disabled
+— enable it with /<slash> enable` — and `LibKa0s-Slash-1.0` builds it from
+`lib.DISABLED_LINE_FORMAT`. The library's own contract says the locale override a host passes **does
+not reach** that line: the wording is the collection's, not the addon's, and eleven addons each
+translating it slightly differently is the drift the one shared formatter exists to end. So nothing
+here overrides it and the dispatcher is asked for the line rather than handed one.
 
-It is listed there rather than left to the metatable — which would resolve it identically — because
-it is the only entry a translator has to find, and because the `%s` is a **contract**: the call site
-substitutes the gold-wrapped `/pm enable`, so a translation that drops the placeholder loses the one
-thing the line exists to name. The slash command is not part of the key for the same reason. The
-seam is otherwise unchanged, and a later pass can wrap the rest
-(`NS.L["Show names while unlocked"]`) without touching call sites.
+What a translator gets in it instead is the **brand name** — which `launcher-§1` already forbids
+escapes in, which is exactly what makes it safe to drop into a colored line — and that is a name, so
+the rule below keeps it untranslated too.
 
 Two things must **never** be routed through `NS.L`:
 

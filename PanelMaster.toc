@@ -61,6 +61,11 @@ core\CoreSetup.lua
 # (NS.LIBKA0S_MISSING). Everything else it touches is reached through a closure, so the console no
 # longer has to sit down in modules/ the way modules/DebugLog.lua did.
 core\DebugLogSetup.lua
+# The LibKa0s-Lifecycle-1.0 seam: the stand-down latch (slash-commands-§7). After DebugLogSetup for
+# NS.Debug, which NS.StandDown and NS.StandUp both trace through; everything else it touches --
+# NS.db, NS.Schema, NS.Canvas, NS.addon -- is reached through a closure and resolved at call time,
+# so the rest of its position is conventional. Nothing calls the latch until addon:OnEnable.
+core\LifecycleSetup.lua
 core\PanelMaster.lua
 core\Database.lua
 # The LibKa0s-Launcher-1.0 seam: one LibDataBroker object, registered twice (launcher-§1). After
