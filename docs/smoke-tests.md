@@ -23,7 +23,7 @@ reset** and takes the panels with it, so `/pm panel deleteall` is no longer need
 2. `/pm` → **Expect:** the settings window opens on the **Ka0s Panel Master** landing page, not a
    sub-page, and nothing prints. `/pm help` → **Expect:** the help index, every line prefixed with a
    cyan `[PM]`, one row per command, no trailing colons.
-3. `/pm version` → **Expect:** `[PM] v1.1.0`, matching the TOC.
+3. `/pm version` → **Expect:** `[PM] v1.1.1`, matching the TOC.
 4. `/pm panels` → **Expect:** "No panels yet", suggesting `/pm new`.
 
 ## 2. No separate test mode
@@ -488,6 +488,12 @@ worth doing in full after any change to the icon or the seam.
    **no** panel opens.
 6. Leave combat → **Expect:** the options panel does **not** pop open by itself. Run `/pm config`
    yourself and it opens.
+7. Open the settings with `/pm config` **out of combat**, then pull a training dummy with the window
+   still open. **Expect:** every page, the tab strip included, is covered with a gray *"Settings are
+   locked during combat."*; clicking a control, **Defaults** or a tab does nothing; switching
+   category in the sidebar raises no Lua error and the window stays open; exactly **one** gray chat
+   notice per combat, however many clicks. Leave combat → **Expect:** the cover lifts and the page is
+   live and shows current values.
 
 ## 9. Options panel
 
@@ -846,7 +852,7 @@ that looks different is the finding.
 2. **Its close control is the library's ×**, 18×18, gray, turning **red** on hover — not the old
    flat `X` that turned gold. `Copy` and `Clear` sit to its left with a 6px gap, unmoved.
 3. **`/pm help` rows are indented two spaces** under the header, and the header now carries an em
-   dash: `v1.1.0 — slash commands (/panelmaster is an alias for /pm)`.
+   dash: `v1.1.1 — slash commands (/panelmaster is an alias for /pm)`.
 4. **The settings landing page's command list** lost its double spacing: `/pm config — Open
    settings`, one space either side of the dash, the dash gold-to-white rather than white-wrapped.
    It should now look **identical** to `/pm help`'s rows minus their indent — compare them directly.
@@ -1056,8 +1062,8 @@ falls back and the line silently reports the constant again — which looks corr
 where the two strings agree, and is exactly the failure this change exists to remove.
 
 **Setup.** In the INSTALLED copy under `Interface/AddOns/PanelMaster/` — never in the repo — edit
-`PanelMaster.toc` so `## Version:` reads `1.1.0-smoke`. That is the whole point: while the TOC and
-`core/Namespace.lua`'s constant read the same `1.1.0`, no in-client observation can tell which one
+`PanelMaster.toc` so `## Version:` reads `1.1.1-smoke`. That is the whole point: while the TOC and
+`core/Namespace.lua`'s constant read the same `1.1.1`, no in-client observation can tell which one
 was printed.
 
 1. Log in.
@@ -1066,10 +1072,10 @@ was printed.
 4. `/pm version`.
 5. Restore the installed TOC's `## Version` and `/reload`.
 
-**Expect:** step 3 reads `PanelMaster v1.1.0-smoke, schema v2, profile '<yours>', N panels` — the
-**TOC's** string — and step 4 reads `[PM] v1.1.0-smoke`. The two surfaces agree.
+**Expect:** step 3 reads `PanelMaster v1.1.1-smoke, schema v2, profile '<yours>', N panels` — the
+**TOC's** string — and step 4 reads `[PM] v1.1.1-smoke`. The two surfaces agree.
 
-**Fail:** an `[Init]` line reading `v1.1.0` while `/pm version` reads `v1.1.0-smoke`. That is one
+**Fail:** an `[Init]` line reading `v1.1.1` while `/pm version` reads `v1.1.1-smoke`. That is one
 string with two sources of truth, and the `[Init]` line is the one a user pastes into a bug report.
 
 ---
