@@ -188,7 +188,12 @@ Two things are gated, in the two different shapes the standard defines:
   than resurrecting an unlock entry for a record that has gone. Nothing bypasses the gate.
 - **The options panel refuses** (`options-ui-§2`). `Settings.OpenToCategory` is protected, so
   `/pm config` in combat prints a gray notice and returns. It does **not** replay: a panel that pops
-  itself open the instant combat drops steals focus during recovery.
+  itself open the instant combat drops steals focus during recovery. A page that is already on
+  screen when combat starts, or is reached in combat through Blizzard's AddOns sidebar, is held by
+  the library's **combat lock** (LibKa0s v1.46.1, `LibKa0s-Options-1.0` minor 22): it is covered
+  with a gray *"Settings are locked during combat."*, every write through the options surface is
+  refused with one gray chat notice per combat, and `PLAYER_REGEN_ENABLED` redraws it from current
+  state. Nothing closes or re-opens the settings window from addon code.
 
 | Event | Handler | Why |
 |---|---|---|
