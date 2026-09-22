@@ -143,11 +143,15 @@ delete rename panels panel unlock lock recover` — no `test` verb, because unlo
 test mode (`options-ui-§15`). `enable` and `disable` are **aliases** onto `settings.enabled`, the
 path the Master-controls checkbox writes, through the same write seam and holding no state of their
 own (`slash-commands-§2`). While the addon is **disabled** the whole reserved surface still answers
-— a bare `/pm` opens the settings panel, and `help config version enable disable debug perf get set
-list reset resetall` behave normally, which standard v2.57.0 restored after v2.56.0 briefly narrowed
-it. The only refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`,
-and that gate is **the library's**: `settings/Slash.lua` passes `isEnabled` and `brandName` and
-narrows nothing (no `liveVerbs`). Verb detail and the host/library split in
+— a bare `/pm` opens the settings panel, and the standard's twelve reserved verbs (`help config
+version enable disable debug perf get set list reset resetall`, read from `lib.LIVE_VERBS`) stay
+live, which standard v2.57.0 restored after v2.56.0 briefly narrowed it. `perf` sits in that set as
+a **reservation**, not a command: this addon registers no `perf` verb — `NS.COMMANDS`
+(`settings/Slash.lua:285`) holds 19 verbs and none of them is `perf` — so the eleven reserved verbs
+it does ship are the ones that behave normally. The only refusal is the addon's own **feature
+verbs**, on one tagged line naming `/pm enable`, and that gate is **the library's**:
+`settings/Slash.lua` passes `isEnabled` and `brandName` and narrows nothing (no `liveVerbs`). Verb
+detail and the host/library split in
 **[slash-dispatch.md](slash-dispatch.md)**; what *disabled* actually means in
 **[The disabled state](#the-disabled-state-is-total-slash-commands-7)** below.
 
