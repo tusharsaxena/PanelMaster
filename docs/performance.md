@@ -115,7 +115,7 @@ cites it.
 
 ## The committed sweep
 
-`performance-§12` asks for this as evidence. It is committed here because it is the artefact that
+`performance-§12` asks for this as evidence. It is committed here because it is the artifact that
 settles the question either way, and re-running it is how anyone checks whether the answer has
 changed.
 

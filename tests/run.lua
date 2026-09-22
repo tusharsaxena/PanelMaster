@@ -95,7 +95,7 @@ local SUITES = {
   "test_disabled",
   "test_sunnart",
   "test_libka0s", "test_surface_parity", "test_harness",
-  "test_spelling",
+  { name = "test_prose", dir = "tests/_kit/" },
   "test_vendor_sync",
   "test_layout_cap", "test_options_groups",
   "test_register", "test_docs", "test_lintconfig",

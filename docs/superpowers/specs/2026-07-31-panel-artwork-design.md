@@ -2,7 +2,7 @@
 
 > **Superseded (2026-08-02).** The pipeline this describes has been replaced. The
 > manifest, the scaffold step and the generated-plate importer are gone; artwork is now
-> converted by `tools/artwork/artwork_cleaner.py` and catalogued by
+> converted by `tools/artwork/artwork_cleaner.py` and catalogd by
 > `tools/artwork/update_catalog.py`, with categories derived from the folder tree. See
 > `docs/artwork-spec.md`. Kept for the reasoning, not as a description of the code.
 
