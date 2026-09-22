@@ -17,7 +17,7 @@ luacheck .            # 0 errors, 0 warnings
 gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
 vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
 under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
-addon's code and are linted as such, which is why the figure below is 57 files and not the 26 it
+addon's code and are linted as such, which is why the figure below is 61 files and not the 26 it
 was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
@@ -33,7 +33,7 @@ spelling would slip past — and holds four rules.
 
 | Rule | What it refuses |
 | --- | --- |
-| No top-level `ignore` | An entry there reaches all 57 files, including every file with no business producing the code. |
+| No top-level `ignore` | An entry there reaches all 61 files, including every file with no business producing the code. |
 | No wholesale class switch | `unused_args = false` and eight relatives are the same blanket spelled as a switch. |
 | Every `files[...]` ignore is narrow | The stanza key names one `.lua` file, or the entry names the variable as well as the code (`212/self`). |
 | Every inline `-- luacheck: ignore` names a code | Bare, it silences everything in scope; with only a variable after it, every code for that name. |
@@ -73,10 +73,12 @@ claims?"*. The two questions give the same answer only while the library has tag
 than the tag this addon has taken.
 
 Between a library release and the re-vendor that carries it they disagree, and that disagreement is
-the normal state rather than a defect. It is the state as this is written: `../LibKa0s` sits on
-**v1.27.0**, [`CLAUDE.md`](../CLAUDE.md) names **v1.26.0**, and the commands above report **306**
-differing lines for the library and **947** for the test kit. Re-vendoring to quiet them would be
-the actual mistake — it would pull an untested library release for the sake of a clean diff.
+the normal state rather than a defect. It was the state when this was written: `../LibKa0s` sat on
+**v1.27.0** while [`CLAUDE.md`](../CLAUDE.md) named **v1.26.0**, and the commands above reported
+**306** differing lines for the library and **947** for the test kit. Re-vendoring to quiet them
+would have been the actual mistake — it would pull an untested library release for the sake of a
+clean diff. The two converge again at each re-vendor, which is where the tree sits today: the
+sibling and the vendored payload are both on the tag `CLAUDE.md` names.
 
 **The authoritative comparison is against the tag `CLAUDE.md` names**, and that one must be empty at
 every commit:
