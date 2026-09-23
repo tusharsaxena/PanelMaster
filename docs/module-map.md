@@ -36,8 +36,10 @@ Load order is fixed by the TOC (`layout`); `core/Compat.lua` is first, `settings
 | `settings/OptionsSetup.lua` | `NS.Helpers`, `NS.SetBuildMain` | The `LibKa0s-Options-1.0` seam. `NS.Helpers` **is** the library instance rather than a wrapper (options-ui-§1), which is what lets `settings/Panel.lua` decorate it in place. Holds the descriptor: the write seam (`NS.Schema:Set`, already the two-argument shape the library calls with), `rowsForPage`, the boot validation, the AceGUI stash and the drag throttle. `buildMain` reaches the landing page through a forward declaration `settings/Panel.lua` fills in, because that file loads after this one. |
 | `settings/Panel.lua` | `NS.Panel` | What LibKa0s-Options-1.0 does **not** own: the open-dropdown registry that closes a list on scroll, the paired-button width, the landing page's body, the Profiles page, and the four page builders. The canvas factory, the header and breadcrumb, the lazy Defaults button, the scroll frame, the scrollbar patch, section headings, spacers, tooltips, the five widget makers, the two-column flow engine and the **tab strip** are all the library's now. The General page draws itself with one `H.RenderTabbedSchema` call, whose `afterGroup` hook hangs the **Recover panels** button under the Editing tab. Two library members are wrapped **on the instance** — `RenderField` and `EnsureScroll` — because the flow engine resolves both from the instance table at call time, so a host-side helper beside them is bypassed by every page it draws. Drives the editor through `E:WireBus` / `E:BuildPage` / `E:Rebuild`. |
 
-Eight of the twelve `LibKa0s` majors are adopted (`Core`, `Env`, `Media`, `DebugLog`, `Slash`,
-`Options`, `Launcher`, `Lifecycle`); `Pool`, `Item` and `Widgets` are vendored but not consumed here, and
+Eight of the fifteen `LibKa0s` majors are adopted (`Core`, `Env`, `Media`, `DebugLog`, `Slash`,
+`Options`, `Launcher`, `Lifecycle`); `Pool`, `Item` and `Widgets` are vendored but not consumed here,
+nor are `Compat`, `Bus` and `Schema`, which arrived with v1.55.0 and have not been through an adoption
+pass yet, and
 `Perf` is declined on structural grounds — see closed issue [`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31). The
 library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here**: a library
 problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a

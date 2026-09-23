@@ -97,7 +97,13 @@ local SUITES = {
   "test_libka0s", "test_surface_parity", "test_harness",
   { name = "test_prose", dir = "tests/_kit/" },
   "test_vendor_sync",
-  "test_layout_cap", "test_options_groups",
+  -- The layout-§1 cap gate is the kit's since revision 25, declared by the pair (basename, kit
+  -- directory) like the other kit suites. This repo's own tests/test_layout_cap.lua, which also
+  -- gated the 1000-1500 band, was retired on that re-vendor: the band is dispositioned in the
+  -- release watch list alone (automated-tests-§4), and a bare "test_layout_cap" beside a local
+  -- file of that name would now read as a collision with the kit's copy.
+  { name = "test_layout_cap", dir = "tests/_kit/" },
+  "test_options_groups",
   "test_register", "test_docs", "test_lintconfig",
   -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
   -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives

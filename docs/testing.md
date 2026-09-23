@@ -170,29 +170,28 @@ they mean the pack changed shape — and neither is fatal: it trusts the files.
 
 ## The `layout-§1` size gate
 
-`tests/test_layout_cap.lua` compares two things: every authored `.lua` git tracks, and the census
-under *Files by the `layout-§1` band* in [ARCHITECTURE.md](ARCHITECTURE.md). It reads them in both
-directions, so a file that reaches the 1000-line on-notice band unremarked and a row left behind for a
-file that has fallen back under it are each a red.
+The gate is the kit's: `tests/_kit/test_layout_cap.lua`, shipped with kit revision 25 (LibKa0s
+v1.55.0) and declared in `tests/run.lua` as `{ name = "test_layout_cap", dir = "tests/_kit/" }`. It
+compares every authored `.lua` git tracks against the census under `### Files over the 1500-line cap`,
+which sits beneath `## Documented deviations` in [ARCHITECTURE.md](ARCHITECTURE.md). It reads them in
+both directions, so an over-cap file the census does not name and a row left behind for a file that is
+no longer over the cap are each a red, and so is a census heading that is missing, misplaced or
+standing empty. Today the census states its empty result, "Nothing is over the cap today".
 
 `layout-§1` binds **every authored file the repository tracks**, `tests/` included; vendored code
-(`libs/`, `tests/_kit/`) is the only carve-out that reaches this repo. A red on a file **in the band**
-is cleared by adding its census row saying what is to be done about it. A red on a file **over the
-1500 cap** is cleared only by one of the three terminal states the rule allows — peel it, open an issue
-naming the seam a peel would follow, or ratify a register row with a re-check trigger — and the census
-row then has to name the issue or the row. It is not cleared by raising `CAP`, and it must not be
-cleared by dropping the suite from `SUITES`: `Kit.assertSuiteInventory` reddens on that too, which is
-the point of having one.
+(`libs/`, `tests/_kit/`) is the only carve-out that reaches this repo, so `tests/run.lua` passes no
+`Kit.layoutCap`. A red on a file **over the 1500 cap** is cleared only by one of the three terminal
+states the rule allows — peel it, open an issue naming the seam a peel would follow, or ratify a
+register row with a re-check trigger — and the census row then has to name the issue or the row. It
+must not be cleared by dropping the suite from `SUITES`: `Kit.assertSuiteInventory` reddens on an
+undeclared kit suite too, which is the point of having one.
 
-**This repo gates the band as well as the cap, and its siblings gate the cap alone.** MultiMeters and
-LibKa0s carry the same suite over their over-cap files and leave the band as prose. Nothing here is
-over the cap, so that shape would assert nothing at all today; the largest authored file is twelve
-lines under it and the band is where this addon's actual question lives. The reason the distinction is
-not academic: the gate's first run found `tests/test_panel.lua` at 1222, which crossed 1000 on
-2026-09-03 with nothing anywhere recording it.
-
-The line figures in the census are dated measurements and nothing asserts them, so an ordinary edit to
-a large file does not redden this gate. Membership is the invariant, not the numbers.
+**The 1000–1500 band is not gated here.** Until the v1.55.0 re-vendor this repo carried its own
+`tests/test_layout_cap.lua`, which gated the band as well as the cap, keyed to a census headed
+``Files by the `layout-§1` band``. `layout-§1` now puts the band in the release watch list alone —
+`docs/automated-tests/RESULTS.md`, generated on every run, where a newly crossed file arrives with a
+blank `Disposition` cell — so the local gate was deleted rather than kept beside the kit's, which
+under the (basename, directory) suite key would have been a collision.
 
 ## The `options-ui-§16` gate
 
