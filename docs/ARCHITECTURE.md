@@ -44,7 +44,7 @@ only row in the schema that does (`launcher-§3`). That row carries its own `get
 it by `S:InstallMaster`. They read and write it from the DB root, and they NEGATE, because the row's
 boolean says shown while LibDBIcon's key says hidden.
 
-**The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0; `docs/revendor/2026-09-23/`).
+**The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0; `docs/revendor/2026-09-23-v1.55.0/`).
 The rows are this addon's. The machinery around them is one library instance, `NS.SchemaRuntime`,
 built in `settings/Schema.lua`: the path walk, the row index, the single write seam, the bulk
 bracket (`debug-logging-§10`) and the boot shape check. The seam **keeps this addon's names**:

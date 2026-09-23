@@ -367,7 +367,7 @@ local R = SchemaLib:New({
   -- trap: its metatable answers every key with the key itself).
   L = { NOT_FOUND = "unknown path: %s", INVALID = "invalid value" },
   -- No `announce`: every row that broadcasts does it from its own onChange. No `resetExempt`: see
-  -- docs/revendor/2026-09-23/05_SUMMARY.md -- no player reaches a library sweep of these rows.
+  -- docs/revendor/2026-09-23-v1.55.0/05_SUMMARY.md -- no player reaches a library sweep of these rows.
 })
 
 -- The resolved library (or the stub standing in for it) and the instance, published for the two
