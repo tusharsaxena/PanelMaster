@@ -62,11 +62,12 @@ raised never reached `OnProfileReset`, which is why the bracket logs `reset all`
 (`core/Database.lua`). A reset or copy is AceDB replacing the profile wholesale, not a batch through
 the write seam. `Registry:ReloadProfile` logs nothing, so a reset is not also reported as a switch.
 
-**One bracket, in `settings/Schema.lua`.** `S.BulkBegin` / `S.BulkEnd` is the pair the Options
-descriptor hands LibKa0s (minor 16) for `O.RestoreDefaults` and `O.RestoreAllDefaults`, and
-`S.BulkLine` is how the Registry's verbs log. While a bracket is open, `S:Set` mutes its per-row line
-and tallies a write only when the row reads back differently, so the library's own `count` (every
-row `applyDefault` returned) is never used as N. Brackets nest by depth over one shared tally, and
+**One bracket, the schema runtime's.** `LibKa0s-Schema-1.0`'s instance (`NS.SchemaRuntime`, built
+in `settings/Schema.lua`) owns it. `S.BulkBegin` / `S.BulkEnd` are its members, the pair the Options
+descriptor hands LibKa0s (Options minor 16) for `O.RestoreDefaults` and `O.RestoreAllDefaults`, and
+`S.BulkLine` (its `BulkRun` plus `BulkAdd`) is how the Registry's verbs log. While a bracket is open,
+the write seam mutes its per-row line and tallies a write only when the row reads back differently,
+so the library's own `count` (every row `applyDefault` returned) is never used as N. Brackets nest by depth over one shared tally, and
 only the **outermost** act emits: an act run inside another adds to its total. If any level reports
 `info.profileReset`, nothing is emitted, because the profile handler logs that reset. The Options
 pair is defensive: no control in this addon reaches a library walk today.

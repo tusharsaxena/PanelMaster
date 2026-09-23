@@ -159,14 +159,22 @@ end)
 test("Schema.Set: a table value is deep-copied, not aliased", function()
   -- Nothing in the current schema stores a table, but the seam must not alias one when a future row
   -- does: a stored alias lets an in-place mutation silently rewrite the shipped default.
+  --
+  -- The probe goes in through the runtime's AddRows and comes out through Reindex, because the
+  -- write seam answers from an INDEX of the rows (LibKa0s-Schema-1.0), not a scan: a row appended
+  -- to the array by hand is not a row the seam knows about until it is re-indexed.
+  local R = NS.SchemaRuntime
   local row = { path = "settings.__probe", default = {}, type = "table" }
-  S.Schema[#S.Schema + 1] = row
+  R.AddRows({ row })
   local source = { a = 1 }
-  S:Set("settings.__probe", source)
+  local ok = S:Set("settings.__probe", source)
   source.a = 2
-  assertEqual(NS.db.profile.settings.__probe.a, 1, "the stored table aliased the caller's")
   S.Schema[#S.Schema] = nil
+  R.Reindex()
+  assertTrue(ok, "the probe row was refused")
+  assertEqual(NS.db.profile.settings.__probe.a, 1, "the stored table aliased the caller's")
   NS.db.profile.settings.__probe = nil
+  assertEqual(S:FindRow("settings.__probe"), nil, "the probe row outlived its case")
 end)
 
 test("Schema.Default: returns the row's default, deep-copied", function()
@@ -525,4 +533,100 @@ test("Schema seam: the General page's Defaults closes an open debug console", fu
   assertTrue(S:Get("state.debugConsole"), "the precondition did not take")
   NS.Helpers.RestoreDefaults("general", nil)
   assertFalse(S:Get("state.debugConsole"), "a page Defaults left the debug console open")
+end)
+
+-- ── The library-absent seam: settings/Schema.lua's host stub ────────────────────
+--
+-- The stub is WRITE-COMPLETING and LOG-SILENT (docs/api/Schema/version-1-docs.md, "The degradation
+-- stub"). One degraded write per writer kind this addon has is pinned landing in the store: a host
+-- verb, Reset All, the page Defaults sweep and a runtime writer (a Registry bulk act). Each arm is a
+-- REAL LOAD from a partial payload (tests/degraded_env.lua), never a hand-stubbed `lib = nil`.
+
+local Env = dofile("tests/degraded_env.lua")
+
+--- Every [Set] line in a degraded environment's live console buffer.
+local function setLines(ns)
+  local out = {}
+  assertEqual(type(ns.DebugLog.buffer), "table", "the degraded load has no live console buffer to read")
+  for _, line in ipairs(ns.DebugLog.buffer) do
+    if line:find("[Set]", 1, true) then out[#out + 1] = line end
+  end
+  return out
+end
+
+test("Schema stub: a host verb's write lands, reacts, and refuses in the host's own words", function()
+  local ns = Env.loadPartial({ Schema = true })
+  assertTrue(ns.SchemaLib ~= NS.SchemaLib, "the degraded load resolved the live library")
+
+  -- `/pm set`, through the live Slash major onto the stub seam, and the row's onChange with it.
+  local row = ns.Schema:FindRow("settings.showLabels")
+  local seen
+  row.onChange = function(v) seen = v end
+  ns.State.debug = true
+  ns.Slash:OnSlash("set settings.showLabels false")
+  assertEqual(ns.db.profile.settings.showLabels, false, "a /pm set did not land on a degraded load")
+  assertEqual(seen, false, "the row's onChange did not run on a degraded write")
+  -- Log-silent: the stub writes no [Set] line, and that is the whole of what it drops.
+  assertEqual(#setLines(ns), 0, "the stub logged a [Set] line")
+
+  -- The reserved pair (slash-commands-§2) writes the master switch through the same seam.
+  ns.Slash:OnSlash("disable")
+  assertEqual(ns.db.profile.settings.enabled, false, "/pm disable did not land on a degraded load")
+  assertFalse(ns.IsAddonEnabled(), "the addon did not stand down")
+  ns.Slash:OnSlash("enable")
+  assertTrue(ns.IsAddonEnabled(), "the addon did not stand back up")
+
+  local ok, err = ns.Schema:Set("settings.nonsense", 1)
+  assertFalse(ok)
+  assertEqual(err, "unknown path: settings.nonsense")
+  assertEqual(ns.db.profile.settings.nonsense, nil, "the stub stored a path no row declares")
+  ok, err = ns.Schema:Set("settings.gridSize", -1)
+  assertFalse(ok)
+  assertEqual(err, "invalid value")
+end)
+
+test("Schema stub: Reset All, the page Defaults and a Registry bulk act all complete", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+
+  assertTrue(ns.Schema:Set("settings.gridSize", 16), "the precondition was refused")
+  ns.Slash:DoResetAll()
+  assertEqual(ns.Schema:Get("settings.gridSize"), 4, "Reset All did not reset on a degraded load")
+  assertFalse(R.InBulk(), "Reset All left the stub's bracket open")
+
+  assertTrue(ns.Schema:Set("settings.gridSize", 16), "the precondition was refused")
+  assertTrue(ns.Schema:Set("state.debugConsole", true), "the precondition was refused")
+  assertTrue(ns.Schema:Get("state.debugConsole"), "the console did not open")
+  ns.Helpers.RestoreDefaults("general", nil)
+  assertEqual(ns.Schema:Get("settings.gridSize"), 4, "the page Defaults did not reset a stored row")
+  assertFalse(ns.Schema:Get("state.debugConsole"), "the page Defaults left the console open")
+  assertFalse(R.InBulk(), "the page Defaults left the stub's bracket open")
+
+  local rec = ns.Registry:New("Stubbed", { width = 500 })
+  assertTrue((ns.Registry:Reset(rec.id)), "a Registry bulk act failed on a degraded load")
+  assertEqual(rec.width, ns.Schema:Get("settings.defaultWidth"))
+  assertFalse(R.InBulk(), "S.BulkLine left the stub's bracket open")
+end)
+
+test("Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands", function()
+  local ns, m = Env.loadDegraded()
+  local lines = #m.__chat
+  assertEqual(ns.Schema:Register(), 0)
+  assertEqual(#m.__chat, lines, "the degraded boot check printed a line: " .. tostring(m.__chat[#m.__chat]))
+  assertTrue(ns.Schema:Set("settings.gridSize", 8), "a host write was refused on a degraded load")
+  assertEqual(ns.db.profile.settings.gridSize, 8)
+  assertTrue(ns.IsAddonEnabled(), "the master switch read wrong through the stub")
+end)
+
+test("Schema seam: the live seam is the library's instance, and NS.Schema's names answer it", function()
+  -- The adoption in one assertion per half: the instance came from LibKa0s-Schema-1.0 rather than
+  -- the stub, and NS.Schema's kept names answer what the instance answers.
+  assertTrue(NS.SchemaLib == T.mocks.LibStub("LibKa0s-Schema-1.0"), "the live load fell back to the stub")
+  local R = NS.SchemaRuntime
+  assertTrue(R.AllRows() == S.Schema, "the runtime holds a copy of the rows, not the array")
+  assertTrue(S:FindRow("settings.gridSize") == R.FindRow("settings.gridSize"))
+  -- The one refusal whose arity the library sets: `false, err, why`, and this addon's validators
+  -- answer no `why`.
+  assertEqual(select("#", S:Set("settings.gridSize", -1)), 3)
+  assertEqual(select(3, S:Set("settings.gridSize", -1)), nil)
 end)

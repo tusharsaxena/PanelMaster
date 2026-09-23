@@ -63,10 +63,16 @@ NS.addon:OnEnable()
 --
 -- Set BEFORE Kit.expose, which is what makes it stick: expose registers a source only when none is
 -- registered yet, precisely so a runner like this one keeps its own.
+--
+-- Schema is the one row here that IS the library table, and on purpose: its stub stands in for the
+-- library's pure primitives and `New` as well as for the instance, and the by-name call compares
+-- the stub LIBRARY (tests/test_surface_parity.lua). The instance half is compared two-table, since
+-- the instance surface is not in the library's member manifest.
 Kit.setSurfaceSource{
   ["LibKa0s-Options-1.0"]  = NS.Helpers,
   ["LibKa0s-DebugLog-1.0"] = NS.DebugLog,
   ["LibKa0s-Launcher-1.0"] = NS.Launcher,
+  ["LibKa0s-Schema-1.0"]   = mocks.LibStub("LibKa0s-Schema-1.0"),
 }
 
 -- The kit's registry and assertions are MERGED into this addon's existing global test table, under

@@ -1,7 +1,8 @@
 -- tests/test_surface_parity.lua — every degradation stub carries the whole live surface.
 --
--- Four LibKa0s seams are adopted — Core, DebugLog, Slash, Options — and each setup file carries an
--- `if not lib then` branch whose member set is what a library-less install actually runs on. A stub
+-- Six LibKa0s seams carry a degradation stub here — Core, DebugLog, Launcher, Slash, Options and
+-- Schema — each an `if not lib then` branch (Schema's is a builder function, `hostSchemaStub`) whose
+-- member set is what a library-less install actually runs on. A stub
 -- is a second implementation of somebody else's surface, so it drifts the moment the live half
 -- grows a member the host starts calling: the live path stays green and the degraded path raises in
 -- exactly the install the stub exists for. That is not hypothetical here. `Sl.FormatKV` was
@@ -19,7 +20,7 @@
 --   * Where a member is live-only ON PURPOSE it is named in the `ignore` set with its reason,
 --     because otherwise a deliberate omission and a bug read identically.
 --
--- TWO SEAMS CALL THE KIT'S BY-NAME FORM AND TWO DO NOT, and which is which is the thing to get
+-- FOUR SEAMS CALL THE KIT'S BY-NAME FORM AND TWO DO NOT, and which is which is the thing to get
 -- right rather than a style choice.
 --
 -- `assertSurfaceParity(stub, major, ignore)` arrived with kit 15 and was vendored by M4-01. What it
@@ -28,10 +29,13 @@
 -- talking to itself across its own file boundaries — `__bannerBand`, `__layoutTabs`,
 -- `__tabPlacement`, `__print` — and a stub is obliged to carry none of them.
 --
---   * DebugLog and Options use it. Both stubs stand in for an INSTANCE — what `lib:New(descriptor)`
---     returned — and `tests/run.lua` registers those two instances by major name with
---     `Kit.setSurfaceSource`, because LibStub answers the LIBRARY TABLE for the same name and that
---     is not the surface the addon's files call.
+--   * DebugLog, Options and Launcher use it. Their stubs stand in for an INSTANCE — what
+--     `lib:New(descriptor)` returned — and `tests/run.lua` registers those instances by major name
+--     with `Kit.setSurfaceSource`, because LibStub answers the LIBRARY TABLE for the same name and
+--     that is not the surface the addon's files call.
+--   * Schema uses BOTH forms, because its stub stands in for both tables: the library by name (the
+--     runner registers the library table for that major) and the instance two-table, against the
+--     live NS.SchemaRuntime.
 --   * Core does not, because it is not a major's surface at all: its two halves are two blocks of
 --     `core/CoreSetup.lua`, and what they have in common is a set of names hung on `NS`. There is no
 --     name to look up.
@@ -215,4 +219,27 @@ test("Parity: the Options seam's degraded surface matches the live one", functio
   for _, k in ipairs({ "ROW_VSPACER", "SECTION_HEADING_H", "BUTTON_PAIR_REL" }) do
     assertEqual(degradedNS.Helpers[k], 0, "the Options stub reports a real-looking " .. k)
   end
+end)
+
+-- ── Schema ─────────────────────────────────────────────────────────────────────
+
+test("Parity: the Schema seam's degraded surface matches the live one, on both levels", function()
+  -- settings/Schema.lua resolves `LibStub("LibKa0s-Schema-1.0", true) or hostSchemaStub()`, and the
+  -- stub stands in for TWO tables: the library (its pure primitives and `New`) and the instance
+  -- `New` answers. Both are pinned. The instance by the kit's two-table form, against the live
+  -- NS.SchemaRuntime, because the instance surface is not in the library's member manifest; the
+  -- library by name, against the table tests/run.lua registers for the major.
+  --
+  -- The degraded arm is a REAL LOAD with Schema.lua alone left out of the payload, so every other
+  -- major is live and the stub is the only thing that changed.
+  local degradedNS = loadPartial({ Schema = true })
+  assertTrue(degradedNS.SchemaLib ~= nil, "the Schema degradation arm published no library")
+  assertTrue(degradedNS.SchemaLib ~= NS.SchemaLib, "the degraded load resolved the live library")
+  assertSurfaceParity(NS.SchemaRuntime, degradedNS.SchemaRuntime, "schema instance vs host stub")
+  assertSurfaceParity(degradedNS.SchemaLib, "LibKa0s-Schema-1.0", {
+    -- The library's default refusal texts. The stub refuses in this addon's own words, the same
+    -- ones the live instance is handed through its descriptor's `L`, so a copy of the library's
+    -- constants here would be a string table with no reader.
+    "STRINGS",
+  })
 end)

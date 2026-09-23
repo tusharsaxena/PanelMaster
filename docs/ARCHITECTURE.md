@@ -40,9 +40,35 @@ the array's order is the strip a player sees on the General page — `Master con
 `Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
 through their own `get`/`set` and are never persisted, and **one** — `global.minimap.hide`, the
 *Minimap button* row — is stored but lives in `db.global` rather than `db.profile`, which is the
-only row in the schema that does (`launcher-§3`). `S:Get` and `S:Set` branch on that path: they
-read and write it from the DB root, and they NEGATE, because the row's boolean says shown while
-LibDBIcon's key says hidden.
+only row in the schema that does (`launcher-§3`). That row carries its own `get`/`set`, wired onto
+it by `S:InstallMaster`. They read and write it from the DB root, and they NEGATE, because the row's
+boolean says shown while LibDBIcon's key says hidden.
+
+**The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0; `docs/revendor/2026-09-23/`).
+The rows are this addon's. The machinery around them is one library instance, `NS.SchemaRuntime`,
+built in `settings/Schema.lua`: the path walk, the row index, the single write seam, the bulk
+bracket (`debug-logging-§10`) and the boot shape check. The seam **keeps this addon's names**:
+`NS.Schema:Set`, `:Get`, `:FindRow`, `:Default` and `:Register`, plus `S.BulkBegin`, `S.BulkEnd`
+and `S.BulkLine`, each delegate to the instance, so no caller moved. The Options and Slash
+descriptors take the instance's members **as values** (`set = NS.SchemaRuntime.Set`, and the
+same for `get`, `applyDefault`, `findRow`, `allRows` and the bracket pair). That is safe because
+nothing sits in front of the seam: the minimap inversion is the row's own `get`/`set`, and a
+refusal belongs in a row's `validate`, which `ApplyDefault` reaches too.
+Stored rows resolve against the active profile (`resolveRoot`). The refusal texts are this addon's
+own (`unknown path: <path>`, `invalid value`), restored through the descriptor's plain-table `L`.
+`S:Register` is the instance's `Validate` with a `global.`-aware defaults root, and it counts shape
+errors as well as unresolved paths. The profile reset's row count stays host-side
+(`S:SnapshotPersisted` / `S:CountChangedSince`), as the design allows.
+
+**Without the library** the seam degrades to `hostSchemaStub`, which stands in for both the
+library's pure primitives and the instance. The stub is **write-completing and log-silent**
+(`docs/api/Schema/version-1-docs.md`, "The degradation stub"). Reads, writes, each row's `onChange`
+and the bracket's depth all work, so the host writers keep writing: `/pm set` and `/pm disable`
+where the Slash major survives, Reset All, the page Defaults sweep, and the Registry's bulk verbs.
+The stub does not reproduce the per-write `[Set]` line or the bracket's tally, and it skips the
+boot shape check silently. This is a documented duplication of a runtime write path, not of a
+rendering helper. `tests/test_surface_parity.lua` holds both of its levels to the live surface, and
+`tests/test_schema.lua` drives one degraded write per writer kind.
 
 The **first** seven are not literals in that file. `Master controls` is COMPOSED, out of
 `LibKa0s-Options-1.0`'s `MasterControls` (`options-ui-§15`), and spliced at the head of the array by
