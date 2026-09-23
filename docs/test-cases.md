@@ -526,7 +526,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (40)
+### test_schema.lua (41)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -563,7 +563,8 @@ badge and any count quoted in the docs must agree with it.
 - Schema seam: a write logs its [Set] line, then runs onChange once
 - Schema seam: a raising onChange propagates, and the write has already landed
 - Schema seam: a read of an interior path answers the stored table itself
-- Schema seam: the General page's Defaults closes an open debug console
+- Schema seam: the library's RestoreDefaults walk over General closes an open debug console
+- Schema seam: /pm reset state.debugConsole closes an open debug console
 - Schema stub: a host verb's write lands, reacts, and refuses in the host's own words
 - Schema stub: Reset All, the page Defaults and a Registry bulk act all complete
 - Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands
@@ -999,7 +1000,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 40 |
+| test_schema.lua | 41 |
 | test_slash.lua | 74 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
@@ -1017,4 +1018,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **883** |
+| **Total** | **884** |

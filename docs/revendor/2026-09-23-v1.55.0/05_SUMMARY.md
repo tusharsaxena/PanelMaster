@@ -27,7 +27,7 @@ None (`01_DELTA.md` 3g).
 
 | Commit | What |
 |---|---|
-| `d830303` | Six characterization cases in `tests/test_schema.lua`, green against the host's own seam before any code moved. They cover refusal texts and arity, a write answering exactly `true`, the `[Set]` line before `onChange`, a raising `onChange` propagating after the store, an interior-path read answering the stored table, and the page Defaults closing an open console. |
+| `d830303` | Six characterization cases in `tests/test_schema.lua`, green against the host's own seam before any code moved. They cover refusal texts and arity, a write answering exactly `true`, the `[Set]` line before `onChange`, a raising `onChange` propagating after the store, an interior-path read answering the stored table, and the library's `RestoreDefaults("general")` walk closing an open console (a walk no player reaches; see Open). |
 | `af8a935` | The adoption. `settings/Schema.lua` builds `NS.SchemaRuntime` and keeps every seam name as a delegate. The minimap inversion moves onto the row's own `get`/`set`. `defaults.debugConsole = false` (JC-5). The refusal texts are kept through `L`. `Register` becomes `Validate`, and `hostSchemaStub` is added. The Options and Slash descriptors are bound to the instance's members. There is a parity case on both levels, with the major added to `Kit.setSurfaceSource`. Four library-absent cases (one live-seam identity case beside them) and the docs complete the commit. |
 
 Tests added: 6 characterization and 5 adoption, 872 → 883 (`lua tests/run.lua`, Totals row).
@@ -35,7 +35,9 @@ Mutation checks, run by hand and then reverted, each went red:
 
 - dropping a stub member: the parity case fails, naming `BulkAdd`;
 - a stub `Set` that refuses: three stub cases fail;
-- dropping `debugConsole = false`: the Defaults characterization case and a stub case fail.
+- dropping `debugConsole = false`: the `RestoreDefaults` walk characterization case and a stub case
+  fail. A later correction added the player's path, `/pm reset state.debugConsole` through
+  `NS.Slash:OnSlash`, as its own case (884 total); the same mutation turns it red too.
 
 What changed on purpose, and what did not:
 
@@ -100,7 +102,8 @@ read-path ceiling, so the API document's re-run note does not apply.
 - **In-game checks owed.** Two, and they are separate on purpose. (1) JC-5: open the debug
   console, then type `/pm reset state.debugConsole`. The console should close. That row reset is
   where a player meets `defaults.debugConsole = false`: with the default dropped, the console
-  stays open (a scratch mutation run confirmed it). (2) Open `/pm`, toggle the Minimap button checkbox, then Reset all settings (General →
+  stays open (a scratch mutation run confirmed it, and `tests/test_schema.lua` now pins it).
+  (2) Open `/pm`, toggle the Minimap button checkbox, then Reset all settings (General →
   Defaults, or `/pm resetall`) and accept. The minimap choice should survive. General → Defaults is
   the profile reset (`settings/Panel.lua` rebinds it to `P:RestoreDefaults`, which ends in
   `db:ResetProfile()`). It never writes the session-only `state.debugConsole` row, so it leaves an

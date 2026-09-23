@@ -433,7 +433,7 @@ function S:InstallMaster(H)
     -- `debugConsole = false` is what the row RESETS to. The composer declares that row no default,
     -- and the schema runtime reads a nil default as "no restore", so without it a row reset --
     -- `/pm reset state.debugConsole`, or the library's RestoreDefaults("general") walk -- would
-    -- leave an open console open. Both always closed it; tests/test_schema.lua pins the walk. The
+    -- leave an open console open. Both always closed it; tests/test_schema.lua pins both. The
     -- General page's Defaults BUTTON is neither: settings/Panel.lua rebinds it to the profile
     -- reset, which never writes this session-only row, so it leaves an open console open and
     -- always has.

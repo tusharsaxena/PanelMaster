@@ -20,8 +20,8 @@ commit. JC-5 is kept by `defaults.debugConsole = false`, so a row reset still hi
 console: `/pm reset state.debugConsole`, and the library's `RestoreDefaults("general")` walk. The
 General page's Defaults button is neither; it is the profile reset, which never writes that
 session-only row. `Validate`'s stricter shape check passes on this schema. The refusal texts are
-kept through `descriptor.L`. Outcome: landed green in two commits, `d830303` (the six contract cases,
-green against the host seam first) and `af8a935` (the adoption). See `05_SUMMARY.md`.
+kept through `descriptor.L`. Outcome: landed green in two commits, `d830303` (the six contract
+cases, green against the host seam first) and `af8a935` (the adoption). See `05_SUMMARY.md`.
 
 ## C-2. `LibKa0s-Bus-1.0` `Catalog` — not now
 

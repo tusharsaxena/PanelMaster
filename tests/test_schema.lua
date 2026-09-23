@@ -526,13 +526,26 @@ test("Schema seam: a read of an interior path answers the stored table itself", 
   assertEqual(S:FindRow("settings"), nil, "the probe path has become a row")
 end)
 
-test("Schema seam: the General page's Defaults closes an open debug console", function()
+test("Schema seam: the library's RestoreDefaults walk over General closes an open debug console", function()
   -- The console row is session-only and composed; what it resets TO is the part at risk. Driven
-  -- through the library's own page walk, which calls the descriptor's applyDefault per row.
+  -- through the library's own page walk, which calls the descriptor's applyDefault per row. No
+  -- player reaches this walk: the General page's Defaults BUTTON is rebound to the profile reset
+  -- (settings/Panel.lua), which never writes this row. The player's path is the case below.
   S:Set("state.debugConsole", true)
   assertTrue(S:Get("state.debugConsole"), "the precondition did not take")
   NS.Helpers.RestoreDefaults("general", nil)
-  assertFalse(S:Get("state.debugConsole"), "a page Defaults left the debug console open")
+  assertFalse(S:Get("state.debugConsole"), "the RestoreDefaults walk left the debug console open")
+end)
+
+test("Schema seam: /pm reset state.debugConsole closes an open debug console", function()
+  -- JC-5 as a player meets it: the row reset reads `defaults.debugConsole = false`. Without that
+  -- default the runtime reads nil as "no restore" and the console stays open.
+  S:Set("state.debugConsole", true)
+  assertTrue(S:Get("state.debugConsole"), "the precondition did not take")
+  assertTrue(NS.DebugLog:IsShown(), "the console window did not open")
+  NS.Slash:OnSlash("reset state.debugConsole")
+  assertFalse(S:Get("state.debugConsole"), "/pm reset state.debugConsole left the row on")
+  assertFalse(NS.DebugLog:IsShown(), "/pm reset state.debugConsole left the console window open")
 end)
 
 -- ── The library-absent seam: settings/Schema.lua's host stub ────────────────────
