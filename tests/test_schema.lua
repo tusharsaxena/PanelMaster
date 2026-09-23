@@ -450,3 +450,79 @@ test("Schema: no color row is ever disabled by its class-color companion", funct
     assertEqual(body:find("disabledIf%s*="), nil, path .. " disables a control by condition")
   end
 end)
+
+-- ── The write seam's contract, pinned before LibKa0s-Schema-1.0 took it ─────────
+--
+-- Written against the host's own `S:Set` / `S:Get` and green there FIRST, so each case below states
+-- what the library seam has to keep rather than what it happens to produce. The kept names
+-- (`NS.Schema:Set`, `:Get`, `:Default`) are what every caller reaches, so they are what is pinned.
+
+test("Schema seam: a refusal answers the host's own words, and stores nothing", function()
+  -- The library's own texts are `Setting not found: %s` and `Invalid value for %s`; this addon
+  -- keeps its own through the descriptor's `L`, and this case is what says so.
+  local n = select("#", S:Set("settings.nonsense", 1))
+  local ok, err = S:Set("settings.nonsense", 1)
+  assertFalse(ok)
+  assertEqual(err, "unknown path: settings.nonsense")
+  assertEqual(n, 2, "an unknown-path refusal answered a different number of values")
+  assertEqual(NS.db.profile.settings.nonsense, nil, "a refused path was stored anyway")
+
+  local before = S:Get("settings.gridSize")
+  ok, err = S:Set("settings.gridSize", -1)
+  assertFalse(ok)
+  assertEqual(err, "invalid value")
+  assertEqual(S:Get("settings.gridSize"), before, "a refused value was stored anyway")
+end)
+
+test("Schema seam: a write answers exactly true", function()
+  local before = S:Get("settings.showLabels")
+  assertEqual(select("#", S:Set("settings.showLabels", not before)), 1)
+  assertEqual(S:Set("settings.showLabels", before), true)
+end)
+
+test("Schema seam: a write logs its [Set] line, then runs onChange once", function()
+  -- The order is the contract (architecture-5, debug-logging-10): the trace of a write that
+  -- landed is written BEFORE any reaction runs, so a reaction that raises cannot erase it.
+  -- NS.Debug is read at call time by the seam, so replacing it here reaches the seam's own call.
+  local calls = {}
+  local row = S:FindRow("settings.showLabels")
+  local origDebug, origChange = NS.Debug, row.onChange
+  local before = S:Get("settings.showLabels")
+  NS.Debug = function(tag, fmt, ...) calls[#calls + 1] = tag .. ": " .. fmt:format(...) end
+  row.onChange = function(v) calls[#calls + 1] = "onChange " .. tostring(v) end
+  local ok = pcall(S.Set, S, "settings.showLabels", not before)
+  NS.Debug, row.onChange = origDebug, origChange
+  assertTrue(ok)
+  assertEqual(table.concat(calls, " | "),
+    ("Set: settings.showLabels = %s | onChange %s"):format(tostring(not before), tostring(not before)))
+  S:Set("settings.showLabels", before)
+end)
+
+test("Schema seam: a raising onChange propagates, and the write has already landed", function()
+  local row = S:FindRow("settings.showLabels")
+  local orig = row.onChange
+  local before = S:Get("settings.showLabels")
+  local boom = {}
+  row.onChange = function() error(boom) end
+  local ok, err = pcall(S.Set, S, "settings.showLabels", not before)
+  row.onChange = orig
+  assertFalse(ok, "the seam swallowed a raising onChange")
+  assertTrue(err == boom, "the error came back changed")
+  assertEqual(S:Get("settings.showLabels"), not before, "the value was not stored before the reaction")
+  S:Set("settings.showLabels", before)
+end)
+
+test("Schema seam: a read of an interior path answers the stored table itself", function()
+  -- A path with no row is still read: `/pm get settings` is a player asking a real question.
+  assertTrue(S:Get("settings") == NS.db.profile.settings, "an interior read did not reach the store")
+  assertEqual(S:FindRow("settings"), nil, "the probe path has become a row")
+end)
+
+test("Schema seam: the General page's Defaults closes an open debug console", function()
+  -- The console row is session-only and composed; what it resets TO is the part at risk. Driven
+  -- through the library's own page walk, which calls the descriptor's applyDefault per row.
+  S:Set("state.debugConsole", true)
+  assertTrue(S:Get("state.debugConsole"), "the precondition did not take")
+  NS.Helpers.RestoreDefaults("general", nil)
+  assertFalse(S:Get("state.debugConsole"), "a page Defaults left the debug console open")
+end)
