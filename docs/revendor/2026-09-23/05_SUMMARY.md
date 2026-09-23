@@ -97,6 +97,12 @@ read-path ceiling, so the API document's re-run note does not apply.
 - **`NS.Util.SplitPath` has no production caller left.** The runtime owns the walk, and only
   `tests/test_util.lua` still calls it. It was left in place so this adoption changed no count
   outside its own seam.
-- **In-game check owed.** Open `/pm`, toggle the Minimap button checkbox, and press General →
-  Defaults with the debug console open. The console should close and the minimap choice should
-  survive.
+- **In-game checks owed.** Two, and they are separate on purpose. (1) JC-5: open the debug
+  console, then type `/pm reset state.debugConsole`. The console should close. That row reset is
+  where a player meets `defaults.debugConsole = false`: with the default dropped, the console
+  stays open (a scratch mutation run confirmed it). (2) Open `/pm`, toggle the Minimap button checkbox, then Reset all settings (General →
+  Defaults, or `/pm resetall`) and accept. The minimap choice should survive. General → Defaults is
+  the profile reset (`settings/Panel.lua` rebinds it to `P:RestoreDefaults`, which ends in
+  `db:ResetProfile()`). It never writes the session-only `state.debugConsole` row, so it leaves an
+  open console open, as it did before this pass. Only the headless cases reach the library's
+  `RestoreDefaults("general")` walk, which does close the console.

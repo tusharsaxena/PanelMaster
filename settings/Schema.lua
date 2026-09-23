@@ -431,8 +431,12 @@ function S:InstallMaster(H)
     -- install a screen full of draggable, labeled panels on the next login.
     --
     -- `debugConsole = false` is what the row RESETS to. The composer declares that row no default,
-    -- and the schema runtime reads a nil default as "no restore", so without it the General page's
-    -- Defaults would leave an open console open. It always closed it (tests/test_schema.lua).
+    -- and the schema runtime reads a nil default as "no restore", so without it a row reset --
+    -- `/pm reset state.debugConsole`, or the library's RestoreDefaults("general") walk -- would
+    -- leave an open console open. Both always closed it; tests/test_schema.lua pins the walk. The
+    -- General page's Defaults BUTTON is neither: settings/Panel.lua rebinds it to the profile
+    -- reset, which never writes this session-only row, so it leaves an open console open and
+    -- always has.
     defaults  = { enabled = true, visibility = "always", scale = 1, alpha = 1, locked = true,
                   debugConsole = false },
     -- No `testModePath`, on purpose (options-ui-§15, standard v2.49.0): unlocking already shows
