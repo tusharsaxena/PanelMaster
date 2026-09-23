@@ -177,10 +177,12 @@ files["settings/PanelEditor.lua"] = {
   ignore = { "212/self" },
 }
 
--- The schema seam, and the one place the calling convention is written down in another repository:
--- settings/OptionsSetup.lua:169-:171 hands `function(path) return NS.Schema:Get(path) end` and its
--- two siblings to the LibKa0s-Options descriptor, and core/PanelMaster.lua:33 probes `Register`.
--- The schema table is a file-scope array; the receiver is the addon's own convention around it.
+-- The schema seam's kept names. `NS.Schema:Set`, `:Get`, `:FindRow`, `:Default`, `:ReadPath`,
+-- `:Register`, `:SnapshotPersisted` and `:CountChangedSince` are colon methods because every caller
+-- in this addon reaches them by colon -- core/LifecycleSetup.lua's switch read, core/LauncherSetup.lua's
+-- lock toggle, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates
+-- to the LibKa0s-Schema-1.0 instance, whose members are dot-called and take no receiver. The
+-- receiver is the addon's own convention around the instance.
 files["settings/Schema.lua"] = {
   ignore = { "212/self" },
 }

@@ -174,21 +174,24 @@ NS.Helpers = lib:New({
   print = function(line) NS.Print(line) end,
   debug = function(tag, fmt, ...) NS.Debug(tag, fmt, ...) end,
 
-  -- The write seam. NS.Schema:Set is already the two-argument shape the library calls with — it is
-  -- this addon's single write path, validating, logging once and firing onChange — so no arity
-  -- adapter is needed and a panel write takes exactly the path a slash write does.
-  get          = function(path) return NS.Schema:Get(path) end,
-  set          = function(path, v) NS.Schema:Set(path, v) end,
-  applyDefault = function(row) NS.Schema:Set(row.path, NS.Schema:Default(row.path)) end,
-  allRows      = function() return NS.Schema.Schema end,
+  -- The write seam: the LibKa0s-Schema-1.0 instance's own members, handed over AS VALUES
+  -- (settings/Schema.lua builds it and loads before this file). This addon's single write path,
+  -- validating, logging once and firing onChange, so a panel write takes exactly the path a slash
+  -- write does. Bound straight to the members because nothing sits in front of the seam: the
+  -- minimap inversion is that row's own get/set. `applyDefault` is the runtime's, which writes a
+  -- copy of the row's default through the same Set and leaves a row with no default alone.
+  get          = NS.SchemaRuntime.Get,
+  set          = NS.SchemaRuntime.Set,
+  applyDefault = NS.SchemaRuntime.ApplyDefault,
+  allRows      = NS.SchemaRuntime.AllRows,
 
   -- The bulk bracket (debug-logging-§10, Options minor 16), and it is DEFENSIVE. Neither of this
   -- addon's own reset controls reaches a library walk: the global reset is `db:ResetProfile()`
   -- (below), and the Registry's bulk verbs write records. But a page left on the library's own
   -- Defaults would reach O.RestoreDefaults, and unbracketed that is one [Set] line per row. The pair
-  -- is settings/Schema.lua's, which loads before this file.
-  bulkBegin    = NS.Schema.BulkBegin,
-  bulkEnd      = NS.Schema.BulkEnd,
+  -- is the schema runtime's, the same one settings/Schema.lua republishes as S.BulkBegin/BulkEnd.
+  bulkBegin    = NS.SchemaRuntime.BulkBegin,
+  bulkEnd      = NS.SchemaRuntime.BulkEnd,
 
   -- RESET ALL SETTINGS IS A PROFILE RESET (options-ui-§12), and these two fields tell the library so.
   -- The reset itself is still Sl:DoResetAll (settings/Slash.lua). `/pm resetall`, the header Defaults

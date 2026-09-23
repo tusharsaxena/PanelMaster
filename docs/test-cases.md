@@ -526,7 +526,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (30)
+### test_schema.lua (41)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -558,6 +558,17 @@ badge and any count quoted in the docs must agree with it.
 - Preview: the sample-panel machinery is gone, and only the sweep's marker remains
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
+- Schema seam: a refusal answers the host's own words, and stores nothing
+- Schema seam: a write answers exactly true
+- Schema seam: a write logs its [Set] line, then runs onChange once
+- Schema seam: a raising onChange propagates, and the write has already landed
+- Schema seam: a read of an interior path answers the stored table itself
+- Schema seam: the library's RestoreDefaults walk over General closes an open debug console
+- Schema seam: /pm reset state.debugConsole closes an open debug console
+- Schema stub: a host verb's write lands, reacts, and refuses in the host's own words
+- Schema stub: Reset All, the page Defaults and a Registry bulk act all complete
+- Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands
+- Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 
 ### test_slash.lua (74)
 
@@ -872,13 +883,14 @@ badge and any count quoted in the docs must agree with it.
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (5)
+### test_surface_parity.lua (6)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
 - Parity: the Launcher seam's degraded surface matches the live one
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
+- Parity: the Schema seam's degraded surface matches the live one, on both levels
 
 ### test_harness.lua (18)
 
@@ -901,11 +913,23 @@ badge and any count quoted in the docs must agree with it.
 - Mock frame: SetTexture keeps the wrap arguments and SetTexCoord the flat list
 - Mock frame: the recorded odds and ends round-trip
 
-### test_spelling.lua (3)
+### test_prose.lua (15)
 
-- Spelling: the TOC and run.lua between them name every authored source
-- Spelling: the matcher catches the British verb and spares the US noun
-- Spelling: authored English is US English
+- prose: no authored file carries a British spelling from localization-5's published list
+- prose: the gate carries localization-5's two lists whole, and nothing of its own
+- prose self-test: the carve-out suppresses the named generated folder, and only it
+- prose self-test: a path the carve-out does not name is not covered by one that looks like it
+- prose self-test: a carve-out that is not a set of path strings is a failure, not a silence
+- prose self-test: a TOC's file lines are read as paths, and its directives and comments are not
+- prose self-test: a .pkgmeta's ignore block is read, and the keys around it are not
+- prose self-test: an ignore entry covers a path exactly, by folder, and by wildcard
+- prose self-test: the carve-out admits a generated dump and refuses a file the TOC loads
+- prose self-test: a waiver-file exclusion meets the same two refusals as the carve-out
+- prose self-test: each list is refused on the matching rule its own scan uses
+- prose self-test: the scan and the refusals read the added exclusions through one reader
+- prose self-test: a narrowing is refused by what it suppresses, not by how it is written
+- prose self-test: the disclosure names what each entry suppressed, and says when it is bounded
+- prose self-test: a malformed waived is a failure, not a silence
 
 ### test_vendor_sync.lua (3)
 
@@ -913,11 +937,21 @@ badge and any count quoted in the docs must agree with it.
 - tests/_kit is the test kit that shipped with that release
 - the automated-test runner is recorded executable (100755)
 
-### test_layout_cap.lua (3)
+### test_layout_cap.lua (13)
 
-- layoutcap: every authored file at or over 1000 lines is named in the ARCHITECTURE.md census
-- layoutcap: no census row outlives the file it records
-- layoutcap: every file over the 1500-line cap carries a disposition that can be followed
+- layoutcap: every authored file over the 1500-line cap is named in the census
+- layoutcap: no census row outlives the breach it records
+- layoutcap: every over-cap census row carries one of layout-1's three terminal states
+- layoutcap: the census and the exempt set agree about which paths were exempted
+- layoutcap: an empty census is written as a result rather than left standing empty
+- layoutcap self-test: the parser reads the census nested under the register, and stops there
+- layoutcap self-test: a census outside its register, or at the wrong level, is not read
+- layoutcap self-test: an over-cap file missing from the census is reported, and an exempt one is not
+- layoutcap self-test: a census row that outlives its breach is reported
+- layoutcap self-test: an over-cap row that names no terminal state is reported
+- layoutcap self-test: the census and the exempt set are held to naming the same paths
+- layoutcap self-test: a census that states nothing is told apart from one that states none
+- layoutcap self-test: the exempt set takes folders as well as paths
 
 ### test_options_groups.lua (7)
 
@@ -944,9 +978,10 @@ badge and any count quoted in the docs must agree with it.
 - lintconfig: every files[...] ignore is narrowed to a file or a name
 - lintconfig: every inline luacheck ignore names the code it answers
 
-### test_eol.lua (1)
+### test_eol.lua (2)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
+- eol: .gitattributes is line-endings-5's canonical body for this repo kind
 
 ## Totals
 
@@ -965,7 +1000,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 30 |
+| test_schema.lua | 41 |
 | test_slash.lua | 74 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
@@ -973,14 +1008,14 @@ badge and any count quoted in the docs must agree with it.
 | test_disabled.lua | 14 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
-| test_surface_parity.lua | 5 |
+| test_surface_parity.lua | 6 |
 | test_harness.lua | 18 |
-| test_spelling.lua | 3 |
+| test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
-| test_layout_cap.lua | 3 |
+| test_layout_cap.lua | 13 |
 | test_options_groups.lua | 7 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
-| test_eol.lua | 1 |
-| **Total** | **849** |
+| test_eol.lua | 2 |
+| **Total** | **884** |

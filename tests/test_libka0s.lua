@@ -912,6 +912,10 @@ local SEAM_FILES = {
   "core/LifecycleSetup.lua",
   "settings/Slash.lua",
   "settings/OptionsSetup.lua",
+  -- The schema runtime's seam (LibKa0s-Schema-1.0). Its descriptor DOES take an `L` -- a plain
+  -- table of the two refusal texts this addon keeps -- which is exactly the field the guard above
+  -- exists to check.
+  "settings/Schema.lua",
 }
 
 test("L trap: no seam file hands a descriptor this addon's locale table", function()

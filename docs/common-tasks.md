@@ -23,8 +23,11 @@ path that already has a row.
    `settings.snapToGrid` and `settings.gridSize` carry none on purpose: `Unlock.SnapPosition` reads
    them live at drag-stop and nothing renders from them, so announcing would repaint every panel on
    each tick of the Grid size slider for no visible difference.
-5. Every write goes through `NS.Schema:Set` — already the two-argument shape the library calls with,
-   so the panel widget and the slash line take exactly one path.
+5. Every write goes through `NS.Schema:Set` — a delegate to the `LibKa0s-Schema-1.0` instance's
+   `Set`, the same member the Options and Slash descriptors hold — so the panel widget and the slash
+   line take exactly one path. A row whose value is not stored in `db.profile` carries its own
+   `get` / `set` (the minimap row does), and a refusal belongs in its `validate`, never in a wrapper in
+   front of the seam: the runtime's reset calls its own `Set`.
 
 ## Add a field to the panel record
 

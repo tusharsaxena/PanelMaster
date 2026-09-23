@@ -545,15 +545,17 @@ local dispatcher = lib:New({
   -- `## Title`, which MAY carry color escapes. Missing it alongside `isEnabled` raises at `New`.
   brandName = NS.BRAND,
 
-  -- The schema seam. This addon's write path is already the two-argument shape the library calls
-  -- with, so `set` needs no arity adapter — NS.Schema:Set(path, value) IS the single write seam that
-  -- validates, logs once and fires onChange, and routing the CLI through it is what keeps a slash
-  -- write and a panel write the same event.
-  get          = function(path) return NS.Schema:Get(path) end,
-  set          = function(path, v) NS.Schema:Set(path, v) end,
-  findRow      = function(path) return NS.Schema:FindRow(path) end,
-  allRows      = function() return NS.Schema.Schema end,
-  applyDefault = function(row) NS.Schema:Set(row.path, NS.Schema:Default(row.path)) end,
+  -- The schema seam: the LibKa0s-Schema-1.0 instance's own members, handed over AS VALUES, the same
+  -- ones the Options descriptor takes (settings/Schema.lua builds the instance and loads before this
+  -- file). `set` IS the single write seam that validates, logs once and fires onChange, and routing
+  -- the CLI through it is what keeps a slash write and a panel write the same event. No wrapper sits
+  -- in front of it, so a `/pm reset <path>` (the runtime's applyDefault) and a `/pm set` cannot take
+  -- two different paths to the store.
+  get          = NS.SchemaRuntime.Get,
+  set          = NS.SchemaRuntime.Set,
+  findRow      = NS.SchemaRuntime.FindRow,
+  allRows      = NS.SchemaRuntime.AllRows,
+  applyDefault = NS.SchemaRuntime.ApplyDefault,
 
   -- ADAPTER. The library groups `/pm list` by `row.page`; this addon's schema has always grouped by
   -- `row.group`, which is also the section heading its settings panel draws. One name, two readers.

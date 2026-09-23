@@ -63,10 +63,16 @@ NS.addon:OnEnable()
 --
 -- Set BEFORE Kit.expose, which is what makes it stick: expose registers a source only when none is
 -- registered yet, precisely so a runner like this one keeps its own.
+--
+-- Schema is the one row here that IS the library table, and on purpose: its stub stands in for the
+-- library's pure primitives and `New` as well as for the instance, and the by-name call compares
+-- the stub LIBRARY (tests/test_surface_parity.lua). The instance half is compared two-table, since
+-- the instance surface is not in the library's member manifest.
 Kit.setSurfaceSource{
   ["LibKa0s-Options-1.0"]  = NS.Helpers,
   ["LibKa0s-DebugLog-1.0"] = NS.DebugLog,
   ["LibKa0s-Launcher-1.0"] = NS.Launcher,
+  ["LibKa0s-Schema-1.0"]   = mocks.LibStub("LibKa0s-Schema-1.0"),
 }
 
 -- The kit's registry and assertions are MERGED into this addon's existing global test table, under
@@ -97,7 +103,13 @@ local SUITES = {
   "test_libka0s", "test_surface_parity", "test_harness",
   { name = "test_prose", dir = "tests/_kit/" },
   "test_vendor_sync",
-  "test_layout_cap", "test_options_groups",
+  -- The layout-§1 cap gate is the kit's since revision 25, declared by the pair (basename, kit
+  -- directory) like the other kit suites. This repo's own tests/test_layout_cap.lua, which also
+  -- gated the 1000-1500 band, was retired on that re-vendor: the band is dispositioned in the
+  -- release watch list alone (automated-tests-§4), and a bare "test_layout_cap" beside a local
+  -- file of that name would now read as a collision with the kit's copy.
+  { name = "test_layout_cap", dir = "tests/_kit/" },
+  "test_options_groups",
   "test_register", "test_docs", "test_lintconfig",
   -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
   -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives

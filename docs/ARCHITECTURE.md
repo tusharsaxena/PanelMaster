@@ -40,9 +40,35 @@ the array's order is the strip a player sees on the General page — `Master con
 `Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
 through their own `get`/`set` and are never persisted, and **one** — `global.minimap.hide`, the
 *Minimap button* row — is stored but lives in `db.global` rather than `db.profile`, which is the
-only row in the schema that does (`launcher-§3`). `S:Get` and `S:Set` branch on that path: they
-read and write it from the DB root, and they NEGATE, because the row's boolean says shown while
-LibDBIcon's key says hidden.
+only row in the schema that does (`launcher-§3`). That row carries its own `get`/`set`, wired onto
+it by `S:InstallMaster`. They read and write it from the DB root, and they NEGATE, because the row's
+boolean says shown while LibDBIcon's key says hidden.
+
+**The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0; `docs/revendor/2026-09-23-v1.55.0/`).
+The rows are this addon's. The machinery around them is one library instance, `NS.SchemaRuntime`,
+built in `settings/Schema.lua`: the path walk, the row index, the single write seam, the bulk
+bracket (`debug-logging-§10`) and the boot shape check. The seam **keeps this addon's names**:
+`NS.Schema:Set`, `:Get`, `:FindRow`, `:Default` and `:Register`, plus `S.BulkBegin`, `S.BulkEnd`
+and `S.BulkLine`, each delegate to the instance, so no caller moved. The Options and Slash
+descriptors take the instance's members **as values** (`set = NS.SchemaRuntime.Set`, and the
+same for `get`, `applyDefault`, `findRow`, `allRows` and the bracket pair). That is safe because
+nothing sits in front of the seam: the minimap inversion is the row's own `get`/`set`, and a
+refusal belongs in a row's `validate`, which `ApplyDefault` reaches too.
+Stored rows resolve against the active profile (`resolveRoot`). The refusal texts are this addon's
+own (`unknown path: <path>`, `invalid value`), restored through the descriptor's plain-table `L`.
+`S:Register` is the instance's `Validate` with a `global.`-aware defaults root, and it counts shape
+errors as well as unresolved paths. The profile reset's row count stays host-side
+(`S:SnapshotPersisted` / `S:CountChangedSince`), as the design allows.
+
+**Without the library** the seam degrades to `hostSchemaStub`, which stands in for both the
+library's pure primitives and the instance. The stub is **write-completing and log-silent**
+(`docs/api/Schema/version-1-docs.md`, "The degradation stub"). Reads, writes, each row's `onChange`
+and the bracket's depth all work, so the host writers keep writing: `/pm set` and `/pm disable`
+where the Slash major survives, Reset All, the page Defaults sweep, and the Registry's bulk verbs.
+The stub does not reproduce the per-write `[Set]` line or the bracket's tally, and it skips the
+boot shape check silently. This is a documented duplication of a runtime write path, not of a
+rendering helper. `tests/test_surface_parity.lua` holds both of its levels to the live surface, and
+`tests/test_schema.lua` drives one degraded write per writer kind.
 
 The **first** seven are not literals in that file. `Master controls` is COMPOSED, out of
 `LibKa0s-Options-1.0`'s `MasterControls` (`options-ui-§15`), and spliced at the head of the array by
@@ -401,63 +427,45 @@ record, not where the write goes, and that row's trigger is deliberately the sch
   check: `diff <(head -n 81 .gitattributes) <canonical>` is empty and
   `tail -n +82 .gitattributes | tr -d '\r' | grep -m1 .` is the delimiter.
 
-## File sizes (`layout-§1`)
+### Files over the 1500-line cap
 
 `layout-§1` caps every **authored** `.lua` file this repository tracks at 1500 lines — `tests/`
-included, with vendored code (`libs/`, `tests/_kit/`) the only carve-out that reaches anything here;
-nothing in this repo is generated non-shipping data, so the second carve-out has no instance. Files in
-the **1000–1500 band are on notice**. A file **over** the cap has three terminal states and no others:
-peeled, an open issue naming the seam a peel would follow, or a ratified row in
-`## Documented deviations` above carrying a re-check trigger. What the rule does not allow is a file
-nothing anywhere remarks on — "the count sitting in a bundle manifest that no document reads".
+included, with vendored code (`libs/`, `tests/_kit/`) the only carve-out that reaches anything here.
+Nothing in this repo is generated non-shipping data, so the second carve-out has no instance and
+`tests/run.lua` sets no `Kit.layoutCap`. A file **over** the cap has three terminal states and no
+others: peeled, an open issue naming the seam a peel would follow, or a ratified row in the register
+above carrying a re-check trigger. This census records which one each breach sits in. The kit's gate,
+`tests/_kit/test_layout_cap.lua` (kit revision 25, LibKa0s v1.55.0), reads it from here and fails the
+suite on an over-cap file it does not name, on a row naming a file that is no longer over the cap,
+and on a heading that is missing, misplaced or standing empty.
 
-This table is the remark, and it is the **live** register. `docs/automated-tests/RESULTS.md` also
-carries a *Files by `layout-§1` band* watch list; that one is per-run generated evidence, frozen at the
-run that wrote it, and it is not hand-edited (`performance-§10`). When the two disagree, this table is
-the current one and the other is a measurement of an August afternoon.
-
-### Files by the `layout-§1` band
-
-Measured 2026-09-16 with
+**Nothing is over the cap today.** Measured 2026-09-23 with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-| File | Lines (2026-09-16) | Disposition |
-|---|---|---|
-| `settings/PanelEditor.lua` | 1476 (1485 on 2026-09-12, after [#48](https://github.com/tusharsaxena/PanelMaster/issues/48) composed its three blocks; 1476 once the swatch suffix went) | **On notice, and its own trigger has fired.** Issue [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor (`:200-231`, `:347-1170`, ~825 lines, measured 2026-09-12) out from under the Panels page's chrome band, into a sibling under `settings/`; the issue names the four shared symbols the peel has to publish on `E` first. Not peeled this cycle by plan. |
-| `tests/test_artwork.lua` | 1356 | **Accepted — it peels when `modules/Artwork.lua` does, on the same seam, in the same commit.** A mirror suite has no partition of its own: pick one before the module has, and the two files stop pairing, which is worse for a reader under failure than one long file that pairs. |
-| `tests/test_panel.lua` | 1353 | **Accepted, and it is the row this census was written by finding.** It crossed 1000 at `1b8c672` (2026-09-03, 1076) and nothing anywhere said so — the watch list that should have caught it is frozen at the 1.0.0 release run, where this file was 708. It is the suite for **both** page files, so its appearance cases leave with the editor when [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) peels; same seam, same commit. |
-| `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** Flat since the 1.0.0 release run (1188 at `20260807-160022`, 1087 at the baseline). Split along the catalog / geometry seam before the next feature lands in it; `tests/test_artwork.lua` peels with it. |
+The largest authored file is `settings/PanelEditor.lua` at 1476 lines, twenty-four under the cap.
 
-**Nothing is over the cap.** The largest authored file in the repository,
-`settings/PanelEditor.lua`, is twenty-four lines under it (1476 lines on 2026-09-16), and
-the four rows above are the whole band. `tests/test_libka0s.lua` at 971 is the nearest file outside
-the table and is twenty-nine lines from needing a row of its own, with `tests/test_sunnart.lua` at 955
-and `modules/Registry.lua` at 937 behind it. `M4-18` put a private sweep in `Registry` and was
-trimmed to stay under the trigger deliberately: crossing the band as a side effect of a Low-severity
-boundary fix would have bought a census row that said nothing.
+**The 1000–1500 band is not recorded here.** `layout-§1` and `automated-tests-§4` disposition it in
+the release watch list and only there: the *Files by `layout-§1` band* table in
+[`automated-tests/RESULTS.md`](automated-tests/RESULTS.md), whose rows the runner generates on every
+run and whose `Disposition` column is the one authored cell. A file moving between bands therefore
+moves on one line of one document. All four files in the band on 2026-09-23 already carry a
+disposition there: `settings/PanelEditor.lua` (1476), whose peel is issue
+[#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor out from under
+the Panels page's chrome band into a sibling under `settings/`; `tests/test_panel.lua` (1353), which
+mirrors that file and peels with it; and `modules/Artwork.lua` (1188) with its mirror suite
+`tests/test_artwork.lua` (1356), which split together along the catalog / geometry seam. The next
+file to reach 1000 arrives in that table with a blank `Disposition` cell, which is the file saying
+something crossed and nobody has ruled on it yet.
 
-**The line counts are dated because they drift, and nothing asserts them.** What
-`tests/test_layout_cap.lua` asserts is the *membership* of this table, in both directions: a file that
-reaches 1000 lines and is not listed here turns the suite red, and so does a row for a file that has
-fallen back under the band or been deleted. A figure in this column is a measurement, not a claim about
-today.
-
-**This repo gates the band; its siblings gate the cap alone, and the difference is deliberate.**
-MultiMeters (fifteen files over the cap) and LibKa0s (two) run the same gate over the over-cap set and
-leave the band as prose, which is right where the breaches are the subject. Here there are no breaches,
-so an over-cap-only gate would assert nothing at all today and would first speak on the day
-`settings/PanelEditor.lua` crossed 1500 with no row — one ordinary commit away. The subject in this
-repository is the band, so the band is what is gated.
-
-**Nothing here is peeled this cycle.** The 2026-09-07 remediation plan rules out splitting any file
-(`03_SPEC.md` § C22 non-goals; `04_EXECUTION_PLAN.md` `M4-14`: *"No splits in this plan"*). The
-deliverable was the disposition, and the disposition is this table plus [#47](https://github.com/tusharsaxena/PanelMaster/issues/47).
-
-**Why `settings/PanelEditor.lua` gets an issue rather than a register row.** A register row ratifies a
-**deviation**, and there is nothing to deviate from: at 1476 the file complies with `layout-§1`. A row
-in `## Documented deviations` claiming otherwise would be a false row, which is the same mistake this
-document already reasons about at length for the `performance-§12` exemption it declined to claim. An
-open issue naming a verified seam is the honest record of a peel that is owed and not yet done.
+**Retired on 2026-09-23: this repo's own band gate.** Until the LibKa0s v1.55.0 re-vendor the census
+was headed ``Files by the `layout-§1` band``, sat in a `## File sizes` section of its own below this
+register, and was read by a local `tests/test_layout_cap.lua` that gated the band as well as the cap,
+on the reasoning that with nothing over the cap an over-cap-only gate asserts nothing and the band was
+where this addon's question lived. Standard v2.64.0 settles both halves the other way: the heading's
+name and its parent under `## Documented deviations` are fixed, so a gate can find it in every repo,
+and the band gets no heading in the hub, so its dispositions are not kept in two places that can
+disagree. The local gate is deleted, the kit's is declared by the pair form in `tests/run.lua`, and
+the band rows moved to the watch list, which already carried a disposition for each of them.
