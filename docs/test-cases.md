@@ -526,7 +526,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (30)
+### test_schema.lua (40)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -558,6 +558,16 @@ badge and any count quoted in the docs must agree with it.
 - Preview: the sample-panel machinery is gone, and only the sweep's marker remains
 - Schema: the Master controls rows are the COMPOSER's, not eight literals here
 - Schema: no color row is ever disabled by its class-color companion
+- Schema seam: a refusal answers the host's own words, and stores nothing
+- Schema seam: a write answers exactly true
+- Schema seam: a write logs its [Set] line, then runs onChange once
+- Schema seam: a raising onChange propagates, and the write has already landed
+- Schema seam: a read of an interior path answers the stored table itself
+- Schema seam: the General page's Defaults closes an open debug console
+- Schema stub: a host verb's write lands, reacts, and refuses in the host's own words
+- Schema stub: Reset All, the page Defaults and a Registry bulk act all complete
+- Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands
+- Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 
 ### test_slash.lua (74)
 
@@ -872,13 +882,14 @@ badge and any count quoted in the docs must agree with it.
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (5)
+### test_surface_parity.lua (6)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
 - Parity: the Launcher seam's degraded surface matches the live one
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
+- Parity: the Schema seam's degraded surface matches the live one, on both levels
 
 ### test_harness.lua (18)
 
@@ -988,7 +999,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 30 |
+| test_schema.lua | 40 |
 | test_slash.lua | 74 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
@@ -996,7 +1007,7 @@ badge and any count quoted in the docs must agree with it.
 | test_disabled.lua | 14 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
-| test_surface_parity.lua | 5 |
+| test_surface_parity.lua | 6 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
@@ -1006,4 +1017,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **872** |
+| **Total** | **883** |
