@@ -188,12 +188,12 @@ test("Schema: the defaults match the shipped profile", function()
   --
   -- The minimap row is checked against the GLOBAL defaults and INVERTED, because both halves of
   -- that row are different from every other stored row's: it lives in db.global (launcher-§3) and
-  -- its boolean says SHOWN where the stored key says hidden. Skipping it would leave the one row
+  -- its boolean says SHOWN where its store, S.MINIMAP_STORE, says hidden. Skipping it would leave the one row
   -- whose default is written down twice AND negated between the two spellings unchecked, which is
   -- the drift this case exists for.
   for _, row in ipairs(S.Schema) do
     if row.path == S.MINIMAP_PATH then
-      assertEqual(S:ReadPath(NS.defaults, row.path), not row.default,
+      assertEqual(S:ReadPath(NS.defaults, S.MINIMAP_STORE), not row.default,
         row.path .. " default disagrees with defaults/Global.lua, or the inversion has been dropped")
     elseif not row.sessionOnly then
       local shipped = S:ReadPath(NS.defaults.profile, row.path)
@@ -356,7 +356,7 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
       { path = "settings.alpha",      label = "Master alpha" },
       { path = "state.locked",        label = "Lock frame" },
       { path = "state.debugConsole",  label = "Debug console" },
-      { path = "global.minimap.hide", label = "Minimap button" },
+      { path = "global.minimap.shown", label = "Minimap button" },
     }
 
     assertEqual(S.Schema[1].group, "Master controls",

@@ -144,9 +144,10 @@ if not lib then
   -- has already named the cause.
   --
   -- SetShown ANSWERS FALSE rather than pretending, and deliberately does NOT write the store: the
-  -- write seam has already written `db.global.minimap.hide` itself before it calls here, so a
-  -- second write would be this file keeping a copy of the one boolean launcher-§3 says there must
-  -- be only one of. What is lost on this path is the button moving, and there is no button.
+  -- write seam has already written the row's store, S.MINIMAP_STORE (`db.global.minimap.hide`),
+  -- itself before it calls here, so a second write would be this file keeping a copy of the one
+  -- boolean launcher-§3 says there must be only one of. What is lost on this path is the button
+  -- moving, and there is no button.
   --
   -- IsShown reads the STORE rather than its receiver, exactly as the live instance does, so the
   -- answer is still the player's own choice rather than `true` because nothing contradicted it.

@@ -472,6 +472,13 @@ worth doing in full after any change to the icon or the seam.
    it to.
 8. Right-click the button and use **LibDBIcon's own menu** to hide it → **Expect:** the **Minimap
    button** checkbox is now unticked. They are one setting.
+8b. The CLI name reads **shown** (`launcher-§3`, standard v2.65.0). With the button visible,
+   `/pm get global.minimap.shown` → **Expect:** `true`. `/pm set global.minimap.shown false` →
+   **Expect:** the button goes at once. Bring it back, hide it with LibDBIcon's right-click menu,
+   then `/pm get global.minimap.shown` → **Expect:** `false`. `/reload` → it stays hidden.
+   `/pm get global.minimap.hide` → **Expect:** *Setting not found* — the old path is not an alias.
+   **Failure:** `get` answers `true` while the button is hidden, or the old path still answers.
+   Tick the button back on before moving on.
 9. Only if you run Titan Panel, ElvUI or Bazooka: **Expect:** a row labeled **Ka0s Panel Master**
    in its plugin list -- the brand name in plain text, not `PanelMaster` and not a string with color
    escapes in it (`launcher-§1`) -- wearing the same logo, whose left and right clicks do the same

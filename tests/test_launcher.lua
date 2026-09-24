@@ -216,12 +216,16 @@ test("Minimap row: it is a STORED row in the canonical position, not a session f
   assertEqual(row.default, true)
 end)
 
-test("Minimap row: the path is LibDBIcon's own key, in the GLOBAL store", function()
-  -- launcher-§3 fixes both halves. `hide` is the boolean LibDBIcon itself writes when the player
-  -- uses its right-click menu, so a parallel `minimap.show` here would be a second copy of one
-  -- state. And the scope is global so that switching profiles does not move a player's buttons and
-  -- options-ui-§12's profile reset does not un-hide one they hid.
-  assertEqual(S.MINIMAP_PATH, "global.minimap.hide")
+test("Minimap row: the path reads SHOWN, and the store is LibDBIcon's own key in the GLOBAL store", function()
+  -- launcher-§3 (v2.65.0) fixes all three. The path is the row's CLI name, so it is spelled in the
+  -- row's own sense: `/pm get global.minimap.shown` answers true while the button shows. The STORE
+  -- is `hide`, the boolean LibDBIcon itself writes when the player uses its right-click menu, so a
+  -- stored `shown` beside it would be a second copy of one state (anti-pattern #81). And the scope
+  -- is global so that switching profiles does not move a player's buttons and options-ui-§12's
+  -- profile reset does not un-hide one they hid.
+  assertEqual(S.MINIMAP_PATH, "global.minimap.shown")
+  assertEqual(S.MINIMAP_STORE, "global.minimap.hide")
+  assertEqual(NS.defaults.global.minimap.shown, nil, "a `shown` default is the second copy #81 forbids")
   assertEqual(type(NS.db.global.minimap), "table", "the declared default never materialized")
   assertEqual(NS.defaults.global.minimap.hide, false,
     "the shipped default is not 'shown' -- a fresh install starts with no button")
@@ -283,6 +287,81 @@ test("Minimap row: LibDBIcon holds the very table the row writes, not a copy", f
     "the library hid the button and the checkbox still reads ticked")
   mocks.LibStub("LibDBIcon-1.0"):Show(NAME)
   assertEqual(S:Get(S.MINIMAP_PATH), true)
+end)
+
+--- Every line printed while running `fn`.
+local function capture(fn)
+  local chat = mocks.__chat
+  local before = #chat
+  fn()
+  local out = {}
+  for i = before + 1, #chat do out[#out + 1] = chat[i] end
+  return out
+end
+
+test("Launcher: /pm get global.minimap.shown answers true while the button shows, and writes land on hide", function()
+  -- The CLI name reads in the row's own sense (launcher-§3, v2.65.0). Before the rename the path
+  -- was the stored key, so `/pm get global.minimap.hide` answered `true` while the button was ON
+  -- the minimap and `set ... false` hid it -- a player reading the verb got the opposite answer.
+  NS.db.global.minimap.hide = false
+  local lines = capture(function() NS.Slash:OnSlash("get global.minimap.shown") end)
+  assertEqual(#lines, 1)
+  assertTrue(lines[1]:find("= |cFFFFFFFFtrue|r", 1, true) ~= nil,
+    "the button shows and the verb did not answer true: " .. tostring(lines[1]))
+
+  NS.Slash:OnSlash("set global.minimap.shown false")
+  assertEqual(NS.db.global.minimap.hide, true, "the set did not land on LibDBIcon's `hide`")
+  assertEqual(NS.db.global.minimap.shown, nil, "a `shown` key was written beside `hide` (#81)")
+  assertFalse(button().shown, "the button is still on the minimap")
+
+  -- The old path is not kept as an alias: it answers the unknown-setting refusal.
+  lines = capture(function() NS.Slash:OnSlash("get global.minimap.hide") end)
+  assertTrue(lines[1] ~= nil and lines[1]:find("Setting not found", 1, true) ~= nil,
+    "the retired path still answers: " .. tostring(lines[1]))
+
+  NS.Slash:OnSlash("set global.minimap.shown true")
+  assertEqual(NS.db.global.minimap.hide, false)
+  assertTrue(button().shown)
+end)
+
+test("Minimap row: a legacy store keeps its setting across the rename, with no migration", function()
+  -- The stored key did not move, so an existing player's `hide = true` reads as shown = false with
+  -- no code and no schema-version bump; LibDBIcon's `minimapPos` is untouched; and no write ever
+  -- plants a `shown` key in the raw SavedVariables.
+  --
+  -- The legacy SavedVariables are laid over what the AceDB mock builds, in the window
+  -- tests/degraded_env.lua opens before the addon's own files load, so LibDBIcon registers against
+  -- the stored table exactly as it would on a player's login.
+  local ns, m = loadPartial({}, function(m)
+    local AceDB = m.__libs["AceDB-3.0"]
+    local realNew = AceDB.New
+    AceDB.New = function(...)
+      local db = realNew(...)
+      db.global.minimap = { hide = true, minimapPos = 200 }
+      return db
+    end
+  end)
+  local raw = ns.db.global.minimap
+  local path = ns.Schema.MINIMAP_PATH
+  assertEqual(ns.Schema:Get(path), false, "a legacy hide = true reads as shown")
+  local lines = {}
+  local chat = m.__chat
+  local before = #chat
+  ns.Slash:OnSlash("get " .. path)
+  for i = before + 1, #chat do lines[#lines + 1] = chat[i] end
+  assertTrue(lines[1] ~= nil and lines[1]:find("= |cFFFFFFFFfalse|r", 1, true) ~= nil,
+    "the legacy hidden button does not read false on the CLI: " .. tostring(lines[1]))
+  assertFalse(m.__minimapButtons[NAME].shown, "the legacy hidden button came back on the rename")
+  assertEqual(raw.minimapPos, 200, "the dragged angle moved")
+  assertEqual(raw.hide, true)
+
+  ns.Slash:OnSlash("set " .. path .. " false")
+  ns.Schema:Set(path, true)
+  ns.Schema:Set(path, false)
+  assertEqual(raw.shown, nil, "a `shown` key was written to the raw SV (#81)")
+  assertEqual(raw.hide, true)
+  assertEqual(raw.minimapPos, 200, "a write moved the dragged angle")
+  assertFalse(m.__minimapButtons[NAME].shown)
 end)
 
 -- ── surviving a reset (launcher-§3, as amended at standard v2.54.0) ────────────
@@ -347,10 +426,18 @@ test("Minimap row: the General page's Defaults button does not un-hide the butto
 end)
 
 test("Minimap row: Register validates it, rather than exempting it", function()
-  -- It is the ONE stored row outside db.profile, so the boot check reads it against the GLOBAL
-  -- defaults. Exempting it instead would leave the addon's only cross-store path unchecked, which
-  -- is the escape hatch settings/Schema.lua's own header spent a paragraph removing.
+  -- It is the ONE stored row outside db.profile, and the one closure-backed row: its path names the
+  -- row and is never declared, so the boot check skips the PATH and reads the STORE against the
+  -- GLOBAL defaults. Exempting it instead would leave the addon's only cross-store path unchecked,
+  -- which is the escape hatch settings/Schema.lua's own header spent a paragraph removing.
   assertEqual(S:Register(), 0)
+
+  -- And the store check can fire: drop the declared `hide` and it counts one missing.
+  local declared = NS.defaults.global.minimap.hide
+  NS.defaults.global.minimap.hide = nil
+  local problems = S:Register()
+  NS.defaults.global.minimap.hide = declared
+  assertEqual(problems, 1, "an undeclared store was not counted")
 end)
 
 -- ── degradation ────────────────────────────────────────────────────────────────

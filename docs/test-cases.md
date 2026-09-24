@@ -760,7 +760,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
-### test_launcher.lua (23)
+### test_launcher.lua (25)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
 - Launcher: the object is type 'launcher' and wears the addon's own icon
@@ -773,11 +773,13 @@ badge and any count quoted in the docs must agree with it.
 - Launcher: RIGHT-click opens the settings panel
 - Launcher: RIGHT-click does not touch the lock, and LEFT-click does not open the panel
 - Minimap row: it is a STORED row in the canonical position, not a session flag
-- Minimap row: the path is LibDBIcon's own key, in the GLOBAL store
+- Minimap row: the path reads SHOWN, and the store is LibDBIcon's own key in the GLOBAL store
 - Minimap row: get INVERTS, so the label and the stored key disagree on purpose
 - Minimap row: set INVERTS and moves the button in the same act
 - Minimap row: the write seam inverts on its own, not only through the library
 - Minimap row: LibDBIcon holds the very table the row writes, not a copy
+- Launcher: /pm get global.minimap.shown answers true while the button shows, and writes land on hide
+- Minimap row: a legacy store keeps its setting across the rename, with no migration
 - Minimap row: Reset all settings does not un-hide the button
 - Minimap row: the General page's Defaults button does not un-hide the button
 - Minimap row: Register validates it, rather than exempting it
@@ -1034,7 +1036,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
-| test_launcher.lua | 23 |
+| test_launcher.lua | 25 |
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 46 |
@@ -1048,4 +1050,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **914** |
+| **Total** | **916** |

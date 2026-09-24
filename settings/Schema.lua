@@ -165,13 +165,20 @@ S.Schema = {
 -- `prefix .. "enabled"` produces. Spelled once here rather than at each of the three call sites.
 S.ENABLED_PATH = "settings.enabled"
 
--- ── The minimap button's stored path (launcher-§3) ─────────────────────────────
+-- ── The minimap button's row path and its store (launcher-§3) ─────────────────
 --
--- The ONE path in this schema that is stored OUTSIDE `db.profile`, and it is named here because
--- four places have to agree on it: `S:InstallMaster` hands it to the composer and wires the row's
--- own `get`/`set` onto it, `S:SnapshotPersisted` leaves it out of the profile picture, and
--- `S:Register` reads it against the GLOBAL defaults. Four literals would be four chances to typo a
--- path that reads and writes nowhere while raising nothing.
+-- TWO NAMES, ONE STATE. `S.MINIMAP_PATH` is the ROW: its schema path, and so its CLI name
+-- (slash-commands-§3). It reads in the row's own sense, SHOWN, so `/pm get global.minimap.shown`
+-- answers true while the button is on the minimap. `S.MINIMAP_STORE` is where that state LIVES:
+-- LibDBIcon's own `hide` key, the one its right-click menu writes, and the ONLY stored key. Nothing
+-- is ever written or declared at the row's path -- a stored `shown` beside `hide` would be a second
+-- copy of one state (anti-pattern #81) -- so the row owns its storage through its own `get`/`set`.
+--
+-- Both are named here because four places have to agree on them: `S:InstallMaster` hands the path
+-- to the composer and wires the row's `get`/`set` onto the store, `S:SnapshotPersisted` leaves the
+-- row out of the profile picture, and `S:Register` skips the row's path and checks the store
+-- against the GLOBAL defaults instead. Four literals would be four chances to typo a path that
+-- reads and writes nowhere while raising nothing.
 --
 -- TAKEN VERBATIM BY THE COMPOSER, unprefixed -- like the debug console's, and for a stricter
 -- reason: the console's path is merely outside the block's `settings.` prefix, while this one is
@@ -179,12 +186,17 @@ S.ENABLED_PATH = "settings.enabled"
 -- minimap button belongs to the installation rather than to a profile (defaults/Global.lua states
 -- the argument).
 --
--- THE SENSE INVERTS. The row's label says *Minimap button* and its boolean says SHOWN; LibDBIcon's
--- key says HIDDEN. That inversion is the HOST's, not the library's -- the composer emits an
--- ordinary bool row and the row's own `get`/`set`, wired in `S:InstallMaster`, negate. The single
--- write seam calls them on every surface's write, which is the same place Lock frame's
--- un-inversion happens and for the same reason.
-S.MINIMAP_PATH = "global.minimap.hide"
+-- THE SENSE INVERTS between the two. That inversion is the HOST's, not the library's -- the
+-- composer emits an ordinary bool row and the row's own `get`/`set`, wired in `S:InstallMaster`,
+-- negate. The single write seam calls them on every surface's write, which is the same place Lock
+-- frame's un-inversion happens and for the same reason.
+--
+-- The path used to be the store's (`global.minimap.hide`), which made the CLI answer the opposite
+-- of the checkbox. The rename moved NO storage: an existing `hide = true` reads as shown = false
+-- with no SavedVariables migration and no schema-version bump, and the old path now answers the
+-- unknown-setting refusal like any other path no row declares.
+S.MINIMAP_PATH = "global.minimap.shown"
+S.MINIMAP_STORE = "global.minimap.hide"
 
 -- ── The runtime: LibKa0s-Schema-1.0 (architecture-§5, debug-logging-§10) ──────
 --
@@ -620,22 +632,23 @@ function S:InstallMaster(H)
       if v then NS.DebugLog:Show() else NS.DebugLog:Hide() end
     end,
   })
-  -- THE INVERSION (launcher-§3), on the row itself. The row says SHOWN; LibDBIcon's key says HIDDEN;
-  -- these two negate, and every surface -- the checkbox, `/pm set global.minimap.hide true`,
-  -- LibDBIcon's own right-click menu -- ends up agreeing because there is one negation and one
-  -- store, never a second boolean beside `hide` (anti-pattern #81).
+  -- THE INVERSION (launcher-§3), on the row itself. The row's path says SHOWN; LibDBIcon's key,
+  -- S.MINIMAP_STORE, says HIDDEN; these two negate, and every surface -- the checkbox,
+  -- `/pm set global.minimap.shown false`, LibDBIcon's own right-click menu -- ends up agreeing
+  -- because there is one negation and one store. The row's own path is never written: no `shown`
+  -- key ever lands beside `hide` (anti-pattern #81).
   --
   -- `db.global`, not `db.profile`: the ONE stored row outside the profile, which is why it carries
-  -- its own storage rather than going through the runtime's profile resolver. The path is read and
+  -- its own storage rather than going through the runtime's profile resolver. The store is read and
   -- written whole from the DB ROOT, so `global.minimap.hide` resolves as itself.
   --
   -- Answers SHOWN for a DB that is not up yet: `hide` absent means a button that was never hidden,
   -- the same answer the library's own IsShown gives and the one defaults/Global.lua produces the
   -- moment AceDB is there.
   wire(rows, S.MINIMAP_PATH, {
-    get = function() return not SchemaLib.Read(NS.db, S.MINIMAP_PATH) end,
+    get = function() return not SchemaLib.Read(NS.db, S.MINIMAP_STORE) end,
     set = function(v)
-      SchemaLib.Write(NS.db, S.MINIMAP_PATH, not v)
+      SchemaLib.Write(NS.db, S.MINIMAP_STORE, not v)
       -- Then the button follows immediately rather than at the next reload. SetShown writes `hide`
       -- a second time with the same value, which is the library's own documented behavior. It
       -- answers false where LibDBIcon is absent; the store is still correct.
@@ -757,16 +770,24 @@ function S:Default(path) return R.Default(path) end
 -- never consults the row's own default (savedvariables-§2: the declaration site is defaults/).
 --
 -- Session-only rows (state.*) are the ONE exemption: they route through their own get/set and are
--- never persisted. The minimap row is CHECKED, not exempted, and only its ROOT differs: its path is
--- spelled from the DB root and begins `global.`, so it is read against NS.defaults whole
--- (launcher-§3), which is the same check every other row gets against NS.defaults.profile.
+-- never persisted. The minimap row is the one CLOSURE-BACKED row (architecture-§5, launcher-§3):
+-- its path names the row and is never stored or declared, so the runtime is told it has no root
+-- (`defaultsRoot` answers nil for it) and its STORE is checked instead, against NS.defaults whole
+-- because it is spelled from the DB root and begins `global.`. Checked, not exempted: a store that
+-- does not resolve counts one missing, with the same printed schema error the runtime gives.
 function S:Register()
   if not (NS.defaults and NS.defaults.profile) then return 0 end
   local errors, _, missing = R.Validate({
-    defaultsRoot = function(parts)
+    defaultsRoot = function(parts, row)
+      if row and row.path == S.MINIMAP_PATH then return nil end
       if parts[1] == "global" then return NS.defaults, 1 end
       return NS.defaults.profile, 1
     end,
   })
+  if SchemaLib.Read(NS.defaults, S.MINIMAP_STORE) == nil then
+    missing = missing + 1
+    print(("|cffff0000schema error|r: %s: store `%s` does not resolve against the defaults")
+      :format(S.MINIMAP_PATH, S.MINIMAP_STORE))
+  end
   return errors + missing
 end

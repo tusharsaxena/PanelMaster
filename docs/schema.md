@@ -45,10 +45,13 @@ time either surface is used.
 It is **global** rather than profile-scoped because a minimap button belongs to the installation:
 switching profiles must not move a player's buttons. `defaults/Global.lua` declares `hide = false`,
 and that declaration is what materializes the table — nothing seeds it at runtime
-(`architecture-§5`). The *Minimap button* settings row addresses `global.minimap.hide` and
-**inverts**: the row says shown, the key says hidden, and both halves of the negation live on the
-row itself, as the `get` / `set` `S:InstallMaster` wires onto it. The write seam calls them on every
-surface's write.
+(`architecture-§5`). The *Minimap button* settings row is `/pm get global.minimap.shown`, stored at
+`db.global.minimap.hide`, and **inverts**: the row says shown, the key says hidden, and both halves
+of the negation live on the row itself, as the `get` / `set` `S:InstallMaster` wires onto it. The
+write seam calls them on every surface's write. The row's path is its CLI name and is never stored
+or declared — a `shown` key beside `hide` would be the copy the paragraph above rules out — so the
+old `/pm get global.minimap.hide` answers *Setting not found*, and no SavedVariables migration was
+owed when the path was renamed: the stored key never moved.
 
 That it **survives a reset** is a separate property of the setting rather than a consequence of that
 scope (`launcher-§3`, amended at standard v2.54.0): it must survive *Reset all settings* **and** a

@@ -38,11 +38,15 @@ carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a 
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
 the array's order is the strip a player sees on the General page — `Master controls` (7),
 `Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
-through their own `get`/`set` and are never persisted, and **one** — `global.minimap.hide`, the
+through their own `get`/`set` and are never persisted, and **one** — `global.minimap.shown`, the
 *Minimap button* row — is stored but lives in `db.global` rather than `db.profile`, which is the
-only row in the schema that does (`launcher-§3`). That row carries its own `get`/`set`, wired onto
-it by `S:InstallMaster`. They read and write it from the DB root, and they NEGATE, because the row's
-boolean says shown while LibDBIcon's key says hidden.
+only row in the schema that does (`launcher-§3`). Its path is its CLI name and reads in the row's
+own sense, so `/pm get global.minimap.shown` answers `true` while the button shows; the state is
+stored at `db.global.minimap.hide`, LibDBIcon's own key and the only stored one (`S.MINIMAP_STORE`).
+The row carries its own `get`/`set`, wired onto it by `S:InstallMaster`. They read and write the
+store from the DB root, and they NEGATE, because the row says shown while LibDBIcon's key says
+hidden. Nothing is ever written or declared at the row's path (anti-pattern #81), so
+`S:Register` skips that path and checks the store against the global defaults instead.
 
 **The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0; `docs/revendor/2026-09-23-v1.55.0/`).
 The rows are this addon's. The machinery around them is one library instance, `NS.SchemaRuntime`,
@@ -198,7 +202,7 @@ construction rather than by two implementations agreeing. The name is the **fold
 | The object and its click | `core/LauncherSetup.lua` | Left-click toggles the lock (**rung (b)** — unlocking is this addon's preview, so there is no test mode to toggle instead). It writes `state.locked` through `NS.Schema:Set`, the same seam the *Lock frame* checkbox writes through, and holds no copy of that state. Right-click always opens the settings panel. |
 | The icon | `C.ICON_PATH` (`core/Constants.lua`) | `media/logos/panelmaster.logo.128.tga`, the same file the TOC's `## IconTexture` names (`launcher-§4`). `tests/test_constants.lua` asserts the two spellings name one file and reads its header bytes. |
 | The broker label | `core/LauncherSetup.lua` | `Ka0s Panel Master` — the **brand name in plain text** (`launcher-§1`), which is what a broker display prints in its row beside the other ten Ka0s addons. Deliberately **not** the TOC `## Title` and not wired to it (a Title may carry color escapes, and one in the collection does), and not the folder name, which is the registration `name` above. A literal here, with no escape sequence of any kind. |
-| The visibility row | `settings/Schema.lua` | *Minimap button*, composed by `MasterControls`' `minimapPath`. Stored at `db.global.minimap.hide` — LibDBIcon's own table, handed to the library whole. `S:Get`/`S:Set` **negate**: the row says shown, the key says hidden. |
+| The visibility row | `settings/Schema.lua` | *Minimap button*, composed by `MasterControls`' `minimapPath` — `/pm get global.minimap.shown`. Stored at `db.global.minimap.hide` — LibDBIcon's own table, handed to the library whole. `S:Get`/`S:Set` **negate**: the row says shown, the key says hidden. No `shown` key is ever stored. |
 | The stored default | `defaults/Global.lua` | `minimap = { hide = false }`, **declared** rather than seeded, which is what materializes the table (`architecture-§5`). `minimapPos` is LibDBIcon's to write and has no row. |
 | The libraries | `libs/LibDataBroker-1.1`, `libs/LibDBIcon-1.0` | Vendored and listed in the TOC's `# Libraries` block. Both are resolved with `LibStub(..., true)` at Register time, so a client missing either degrades by name and raises nothing. |
 
@@ -212,7 +216,7 @@ in the same class as the position LibDBIcon keeps in the same table, so it must 
 `options-ui-§12`'s *Reset all settings* **and** a page-scoped **Defaults** button. Read against this
 code, neither reaches it, and the two reasons are different:
 
-| Reset | Reaches `global.minimap.hide`? | Why |
+| Reset | Reaches `global.minimap.shown` (stored at `db.global.minimap.hide`)? | Why |
 |---|---|---|
 | *Reset all settings* — `/pm resetall`, the header **Defaults** button, the composed *Reset all settings* button | no | All three funnel into `Sl:DoResetAll`, which is `db:ResetProfile()` on the active profile. This addon **has** a profile and keeps everything the player configures in it, so the store AceDB replaces is `db.profile`; `db.global` is a different table. |
 | The General page's **Defaults** button, and the Blizzard footer control that forwards to it | no | It is **not** the library's row walk here. `settings/Panel.lua` rebinds `ctx.panel.defaultsOnClick` to `P:RestoreDefaults`, which is the same profile reset, and `O.CreatePanel`'s `OnDefault` forwards to that same closure. `O.RestoreDefaults` *would* reach the row — `rowsForPage("general")` answers the whole schema and the composed row is spliced at its head — but nothing in this addon calls it. |
