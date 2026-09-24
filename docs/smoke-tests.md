@@ -832,8 +832,14 @@ addon still *works*.
     addon's texture goes away (§5b step 10). Nothing raises, and nothing is overwritten: reinstate
     `libs/LibKa0s` and the names come straight back.
 10. `/pm debug dump` → still answers with the state dump.
-11. `/pm list` → `…, so the slash help index and the settings CLI (list/get/set/reset) are
-    unavailable.`
+11. `/pm list` → `…, so the settings CLI (list/get/set/reset) is unavailable.`
+11b. `/pm help` → that same line once, then one plain `/pm <cmd>  <desc>` row per verb (no colors, no
+    em dash): the degraded index is allowed to look degraded, never to vanish.
+11c. `/pm disable`, then `/pm enable` → the panels go and come back, and each prints the
+    `settings.enabled = false` / `= true` echo. No Lua error: the path is written through the Schema
+    seam's `writeThrough` list with no composed row behind it.
+11d. `/pm unlock` → `/pm unlock is unavailable: the LibKa0s library did not load.` and nothing moves;
+    `/pm lock` the same with its own verb.
 12. `/pm resetall` → **still works**, popup and all: it is the one schema verb with no library
     dependency, and since `options-ui-§12` its body is `db:ResetProfile()`, which needs the db
     rather than the library.

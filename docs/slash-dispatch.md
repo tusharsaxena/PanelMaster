@@ -47,6 +47,21 @@ override does not reach it (`docs/localization.md`).
 
 `/pm help` while disabled prints the **whole index**, headed by that same line as a state note. That
 is an answer with a note above it, not a refusal.
+
+**Library-absent load.** `enable`, `disable`, `lock` and `unlock` write rows the Options composer
+declares, so whenever that major is absent — the whole library, or Options alone on a partial load —
+the rows do not exist, and each verb takes one of `slash-commands-§1`'s two routes (WS-02) instead
+of `CliSet`. `enable` / `disable` take **route (a)** through `Sl:CliEnable`: `settings.enabled` is in
+the Schema seam's `writeThrough` list (`settings/Schema.lua`, Schema minor 2), so the write lands raw
+without a row on the live instance and on the degradation stub alike; because a written-through
+value runs no `onChange`, the verb calls `NS.RefreshEnabled()` itself and then prints the same
+`settings.enabled = <value>` echo. `lock` / `unlock` take **route (b)** through `Sl:CliLock`: one line,
+`/pm unlock is unavailable: the LibKa0s library did not load.`, through `NS.L`, and nothing written.
+With the rows present both handlers are exactly the `CliSet` they always were. The Slash degradation
+stub itself follows `LibKa0s-Slash-1.0`'s prescribed shape (Slash 15, "The degradation stub"): a
+minimal dispatcher, `Sl.DISABLED_LINE_FORMAT` as the one library string it carries (published on
+both arms, and pinned against the library by `tests/test_surface_parity.lua`), and a `/pm help` that
+prints the library-absent notice once and then a plain `/pm <cmd>  <desc>` row per verb.
 Panel verbs: `new delete rename panels panel unlock lock recover`.
 
 There is no `test` verb. Unlocking is this addon's test mode (`options-ui-§15`): it shows every

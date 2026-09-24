@@ -54,7 +54,7 @@ paths — and each of the other three appends its own consequence and its own te
 |---|---|
 | `core/CoreSetup.lua` | `"; running on reduced built-in fallbacks."` — announced once, on the first line the addon prints |
 | `core/DebugLogSetup.lua` | `", so the debug console window is unavailable."` |
-| `settings/Slash.lua` | `", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."` |
+| `settings/Slash.lua` | `", so the settings CLI (list/get/set/reset) is unavailable."` — the degraded `/pm help` prints it once above a plain `/pm <cmd>  <desc>` row per verb |
 | `settings/OptionsSetup.lua` | `", so the settings panel is unavailable."` — said on **every** `/pm config`, never latched |
 
 A degraded install therefore says the same thing about **why** at every site and a different thing

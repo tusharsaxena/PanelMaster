@@ -148,6 +148,25 @@ function NS.StandUp()
   NS.Debug("Lifecycle", "stood up")
 end
 
+--- The one entry point every surface that can change the answer calls: the composed *Enable Ka0s
+--- Panel Master* row's onChange, `/pm enable`, `/pm disable` (which are that row's write by another
+--- name), and the three AceDB profile callbacks. Written once, in the library's shape, rather than
+--- as a branch each caller writes for itself -- a branch written four times is a branch one caller
+--- writes backwards.
+---
+--- `Reevaluate` after `Set` is what the profile callbacks need and what costs the other callers
+--- nothing: it is idempotent and fires a callback only on an actual edge, so a profile switch that
+--- agrees with the outgoing one is silent.
+---
+--- Defined ABOVE the degradation branch, which returns early: it reads `NS.Lifecycle` at call time,
+--- so it serves the stub latch and the library's alike. Below the branch it did not exist on a
+--- Lifecycle-less load, where the profile callbacks call it and Sl:CliEnable's write-through
+--- route needs it to move the latch (PM-09).
+function NS.RefreshEnabled()
+  NS.Lifecycle:Set(NS.HOLD_DISABLED, not NS.IsAddonEnabled())
+  NS.Lifecycle:Reevaluate()
+end
+
 if not Lifecycle then
   -- Degrade, never error -- and here the stub does the job rather than answering false, which is
   -- the opposite of what core/LauncherSetup.lua's stub does and is the right call for the opposite
@@ -217,17 +236,3 @@ NS.Lifecycle = Lifecycle:New({
   -- narrated every edge would print into a player's chat on every profile switch.
   print     = function(line) NS.Print(line) end,
 })
-
---- The one entry point every surface that can change the answer calls: the composed *Enable Ka0s
---- Panel Master* row's onChange, `/pm enable`, `/pm disable` (which are that row's write by another
---- name), and the three AceDB profile callbacks. Written once, in the library's shape, rather than
---- as a branch each caller writes for itself -- a branch written four times is a branch one caller
---- writes backwards.
----
---- `Reevaluate` after `Set` is what the profile callbacks need and what costs the other callers
---- nothing: it is idempotent and fires a callback only on an actual edge, so a profile switch that
---- agrees with the outgoing one is silent.
-function NS.RefreshEnabled()
-  NS.Lifecycle:Set(NS.HOLD_DISABLED, not NS.IsAddonEnabled())
-  NS.Lifecycle:Reevaluate()
-end

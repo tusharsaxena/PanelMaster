@@ -183,6 +183,11 @@ test("Parity: the Slash seam's degraded surface matches the live one", function(
   assertTrue(libSlash ~= nil, "LibKa0s-Slash-1.0 did not register on the live path")
   assertEqual(Sl.FormatKV("a.b", "7"), libSlash.FormatKV("a.b", "7"))
   assertEqual(Sl.FormatKV("a.b", "7"), "|cFFFFFF00a.b|r = |cFFFFFFFF7|r")
+
+  -- The one library string a Slash stub may carry (slash-commands-§1, kit 26), pinned byte for byte
+  -- against the live library's, and the stub's refusal line built from it.
+  T.assertLibraryConstant(Sl.DISABLED_LINE_FORMAT, "LibKa0s-Slash-1.0", "DISABLED_LINE_FORMAT")
+  assertEqual(Sl:DisabledLine(), Sl.DISABLED_LINE_FORMAT:format(degradedNS.BRAND, "/pm enable"))
 end)
 
 -- ── Options ────────────────────────────────────────────────────────────────────

@@ -750,6 +750,42 @@ test("Schema stub: Get and ApplyDefault forward the instance id", function()
   assertEqual(changedId, "inst-2", "ApplyDefault did not forward the id to Set")
 end)
 
+-- writeThrough (Schema minor 2, options-ui-§1 route (a)): `settings.enabled` is declared by the
+-- Options composer, so a load without it has no row, yet `/pm enable` and `/pm disable` must land.
+-- The path is stored raw with no row -- no validate, no onChange, so the latch does not move on
+-- the write alone -- and every other row-less path is still refused.
+local function assertWritesThrough(ns, label)
+  local R = ns.SchemaRuntime
+  assertEqual(ns.Schema:FindRow("settings.enabled"), nil, label .. ": the enabled row exists")
+  local r = pack(R.Set("settings.enabled", false))
+  assertEqual(r.n, 1, label .. ": a written-through Set did not answer exactly true")
+  assertEqual(r[1], true, label .. ": the writeThrough path was refused")
+  assertEqual(ns.db.profile.settings.enabled, false, label .. ": the writeThrough value did not land")
+  assertEqual(ns.Schema:Get("settings.enabled"), false, label .. ": Get does not read it back")
+  assertFalse(ns.Lifecycle:IsDown(), label .. ": a raw write ran a reaction it has no row for")
+  assertEqual(ns.Schema:FindRow("settings.enabled"), nil, label .. ": the write grew a row")
+  local ok, err = ns.Schema:Set("settings.nonsense", 1)
+  assertFalse(ok, label .. ": a row-less path outside the list was stored")
+  assertEqual(err, "unknown path: settings.nonsense", label)
+  assertEqual(ns.db.profile.settings.nonsense, nil, label)
+  assertTrue((R.Set("settings.enabled", true)))
+end
+
+test("Schema stub: a writeThrough path is stored without a row; any other row-less path is refused",
+  function()
+    local ns = Env.loadDegraded()
+    assertTrue(ns.SchemaLib ~= NS.SchemaLib, "the degraded load resolved the live library")
+    assertWritesThrough(ns, "stub")
+  end)
+
+test("Schema seam: the live instance writes a writeThrough path through when Options is absent",
+  function()
+    local ns, m = Env.loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true,
+                                    OptionsCompose = true })
+    assertTrue(ns.SchemaLib == m.LibStub("LibKa0s-Schema-1.0"), "the partial load fell back to the stub")
+    assertWritesThrough(ns, "live")
+  end)
+
 test("Schema seam: the live seam is the library's instance, and NS.Schema's names answer it", function()
   -- The adoption in one assertion per half: the instance came from LibKa0s-Schema-1.0 rather than
   -- the stub, and NS.Schema's kept names answer what the instance answers.

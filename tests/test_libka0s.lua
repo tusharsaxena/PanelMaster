@@ -834,10 +834,83 @@ test("Degraded install: a bare /pm runs `config`, and falls back to help without
   table.remove(ns.COMMANDS, index)
   local before = #m.__chat
   ns.Slash:OnSlash("")
+  local rows = #ns.COMMANDS
   table.insert(ns.COMMANDS, index, row)
-  assertEqual(#m.__chat, before + 1, "a bare /pm with no `config` row printed nothing")
-  assertTrue(m.__chat[before + 1]:find("so the slash help index", 1, true) ~= nil,
+  -- The help answer is the degraded index (PM-09): the notice, then one row per remaining verb.
+  assertEqual(#m.__chat, before + 1 + rows, "a bare /pm with no `config` row did not print the index")
+  assertTrue(m.__chat[before + 1]:find(ns.LIBKA0S_MISSING, 1, true) ~= nil,
     "a bare /pm with no `config` row did not fall back to the help answer")
+end)
+
+-- ── the composed-row verbs on a library-absent load (slash-commands-§1, WS-02) ─
+--
+-- `enable`, `disable`, `lock` and `unlock` write rows the Options COMPOSER declares, so whenever the
+-- Options major is absent -- the whole library, or Options alone -- there is no row for them to
+-- write. `enable` / `disable` take route (a): the path is in the Schema seam's `writeThrough` list,
+-- so the value is stored without a row and the verb re-evaluates the latch itself. `lock` /
+-- `unlock` take route (b): the library-absent line, and nothing written.
+
+--- The two library-absent loads the composed rows vanish on, in a fixed order.
+local COMPOSERLESS = {
+  { "degraded", function() return loadDegraded() end },
+  { "partial", function()
+      return loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true,
+                           OptionsCompose = true })
+    end },
+}
+
+test("Degraded install: /pm disable and /pm enable write through and flip the latch without raising",
+  function()
+    for _, arm in ipairs(COMPOSERLESS) do
+      local name, ns, m = arm[1], arm[2]()
+      assertEqual(ns.Schema:FindRow(ns.Schema.ENABLED_PATH), nil, name .. ": the enabled row exists")
+      ns.Print("warm up the notice")
+      local ok, err = pcall(ns.Slash.OnSlash, ns.Slash, "disable")
+      assertTrue(ok, name .. ": /pm disable raised: " .. tostring(err))
+      assertEqual(ns.db.profile.settings.enabled, false, name .. ": /pm disable did not land")
+      assertTrue(ns.Lifecycle:IsDown(), name .. ": /pm disable did not stand the addon down")
+      assertEqual(m.__chat[#m.__chat],
+        ns.PREFIX .. " " .. ns.Slash.FormatKV("settings.enabled", "false"), name)
+
+      ok, err = pcall(ns.Slash.OnSlash, ns.Slash, "enable")
+      assertTrue(ok, name .. ": /pm enable raised: " .. tostring(err))
+      assertEqual(ns.db.profile.settings.enabled, true, name .. ": /pm enable did not land")
+      assertFalse(ns.Lifecycle:IsDown(), name .. ": /pm enable did not stand the addon back up")
+      assertEqual(m.__chat[#m.__chat],
+        ns.PREFIX .. " " .. ns.Slash.FormatKV("settings.enabled", "true"), name)
+    end
+  end)
+
+test("Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing",
+  function()
+    for _, arm in ipairs(COMPOSERLESS) do
+      local name, ns, m = arm[1], arm[2]()
+      ns.Print("warm up the notice")
+      for _, verb in ipairs({ "unlock", "lock" }) do
+        local was = ns.State.unlocked
+        local before = #m.__chat
+        local ok, err = pcall(ns.Slash.OnSlash, ns.Slash, verb)
+        assertTrue(ok, name .. ": /pm " .. verb .. " raised: " .. tostring(err))
+        assertEqual(#m.__chat, before + 1, name .. ": /pm " .. verb .. " did not print exactly one line")
+        assertEqual(m.__chat[#m.__chat], ns.PREFIX .. " " ..
+          ns.L["%s is unavailable: the LibKa0s library did not load."]:format("/pm " .. verb), name)
+        assertEqual(ns.State.unlocked, was, name .. ": /pm " .. verb .. " changed the unlock state")
+      end
+    end
+  end)
+
+test("Degraded install: the help index still lists every verb", function()
+  local ns, m = loadDegraded()
+  ns.Print("warm up the notice")
+  local before = #m.__chat
+  ns.Slash:OnSlash("help")
+  assertEqual(#m.__chat, before + 1 + #ns.COMMANDS,
+    "the degraded help is not the notice plus one row a verb")
+  assertTrue(m.__chat[before + 1]:find(ns.LIBKA0S_MISSING, 1, true) ~= nil,
+    "the degraded help does not lead with the library-absent notice")
+  for i, cmd in ipairs(ns.COMMANDS) do
+    assertEqual(m.__chat[before + 1 + i], ns.PREFIX .. " /pm " .. cmd[1] .. "  " .. cmd[2])
+  end
 end)
 
 -- ── the `L` trap ───────────────────────────────────────────────────────────────

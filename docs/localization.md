@@ -9,10 +9,13 @@ renaming one later means moving every key and every call site in a single change
 `locales/PostLoad.lua` loads after every locale file and holds derived-key aliases — strings whose
 translation always matches another key's — so a translator never does the same work twice.
 
-**English-only remains the shipped scope, and `locales/enUS.lua` carries no keys.** Almost every
+**English-only remains the shipped scope, and `locales/enUS.lua` carries one key.** Almost every
 label, tooltip and message is hardcoded English — a scope decision rather than an oversight, and
 precisely what made the US-English sweep cheap, since there were no keys to move alongside the
-strings. A later pass can wrap them (`NS.L["Show names while unlocked"]`) without touching call
+strings. The one key is the collection's **library-absent line**, `"%s is unavailable: the LibKa0s
+library did not load."`, which `slash-commands-§1` routes through the host's locale:
+`Sl:LibraryAbsentLine` (`settings/Slash.lua`) formats it with the verb as typed, for `/pm lock` and
+`/pm unlock` whenever the composed Lock frame row is absent. A later pass can wrap them (`NS.L["Show names while unlocked"]`) without touching call
 sites, because the seam and its key-returning metatable are already here.
 
 **The one key that used to be here is gone, and its absence is the entry.** The **disabled-verb

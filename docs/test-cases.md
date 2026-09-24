@@ -534,7 +534,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (48)
+### test_schema.lua (50)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -582,6 +582,8 @@ badge and any count quoted in the docs must agree with it.
 - Schema: the live runtime and the stub answer SetMany identically
 - Schema stub: row.normalize replaces the value, and a nil from it refuses
 - Schema stub: Get and ApplyDefault forward the instance id
+- Schema stub: a writeThrough path is stored without a row; any other row-less path is refused
+- Schema seam: the live instance writes a writeThrough path through when Options is absent
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
@@ -859,7 +861,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (43)
+### test_libka0s.lua (46)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -899,6 +901,9 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: the fallback printer renders the same bytes as the library's
 - Degraded install: /pm config answers on EVERY invocation, not once
 - Degraded install: a bare /pm runs `config`, and falls back to help without one
+- Degraded install: /pm disable and /pm enable write through and flip the latch without raising
+- Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing
+- Degraded install: the help index still lists every verb
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
 - L trap: no seam file hands a descriptor this addon's locale table
@@ -1022,14 +1027,14 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 48 |
+| test_schema.lua | 50 |
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 23 |
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 43 |
+| test_libka0s.lua | 46 |
 | test_surface_parity.lua | 6 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
@@ -1040,4 +1045,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **906** |
+| **Total** | **911** |

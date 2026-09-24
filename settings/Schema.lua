@@ -202,7 +202,9 @@ S.MINIMAP_PATH = "global.minimap.hide"
 -- SetMany), each row's validate, normalize and onChange, the instance id forwarded through Get and
 -- ApplyDefault, and the sweep bracket's depth all work, because host writers (the Registry's bulk
 -- verbs, Reset All, `/pm set` where the Slash major survives) reach this seam on a degraded load
--- too. What it does not
+-- too. So does minor 2's `writeThrough`: `Set` and `SetMany` store a listed path that has no row
+-- raw -- a copy, no validate, normalize or onChange -- and announce it with a synthetic
+-- `{ path, writeThrough }` row, while every other row-less path is still refused. What it does not
 -- reproduce is what only feeds the debug console -- the per-write `[Set]` line and the bracket's
 -- tally -- and the degraded console stub discards those lines anyway. This is a documented
 -- duplication rather than anti-pattern #47: options-ui-§1's no-copy MUST names widget makers, the
@@ -259,6 +261,16 @@ local function hostSchemaStub()
   function stubLib.New(_, d)
     local R, depth = {}, 0
     local rows = d.rows
+    -- writeThrough (minor 2): read ONCE, here, as the live instance reads it. One synthetic row per
+    -- listed path, handed to announce by identity so a write allocates nothing.
+    local throughRows = {}
+    if type(d.writeThrough) == "table" then
+      for _, path in ipairs(d.writeThrough) do
+        if type(path) == "string" and path ~= "" then
+          throughRows[path] = { path = path, writeThrough = true }
+        end
+      end
+    end
     local function resolve(parts, id)
       if type(d.resolveRoot) ~= "function" then return nil end
       return d.resolveRoot(parts, id)
@@ -334,9 +346,15 @@ local function hostSchemaStub()
     local function announceOne(plan)
       if type(d.announce) == "function" then d.announce(plan.row, plan.path, plan.value, plan.rid) end
     end
+    -- The row a write goes through: the indexed row, else the path's synthetic writeThrough row.
+    -- That row carries no set, validate, normalize or onChange, so the ordinary plan below stores
+    -- it raw (a copy, at the resolved root) and announces it with nothing reacting.
+    local function writeRow(path)
+      return R.FindRow(path) or (type(path) == "string" and throughRows[path]) or nil
+    end
     -- The seam's order without its log and tally: refuse, validate, store, react, announce.
     function R.Set(path, value, id)
-      local row = R.FindRow(path)
+      local row = writeRow(path)
       if not row then return false, "unknown path: " .. tostring(path) end
       local plan, err, why = prepare(row, path, value, id)
       if not plan then return false, err, why end
@@ -350,7 +368,7 @@ local function hostSchemaStub()
       local plans = {}
       for i, e in ipairs(entries) do
         local path = type(e) == "table" and e.path or nil
-        local row = R.FindRow(path)
+        local row = writeRow(path)
         if not row then return nil, "unknown path: " .. tostring(path), nil, i end
         local plan, err, why = prepare(row, path, e.value, id)
         if not plan then return nil, err, why, i end
@@ -446,6 +464,15 @@ local R = SchemaLib:New({
   L = { NOT_FOUND = "unknown path: %s", INVALID = "invalid value" },
   -- No `announce`: every row that broadcasts does it from its own onChange. No `resetExempt`: see
   -- docs/revendor/2026-09-23-v1.55.0/05_SUMMARY.md -- no player reaches a library sweep of these rows.
+  --
+  -- `writeThrough` (Schema minor 2; options-ui-§1 route (a), slash-commands-§1). The master switch
+  -- is a COMPOSED row, so whenever the Options composer is absent -- the whole library, or Options
+  -- alone -- `settings.enabled` has no row, and `/pm enable` / `/pm disable` would be refused on the
+  -- very load they most need to work. Listed here, the path is stored raw without a row: no
+  -- validate and no onChange, so Sl:CliEnable re-evaluates the latch itself after the write. On a
+  -- full load the composed row exists and takes the write, list or no list. The same list reaches
+  -- the stub above, which reads it from this one descriptor.
+  writeThrough = { S.ENABLED_PATH },
 })
 
 -- The resolved library (or the stub standing in for it) and the instance, published for the two
