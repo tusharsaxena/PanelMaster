@@ -631,6 +631,125 @@ test("Schema stub: with no LibKa0s at all, the boot check is silent and a write 
   assertTrue(ns.IsAddonEnabled(), "the master switch read wrong through the stub")
 end)
 
+-- The stub keeps pace with Schema minor 2 (LibKa0s v1.56.0): the all-or-nothing batch SetMany,
+-- row.normalize, and the instance id forwarded through Get and ApplyDefault.
+-- red under: delete R.SetMany from hostSchemaStub
+
+--- Every answer of a call, with its count, so an arity difference is visible too.
+local function pack(...) return { n = select("#", ...), ... } end
+
+--- The two grid rows of `ns`, each with an onChange spy appending `path=value` to the returned log.
+local function spyGridRows(ns)
+  local log = {}
+  for _, path in ipairs({ "settings.gridSize", "settings.snapToGrid" }) do
+    ns.Schema:FindRow(path).onChange = function(v) log[#log + 1] = path .. "=" .. tostring(v) end
+  end
+  return log
+end
+
+test("Schema stub: SetMany stores every entry in order and runs each onChange", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local log = spyGridRows(ns)
+  local ok = ns.SchemaRuntime.SetMany({ { path = "settings.gridSize", value = 16 },
+                                        { path = "settings.snapToGrid", value = false } })
+  assertEqual(ok, true)
+  assertEqual(ns.db.profile.settings.gridSize, 16)
+  assertEqual(ns.db.profile.settings.snapToGrid, false)
+  assertEqual(table.concat(log, ","), "settings.gridSize=16,settings.snapToGrid=false")
+end)
+
+test("Schema stub: SetMany is all-or-nothing", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  local log = spyGridRows(ns)
+  local before = ns.db.profile.settings.snapToGrid
+  local r = pack(R.SetMany({ { path = "settings.snapToGrid", value = not before },
+                             { path = "settings.gridSize", value = 999 } }))
+  assertEqual(r.n, 4)
+  assertEqual(r[1], false)
+  assertEqual(r[2], "invalid value")
+  assertEqual(r[3], nil)
+  assertEqual(r[4], 2)
+  assertEqual(ns.db.profile.settings.snapToGrid, before, "entry 1 was stored by a refused batch")
+  assertEqual(#log, 0, "a refused batch ran an onChange")
+  r = pack(R.SetMany({ { path = "settings.nonsense", value = 1 } }))
+  assertEqual(r[1], false)
+  assertEqual(r[2], "unknown path: settings.nonsense")
+  assertEqual(r[4], 1)
+end)
+
+test("Schema stub: SetMany with opts.act runs inside one bracket", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  local inside
+  ns.Schema:FindRow("settings.gridSize").onChange = function() inside = R.InBulk() end
+  assertTrue((R.SetMany({ { path = "settings.gridSize", value = 12 } }, { act = "Import", scope = "grid" })))
+  assertEqual(inside, true, "onChange ran outside the batch's bracket")
+  assertFalse(R.InBulk(), "SetMany left the bracket open")
+  assertTrue((R.SetMany({ { path = "settings.gridSize", value = 10 } })))
+  assertEqual(inside, false, "a batch without opts.act opened a bracket")
+end)
+
+test("Schema: the live runtime and the stub answer SetMany identically", function()
+  local arms = { live = NS, stub = Env.loadPartial({ Schema = true }) }
+  local live = NS.db.profile.settings
+  local saved = { gridSize = live.gridSize, snapToGrid = live.snapToGrid }
+  local batches = {
+    { { path = "settings.gridSize", value = 20 }, { path = "settings.snapToGrid", value = false } },
+    { { path = "settings.gridSize", value = 8 }, { path = "settings.gridSize", value = 999 } },
+    { { path = "settings.snapToGrid", value = true }, { path = "settings.nonsense", value = 1 } },
+  }
+  local answers = {}
+  for name, ns in pairs(arms) do
+    answers[name] = {}
+    for b, entries in ipairs(batches) do
+      local r = pack(ns.SchemaRuntime.SetMany(entries))
+      local st = ns.db.profile.settings
+      answers[name][b] = string.format("%d|%s|%s|%s|%s|grid=%s|snap=%s", r.n, tostring(r[1]),
+        tostring(r[2]), tostring(r[3]), tostring(r[4]), tostring(st.gridSize), tostring(st.snapToGrid))
+    end
+  end
+  live.gridSize, live.snapToGrid = saved.gridSize, saved.snapToGrid
+  for b = 1, #batches do
+    assertEqual(answers.stub[b], answers.live[b], "batch " .. b .. " answered differently")
+  end
+end)
+
+test("Schema stub: row.normalize replaces the value, and a nil from it refuses", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  ns.Schema:FindRow("settings.gridSize").normalize = function(v)
+    if v == 13 then return nil, "unlucky" end
+    return math.floor(v)
+  end
+  assertTrue((R.Set("settings.gridSize", 7.6)))
+  assertEqual(ns.db.profile.settings.gridSize, 7, "Set stored the value before normalize")
+  local r = pack(R.Set("settings.gridSize", 13))
+  assertEqual(r[1], false)
+  assertEqual(r[2], "invalid value")
+  assertEqual(r[3], "unlucky")
+  assertEqual(ns.db.profile.settings.gridSize, 7, "a refused normalize stored")
+  r = pack(R.SetMany({ { path = "settings.gridSize", value = 9.9 }, { path = "settings.gridSize", value = 13 } }))
+  assertEqual(r[3], "unlucky")
+  assertEqual(r[4], 2)
+  assertTrue((R.SetMany({ { path = "settings.gridSize", value = 9.9 } })))
+  assertEqual(ns.db.profile.settings.gridSize, 9, "SetMany stored the value before normalize")
+end)
+
+test("Schema stub: Get and ApplyDefault forward the instance id", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  local gotId, changedId
+  R.AddRows({ { path = "settings.probe", default = 1, type = "number",
+    get = function(id) gotId = id return 1 end, set = function() end } })
+  R.Get("settings.probe", "inst-1")
+  assertEqual(gotId, "inst-1", "Get did not hand the id to row.get")
+  local row = ns.Schema:FindRow("settings.gridSize")
+  row.onChange = function(_, rid) changedId = rid end
+  assertTrue((R.ApplyDefault(row, "inst-2")))
+  assertEqual(changedId, "inst-2", "ApplyDefault did not forward the id to Set")
+end)
+
 test("Schema seam: the live seam is the library's instance, and NS.Schema's names answer it", function()
   -- The adoption in one assertion per half: the instance came from LibKa0s-Schema-1.0 rather than
   -- the stub, and NS.Schema's kept names answer what the instance answers.

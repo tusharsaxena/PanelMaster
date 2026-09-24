@@ -526,7 +526,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (41)
+### test_schema.lua (47)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -568,6 +568,12 @@ badge and any count quoted in the docs must agree with it.
 - Schema stub: a host verb's write lands, reacts, and refuses in the host's own words
 - Schema stub: Reset All, the page Defaults and a Registry bulk act all complete
 - Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands
+- Schema stub: SetMany stores every entry in order and runs each onChange
+- Schema stub: SetMany is all-or-nothing
+- Schema stub: SetMany with opts.act runs inside one bracket
+- Schema: the live runtime and the stub answer SetMany identically
+- Schema stub: row.normalize replaces the value, and a nil from it refuses
+- Schema stub: Get and ApplyDefault forward the instance id
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 
 ### test_slash.lua (74)
@@ -915,8 +921,8 @@ badge and any count quoted in the docs must agree with it.
 
 ### test_prose.lua (15)
 
-- prose: no authored file carries a British spelling from localization-5's published list
-- prose: the gate carries localization-5's two lists whole, and nothing of its own
+- prose: no authored file carries a British spelling from localization-§5's published list
+- prose: the gate carries localization-§5's two lists whole, and nothing of its own
 - prose self-test: the carve-out suppresses the named generated folder, and only it
 - prose self-test: a path the carve-out does not name is not covered by one that looks like it
 - prose self-test: a carve-out that is not a set of path strings is a failure, not a silence
@@ -941,7 +947,7 @@ badge and any count quoted in the docs must agree with it.
 
 - layoutcap: every authored file over the 1500-line cap is named in the census
 - layoutcap: no census row outlives the breach it records
-- layoutcap: every over-cap census row carries one of layout-1's three terminal states
+- layoutcap: every over-cap census row carries one of layout-§1's three terminal states
 - layoutcap: the census and the exempt set agree about which paths were exempted
 - layoutcap: an empty census is written as a result rather than left standing empty
 - layoutcap self-test: the parser reads the census nested under the register, and stops there
@@ -981,7 +987,7 @@ badge and any count quoted in the docs must agree with it.
 ### test_eol.lua (2)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
-- eol: .gitattributes is line-endings-5's canonical body for this repo kind
+- eol: .gitattributes is line-endings-§5's canonical body for this repo kind
 
 ## Totals
 
@@ -1000,7 +1006,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 41 |
+| test_schema.lua | 47 |
 | test_slash.lua | 74 |
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
@@ -1018,4 +1024,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **884** |
+| **Total** | **890** |

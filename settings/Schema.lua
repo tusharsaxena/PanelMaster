@@ -197,10 +197,12 @@ S.MINIMAP_PATH = "global.minimap.hide"
 -- front of this seam: the minimap inversion that used to branch inside it is the row's own
 -- `get`/`set` now.
 --
--- The degradation stub (docs/api/Schema/version-1-docs.md, "The degradation stub"). A load without
--- the library is WRITE-COMPLETING and LOG-SILENT: reads, writes, each row's onChange and the sweep
--- bracket's depth all work, because host writers (the Registry's bulk verbs, Reset All, `/pm set`
--- where the Slash major survives) reach this seam on a degraded load too. What it does not
+-- The degradation stub (docs/api/Schema/version-2-docs.md, "The degradation stub"). A load without
+-- the library is WRITE-COMPLETING and LOG-SILENT: reads, writes (Set, and minor 2's all-or-nothing
+-- SetMany), each row's validate, normalize and onChange, the instance id forwarded through Get and
+-- ApplyDefault, and the sweep bracket's depth all work, because host writers (the Registry's bulk
+-- verbs, Reset All, `/pm set` where the Slash major survives) reach this seam on a degraded load
+-- too. What it does not
 -- reproduce is what only feeds the debug console -- the per-write `[Set]` line and the bracket's
 -- tally -- and the degraded console stub discards those lines anyway. This is a documented
 -- duplication rather than anti-pattern #47: options-ui-§1's no-copy MUST names widget makers, the
@@ -278,7 +280,7 @@ local function hostSchemaStub()
     function R.Reindex() end
     function R.Get(path, id)
       local row = R.FindRow(path)
-      if row and type(row.get) == "function" then return row.get() end
+      if row and type(row.get) == "function" then return row.get(id) end
       if type(path) ~= "string" or (row and row.sessionOnly) then return nil end
       local parts = stubLib.SplitPath(path)
       local root, first = resolve(parts, id)
@@ -293,8 +295,17 @@ local function hostSchemaStub()
       if rid == nil then rid = id end
       return parts, root, first, rid
     end
+    -- The value the row wants stored: `value`, or what row.normalize(value, rid) answers. A nil
+    -- from it is a refusal, so a normalize cannot clear a setting to absence.
+    local function normalized(row, value, rid)
+      if type(row.normalize) ~= "function" then return value end
+      local out, why = row.normalize(value, rid)
+      if out == nil then return nil, "invalid value", why end
+      return out
+    end
     -- Everything checked before a store, shared by Set and SetMany so a batch refuses on the
-    -- rules a single write does: a plan to commit, or `nil, err, why` with nothing stored.
+    -- rules a single write does: validate, normalize, then nowhere-to-store. A plan to commit,
+    -- or `nil, err, why` with nothing stored.
     local function prepare(row, path, value, id)
       local stored = type(row.set) ~= "function" and not row.sessionOnly
       local parts, root, first, rid = nil, nil, nil, id
@@ -303,6 +314,9 @@ local function hostSchemaStub()
         local ok, why = row.validate(value, rid)
         if not ok then return nil, "invalid value", why end
       end
+      local err, why
+      value, err, why = normalized(row, value, rid)
+      if err then return nil, err, why end
       if stored and not root then return nil, "nowhere to store " .. path .. " yet" end
       return { row = row, path = path, parts = parts, root = root, first = first, rid = rid,
                value = value, stored = stored }
@@ -382,11 +396,11 @@ local function hostSchemaStub()
       local row = R.FindRow(path)
       return row and copy(row.default)
     end
-    function R.ApplyDefault(row)
+    function R.ApplyDefault(row, id)
       if type(row) ~= "table" or type(row.path) ~= "string" or row.default == nil then return false end
       local exempt = d.resetExempt
       if depth > 0 and type(exempt) == "table" and exempt[row.path] then return false end
-      return R.Set(row.path, copy(row.default))
+      return R.Set(row.path, copy(row.default), id)
     end
     -- The bracket keeps its depth, because the sweep veto above reads it; it counts nothing.
     function R.BulkBegin() depth = depth + 1 end
