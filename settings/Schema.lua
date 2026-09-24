@@ -293,25 +293,89 @@ local function hostSchemaStub()
       if rid == nil then rid = id end
       return parts, root, first, rid
     end
-    -- The seam's order without its log and tally: refuse, validate, store, react, announce.
-    function R.Set(path, value, id)
-      local row = R.FindRow(path)
-      if not row then return false, "unknown path: " .. tostring(path) end
+    -- Everything checked before a store, shared by Set and SetMany so a batch refuses on the
+    -- rules a single write does: a plan to commit, or `nil, err, why` with nothing stored.
+    local function prepare(row, path, value, id)
       local stored = type(row.set) ~= "function" and not row.sessionOnly
       local parts, root, first, rid = nil, nil, nil, id
       if stored then parts, root, first, rid = target(path, id) end
       if type(row.validate) == "function" then
         local ok, why = row.validate(value, rid)
-        if not ok then return false, "invalid value", why end
+        if not ok then return nil, "invalid value", why end
       end
-      if stored and not root then return false, "nowhere to store " .. path .. " yet" end
-      if type(row.set) == "function" then
-        row.set(value)
-      elseif stored then
-        stubLib.Write(root, parts, copy(value), first)
+      if stored and not root then return nil, "nowhere to store " .. path .. " yet" end
+      return { row = row, path = path, parts = parts, root = root, first = first, rid = rid,
+               value = value, stored = stored }
+    end
+    local function store(plan)
+      if type(plan.row.set) == "function" then
+        plan.row.set(plan.value)
+      elseif plan.stored then
+        stubLib.Write(plan.root, plan.parts, copy(plan.value), plan.first)
       end
-      if type(row.onChange) == "function" then row.onChange(value, rid) end
-      if type(d.announce) == "function" then d.announce(row, path, value, rid) end
+    end
+    local function react(plan)
+      if type(plan.row.onChange) == "function" then plan.row.onChange(plan.value, plan.rid) end
+    end
+    local function announceOne(plan)
+      if type(d.announce) == "function" then d.announce(plan.row, plan.path, plan.value, plan.rid) end
+    end
+    -- The seam's order without its log and tally: refuse, validate, store, react, announce.
+    function R.Set(path, value, id)
+      local row = R.FindRow(path)
+      if not row then return false, "unknown path: " .. tostring(path) end
+      local plan, err, why = prepare(row, path, value, id)
+      if not plan then return false, err, why end
+      store(plan)
+      react(plan)
+      announceOne(plan)
+      return true
+    end
+    -- Phase 1: every entry checked before any is stored. The plans, or `nil, err, why, i`.
+    local function prepareBatch(entries, id)
+      local plans = {}
+      for i, e in ipairs(entries) do
+        local path = type(e) == "table" and e.path or nil
+        local row = R.FindRow(path)
+        if not row then return nil, "unknown path: " .. tostring(path), nil, i end
+        local plan, err, why = prepare(row, path, e.value, id)
+        if not plan then return nil, err, why, i end
+        plans[i] = plan
+      end
+      return plans
+    end
+    -- Phase 2 in the live seam's order: every store, then every onChange, so a reaction reading
+    -- a sibling row sees the whole batch.
+    local function commitBatch(plans)
+      for _, plan in ipairs(plans) do store(plan) end
+      for _, plan in ipairs(plans) do react(plan) end
+    end
+    -- The batch's tail: the host's announceBatch once when it has one, else announce per write.
+    local function announceBatch(plans)
+      if #plans == 0 then return end
+      if type(d.announceBatch) ~= "function" then
+        for _, plan in ipairs(plans) do announceOne(plan) end
+        return
+      end
+      local writes = {}
+      for i, p in ipairs(plans) do
+        writes[i] = { row = p.row, path = p.path, value = p.value, rid = p.rid }
+      end
+      d.announceBatch(writes, plans[1].rid)
+    end
+    -- Several rows as ONE act, all or nothing: one refusal answers `false, err, why, index` with
+    -- nothing stored and nothing called. `opts.act` runs the stores inside one bracket.
+    function R.SetMany(entries, opts)
+      if type(entries) ~= "table" then entries = {} end
+      if type(opts) ~= "table" then opts = {} end
+      local plans, err, why, at = prepareBatch(entries, opts.instanceId)
+      if not plans then return false, err, why, at end
+      if opts.act ~= nil then
+        R.BulkRun(opts.act, opts.scope, function() commitBatch(plans) end)
+      else
+        commitBatch(plans)
+      end
+      announceBatch(plans)
       return true
     end
     function R.Default(path)
