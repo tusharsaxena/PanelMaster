@@ -145,6 +145,8 @@ There is no backdrop-support shim. Whether `BackdropTemplateMixin` exists says n
 in hand, so `modules/Canvas.lua` checks the frame's own `SetBackdrop` method instead, and no deprecated
 API is being wrapped.
 
-Tests: `tests/test_compat.lua` covers the degraded answers of seven shims, including all three rungs
-of the `InCombat` ladder. `AddOnFolders`' `nil` answer is covered in `tests/test_sunnart.lua`, where
-the gate that reads it lives.
+Tests: `tests/test_compat.lua` covers the degraded answers of five shims (`GetUIScale`, `FetchMedia`,
+`MediaList`, `RegisterMedia` and `InCombat`, including all three rungs of the `InCombat` ladder).
+`AddOnFolders`' `nil` answer is covered in `tests/test_sunnart.lua`, where the gate that reads it
+lives. `GetScreenSize` and `MouseIsOver` are tested on their normal answers only; nothing yet
+covers `GetScreenSize`'s `nil` or `MouseIsOver`'s missing-global, nil-frame or error `false`.
