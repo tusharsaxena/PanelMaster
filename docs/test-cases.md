@@ -781,7 +781,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (15)
+### test_disabled.lua (19)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
@@ -798,6 +798,10 @@ badge and any count quoted in the docs must agree with it.
 - Disabled 10b: the hold keys are the library's exported constants, not local literals
 - Disabled: a profile switch that flips the enable path re-evaluates the latch
 - Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
+- Events: a rejected event name is recorded and the rest still register
+- Events: with no C_EventUtils the refused name is still caught and recorded
+- Events: the dump says 'rejected events: 0' when nothing was refused
+- Events: the degraded Core stub's SafeRegisterEvent pcalls and records once
 
 ### test_sunnart.lua (53)
 
@@ -1023,7 +1027,7 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 23 |
-| test_disabled.lua | 15 |
+| test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
 | test_surface_parity.lua | 6 |
@@ -1036,4 +1040,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **902** |
+| **Total** | **906** |

@@ -68,6 +68,22 @@ if not lib then
   end
   NS.Util = NS.Util or {}
   NS.Util.print = NS.Print
+
+  -- The event-registration helper, as ONE rung: the target's own pcall. The library front-gates it
+  -- with C_EventUtils.IsEventValid and a probe frame; this stub keeps only the part that is the MUST
+  -- (events-frames-taint-§1) -- a refused name costs only itself and lands on the caller's list,
+  -- once -- because the addon's own function has to survive a retired event on this arm too.
+  function NS.SafeRegisterEvent(target, event, handler, rejected)
+    local ok = pcall(target.RegisterEvent, target, event, handler)
+    if not ok and type(rejected) == "table" then
+      local seen = false
+      for i = 1, #rejected do
+        if rejected[i] == event then seen = true end
+      end
+      if not seen then rejected[#rejected + 1] = event end
+    end
+    return ok
+  end
   return
 end
 
@@ -96,6 +112,14 @@ NS.Print = printer.Print
 -- reclaim restores this one.
 NS.Util = NS.Util or {}
 NS.Util.print = NS.Print
+
+-- Every game-event registration the addon makes goes through this (events-frames-taint-§1): one
+-- refused name is appended once to the caller's list and costs only itself, instead of raising out
+-- of NS.StandUp and leaving the later registrations and Canvas:Enable unbound. Only this member is
+-- republished. PanelMaster registers no unit events and no event arrays, so Core's
+-- SafeRegisterUnitEvent and SafeRegisterEvents have no caller here and are not re-exported -- the
+-- seam's surface stays exactly what the addon calls, identically on both arms.
+NS.SafeRegisterEvent = lib.SafeRegisterEvent
 
 -- DELIBERATELY NOT ADOPTED: Core's skin half (`SKIN`, `ApplySkin`). PanelMaster has exactly one
 -- standalone window — the debug console — and that window is LibKa0s-DebugLog-1.0's to draw, so it

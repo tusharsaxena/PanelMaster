@@ -236,6 +236,12 @@ The render pipeline these drive, and the combat gating around unlock and the opt
 **The first three are registered by `NS.StandUp` and unregistered by `NS.StandDown`, not by
 `OnEnable`** — see the next section. `PLAYER_LOGIN` is the exception, because it is setup.
 
+**Every registration is pcalled through Core** (`events-frames-taint-§1`): all four go through
+`NS.SafeRegisterEvent` (`core/CoreSetup.lua`), so a name the client refuses is appended once to
+`NS.State.rejectedEvents` and costs only itself; the other registrations, `Canvas:Enable()` and the
+repaint still happen. The rejected list is surfaced as the last line of `/pm debug dump`
+([debug.md](debug.md)). `NS.StandDown` keeps its bare `UnregisterEvent` calls.
+
 ## The disabled state is total (`slash-commands-§7`)
 
 **Disabled means the addon is not running.** Not hidden, not quiet, not skipping a repaint. Until

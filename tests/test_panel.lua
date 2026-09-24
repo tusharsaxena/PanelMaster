@@ -73,6 +73,7 @@ test("Panel.Register: the retry is SUBSCRIBED before PLAYER_LOGIN fires (F-013)"
   -- OnEnable is dead on arrival. OnInitialize runs at ADDON_LOADED, strictly before PLAYER_LOGIN,
   -- which is the bootstrap shape options-ui-§1 sanctions. The mock stores whatever handler it is
   -- given, so only the source can show which lifecycle hook made the call.
+  -- The call goes through Core's pcalled helper (events-frames-taint-§1), so that is the form scanned.
   -- CR-stripped: this repo is CRLF-pinned (line-endings-§2), so a scan that anchors on "\nend\n"
   -- must not depend on the checkout's representation.
   local function slurp(path)
@@ -85,11 +86,11 @@ test("Panel.Register: the retry is SUBSCRIBED before PLAYER_LOGIN fires (F-013)"
   local src = slurp("core/PanelMaster.lua")
   local init = src:match("function addon:OnInitialize%(%)(.-)\nend\n")
   assertTrue(init ~= nil, "OnInitialize is no longer a plain function block; the scan needs updating")
-  assertTrue(init:find('RegisterEvent%("PLAYER_LOGIN"') ~= nil,
+  assertTrue(init:find('SafeRegisterEvent%(self, "PLAYER_LOGIN"') ~= nil,
     "the settings-registration retry is not subscribed from OnInitialize")
 
   local seen = 0
-  for _ in src:gmatch('RegisterEvent%("PLAYER_LOGIN"') do seen = seen + 1 end
+  for _ in src:gmatch('SafeRegisterEvent%(self, "PLAYER_LOGIN"') do seen = seen + 1 end
   assertEqual(seen, 1, "PLAYER_LOGIN is registered more than once")
 end)
 

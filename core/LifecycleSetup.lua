@@ -67,6 +67,14 @@ local addonName, NS = ...
 
 local Lifecycle = LibStub and LibStub("LibKa0s-Lifecycle-1.0", true)
 
+-- The three game events NS.StandUp registers, as { event, handler method } in registration order.
+-- NS.StandDown unregisters the same three by name.
+local STAND_UP_EVENTS = {
+  { "PLAYER_ENTERING_WORLD", "OnEnterWorld" },
+  { "PLAYER_REGEN_ENABLED",  "OnRegenEnabled" },
+  { "PLAYER_REGEN_DISABLED", "OnRegenDisabled" },
+}
+
 --- Is the addon's own master switch ON? Read from the SCHEMA, never from a flag of this file's
 --- own: `settings.enabled` is the one path the *Enable Ka0s Panel Master* checkbox, `/pm enable`
 --- and `/pm disable` all write (slash-commands-§2), and a second copy here would answer the player
@@ -124,9 +132,14 @@ end
 --- is a question about the addon's own boot rather than about the client's.
 function NS.StandUp()
   if NS.addon and NS.addon.RegisterEvent then
-    NS.addon:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnterWorld")
-    NS.addon:RegisterEvent("PLAYER_REGEN_ENABLED", "OnRegenEnabled")
-    NS.addon:RegisterEvent("PLAYER_REGEN_DISABLED", "OnRegenDisabled")
+    -- Through Core's pcalled helper (events-frames-taint-§1): a name the client refuses is recorded
+    -- in NS.State.rejectedEvents, which /pm debug dump prints, and costs only itself -- the other
+    -- registrations, Canvas:Enable and the repaint below still happen.
+    for _, reg in ipairs(STAND_UP_EVENTS) do
+      if not NS.SafeRegisterEvent(NS.addon, reg[1], reg[2], NS.State.rejectedEvents) then
+        NS.Debug("Events", "rejected %s", reg[1])
+      end
+    end
   end
   if NS.Canvas then
     NS.Canvas:Enable()

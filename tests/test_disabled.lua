@@ -629,3 +629,96 @@ test("Disabled: `/pm disable` and the checkbox are one write, and the latch is i
     assertTrue(#featureRegistrations() > 0, "/pm enable did not stand it back up")
     cleanup()
   end)
+
+-- ── Events: a refused name costs only itself (events-frames-taint-§1) ────────────
+--
+-- Every registration goes through NS.SafeRegisterEvent (core/CoreSetup.lua), which pcalls the one
+-- call and appends a refused name to NS.State.rejectedEvents. The kit's `M.__badEvents` makes the
+-- client refuse a name; `C_EventUtils.IsEventValid` answers from the same table, so the live arm is
+-- front-gated by it, and the second case below removes it so the probe-frame rung decides instead.
+
+local function wipe(t) for i = #t, 1, -1 do t[i] = nil end end
+
+local function registeredEvents()
+  local out = {}
+  for _, r in ipairs(mocks.__registrations()) do
+    if r.kind == "event" then out[r.event] = true end
+  end
+  return out
+end
+
+--- Two full stand-down/stand-up cycles through the single write seam with PLAYER_REGEN_DISABLED
+--- refused, then the assertions the finding asks for. Restores the bad-event table, the list and a
+--- clean registration set afterwards, whether the body passed or not.
+local function driveRejection(label)
+  local rejected = NS.State.rejectedEvents
+  assertTrue(type(rejected) == "table", "NS.State.rejectedEvents does not exist")
+  wipe(rejected)
+  S:Set(ENABLED, true)
+  local savedBad = mocks.__badEvents
+  mocks.__badEvents = { [COMBAT_ENTRY] = true }
+  local ok, err = pcall(function()
+    for _ = 1, 2 do
+      S:Set(ENABLED, false)
+      S:Set(ENABLED, true)
+    end
+  end)
+  mocks.__badEvents = savedBad
+  local ev = registeredEvents()
+  local list = table.concat(rejected, ",")
+  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
+  local hadCanvas = NS.Canvas.__ev ~= nil
+
+  wipe(rejected)
+  S:Set(ENABLED, false)
+  S:Set(ENABLED, true)
+
+  assertTrue(ok, label .. ": a refused event name raised out of the stand-up: " .. tostring(err))
+  assertTrue(ev.PLAYER_ENTERING_WORLD, label .. ": PLAYER_ENTERING_WORLD did not register")
+  assertTrue(ev.PLAYER_REGEN_ENABLED, label .. ": PLAYER_REGEN_ENABLED did not register")
+  assertTrue(hadCanvas, label .. ": Canvas:Enable never ran after the refused registration")
+  assertEqual(list, COMBAT_ENTRY, label .. ": the rejected list is not exactly the refused name, once")
+  assertTrue(dump:find("rejected events: 1 (" .. COMBAT_ENTRY .. ")", 1, true) ~= nil,
+    label .. ": /pm debug dump does not report the rejected name")
+end
+
+test("Events: a rejected event name is recorded and the rest still register", function()
+  -- red under: bare NS.addon:RegisterEvent in NS.StandUp -- the Set raises
+  -- 'Attempt to register unknown event "PLAYER_REGEN_DISABLED"' and Canvas:Enable never runs.
+  driveRejection("IsEventValid rung")
+end)
+
+test("Events: with no C_EventUtils the refused name is still caught and recorded", function()
+  -- An older client has no IsEventValid; the probe frame and the target's own pcall decide.
+  local saved = mocks.C_EventUtils
+  mocks.C_EventUtils = nil
+  local ok, err = pcall(driveRejection, "pcall rung")
+  mocks.C_EventUtils = saved
+  assertTrue(ok, tostring(err))
+end)
+
+test("Events: the dump says 'rejected events: 0' when nothing was refused", function()
+  wipe(NS.State.rejectedEvents)
+  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
+  assertTrue(dump:find("rejected events: 0", 1, true) ~= nil, "the dump has no rejected-events line")
+end)
+
+test("Events: the degraded Core stub's SafeRegisterEvent pcalls and records once", function()
+  -- No LibKa0s-Core: the one-rung stub in core/CoreSetup.lua is all that stands between a refused
+  -- name and a raise out of NS.StandUp.
+  local degradedNS = dofile("tests/degraded_env.lua").loadPartial({ Core = true })
+  local calls = 0
+  local target = {
+    RegisterEvent = function(_, event)
+      calls = calls + 1
+      if event == "BAD_EVENT" then error("Attempt to register unknown event \"BAD_EVENT\"") end
+    end,
+  }
+  local list = {}
+  assertTrue(degradedNS.SafeRegisterEvent(target, "GOOD_EVENT", "H", list), "a valid name was refused")
+  assertFalse(degradedNS.SafeRegisterEvent(target, "BAD_EVENT", "H", list), "a refused name answered true")
+  assertFalse(degradedNS.SafeRegisterEvent(target, "BAD_EVENT", "H", list), "a refused name answered true")
+  assertEqual(table.concat(list, ","), "BAD_EVENT", "the stub did not record the refusal exactly once")
+  assertEqual(calls, 3, "the stub did not hand every name to the target")
+  assertTrue(degradedNS.SafeRegisterEvent(target, "GOOD_EVENT", "H", nil), "a nil list broke the stub")
+end)

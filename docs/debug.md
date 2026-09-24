@@ -21,6 +21,13 @@ summary.
 renderer's views of the world side by side, including orphaned frames. A panel in the registry with
 no frame — or the reverse — is the shape of every rendering bug this addon can have.
 
+The dump ends with `rejected events: <n> (<names>)`, or `rejected events: 0` when the list is empty
+(`events-frames-taint-§1`). Every game-event registration goes through `NS.SafeRegisterEvent`
+(`core/CoreSetup.lua`, LibKa0s-Core's pcalled helper, or a one-rung pcall stub when the library is
+absent), so a name the client refuses costs only itself and is appended once to the session-only
+`NS.State.rejectedEvents`. A stand-up that meets one also logs `[Events] rejected <name>` while
+logging is on.
+
 ## Bulk copy and reset — one `[Set]` line (`debug-logging-§10`)
 
 A bulk copy or reset logs **one** `[Set]` line naming the act, its scope and how many rows it

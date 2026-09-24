@@ -60,9 +60,12 @@ function addon:OnInitialize()
   -- down would be the addon deciding, while it is off, to make the one surface a player uses to
   -- switch it back on unreachable on the load order that lost the race. It is one of exactly three
   -- registrations tests/test_disabled.lua names as the survivor set; a fourth fails that suite.
-  self:RegisterEvent("PLAYER_LOGIN", function()
+  --
+  -- Pcalled through Core like every other registration (events-frames-taint-§1): a refusal lands in
+  -- NS.State.rejectedEvents, which /pm debug dump prints, instead of raising out of OnInitialize.
+  NS.SafeRegisterEvent(self, "PLAYER_LOGIN", function()
     if NS.Panel and NS.Panel.Register then NS.Panel:Register() end
-  end)
+  end, NS.State.rejectedEvents)
 end
 
 function addon:OnEnable()
