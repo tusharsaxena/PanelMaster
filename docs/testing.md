@@ -289,7 +289,8 @@ each. That file answers *what to install*; this one answers *how to verify*.
 ```
 tests/
   _kit/              -- the SHARED kit, vendored from ../LibKa0s/testkit; never edited here
-    framework.lua    -- the case registry, the assertions and the --list renderer
+    framework.lua    -- the case registry, the runner and the --list renderer; loads asserts.lua
+    asserts.lua      -- the assertions and the surface-parity gate, installed by framework.lua
     loader.lua       -- loads each source with loadfile + setfenv over the mock env
     mock_base.lua    -- the base WoW/Ace mock every Ka0s addon starts from
   run.lua            -- a thin consumer of the kit; also the --list inventory mode
