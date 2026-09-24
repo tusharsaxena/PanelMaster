@@ -918,7 +918,7 @@ badge and any count quoted in the docs must agree with it.
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (7)
+### test_surface_parity.lua (8)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
@@ -927,6 +927,7 @@ badge and any count quoted in the docs must agree with it.
 - Parity: the Options seam's degraded surface matches the live one
 - Parity: the Schema seam's degraded surface matches the live one, on both levels
 - Parity: the Bus seam's degraded surface matches the live one
+- Parity: the Lifecycle seam's degraded surface matches the live one
 
 ### test_harness.lua (18)
 
@@ -1044,7 +1045,7 @@ badge and any count quoted in the docs must agree with it.
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 49 |
-| test_surface_parity.lua | 7 |
+| test_surface_parity.lua | 8 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
@@ -1054,4 +1055,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **920** |
+| **Total** | **921** |

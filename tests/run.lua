@@ -76,6 +76,8 @@ Kit.setSurfaceSource{
   -- The Bus seam publishes the LIBRARY TABLE (NS.BusLib), whose dot-called Catalog is the one
   -- member adopted, so its row is the library table too.
   ["LibKa0s-Bus-1.0"]      = mocks.LibStub("LibKa0s-Bus-1.0"),
+  -- The Lifecycle seam's stub mirrors the INSTANCE core/LifecycleSetup.lua builds with New.
+  ["LibKa0s-Lifecycle-1.0"] = NS.Lifecycle,
 }
 
 -- The kit's registry and assertions are MERGED into this addon's existing global test table, under

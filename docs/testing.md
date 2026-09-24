@@ -337,9 +337,10 @@ override one by one; the *Mock fidelity that is load-bearing* list below is the 
 
 ### The degradation stubs, and the gate over them
 
-Four LibKa0s seams are adopted — Core, DebugLog, Slash and Options — and each setup file carries an
-`if not lib then` branch that is what a library-less install actually runs on. A branch like that is
-a second implementation of somebody else's surface, so it drifts the moment the live half grows a
+Eight adopted LibKa0s seams carry a degradation stub — Core, DebugLog, Launcher, Slash, Options,
+Schema, Bus and Lifecycle — and each setup file carries an `if not lib then` branch that is what a
+library-less install actually runs on. A branch like that is a second implementation of somebody
+else's surface, so it drifts the moment the live half grows a
 member the addon starts calling: the live path stays green and the degraded path raises in exactly
 the install the branch exists for. That is not hypothetical — `Sl.FormatKV` was once assigned on the
 live path and not in the branch, and `/pm panel <name>` raised on it.
@@ -347,12 +348,14 @@ live path and not in the branch, and `/pm panel <name>` raised on it.
 `tests/test_surface_parity.lua` is the gate. One case per seam, each comparing the branch against the
 live surface as a **set** through `Kit.assertSurfaceParity`, and each degraded arm built by a **real
 load** with a partial `libs/` list (`tests/degraded_env.lua`) rather than by hand — hand-stubbing
-`lib = nil` inside a seam tests a branch instead of an install. Two of the four call the kit's
+`lib = nil` inside a seam tests a branch instead of an install. Five of the eight call the kit's
 **by-name** form, `assertSurfaceParity(stub, major, ignore)`, which walks only `Kit.publicMembers`
-and so drops every `__`-prefixed internal; `tests/run.lua` tells it where to look with
-`Kit.setSurfaceSource`, because both of those stubs mirror the **instance** `lib:New(descriptor)`
-returned and not the library table LibStub answers for the same name. Core and Slash stay on the
-four-argument form, and the suite's header says why for each.
+and so drops every `__`-prefixed internal: DebugLog, Options and Launcher, Bus against the library
+table, and Schema for its library half. `tests/run.lua` tells it where to look with
+`Kit.setSurfaceSource`, because the DebugLog, Options, Launcher and Lifecycle stubs mirror the
+**instance** `lib:New(descriptor)` returned and not the library table LibStub answers for the same
+name. Core, Slash and Lifecycle (and Schema's instance half) use the two-table form, and the suite's
+header says why for each.
 
 A member left out on purpose goes in that case's `ignore` list **with its reason**, because otherwise
 a deliberate omission and a bug read identically.

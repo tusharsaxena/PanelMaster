@@ -1,7 +1,7 @@
 -- tests/test_surface_parity.lua — every degradation stub carries the whole live surface.
 --
--- Seven LibKa0s seams carry a degradation stub here — Core, DebugLog, Launcher, Slash, Options,
--- Schema and Bus — each an `if not lib then` branch (Schema's is a builder function,
+-- Eight LibKa0s seams carry a degradation stub here — Core, DebugLog, Launcher, Slash, Options,
+-- Schema, Bus and Lifecycle — each an `if not lib then` branch (Schema's is a builder function,
 -- `hostSchemaStub`) whose member set is what a library-less install actually runs on. A stub
 -- is a second implementation of somebody else's surface, so it drifts the moment the live half
 -- grows a member the host starts calling: the live path stays green and the degraded path raises in
@@ -20,7 +20,7 @@
 --   * Where a member is live-only ON PURPOSE it is named in the `ignore` set with its reason,
 --     because otherwise a deliberate omission and a bug read identically.
 --
--- FIVE SEAMS CALL THE KIT'S BY-NAME FORM AND TWO DO NOT, and which is which is the thing to get
+-- FIVE SEAMS CALL THE KIT'S BY-NAME FORM AND THREE DO NOT, and which is which is the thing to get
 -- right rather than a style choice.
 --
 -- `assertSurfaceParity(stub, major, ignore)` arrived with kit 15 and was vendored by M4-01. What it
@@ -47,6 +47,10 @@
 --     `Version`), so the two halves being compared are two versions of this addon's table. Pointing
 --     the by-name form at `LibKa0s-Slash-1.0` would compare the stub against a surface it was never
 --     mirroring.
+--   * Lifecycle does not, because its stub stands in for the INSTANCE `Lifecycle:New` answers and
+--     the host holds that instance itself as NS.Lifecycle, so the two-table form compares it
+--     directly. tests/run.lua still registers it under the major's name, so a by-name call
+--     resolves the instance rather than the library table.
 
 local T = _G.PM_TEST
 local NS, mocks = T.NS, T.mocks
@@ -272,4 +276,39 @@ test("Parity: the Bus seam's degraded surface matches the live one", function()
   assertEqual(degradedNS.Registry.MSG.PANELS, NS.Registry.MSG.PANELS)
   assertEqual(degradedNS.Registry.MSG.PANEL, NS.Registry.MSG.PANEL)
   assertEqual(degradedNS.Schema.MSG.SETTINGS, NS.Schema.MSG.SETTINGS)
+end)
+
+-- ── Lifecycle ──────────────────────────────────────────────────────────────────
+
+test("Parity: the Lifecycle seam's degraded surface matches the live one", function()
+  -- core/LifecycleSetup.lua's stub is the stand-down latch itself, not a no-op, so what it must
+  -- carry is the whole instance `Lifecycle:New(descriptor)` answers. Two-table form against the
+  -- live NS.Lifecycle, as the Schema instance is compared: the instance surface is not the library
+  -- table LibStub answers for the major.
+  --
+  -- Only Lifecycle.lua comes out of the partial list. Perf.lua depends on the Lifecycle major, but
+  -- its NEEDS_LIFECYCLE floor is a silent `return` before NewLibrary, not a raise, so the load
+  -- stays whole and Perf simply does not register -- which is what a Lifecycle-less payload does in
+  -- the client too. PerfPanel.lua then finds no Perf and returns the same way.
+  local degradedNS = loadPartial({ Lifecycle = true })
+  local LC = degradedNS.Lifecycle
+  assertTrue(LC ~= nil, "the Lifecycle degradation arm is missing")
+  assertTrue(LC ~= NS.Lifecycle, "the degraded load resolved the live instance")
+  -- NO EXEMPTIONS. The two-table form walks every key of the live instance, `name` included, and
+  -- the stub carries each one, so there is no live-only member to excuse. The addon's own call
+  -- sites are
+  --   grep -rn "NS\.Lifecycle[:.]" core modules settings
+  -- (Holds, Set, Reevaluate, IsDown); the rest are answered so a future caller degrades to the
+  -- latch rather than to a raise.
+  assertSurfaceParity(NS.Lifecycle, LC, "Lifecycle stub", {})
+
+  -- The other direction, as the Slash case checks it: a stub member the live instance lacks is how
+  -- a degradation branch grows into a second lifecycle mechanism (anti-pattern #85).
+  local extra = {}
+  for name, value in pairs(LC) do
+    if type(value) == "function" and NS.Lifecycle[name] == nil then extra[#extra + 1] = name end
+  end
+  table.sort(extra)
+  assertEqual(#extra, 0, "the degraded Lifecycle surface grew members the live one lacks (" ..
+    table.concat(extra, ", ") .. ")")
 end)
