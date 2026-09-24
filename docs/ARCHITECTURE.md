@@ -31,7 +31,7 @@ File-by-file table and the seam/load-order contract in **[module-map.md](module-
 
 Two SavedVariables scopes: `defaults/Profile.lua` carries the panel registry, `nextID` and the
 settings block, all profile-scoped (every character starts on the shared "Default" profile,
-`core/Database.lua:18`); `defaults/Global.lua` declares `schemaVersion = 0` (the migration runner's floor; the runner writes
+`core/Database.lua:19`); `defaults/Global.lua` declares `schemaVersion = 0` (the migration runner's floor; the runner writes
 the real stamp) and LibDBIcon's own `minimap` table.
 `settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
 carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**

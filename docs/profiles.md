@@ -1,7 +1,7 @@
 # Profiles
 
 Panel Master stores its panels in **AceDB profiles**. Every character starts on the shared
-**"Default"** profile (`core/Database.lua:18`), so one layout follows the player to their alts until
+**"Default"** profile (`core/Database.lua:19`), so one layout follows the player to their alts until
 a character is given a profile of its own, and profile management is its own settings page. That
 makes profiles a first-class part of the addon's behavior rather than an AceDB detail.
 

@@ -9,7 +9,7 @@ end)
 
 test("Database: InitDB runs the migration runner, so the live DB comes back stamped", function()
   -- What this case is for is the INVOCATION: NS:InitDB calls NS:RunMigrations before any panel is
-  -- read (core/Database.lua:19), and the runner is the only thing that writes the stamp. Drop that
+  -- read (core/Database.lua:20), and the runner is the only thing that writes the stamp. Drop that
   -- call and an upgrading account reaches the renderer un-migrated.
   --
   -- It deliberately says nothing about the SHAPE of NS.defaults.global. Whether the stamp is absent
