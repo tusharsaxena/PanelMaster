@@ -29,57 +29,11 @@ File-by-file table and the seam/load-order contract in **[module-map.md](module-
 
 ## Settings Schema
 
-Two SavedVariables scopes: `defaults/Profile.lua` carries the panel registry, `nextID` and the
-settings block, all profile-scoped (every character starts on the shared "Default" profile,
-`core/Database.lua:19`); `defaults/Global.lua` declares `schemaVersion = 0` (the migration runner's floor; the runner writes
-the real stamp) and LibDBIcon's own `minimap` table.
-`settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
-carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
-(`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
-the array's order is the strip a player sees on the General page — `Master controls` (7),
-`Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
-through their own `get`/`set` and are never persisted, and **one** — `global.minimap.shown`, the
-*Minimap button* row — is stored but lives in `db.global` rather than `db.profile`, which is the
-only row in the schema that does (`launcher-§3`). Its path is its CLI name and reads in the row's
-own sense, so `/pm get global.minimap.shown` answers `true` while the button shows; the state is
-stored at `db.global.minimap.hide`, LibDBIcon's own key and the only stored one (`S.MINIMAP_STORE`).
-The row carries its own `get`/`set`, wired onto it by `S:InstallMaster`. They read and write the
-store from the DB root, and they NEGATE, because the row says shown while LibDBIcon's key says
-hidden. Nothing is ever written or declared at the row's path (anti-pattern #81), so
-`S:Register` skips that path and checks the store against the global defaults instead.
-
-**The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0; `docs/revendor/2026-09-23-v1.55.0/`).
-The rows are this addon's. The machinery around them is one library instance, `NS.SchemaRuntime`,
-built in `settings/Schema.lua`: the path walk, the row index, the single write seam, the bulk
-bracket (`debug-logging-§10`) and the boot shape check. The seam **keeps this addon's names**:
-`NS.Schema:Set`, `:Get`, `:FindRow`, `:Default` and `:Register`, plus `S.BulkBegin`, `S.BulkEnd`
-and `S.BulkLine`, each delegate to the instance, so no caller moved. The Options and Slash
-descriptors take the instance's members **as values** (`set = NS.SchemaRuntime.Set`, and the
-same for `get`, `applyDefault`, `findRow`, `allRows` and the bracket pair). That is safe because
-nothing sits in front of the seam: the minimap inversion is the row's own `get`/`set`, and a
-refusal belongs in a row's `validate`, which `ApplyDefault` reaches too.
-Stored rows resolve against the active profile (`resolveRoot`). The refusal texts are this addon's
-own (`unknown path: <path>`, `invalid value`), restored through the descriptor's plain-table `L`.
-`S:Register` is the instance's `Validate` with a `global.`-aware defaults root, and it counts shape
-errors as well as unresolved paths. The profile reset's row count stays host-side
-(`S:SnapshotPersisted` / `S:CountChangedSince`), as the design allows.
-
-**Without the library** the seam degrades to `hostSchemaStub`, which stands in for both the
-library's pure primitives and the instance. The stub is **write-completing and log-silent**
-(`docs/api/Schema/version-1-docs.md`, "The degradation stub"). Reads, writes, each row's `onChange`
-and the bracket's depth all work, so the host writers keep writing: `/pm set` and `/pm disable`
-where the Slash major survives, Reset All, the page Defaults sweep, and the Registry's bulk verbs.
-The stub does not reproduce the per-write `[Set]` line or the bracket's tally, and it skips the
-boot shape check silently. This is a documented duplication of a runtime write path, not of a
-rendering helper. `tests/test_surface_parity.lua` holds both of its levels to the live surface, and
-`tests/test_schema.lua` drives one degraded write per writer kind.
-
-The **first** seven are not literals in that file. `Master controls` is COMPOSED, out of
-`LibKa0s-Options-1.0`'s `MasterControls` (`options-ui-§15`), and spliced at the head of the array by
-`S:InstallMaster` — which `settings/OptionsSetup.lua` calls the moment the library instance exists,
-because that instance is what carries the composer and it is built after this file loads. A row
-carries no `widget` field: the flow engine dispatches on `type` alone, so a second field naming the
-widget was a selector with no reader.
+Two SavedVariables scopes: `defaults/Profile.lua` (the panel registry, `nextID`, the settings block;
+profile-scoped) and `defaults/Global.lua` (`schemaVersion = 0` and LibDBIcon's `minimap` table).
+`settings/Schema.lua` holds **15 rows in 3 tabs** — `Master controls` (7, composed), `Editing` (4),
+`New panels` (4) — on a `LibKa0s-Schema-1.0` runtime behind this addon's own seam names, and is the
+sole sender of `SettingsChanged`. `global.minimap.shown` is the one `db.global` row, and it inverts.
 
 **The panel registry (`architecture-§5`).** The panel set is the addon's one structural registry:
 the player creates and deletes panels at runtime, the defaults ship it empty, and no schema row
@@ -106,34 +60,15 @@ and copy, replace the store wholesale, which is not a registry write; the load p
 `NS.Registry:ReloadProfile` run after each of them. Each is logged once, by the profile handler in
 `core/Database.lua` and worded by the event (`debug-logging-§10`; `docs/debug.md`).
 
-**The fields on a panel: a ratified `architecture-§5` register row.** A panel's appearance and
-position fields (`C.PANEL_FIELD_TYPE`, less `name`, which is the registry's own label and routes to
-`Rename`) are preferences the player sets on a member, and none of them has a schema row. The field
-controls and `/pm panel <name> set` write them through `NS.Registry:Set`, which coerces, writes,
-sanitizes and sends `PanelChanged` on its own rather than through `NS.Schema:Set`. It is not the
-only writer. `:SetPosition` writes `x`/`y`, and the unlock drag-stop (`modules/Unlock.lua`) writes
-`point`/`relPoint` straight onto the live record before calling it, so a drag writes geometry.
-`:Reset`, `:CopyFrom` and `:FitToArtwork` rewrite fields and then sanitize. `:Recover` writes
-`x`/`y`, and `:ResetPositions` all four anchor fields, onto every record directly, with no
-per-record sanitize, and each sends `PanelsChanged` once if anything moved. None of these is the
-schema helper. The drag is part of the same set, not a separate case: every anchor field it writes
-(`point`, `relPoint`, `x`, `y`) is also set by the editor or `/pm`, so they are preferences.
+**The fields on a panel** have no schema rows: `NS.Registry:Set` and the whole-record verbs write
+them, under the ratified `architecture-§5` row in [`## Documented deviations`](#documented-deviations)
+([#49](https://github.com/tusharsaxena/PanelMaster/issues/49); the adopt path is
+[#54](https://github.com/tusharsaxena/PanelMaster/issues/54)).
 
-Since standard v2.43.0 a preference with no row is a missing row. The owner ruled on 2026-09-12
-([#49](https://github.com/tusharsaxena/PanelMaster/issues/49)) for a register row rather than
-instance-relative rows, because the schema helper addresses paths, not records, and
-instance-addressing every per-panel field would be the largest change in the collection for fields
-the Registry already validates and announces. The row is `architecture-§5` (the fields on a panel)
-in [`## Documented deviations`](#documented-deviations). It retires when the schema helper gains
-instance addressing for registry records (an explicit record argument on `NS.Schema:Set`). The
-record-backed bind arm in `LibKa0s-Options-1.0` is not that trigger: it changes how a control
-binds to a record, not where the write goes.
+The schema runtime, its degradation stub, the Master controls composition, the panel record and
+every field on it, and why those fields have no rows, are in **[schema.md](schema.md#the-schema-runtime)**.
 
-The panel record, every field on it, the artwork fields and the sanitizing pass are in
-**[schema.md](schema.md)**; the pages that edit them in **[settings-panel.md](settings-panel.md)**;
-profile behavior in **[profiles.md](profiles.md)**.
-
-## Message bus (`architecture-§4`)
+## Message Bus
 
 Three messages, one sender each, consumers registering on their **own** AceEvent target via
 `NS.NewBusTarget()`. CallbackHandler keys callbacks by `(message, target)`, so two consumers sharing
@@ -303,7 +238,7 @@ or a setting changed while the addon was off comes back correct.
 `tests/test_disabled.lua` is the conformance suite the standard MUSTs, asserting on the
 **registration set** rather than on any handler's return value.
 
-## Taint
+## Taint Notes
 
 There is none to speak of, and that is a design property rather than luck: the addon creates only
 non-secure frames of its own, never touches a Blizzard frame, never reparents anything, and never
@@ -328,7 +263,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 |---|---|
 | `scope.md` | What the addon draws, and what it deliberately refuses to become |
 | `module-map.md` | Every non-vendored file, what it publishes, and the load order the seams pin |
-| `schema.md` | The two SavedVariables scopes, the panel record, artwork fields, sanitizing |
+| `schema.md` | The two SavedVariables scopes, the panel record, artwork fields, sanitizing, the schema runtime and its stub |
 | `settings-panel.md` | The four canvas pages and the three AceGUI widget workarounds |
 | `data-flow.md` | Record → spec → frame, the frame ladder and pool, the leftover-sample sweep, combat, events |
 | `common-tasks.md` | Add a setting, a verb, a panel field, an artwork entry, a migration |
@@ -340,7 +275,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `slash-dispatch.md` | Present | 19 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
 | `debug.md` | Present | `D:Diagnose()` and `NS.DebugBuild` are the addon's own, beyond the library console |
-| `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message bus` |
+| `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. The one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and it is no longer this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15) owns it for the whole collection, called from `settings/OptionsSetup.lua` |
 | `compat-layer.md` | Present | 8 shims in `core/Compat.lua` (threshold is 3) |
 | `perf-analysis/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
@@ -395,55 +330,18 @@ See [`performance.md`](performance.md) for the cost argument and the committed s
 | `localization-§1` | One user-facing string routes through `NS.L`: the collection's library-absent line (`"%s is unavailable: the LibKa0s library did not load."`, `slash-commands-§1`), printed by `Sl:LibraryAbsentLine`. Everything else — every label, tooltip, other slash line and message — is still hardcoded English. | `1.0.0` ships **English-only** — the second of the two terminal compliant states `localization-§3` names, not an open routing gap. Both MUSTs are met unconditionally: the `NS.L` seam is exported with the key-returning metatable fallback (`locales/enUS.lua:6`) and `enUS.lua` ships, so a later pass wraps strings without touching call sites. Reasoned at `locales/enUS.lua:8-14`. Panel **names** are user data and must never route through `NS.L`; neither must the stored `point` / `strata` tokens (`localization-§4`). | 2026-08-05 | The first non-English locale file added to `locales/` — that change routes the strings and retires this row |
 | `architecture-§5` (the fields on a panel) | The per-panel appearance and position fields in `C.PANEL_FIELD_TYPE` (`core/Constants.lua`) are preferences the player sets on a member, and none has a schema row. That is every field except `name`, which routes to `R:Rename`: colors, the border, bar and bar-border blocks, textures, size, `strata`, `level`, `scale`, `alpha`, mouseover, `enabled`, the `art*` fields and the anchor (`point`, `relPoint`, `x`, `y`). They are written through `NS.Registry:Set` (the field controls in `settings/PanelEditor.lua` and `/pm panel <name> set`) and `:SetPosition`, and by the whole-record and bulk verbs: `R:Reset`, `R:CopyFrom`, `R:FitToArtwork` (through `R.ApplyArtSize`), `R:Recover`, `R:ResetPositions`, and the unlock-mode drag-stop in `modules/Unlock.lua`, which writes `point`/`relPoint` onto the live record and then calls `:SetPosition`. Each of these coerces, writes and notifies on its own (`PanelChanged` per record; `PanelsChanged` once for `Recover` and `ResetPositions`), none through `NS.Schema:Set`. | The schema helper addresses paths, not records: `NS.Schema:Set` writes a path under the profile, and a panel is a registry record reached by id. Instance-addressing every per-panel field would be the largest change in the collection, for fields the Registry already validates (the `C.PANEL_FIELD_TYPE` coercers plus `R.Sanitize`), logs once at the seam and announces on the bus. Owner's decision, 2026-09-12, over [#49](https://github.com/tusharsaxena/PanelMaster/issues/49); re-checked and kept on 2026-09-24, when the library had begun forwarding an instance id (Schema minor 2) but the host had not. The adopt path is [#54](https://github.com/tusharsaxena/PanelMaster/issues/54). | 2026-09-24 | `settings/Schema.lua`'s `resolveRoot` maps an instance id to a registry record **and** `NS.Schema:Set` / `:Get` forward that id. The library has forwarded `instanceId` to `resolveRoot` since Schema minor 2; the host resolver ignores it and the colon wrappers do not pass one, so the trigger is host-side. When both hold, the fields take instance-relative rows, the verbs above become callers of the helper, and this row retires ([#54](https://github.com/tusharsaxena/PanelMaster/issues/54)). |
 
-**Retired on 2026-09-12, three rows for one reason: the `options-ui-§16` border, bar and bar-border
-blocks.** Each row said a canonical group on the Panels page was typed out in
-`settings/PanelEditor.lua`, because `O.BorderGroup` and `O.BarGroup` emitted path-keyed schema rows
-and a panel is a registry record with no path, and each carried the trigger *the composer gains a
-record-backed arm*. LibKa0s v1.31.0 shipped that arm (`spec.bind`, OptionsCompose minor 4, read by
-OptionsWidgets minor 15), so the trigger fired. The three blocks are composed now, each from one
-declaration with a `bind` over the live panel record that writes through `NS.Registry:Set`
-([#48](https://github.com/tusharsaxena/PanelMaster/issues/48)). The behavior is what `§16` mandates,
-and a row for it would be the graveyard `documentation-§3` forbids. `tests/test_options_groups.lua`
-holds the new state: no hand-written block on the page, the three composer calls bound, no
-`options-ui-§16` row in this table, and a control-by-control characterization of what the composed
-blocks draw and write. The `architecture-§5` row above stays. The arm changes how a control binds to a
-record, not where the write goes, and that row's trigger is deliberately the schema helper.
+**Retired rows** (one entry each; the reasoning is in the cited issue or bundle):
 
-**Retired on 2026-09-08, three rows, three different reasons.**
-
-- **`documentation-§4` — pending work in GitHub issues rather than a root `TODO.md`.** The row's
-  Why read *"the addon is pre-release, so the rule is not yet engaged"* and its trigger read *"the
-  first published release"*. `1.0.0` shipped on 2026-08-07 (`PanelMaster.toc`, `README.md`'s
-  Version History, tag `1.0.0-release`), so the trigger fired that day. `documentation-§4` is
-  engaged now, and this addon **satisfies it outright** — there is no `TODO.md` at the root or
-  under `docs/`, and the backlog is the issue store, which is what the rule asks for. A row for
-  compliant behavior is the graveyard `documentation-§3` forbids. `PM-029`.
-
-- **`options-ui-§1` — the Master controls rows a library-less load does not get.** The row
-  argued that the stub cannot reproduce what `H.MasterControls` emits without holding a host copy
-  of the library's canonical row data, and that the copy is the thing that goes stale.
-  `options-ui-§1` now rules exactly that: when the missing content is **composed** the no-copy MUST
-  wins, a stub's composer members answer an empty row list, and *"this shape needs no register row,
-  and the rows already written for it retire"*. The ruling's three bounds hold here — `LibKa0s` is
-  vendored whole so the load that loses the composers loses the schema CLI with it, profile
-  defaults merge from `defaults/Profile.lua` and are never read off the schema, and
-  `tests/test_libka0s.lua`'s *"the schema loses the composed Master controls rows and NOTHING
-  else"* pins the live count, the degraded count and the delta between them rather than one
-  number. Nothing about the degraded load changes.
-
-- **`line-endings-§5` — the extension-less binary mark.** The row recorded a genuine collision:
-  `§4` MUSTs every binary be marked, `§5` MUSTs this file be byte-identical to the canonical body,
-  and `tools/artwork/bin/realesrgan-ncnn-vulkan` has no extension for any `*.ext` line to reach.
-  `§5` now carries an **appendix**: a delimited block below the canonical body, marks keyed by
-  path, single paths rather than globs, each with a comment saying why no extension reaches it —
-  and it says in as many words that a repo **MUST NOT** carry a register row for one, and that a
-  row predating the rule is retired by bringing the block into that shape. So the block moved: it
-  sat at `.gitattributes:67-71`, **inside** the body, which is the placement the appendix rule
-  names as the thing it forbids, because it displaces every line after it and turns a one-decision
-  diff into two. The first 81 lines are now byte-identical to the canonical client-bound body and
-  the mark is below it under `# --- line-endings-§5 appendix ---`. Verified with the section's own
-  check: `diff <(head -n 81 .gitattributes) <canonical>` is empty and
-  `tail -n +82 .gitattributes | tr -d '\r' | grep -m1 .` is the delimiter.
+- `options-ui-§16` ×3 (border, bar and bar-border blocks) — retired 2026-09-12: the composer's
+  record-backed `bind` arm shipped, so the blocks compose now
+  ([#48](https://github.com/tusharsaxena/PanelMaster/issues/48); `docs/revendor/2026-09-12-v1.31.0/`;
+  pinned by `tests/test_options_groups.lua`).
+- `documentation-§4` (no root `TODO.md`) — retired 2026-09-08: `1.0.0` shipped and the addon
+  satisfies the rule outright. PM-029 (`docs/audits/2026-09-07/`, closed in `docs/audits/2026-09-08/`).
+- `options-ui-§1` (Master controls absent on a library-less load) — retired 2026-09-08: the rule now
+  says the composed no-copy shape needs no row. Same `M5-02` pass as PM-029 (`docs/audits/2026-09-08/`).
+- `line-endings-§5` (extension-less binary mark) — retired 2026-09-08: the mark moved to the
+  `§5` appendix block below the canonical body. Same `M5-02` pass as PM-029 (`docs/audits/2026-09-08/`).
 
 ### Files over the 1500-line cap
 
@@ -478,12 +376,5 @@ mirrors that file and peels with it; and `modules/Artwork.lua` (1188) with its m
 file to reach 1000 arrives in that table with a blank `Disposition` cell, which is the file saying
 something crossed and nobody has ruled on it yet.
 
-**Retired on 2026-09-23: this repo's own band gate.** Until the LibKa0s v1.55.0 re-vendor the census
-was headed ``Files by the `layout-§1` band``, sat in a `## File sizes` section of its own below this
-register, and was read by a local `tests/test_layout_cap.lua` that gated the band as well as the cap,
-on the reasoning that with nothing over the cap an over-cap-only gate asserts nothing and the band was
-where this addon's question lived. Standard v2.64.0 settles both halves the other way: the heading's
-name and its parent under `## Documented deviations` are fixed, so a gate can find it in every repo,
-and the band gets no heading in the hub, so its dispositions are not kept in two places that can
-disagree. The local gate is deleted, the kit's is declared by the pair form in `tests/run.lua`, and
-the band rows moved to the watch list, which already carried a disposition for each of them.
+**Retired on 2026-09-23: this repo's own band gate** — the kit's `test_layout_cap.lua` took the
+cap, and the band moved to the watch list (`docs/revendor/2026-09-23-v1.55.0/`).
