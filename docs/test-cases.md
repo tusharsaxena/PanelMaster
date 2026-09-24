@@ -725,7 +725,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 
-### test_profiles.lua (23)
+### test_profiles.lua (24)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -744,6 +744,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: switching profile sanitizes the incoming records
 - Database: a profile switch drops per-panel unlocks rather than reissuing them
 - Database: the profile reload goes through Registry, keeping one sender
+- Profiles: swapping frame names across ids creates no second named frame
 - Panel: the Profiles subcategory is registered
 - Panel: Profiles registers AceDB's own options table
 - Panel: the Profiles page carries the framework contract like every other
@@ -1017,7 +1018,7 @@ badge and any count quoted in the docs must agree with it.
 | test_schema.lua | 47 |
 | test_slash.lua | 74 |
 | test_panel.lua | 62 |
-| test_profiles.lua | 23 |
+| test_profiles.lua | 24 |
 | test_launcher.lua | 23 |
 | test_disabled.lua | 15 |
 | test_sunnart.lua | 53 |
@@ -1032,4 +1033,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **898** |
+| **Total** | **899** |

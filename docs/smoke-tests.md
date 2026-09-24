@@ -768,6 +768,12 @@ rather than carried.
    profile before it drops). **Expect:** on leaving combat nothing unlocks. The queued request named
    a panel that no longer exists; the *global* `/pm unlock` request is deliberately kept and does
    still fire.
+3. Make two profiles whose panels carry **swapped names**: on profile A create `Alpha` then `Xray`
+   (ids 1 and 2); on profile B create `Xray` then `Alpha`. Switch between them five times, then
+   `/pm debug dump`. **Expect:** the `frames: N active, M pooled, 0 orphaned` line shows **no**
+   orphans, and `/framestack` over each panel names the expected `PanelMaster_Panel_<slug>`. A
+   rebuild releases every mismatched frame before any id acquires one; resolving it one id at a
+   time used to create a second frame under a name still in use, on every switch.
 
 ## 12c. Copy settings from another panel
 

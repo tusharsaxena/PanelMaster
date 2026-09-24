@@ -40,6 +40,11 @@ local Util = NS.Util
 -- is what makes the bound "one per panel the user has ever created this session" rather than the
 -- open-ended "one per name they have ever typed".
 --
+-- One frame per name also holds across a profile switch that SWAPS names between ids (profile A has
+-- id 1 = Alpha, id 2 = Xray; profile B the other way round), because Canvas:RenderAll releases every
+-- mismatched frame before any id acquires one: by the time id 1 asks for Xray's name, id 2 has
+-- already handed that frame back to the pool.
+--
 -- The alternative (anonymous pooled frames plus `_G` aliases) keeps a flat pool but hands out frames
 -- whose `GetName()` is nil, which breaks every consumer that expects a real named frame.
 local pool = {}      -- globalName → a released frame, ready to be reused under that same name
@@ -812,6 +817,10 @@ function Canvas:Render(id, inCombat)
   -- it alone, so a renamed panel keeps its frame and everything anchored to it stays attached. What
   -- is left is the genuine mismatch — an id whose record was replaced under it (a profile switch
   -- lands a different panel on the same id) — where swapping really is the right answer.
+  --
+  -- This is now the FALLBACK, for the per-id MSG_PANEL path. A full rebuild never reaches it with a
+  -- mismatch: RenderAll releases every mismatched frame first (releaseMismatched), which is what keeps
+  -- a profile switch that SWAPS names between ids from creating a second frame under one name.
   if f and f.__frameName ~= spec.frameName then
     release(f)
     active[id] = nil
@@ -835,18 +844,36 @@ end
 -- Rebuild the whole set: render every record, and retire any frame whose record no longer exists.
 -- The structural path — a create, a delete, a rename or a master-switch flip. `inCombat` is optional
 -- and handed to every Render unchanged (nil means "read it").
-function Canvas:RenderAll(inCombat)
-  local seen = {}
-  for _, rec in ipairs(NS.Registry:All()) do
-    seen[rec.id] = true
-    Canvas:Render(rec.id, inCombat)
-  end
+--
+-- TWO PASSES, and the order is the point. Every frame that will not survive -- a retired id, or an id
+-- whose record now wants a different frame name -- goes back to the pool BEFORE any id acquires one.
+-- Resolving it one id at a time, as Render's own mismatch branch does, breaks when a profile switch
+-- swaps names between ids: id 1 asks for the name still held by active[2], finds the pool empty, and
+-- CreateFrame's a second frame under that global name, orphaning one on every switch.
+local want = {}   -- panel id → the frame name its record wants; scratch, wiped on every call
+
+-- Release every active frame whose id is gone or wants another name. Reads `want`, which the caller
+-- has just filled; deleting the current key from `active` inside pairs() is legal in Lua.
+local function releaseMismatched()
   for id, f in pairs(active) do
-    if not seen[id] then
+    if want[id] ~= f.__frameName then
       release(f)
       active[id] = nil
     end
   end
+end
+
+-- Refill `want` from the live record list in place, so a rebuild allocates nothing.
+local function fillWant(records)
+  for id in pairs(want) do want[id] = nil end
+  for _, rec in ipairs(records) do want[rec.id] = NS.Registry.FrameName(rec) end
+end
+
+function Canvas:RenderAll(inCombat)
+  local records = NS.Registry:All()
+  fillWant(records)
+  releaseMismatched()
+  for _, rec in ipairs(records) do Canvas:Render(rec.id, inCombat) end
   NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
 end
 

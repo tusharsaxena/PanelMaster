@@ -227,6 +227,64 @@ test("Database: the profile reload goes through Registry, keeping one sender", f
     "the profile callbacks do not delegate to the registry")
 end)
 
+test("Profiles: swapping frame names across ids creates no second named frame", function()
+  -- Panel ids are per profile, so two profiles can hand the same pair of frame names to the same
+  -- pair of ids the other way round. Canvas:RenderAll used to resolve that one id at a time: id 1
+  -- wanted the name still held by active[2], found nothing in the pool, and CreateFrame'd a second
+  -- frame under that global name -- orphaning one frame on every switch (WoW never collects a frame).
+  --
+  -- The mock AceDB models ONE live profile table, so the two named profiles are kept here and
+  -- swapped in exactly the way __switchProfile does: replace db.profile, then fire OnProfileChanged.
+  -- `globals` stands in for the client's _G: every CreateFrame given a name rebinds it, last wins.
+  fresh()
+  local db = NS.db
+  local created, globals = 0, {}
+  local realCreate = T.mocks.CreateFrame
+  T.mocks.CreateFrame = function(kind, name, ...)
+    local f = realCreate(kind, name, ...)
+    if name ~= nil then created = created + 1; globals[name] = f end
+    return f
+  end
+  local function switchTo(profile, key)
+    db.profile = profile
+    db.__fire("OnProfileChanged", db, key)
+  end
+
+  local ok, err = pcall(function()
+    T.mocks.__switchProfile("Swap P1")
+    local a, x = R:New("SwapAlpha"), R:New("SwapXray")
+    assertEqual(a.id, 1)
+    assertEqual(x.id, 2)
+    local p1 = db.profile
+    local p2 = NS.Util.DeepCopy(p1)
+    local r1, r2 = p2.panels[1], p2.panels[2]
+    r1.name, r2.name = r2.name, r1.name
+    r1.frameName, r2.frameName = r2.frameName, r1.frameName
+
+    switchTo(p2, "Swap P2")   -- the first render of the swapped layout: the baseline
+    created = 0
+    local pooled = Canvas.PooledCount()
+    local profiles = { p1, p2 }
+    for i = 1, 6 do
+      local want = profiles[(i - 1) % 2 + 1]
+      switchTo(want, "Swap P" .. ((i - 1) % 2 + 1))
+      for _, rec in ipairs(want.panels) do
+        local name = R.FrameName(rec)
+        assertTrue(globals[name] ~= nil and globals[name] == Canvas:FrameFor(rec.id),
+          ("switch %d: %s does not name panel %d's frame"):format(i, name, rec.id))
+      end
+      assertTrue(Canvas.PooledCount() <= pooled,
+        ("switch %d: the pool grew to %d"):format(i, Canvas.PooledCount()))
+    end
+    assertEqual(created, 0, "a profile swap created a second frame under a name already in use")
+  end)
+
+  T.mocks.CreateFrame = realCreate
+  T.mocks.__switchProfile("Mock - Realm")
+  fresh()
+  if not ok then error(err, 0) end
+end)
+
 -- ── The Profiles settings page ──────────────────────────────────────────────────
 
 test("Panel: the Profiles subcategory is registered", function()
