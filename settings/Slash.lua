@@ -276,7 +276,7 @@ end
 -- with the settings-CLI notice) on the one load it most needs to survive. With the row present each
 -- of these is LITERALLY the `CliSet` it always was, byte for byte.
 
---- The collection's library-absent line (slash-commands-§1), with the verb as the player typed it.
+--- The collection's library-absent line (slash-commands-§1, standard v2.65.0), verb as typed.
 --- The one string this addon routes through NS.L (locales/enUS.lua says why).
 function Sl:LibraryAbsentLine(verb)
   return NS.L["%s is unavailable: the LibKa0s library did not load."]:format(verb)
