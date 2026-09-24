@@ -216,3 +216,9 @@ half-screen: the offset is measured from `relPoint`, so a `LEFT`-anchored panel 
 `RIGHT`-anchored one `-w…0`, and only a `CENTER`-anchored one `-w/2…+w/2` (the vertical axis the same
 way, keyed on `TOP`/`BOTTOM`). Applying the CENTER range to all nine points is what used to drag a
 perfectly visible `TOPLEFT` panel inward.
+
+The range is also measured in the panel's **own scaled units**, not `UIParent`'s: the renderer calls
+`SetScale` before `SetPoint`, so a stored offset is in units of the effective scale `s` (the panel's
+own scale times the Master scale) and the screen spans `w / s` by `h / s` of them. `Util.EffectiveScale`
+is the one definition both the renderer and `Registry:Recover` read, so at `s = 0.5` a visible panel
+is no longer dragged inward and at `s = 2` a genuinely lost one is no longer left where it is.

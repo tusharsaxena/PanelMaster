@@ -332,6 +332,39 @@ test("Registry.Recover: pulls an off-screen panel back into view", function()
   assertEqual(moved.y, -540)   -- half of its 1080 height
 end)
 
+-- The offsets a panel stores are in its OWN scaled units: applySpec calls SetScale before SetPoint,
+-- and the scale it sets is the per-panel scale times the master one (Util.EffectiveScale). So the
+-- screen spans w / s of those units, not w — bounding against the raw screen width moved visible
+-- panels at s < 1 and left genuinely lost ones in place at s > 1 (PanelMaster-R-04).
+local function withMasterScale(v, fn)
+  local settings = NS.db.profile.settings
+  local was = settings.scale
+  settings.scale = v
+  local ok, err = pcall(fn)
+  settings.scale = was
+  if not ok then error(err, 0) end
+end
+
+test("Registry.Recover: at an effective scale of 0.5 a visible TOPLEFT panel at 1.5 x screen width is left alone", function()
+  fresh()
+  local w = NS.Compat.GetScreenSize()
+  withMasterScale(1, function()
+    R:New("Half", { point = "TOPLEFT", relPoint = "TOPLEFT", scale = 0.5, x = 1.5 * w, y = -300 })
+    assertEqual(R:Recover(), 0, "a panel on screen in its own scaled units was moved")
+  end)
+end)
+
+test("Registry.Recover: at an effective scale of 2 a panel at 0.75 x screen width is off-screen and is moved", function()
+  fresh()
+  local w = NS.Compat.GetScreenSize()
+  withMasterScale(2, function()
+    local rec = R:New("Double", { point = "TOPLEFT", relPoint = "TOPLEFT", scale = 1, x = 0.75 * w, y = -100 })
+    assertEqual(R:Recover(), 1, "a panel beyond the screen edge in its own scaled units was left in place")
+    assertEqual(R:Get(rec.id).x, w / 2)   -- a LEFT anchor runs 0..w/s
+    assertEqual(R:Get(rec.id).y, -100)
+  end)
+end)
+
 test("Registry: the panel messages have exactly one sender", function()
   -- architecture-§4: one sender per bus message. Asserted against the sources because a second
   -- sender is added by a well-meaning edit in another file and is invisible until two consumers

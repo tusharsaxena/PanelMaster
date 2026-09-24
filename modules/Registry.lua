@@ -873,6 +873,13 @@ local function offsetRangeY(point, extent)
   return -extent / 2, extent / 2
 end
 
+-- The addon-wide settings the effective scale reads its master multiplier from. Kept out of
+-- R:Recover so the sweep's own branching stays about anchors and bounds.
+local function currentSettings()
+  local db = NS.db
+  return db and db.profile and db.profile.settings or {}
+end
+
 function R:Recover()
   local w, h = NS.Compat.GetScreenSize()
   if not w then return 0 end   -- cannot measure the screen: do nothing rather than guess
@@ -881,6 +888,11 @@ function R:Recover()
   -- taken from `relPoint` — the point on UIParent the offset is measured FROM, i.e. where on the
   -- screen the panel's origin sits — not from `point`, which only says which corner of the panel
   -- lands there.
+  --
+  -- The offsets are in the panel's OWN scaled units, not UIParent's: applySpec calls SetScale before
+  -- SetPoint (modules/Canvas.lua), so at an effective scale `s` the screen spans w / s by h / s of
+  -- them. Util.EffectiveScale is the same definition the renderer drew the panel with.
+  local settings = currentSettings()
   local moved, rows = 0, 0
   for _, rec in ipairs(R:All()) do
     -- Guarded the way the renderer guards it (Canvas.BuildSpec): Sanitize runs per write and on a
@@ -889,8 +901,9 @@ function R:Recover()
     -- loop, leaving the panels already visited rewritten in the DB with no broadcast and no
     -- repaint — a half-applied recover is worse than none.
     local relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
-    local minX, maxX = offsetRange(relPoint, w)
-    local minY, maxY = offsetRangeY(relPoint, h)
+    local s = Util.EffectiveScale(rec, settings)
+    local minX, maxX = offsetRange(relPoint, w / s)
+    local minY, maxY = offsetRangeY(relPoint, h / s)
     local x = Util.Clamp(rec.x, minX, maxX, 0)
     local y = Util.Clamp(rec.y, minY, maxY, 0)
     if x ~= rec.x or y ~= rec.y then

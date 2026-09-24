@@ -79,16 +79,6 @@ function Canvas.VisibilityShows(mode, inCombat)
   return true   -- "always", and anything a hand-edited file put there that is not one of the four
 end
 
--- The master scale. Guarded rather than clamped to a range restated here: the canonical bounds are
--- the composer's, the schema's validate refuses anything outside them at the write seam, and a
--- second copy of the numbers in this file is the copy that goes stale (options-ui-§8's reasoning).
--- What the renderer needs is only that it never multiplies a size by nil, a string or zero.
-local function masterScale(settings)
-  local v = tonumber(settings.scale)
-  if not v or v <= 0 then return 1 end
-  return v
-end
-
 -- The master opacity. 0..1 is not a library constant, it is what alpha IS, so it is clamped here.
 local function masterAlpha(settings)
   return Util.Clamp(settings.alpha, 0, 1, 1)
@@ -109,9 +99,9 @@ local function addGeometry(spec, rec, settings)
   --
   -- Multiplied by the addon-wide master scale, and multiplied rather than replaced for the same
   -- reason it is not folded into width/height: the per-panel scale is what the player set for THIS
-  -- panel and the master one moves all of them together.
-  spec.scale    = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale)
-                  * masterScale(settings)
+  -- panel and the master one moves all of them together. Util.EffectiveScale is the one definition,
+  -- shared with `/pm recover`, which bounds the offsets in these same scaled units.
+  spec.scale    = Util.EffectiveScale(rec, settings)
   spec.point    = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point
   spec.relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
   spec.x        = tonumber(rec.x) or 0

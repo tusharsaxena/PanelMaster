@@ -654,6 +654,12 @@ worth doing in full after any change to the icon or the seam.
 3. `/pm recover` again → **Expect:** "every panel is already on screen".
 4. Confirm recovery did **not** run by itself at login: park a panel half off-screen deliberately,
    `/reload`, and expect it to still be where you put it.
+5. Recover bounds offsets in the panel's **scaled** units (own scale x Master scale). Set Master
+   scale to 0.5, drag a panel into the far right half of the screen, then `/pm recover` →
+   **Expect:** "every panel is already on screen"; the panel does not move.
+6. Set Master scale to 2 and `/pm panel <name> x 1500` on a TOPLEFT-anchored panel (off-screen
+   once scaled), then `/pm recover` → **Expect:** "moved 1 panel back on screen" and it comes
+   back into view. Put Master scale back to 1 afterwards.
 
 ## 11. Debug console
 

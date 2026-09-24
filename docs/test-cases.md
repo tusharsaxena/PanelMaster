@@ -6,12 +6,13 @@ badge and any count quoted in the docs must agree with it.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (31)
+### test_util.lua (32)
 
 - Util.DeepEqual: compares plain data by value, nested tables included
 - Util.CountChanged: counts keys written, added or removed, and not keys left alone
 - Util.SplitPath: splits a dotted path
 - Util.SplitPath: a single segment is one part
+- Util.EffectiveScale: the own scale clamped to the panel bounds, times the master scale
 - Util.Clamp: passes a value already in range
 - Util.Clamp: clamps below and above
 - Util.Clamp: a non-number falls back, then to the low bound
@@ -99,7 +100,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (43)
+### test_registry.lua (45)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -138,6 +139,8 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Recover: survives a record whose anchor is missing or junk (F-006)
 - Registry.Recover: leaves on-screen panels alone
 - Registry.Recover: pulls an off-screen panel back into view
+- Registry.Recover: at an effective scale of 0.5 a visible TOPLEFT panel at 1.5 x screen width is left alone
+- Registry.Recover: at an effective scale of 2 a panel at 0.75 x screen width is off-screen and is moved
 - Registry: the panel messages have exactly one sender
 - Registry.New: a panel really lands on the documented defaults, not just the template
 - Registry.Reset: puts position and scale back to the defaults too
@@ -998,12 +1001,12 @@ badge and any count quoted in the docs must agree with it.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 31 |
+| test_util.lua | 32 |
 | test_compat.lua | 14 |
 | test_constants.lua | 19 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 43 |
+| test_registry.lua | 45 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 21 |
 | test_media.lua | 84 |
@@ -1029,4 +1032,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **895** |
+| **Total** | **898** |
