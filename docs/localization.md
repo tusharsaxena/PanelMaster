@@ -12,11 +12,14 @@ translation always matches another key's — so a translator never does the same
 **English-only remains the shipped scope, and `locales/enUS.lua` carries one key.** Almost every
 label, tooltip and message is hardcoded English — a scope decision rather than an oversight, and
 precisely what made the US-English sweep cheap, since there were no keys to move alongside the
-strings. The one key is the collection's **library-absent line**, `"%s is unavailable: the LibKa0s
-library did not load."`, which `slash-commands-§1` routes through the host's locale:
-`Sl:LibraryAbsentLine` (`settings/Slash.lua`) formats it with the verb as typed, for `/pm lock` and
-`/pm unlock` whenever the composed Lock frame row is absent. A later pass can wrap them (`NS.L["Show names while unlocked"]`) without touching call
-sites, because the seam and its key-returning metatable are already here.
+strings. A later pass can wrap those labels (`NS.L["Show names while unlocked"]`) without touching
+call sites, because the seam and its key-returning metatable are already here.
+
+The one key is the collection's **library-absent line**, `"%s is unavailable: the LibKa0s library
+did not load."`, which `slash-commands-§1` routes through the host's locale. `Sl:LibraryAbsentLine`
+(`settings/Slash.lua`) formats it with the verb as typed: `/pm lock` and `/pm unlock` print it
+whenever the composed Lock frame row is absent, and `/pm enable` and `/pm disable` print it if even
+their write-through is refused.
 
 **The one key that used to be here is gone, and its absence is the entry.** The **disabled-verb
 refusal** (`settings/Slash.lua`) was declared in `locales/enUS.lua` in this addon's own wording.
