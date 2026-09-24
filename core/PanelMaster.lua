@@ -113,15 +113,22 @@ end
 -- frames mid-pull is a UX hazard rather than a taint one. Unlock refuses during combat and is
 -- replayed here, which is the events-frames-taint-§2 deferred-write shape (and NOT the options-panel
 -- case, which refuses outright and never replays — options-ui-§2).
+--
+-- The pending unlock is resumed FIRST, then the combat repaint runs with `false` passed explicitly:
+-- the event is the truth of the transition, so the render does not re-ask a combat API about it.
 function addon:OnRegenEnabled()
   if NS.Unlock and NS.Unlock.ResumePending then NS.Unlock:ResumePending() end
-  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
+  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat(false) end
 end
 
 -- Leaving combat has a second job above; entering it has only this one. Both go through
 -- RenderForCombat, which repaints only when the general-visibility setting is one of the two that
 -- actually depend on the combat state — so the overwhelmingly common "Always" costs one table read
 -- per pull rather than a repaint of every panel.
+--
+-- `true` is passed EXPLICITLY because PLAYER_REGEN_DISABLED fires before lockdown begins and before
+-- the combat flag can be relied on, so a render that re-read the state here drew the out-of-combat
+-- look for the whole fight (events-frames-taint-§2: transitions ride the REGEN events).
 function addon:OnRegenDisabled()
-  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
+  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat(true) end
 end

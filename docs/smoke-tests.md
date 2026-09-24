@@ -500,6 +500,11 @@ worth doing in full after any change to the icon or the seam.
    category in the sidebar raises no Lua error and the window stays open; exactly **one** gray chat
    notice per combat, however many clicks. Leave combat → **Expect:** the cover lifts and the page is
    live and shows current values.
+8. Set **General visibility** to **Only in combat**. **Expect:** panels hidden out of combat. Pull
+   a training dummy → **Expect:** they appear on the first swing, not at some later repaint. Leave
+   combat → **Expect:** they hide again.
+9. Set it to **Only out of combat** and repeat. **Expect:** the reverse — panels vanish on the pull
+   and come back when combat ends. Set it back to **Always** afterwards.
 
 ## 9. Options panel
 

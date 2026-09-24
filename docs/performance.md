@@ -138,8 +138,8 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 |---|---|---|---|
 | `core/PanelMaster.lua:51` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
 | `core/PanelMaster.lua:72` | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
-| `core/PanelMaster.lua:73` | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat()` | fires on **leaving** combat, by definition |
-| `core/PanelMaster.lua:76` | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat()` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
+| `core/PanelMaster.lua:73` | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
+| `core/PanelMaster.lua:76` | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
 
 ### `C_Timer` — 0 hits
 

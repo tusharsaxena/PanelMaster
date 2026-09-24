@@ -777,7 +777,10 @@ end
 
 -- Repaint one panel by id. Cheap and targeted: the drag path and every single-field edit come
 -- through here, so moving a panel does not touch the other twenty-nine.
-function Canvas:Render(id)
+--
+-- `inCombat` is optional. A combat transition passes the truth its event carries (see
+-- RenderForCombat); every other caller omits it and the state is read through NS.Compat.InCombat.
+function Canvas:Render(id, inCombat)
   local rec = NS.Registry:Get(id)
   if not rec then
     -- The record is gone: retire its frame rather than leaving it on screen. This is what makes a
@@ -785,7 +788,8 @@ function Canvas:Render(id)
     if active[id] then release(active[id]); active[id] = nil end
     return nil
   end
-  local spec = Canvas.BuildSpec(rec, currentSettings(), NS.Compat.InCombat())
+  if inCombat == nil then inCombat = NS.Compat.InCombat() end
+  local spec = Canvas.BuildSpec(rec, currentSettings(), inCombat)
   -- THE STAND-DOWN RUNG (slash-commands-§7). Hiding while the addon is stood down is enforced HERE,
   -- inside the one show decision every frame passes through, rather than by an imperative sweep of
   -- Hide() from core/LifecycleSetup.lua -- because a hidden frame comes back. A combat transition, a
@@ -839,12 +843,13 @@ function Canvas:Render(id)
 end
 
 -- Rebuild the whole set: render every record, and retire any frame whose record no longer exists.
--- The structural path — a create, a delete, a rename or a master-switch flip.
-function Canvas:RenderAll()
+-- The structural path — a create, a delete, a rename or a master-switch flip. `inCombat` is optional
+-- and handed to every Render unchanged (nil means "read it").
+function Canvas:RenderAll(inCombat)
   local seen = {}
   for _, rec in ipairs(NS.Registry:All()) do
     seen[rec.id] = true
-    Canvas:Render(rec.id)
+    Canvas:Render(rec.id, inCombat)
   end
   for id, f in pairs(active) do
     if not seen[id] then
@@ -861,10 +866,13 @@ end
 --
 -- Returns whether it repainted, which is the part a headless test can see: the alternative is a
 -- case that asserts on frame state and passes for the wrong reason when nothing was drawn at all.
-function Canvas:RenderForCombat()
+--
+-- `inCombat` is the transition's own truth, passed by the REGEN handlers (core/PanelMaster.lua):
+-- at PLAYER_REGEN_DISABLED no combat API reliably reads true yet, so the event is the answer.
+function Canvas:RenderForCombat(inCombat)
   local mode = currentSettings().visibility
   if mode ~= "inCombat" and mode ~= "outOfCombat" then return false end
-  Canvas:RenderAll()
+  Canvas:RenderAll(inCombat)
   return true
 end
 

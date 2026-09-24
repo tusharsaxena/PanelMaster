@@ -40,7 +40,7 @@ badge and any count quoted in the docs must agree with it.
 - NS.Print: prepends the cyan [PM] tag
 - NS.Print survived the AceConsole embed (architecture-§2)
 
-### test_compat.lua (11)
+### test_compat.lua (14)
 
 - Compat.GetScreenSize: returns the UIParent dimensions
 - Compat.GetUIScale: defaults to 1 when the frame cannot answer
@@ -52,6 +52,9 @@ badge and any count quoted in the docs must agree with it.
 - Compat.RegisterMedia: reports failure without LibSharedMedia rather than erroring
 - Compat: the class-color lookup is the library's, not a private copy here
 - Compat.MouseIsOver: answers without the frame taking mouse input
+- Compat.InCombat follows UnitAffectingCombat, not lockdown
+- Compat.InCombat falls back to InCombatLockdown when UnitAffectingCombat is absent
+- Compat.InCombat answers false when neither combat API exists
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
 ### test_constants.lua (19)
@@ -142,7 +145,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
 
-### test_canvas.lua (36)
+### test_canvas.lua (37)
 
 - Canvas.BuildSpec: carries the record's geometry through
 - Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
@@ -180,6 +183,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas.BuildSpec: master alpha fades the panel AND its mouseover floor
 - Canvas.RenderForCombat: repaints only for the two settings that depend on combat
 - Canvas: leaving and entering combat both reach the renderer
+- Canvas: an Only-in-combat panel appears at the combat-start event, not a repaint later
 
 ### test_unlock.lua (21)
 
@@ -995,12 +999,12 @@ badge and any count quoted in the docs must agree with it.
 | Suite | Cases |
 |-------|------:|
 | test_util.lua | 31 |
-| test_compat.lua | 11 |
+| test_compat.lua | 14 |
 | test_constants.lua | 19 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
 | test_registry.lua | 43 |
-| test_canvas.lua | 36 |
+| test_canvas.lua | 37 |
 | test_unlock.lua | 21 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
@@ -1025,4 +1029,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **891** |
+| **Total** | **895** |

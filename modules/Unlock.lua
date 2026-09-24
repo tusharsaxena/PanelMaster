@@ -229,6 +229,9 @@ end
 -- Locking is never deferred — it only ever makes the UI quieter, and refusing to lock during combat
 -- would be the one case where the gate made things worse. Nothing bypasses the gate: the CLI, the
 -- schema switch and Toggle all come through here.
+--
+-- It asks InCombatLockdown, NOT NS.Compat.InCombat (the combat flag): an unlock is a lockdown
+-- question, not a display one.
 function U:SetUnlocked(on)
   on = not not on
   if on and InCombatLockdown and InCombatLockdown() then

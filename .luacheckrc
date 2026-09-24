@@ -30,7 +30,7 @@ exclude_files = { "libs/", "docs/audits/", "docs/reviews/", "_dev/", "tests/_kit
 read_globals = {
   -- Core Lua/WoW globals
   "_G", "LibStub", "CreateFrame", "GetTime", "time", "date", "unpack",
-  "GetLocale", "C_Timer", "hooksecurefunc", "InCombatLockdown", "PlaySound",
+  "GetLocale", "C_Timer", "hooksecurefunc", "InCombatLockdown", "UnitAffectingCombat", "PlaySound",
   "C_AddOns", "GetAddOnMetadata", "GetNumAddOns", "GetAddOnInfo", "strtrim",
   -- Class color (the classFile token and the palette every UI addon agrees on) and the
   -- cursor test the mouseover fade polls with.
