@@ -455,6 +455,11 @@ worth doing in full after any change to the icon or the seam.
    same state → **Expect:** the settings page opens exactly as it does when enabled, because the
    ruling narrows the slash surface and a mouse click is not a slash command (`launcher-§2`,
    `slash-commands-§7`). `/pm enable` when done.
+4c. **Hover** the button → **Expect:** the library's status tooltip (`launcher-§1`, standard v2.66.0):
+   `Ka0s Panel Master  v<the TOC version>`, `Enabled: Yes` (green), `Locked: Yes`, `Left-click:
+   Unlock frame`, `Right-click: Open settings`, and **no** `Test mode` line. Unlock, hover again →
+   `Locked: No` (red) and `Left-click: Lock frame`. `/pm disable`, hover → the tooltip **still
+   shows**, with `Enabled: No` (red) and `Left-click: disabled — /pm enable`. `/pm enable` when done.
 5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
    where you left it.
 6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move

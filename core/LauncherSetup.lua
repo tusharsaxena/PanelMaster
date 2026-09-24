@@ -94,35 +94,56 @@ end
 --- LOCKED, so toggling it is a plain negation of what the row reads back.
 ---
 --- REFUSED WHILE THE ADDON IS DISABLED (launcher-§2, slash-commands-§7), on one line and with no
---- other effect. This rung drives a PREVIEW SWITCH -- unlocking is this addon's preview -- and a
---- preview of panels that are not drawn is not a coherent request. The refusal is placed before the
---- write and not after it, which is the whole of the rule: the audit's live example is a minimap
---- button with no disabled gate at all, writing the stored tree of an addon the player switched off,
---- and a click is a game event in every sense that matters.
+--- other effect -- but NOT HERE. Since Launcher minor 3 the descriptor below passes `isEnabled` and
+--- `disabledLine`, because that is what makes the status tooltip's `Enabled:` line true, and the
+--- library's own gate then refuses the left click before this function is ever called (Launcher
+--- minor 2's `leftAction`). A second copy of the gate in here would be dead code that could only
+--- drift from the first. The refusal still sits before the write, which is the whole of the rule:
+--- the audit's live example is a minimap button with no disabled gate at all, writing the stored
+--- tree of an addon the player switched off.
 ---
 --- RUNG (c)'s CARVE-OUT DOES NOT REACH THIS ADDON, and it is worth saying so rather than leaving it
 --- to be re-derived: a rung-(c) left-click opens the settings panel, which §7 lists among the things
 --- that SURVIVE, so refusing it would decline one button for doing exactly what the right button
 --- beside it is required to keep doing. This addon is on rung (b) (the standard's own `ADDONS.md`
 --- records it), its left button drives a feature, and so it is refused. RIGHT-click is untouched in
---- either state -- `openSettings` above carries no gate, deliberately, because §7 nominates that
---- click as one of the two routes to the panel and a mouse click is not a slash command.
----
---- The line is the DISPATCHER'S (`Sl:DisabledLine()`), not a second copy worded here: the refusal is
---- one shape collection-wide, and eleven addons each spelling it slightly differently is the drift
---- the shared printer exists to end. Guarded on the forwarder existing so a client with no LibKa0s
---- at all -- where this file is already the stub above -- cannot raise inside a button click.
+--- either state -- the library never gates it, deliberately, because §7 nominates that click as one
+--- of the two routes to the panel and a mouse click is not a slash command.
 local function toggleLock()
   if not NS.Schema then return end
-  -- The MASTER SWITCH, not `NS.Lifecycle:IsDown()`. The latch answers "is the addon stood down for
-  -- any reason", which a `perf` hold also makes true; launcher-§2's refusal is about the DISABLED
-  -- state specifically, and the line it prints names `/pm enable`, which would be the wrong advice
-  -- to a player mid-capture. Same question the slash gate asks, through the same seam.
-  if NS.IsAddonEnabled and not NS.IsAddonEnabled() then
-    if NS.Slash and NS.Slash.DisabledLine then NS.Print(NS.Slash:DisabledLine()) end
-    return
-  end
   NS.Schema:Set("state.locked", not NS.Schema:Get("state.locked"))
+end
+
+--- Whether the addon is enabled: the MASTER SWITCH, not `NS.Lifecycle:IsDown()`. The latch answers
+--- "is the addon stood down for any reason", which a `perf` hold also makes true; launcher-§2's
+--- refusal and the tooltip's `Enabled:` line are both about the DISABLED state specifically, and the
+--- line the refusal prints names `/pm enable`, which would be the wrong advice to a player
+--- mid-capture. Same question the slash gate asks, through the same seam.
+local function isEnabled()
+  if NS.IsAddonEnabled then return NS.IsAddonEnabled() end
+  return true
+end
+
+--- The line a refused left click prints, and the one the tooltip's disabled hint reads `/pm enable`
+--- out of. The DISPATCHER'S (`Sl:DisabledLine()`), not a second copy worded here: the refusal is one
+--- shape collection-wide. Guarded on the forwarder existing, and a non-string answer prints nothing.
+local function disabledLine()
+  if NS.Slash and NS.Slash.DisabledLine then return NS.Slash:DisabledLine() end
+  return nil
+end
+
+--- Whether the panels are locked: the SAME accessor the Master-controls *Lock frame* row reads
+--- (`state.locked` through the write seam), so the tooltip and the checkbox cannot disagree.
+local function isLocked()
+  return NS.Schema and NS.Schema:Get("state.locked") and true or false
+end
+
+--- What rung (b)'s left click is about to do, asked on every show: `Unlock frame` while locked,
+--- `Lock frame` while unlocked. Named after the Master-controls row it drives. Through NS.L, the
+--- addon's locale seam, with English as the key.
+local function leftClickLabel()
+  local loc = NS.L or {}
+  return isLocked() and loc["Unlock frame"] or loc["Lock frame"]
 end
 
 local lib = LibStub and LibStub("LibKa0s-Launcher-1.0", true)
@@ -205,18 +226,33 @@ NS.Launcher = lib:New({
   -- THE RUNG. Its presence is the whole declaration: rung (c) passes nothing here, and passing
   -- `openSettings` would make a skipped rule look like a choice.
   onClick      = toggleLock,
+  -- The left click's disabled gate (Launcher minor 2), and the tooltip's `Enabled:` line (minor 3).
+  isEnabled    = isEnabled,
+  disabledLine = disabledLine,
+
+  -- ── THE STATUS TOOLTIP (launcher-§1, standard v2.66.0; Launcher minor 3) ──────
+  --
+  -- The library draws all of it -- title, Enabled, Locked, the click hints -- on every hover and
+  -- while the addon is disabled; these fields only answer its questions, each read on every show.
+  -- The version is the TOC's `## Version`, through the same seam `/pm version` reads.
+  version        = function() return NS.Version() end,
+  isLocked       = isLocked,
+  leftClickLabel = leftClickLabel,
 
   print = function(line) NS.Print(line) end,
   debug = function(tag, fmt, ...) NS.Debug(tag, fmt, ...) end,
 
   -- DELIBERATELY NOT PASSED:
   --
-  --   onTooltipShow — this addon has nothing to say on hover that the button does not already say
-  --                by being there. A tooltip listing the click actions would restate launcher-§2's
-  --                fixed ladder, which is the same in all eleven addons, and a per-addon copy of a
-  --                collection-wide rule is the copy that goes stale.
-  --   L          — this addon translates nothing (locales/enUS.lua ships English-only by an explicit
-  --                1.0.0 scope decision), so there is no override to pass. Passing NS.L would be the
+  --   isTestMode — this addon HAS no test mode: unlocking is its preview, and settings/Schema.lua
+  --                passes the composer no `testModePath`. A `Test mode:` line would report a state
+  --                that does not exist.
+  --   onTooltipShow — this addon has no line of its own to add. The title, the status lines and
+  --                the click hints are the library's, and a host that drew any of them again would
+  --                draw a second copy (anti-pattern #89).
+  --   L          — this addon overrides none of the library's `lib.STRINGS` (locales/enUS.lua ships
+  --                English-only by an explicit 1.0.0 scope decision; its one tooltip string of its
+  --                own, `leftClickLabel`, goes through NS.L above). Passing NS.L here would be the
   --                `L` trap: its metatable answers every key with the key itself. The library reads
   --                this table with rawget, so that trap could not fire here — but the field would
   --                still be a claim to override strings this addon has no words of its own for.

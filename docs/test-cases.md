@@ -760,7 +760,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
-### test_launcher.lua (25)
+### test_launcher.lua (32)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
 - Launcher: the object is type 'launcher' and wears the addon's own icon
@@ -770,6 +770,13 @@ badge and any count quoted in the docs must agree with it.
 - Launcher: the left click drives the SAME state the Lock frame checkbox drives
 - Launcher: the left click goes through the write seam, so it is traced once
 - Launcher: the left click respects the unlock's combat deferral
+- Launcher tooltip: enabled and locked, the whole block in the library's order
+- Launcher tooltip: the version is the TOC's, through the addon's own version seam
+- Launcher tooltip: Locked and the left-click hint are read on EVERY show
+- Launcher tooltip: the status values are green for Yes and red for No
+- Launcher tooltip: no Test mode line, and nothing of the addon's own
+- Launcher tooltip: it still shows while DISABLED, and the left hint names /pm enable
+- Launcher: the disabled left click is refused by the LIBRARY's gate, once
 - Launcher: RIGHT-click opens the settings panel
 - Launcher: RIGHT-click does not touch the lock, and LEFT-click does not open the panel
 - Minimap row: it is a STORED row in the canonical position, not a session flag
@@ -1041,7 +1048,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
-| test_launcher.lua | 25 |
+| test_launcher.lua | 32 |
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 49 |
@@ -1055,4 +1062,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **921** |
+| **Total** | **928** |

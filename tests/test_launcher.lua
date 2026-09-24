@@ -174,6 +174,136 @@ test("Launcher: the left click respects the unlock's combat deferral", function(
   NS.Unlock:SetUnlocked(false)
 end)
 
+-- ── the status tooltip (launcher-§1, standard v2.66.0; Launcher minor 3) ───────
+--
+-- The library draws the whole tooltip; this addon only answers its questions through the
+-- descriptor: `version` (the TOC's ## Version), `isEnabled` (the master switch), `isLocked` (the
+-- Lock frame row) and `leftClickLabel` (what rung (b)'s left click is about to do). It passes no
+-- `isTestMode`, because it has no test mode, and no `onTooltipShow`, because it has no line of its
+-- own. So the tooltip is read here THROUGH THE OBJECT'S OnTooltipShow, exactly as LibDBIcon calls it
+-- on hover, into a recording stand-in for GameTooltip.
+
+--- Hover the ONE object, and answer every line it drew, raw (escapes kept).
+local function hover()
+  local object = NS.Launcher:Object()
+  assertTrue(object ~= nil, "there is no broker object to hover")
+  assertEqual(type(object.OnTooltipShow), "function", "the object has no OnTooltipShow")
+  local lines = {}
+  local tt = { AddLine = function(_, text) lines[#lines + 1] = text end }
+  object.OnTooltipShow(tt)
+  return lines
+end
+
+--- The same lines with every color escape stripped, which is what the player reads.
+local function plain(lines)
+  local out = {}
+  for i, line in ipairs(lines) do
+    out[i] = (line:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+  end
+  return out
+end
+
+--- The TOC's ## Version as the metadata API answers it (the fixture's "1.2.3-toc",
+--- tests/wow_mock.lua), never the addon's fallback constant.
+local function tocVersion()
+  return mocks.C_AddOns.GetAddOnMetadata(NAME, "Version")
+end
+
+local ENABLED = S.ENABLED_PATH
+
+test("Launcher tooltip: enabled and locked, the whole block in the library's order", function()
+  NS.Unlock:SetUnlocked(false)
+  S:Set("state.locked", true)
+  assertEqual(table.concat(plain(hover()), "\n"), table.concat({
+    "Ka0s Panel Master  v" .. tocVersion(),
+    "Enabled: Yes",
+    "Locked: Yes",
+    "Left-click: Unlock frame",
+    "Right-click: Open settings",
+  }, "\n"), "the tooltip is not the M5 shape for this addon")
+end)
+
+test("Launcher tooltip: the version is the TOC's, through the addon's own version seam", function()
+  -- `version` is NS.Version (core/EnvSetup.lua), which prefers the TOC's ## Version -- the same
+  -- answer `/pm version` gives -- so the tooltip and the CLI cannot name two builds.
+  local v = tocVersion()
+  assertTrue(v ~= nil and v ~= "", "the TOC carries no ## Version")
+  assertTrue(v ~= NS.version, "the fixture cannot tell the TOC from the fallback constant")
+  assertEqual(plain(hover())[1], NS.BRAND .. "  v" .. v,
+    "the tooltip's version is not the TOC's")
+end)
+
+test("Launcher tooltip: Locked and the left-click hint are read on EVERY show", function()
+  -- Never cached: unlock between two hovers and the second one says so, and says the left button
+  -- now LOCKS. The hint names the act, which flips with the state.
+  NS.Unlock:SetUnlocked(false)
+  S:Set("state.locked", true)
+  local first = plain(hover())
+  S:Set("state.locked", false)
+  local second = plain(hover())
+  S:Set("state.locked", true)
+  assertEqual(first[3], "Locked: Yes")
+  assertEqual(first[4], "Left-click: Unlock frame")
+  assertEqual(second[3], "Locked: No", "the tooltip cached the lock state")
+  assertEqual(second[4], "Left-click: Lock frame", "the hint did not follow the lock")
+  NS.Unlock:SetUnlocked(false)
+end)
+
+test("Launcher tooltip: the status values are green for Yes and red for No", function()
+  NS.Unlock:SetUnlocked(false)
+  S:Set("state.locked", false)
+  local raw = hover()
+  S:Set("state.locked", true)
+  assertTrue(raw[2]:find("|cFF00FF00Yes|r", 1, true) ~= nil, "Enabled: Yes is not green: " .. raw[2])
+  assertTrue(raw[3]:find("|cFFFF0000No|r", 1, true) ~= nil, "Locked: No is not red: " .. raw[3])
+  NS.Unlock:SetUnlocked(false)
+end)
+
+test("Launcher tooltip: no Test mode line, and nothing of the addon's own", function()
+  -- This addon has no test mode (unlocking is its preview; settings/Schema.lua passes the composer
+  -- no testModePath), so a `Test mode:` line would report a state that does not exist. And it passes
+  -- no onTooltipShow, so no title, status or hint is drawn a second time (anti-pattern #89).
+  local lines = plain(hover())
+  assertEqual(#lines, 5, "the tooltip drew " .. #lines .. " lines, not five")
+  for _, line in ipairs(lines) do
+    assertFalse(line:find("Test mode", 1, true) ~= nil, "a Test mode line was drawn")
+  end
+end)
+
+test("Launcher tooltip: it still shows while DISABLED, and the left hint names /pm enable", function()
+  -- The owner's M5 ruling: the button always answers a hover, disabled included, which is when a
+  -- player most needs to ask. Rung (b)'s left click is refused while disabled, so its hint says so
+  -- and points at the command; right-click is unchanged, because it never stops opening the panel.
+  NS.Unlock:SetUnlocked(false)
+  S:Set("state.locked", true)
+  S:Set(ENABLED, false)
+  local lines = plain(hover())
+  S:Set(ENABLED, true)
+  assertEqual(table.concat(lines, "\n"), table.concat({
+    "Ka0s Panel Master  v" .. tocVersion(),
+    "Enabled: No",
+    "Locked: Yes",
+    "Left-click: disabled \226\128\148 /pm enable",
+    "Right-click: Open settings",
+  }, "\n"), "the disabled tooltip is not the M5 shape")
+end)
+
+test("Launcher: the disabled left click is refused by the LIBRARY's gate, once", function()
+  -- isEnabled / disabledLine are on the descriptor, which is what makes the tooltip's Enabled line
+  -- true; the library's gate is then the one refusal, and it prints the dispatcher's own line
+  -- exactly once through NS.Print.
+  NS.Unlock:SetUnlocked(false)
+  S:Set(ENABLED, false)
+  local at = #mocks.__chat
+  click("LeftButton")
+  local n = #mocks.__chat - at
+  local last = mocks.__chat[#mocks.__chat]
+  S:Set(ENABLED, true)
+  assertEqual(n, 1, "the refused click printed " .. n .. " lines")
+  assertEqual(last, NS.PREFIX .. " " .. NS.Slash:DisabledLine())
+  assertFalse(NS.State.unlocked, "the refused click unlocked anyway")
+end)
+
 -- ── right-click always opens the settings panel (launcher-§2) ──────────────────
 
 test("Launcher: RIGHT-click opens the settings panel", function()

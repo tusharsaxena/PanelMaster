@@ -12,15 +12,24 @@ NS.L = setmetatable(NS.L or {}, { __index = function(_, k) return k end })
 -- Keys are the English source strings (localization-§2); only overrides need listing, e.g.:
 -- NS.L["Enable panels"] = "Enable panels"
 --
--- ── THE ONE STRING THAT ROUTES THROUGH THE SEAM ────────────────────────────────
+-- ── THE LIBRARY-ABSENT LINE ──────────────────────────────────────────────────
 --
 -- The collection's LIBRARY-ABSENT line: what a composed-row verb (`/pm lock`, `/pm unlock`, and
 -- `/pm enable` / `/pm disable` if even their write-through is refused) prints when the LibKa0s
 -- composer that declares its row did not load. slash-commands-§1 says it routes through the
 -- host's locale, one sentence with one placeholder -- the full verb as the player typed it -- so
--- it is the one key listed here. settings/Slash.lua's Sl:LibraryAbsentLine formats it.
+-- it is listed here. settings/Slash.lua's Sl:LibraryAbsentLine formats it.
 NS.L["%s is unavailable: the LibKa0s library did not load."] =
   "%s is unavailable: the LibKa0s library did not load."
+--
+-- ── THE LAUNCHER TOOLTIP'S LEFT-CLICK HINT ───────────────────────────────────
+--
+-- LibKa0s-Launcher-1.0 (minor 3) draws the minimap button's status tooltip, and its `Left-click:`
+-- line reads the one string that is this addon's own: what rung (b)'s left click is about to do,
+-- named after the Master-controls row it drives. core/LauncherSetup.lua's leftClickLabel reads
+-- these two keys on every hover; the rest of the tooltip is the library's `lib.STRINGS`.
+NS.L["Unlock frame"] = "Unlock frame"
+NS.L["Lock frame"] = "Lock frame"
 --
 -- ── THE ONE STRING THAT IS DELIBERATELY NOT HERE ───────────────────────────────
 --

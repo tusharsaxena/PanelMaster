@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-921%2F921_passing-green)
+![Tests](https://img.shields.io/badge/Tests-928%2F928_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -69,7 +69,8 @@ again to lock them; right-click opens the settings page. Drag it anywhere around
 and it stays there. If you would rather not have it, untick **Minimap button** under General ▸
 Master controls. It goes, and it stays gone on every character until you tick it back. The same
 button shows up as a row in Titan Panel, ElvUI's data texts or Bazooka if you run one of those, and
-clicks there do the same two things.
+clicks there do the same two things. Hover it and the tooltip tells you where things stand: the
+version, whether the addon is enabled, whether your panels are locked, and what each click will do.
 
 Every setting is readable from chat too, if you would rather type than click: `/pm list` prints
 each one with its current value, `/pm get settings.gridSize` answers for one, and
@@ -86,7 +87,8 @@ still opens the settings page, and `help`, `version`, `config`, `debug` and the 
 above still answer and still write, because reading and repairing your settings is what you are
 most likely to want while the addon is off. Only the verbs that make and edit panels refuse, with
 one line naming `/pm enable`. The minimap button stays too: right-click still opens the settings
-page, and left-click prints that same line instead of unlocking panels that are not drawn.
+page, left-click prints that same line instead of unlocking panels that are not drawn, and its
+tooltip says **Enabled: No** and names `/pm enable`.
 
 Everything else is configuration, and it lives in three places: the button on your minimap, the
 addon's own page under Settings ▸ AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare
