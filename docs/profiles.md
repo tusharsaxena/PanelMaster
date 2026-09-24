@@ -8,9 +8,9 @@ makes profiles a first-class part of the addon's behavior rather than an AceDB d
 ## Where profiles sit in the data model
 
 `defaults/Profile.lua` carries the profile defaults — the (empty) panel registry, `nextID`, and the
-settings block. `defaults/Global.lua` carries the one account-wide value, the `schemaVersion`
-stamp. `core/Database.lua` opens AceDB on the shared **"Default"** profile and owns the
-profile-change callbacks.
+settings block. `defaults/Global.lua` declares `schemaVersion = 0`, the migration runner's floor
+(the runner writes the real stamp), and LibDBIcon's `minimap` table. `core/Database.lua` opens
+AceDB on the shared **"Default"** profile and owns the profile-change callbacks.
 
 The split is deliberate: a panel layout is tied to a character's UI, so it belongs to a profile; the
 schema stamp describes the saved file itself, so it belongs to `global` and must not fork per

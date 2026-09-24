@@ -10,7 +10,8 @@ A row in `settings/Schema.lua` drives the widget on the **General** page, the
 path that already has a row.
 
 1. Add the shipped value to `defaults/Profile.lua`'s settings block (or `defaults/Global.lua` if it
-   describes the saved file rather than the character's UI — today only `schemaVersion` qualifies).
+   describes the saved file rather than the installation's UI — today that is `schemaVersion = 0`,
+   the migration runner's floor (the runner writes the real stamp), and LibDBIcon's `minimap` table).
 2. Add the row to `settings/Schema.lua` at the position you want it rendered. **The position is the
    layout.** `group` is the TAB it lands on (`options-ui-§13`), the array's order is the tab order,
    and consecutive rows are paired two per line — so a row filed under a group the array has already

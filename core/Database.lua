@@ -13,7 +13,8 @@ local addonName, NS = ...
 -- that has ALREADY been assigned a profile keeps it. This changes where new characters land, not
 -- where existing ones already are.
 --
--- `global` holds only the schema stamp; everything the user configures lives in `profile`.
+-- `global` holds the schemaVersion stamp and LibDBIcon's minimap table; everything the user
+-- configures lives in `profile`.
 function NS:InitDB()
   NS.db = LibStub("AceDB-3.0"):New(addonName .. "DB", NS.defaults, true)
   NS:RunMigrations()          -- normalize the persisted schema before any panel is read
@@ -78,10 +79,11 @@ end
 -- NS:RunMigrations is deliberately NOT called from here. The stamp it gates on lives in `db.global`,
 -- which is ACCOUNT-WIDE and already written by InitDB before any profile can be switched — so a
 -- second call could only ever be a no-op, and a no-op that reads as a safety net is worse than
--- none. What an incoming profile actually needs is the per-RECORD repair, and that is R.Sanitize's:
--- NS.Registry:ReloadProfile sanitizes every record it finds, which includes the same frame-name
--- backfill the v1 → v2 body performs (modules/Registry.lua:200-202). That is the path that reaches
--- a profile the account-wide stamp has already declared current.
+-- none. Nor does a switch need it: the v1 → v2 body walks EVERY profile the SavedVariables file
+-- stores, so an inactive profile was already migrated at init. What a profile that arrives LATER
+-- needs — one imported or copied in from a file this runner never saw — is the per-RECORD repair,
+-- and that is R.Sanitize's: NS.Registry:ReloadProfile sanitizes every record it finds, which
+-- includes the same frame-name backfill the v1 → v2 body performs (modules/Registry.lua:200-202).
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
@@ -122,42 +124,62 @@ function NS:RegisterProfileCallbacks()
   end)
 end
 
--- Schema-migration runner (savedvariables-§1). Reads/writes db.global.schemaVersion and ships even
--- with an effectively empty body — the *seam* is the requirement: future schema changes get a
--- single, idempotent upgrade path invoked once at init, before any read of db.profile.panels. Safe
--- no-op when the DB isn't ready yet.
+-- v1 → v2 for ONE profile: stamp each panel's frame name onto its record, and return how many rows
+-- it touched.
+--
+-- Before v2 the frame name was derived from the panel's name on every read, so a rename produced a
+-- DIFFERENT frame name — which abandoned the old frame and silently orphaned every external anchor
+-- pointed at it. Storing it makes it identity, like the id, and a rename becomes a relabel.
+--
+-- Deriving it here from the name is what makes the upgrade invisible: it reproduces exactly the name
+-- the previous build already gave that panel's frame, so nothing anchored to it moves. Guarded on
+-- the key being absent rather than rewritten unconditionally, so this is idempotent and so a record
+-- already stamped by R.Sanitize on some earlier path is left alone.
+local function stampFrameNames(profile)
+  local rows = 0
+  local panels = type(profile) == "table" and profile.panels
+  if type(panels) ~= "table" then return 0 end
+  for _, rec in ipairs(panels) do
+    if type(rec) == "table" and (type(rec.frameName) ~= "string" or rec.frameName == "") then
+      rec.frameName = NS.Util.FrameName(rec.name)
+      rows = rows + 1
+    end
+  end
+  return rows
+end
+
+-- The v1 → v2 step over EVERY profile the SavedVariables file stores, not only the active one. The
+-- stamp that gates it is account-wide, so once it is written no later run reaches an inactive
+-- profile again; a step that touched only `db.profile` would declare every other profile current
+-- without migrating it. AceDB keeps the active profile as one of `sv.profiles`' own tables, so the
+-- identity check only adds `db.profile` when it is somewhere else (a fresh, never-stored profile).
+local function stampEveryProfile(db)
+  local rows, sawActive = 0, false
+  for _, prof in pairs((db.sv and db.sv.profiles) or {}) do
+    if prof == db.profile then sawActive = true end
+    rows = rows + stampFrameNames(prof)
+  end
+  if not sawActive then rows = rows + stampFrameNames(db.profile) end
+  return rows
+end
+
+-- Schema-migration runner (savedvariables-§1). The runner OWNS the stamp: defaults/Global.lua
+-- declares `schemaVersion = 0` as the floor, an unstamped account reads that 0 and the gate opens,
+-- and the runner writes the real stamp into the SavedVariables file. Future schema changes get a
+-- single, idempotent upgrade path invoked once at init, before any read of db.profile.panels. The
+-- stamp is written only after every step has returned, so a step that raises leaves the file
+-- unstamped and the next load retries it. Safe no-op when the DB isn't ready yet.
 function NS:RunMigrations()
   local g = NS.db and NS.db.global
   if not g then return end
-  g.schemaVersion = g.schemaVersion or 1
-  if g.schemaVersion < NS.SCHEMA_VERSION then
-    local from = g.schemaVersion
-    local rows = 0
+  local from = tonumber(g.schemaVersion) or 0
+  if from >= NS.SCHEMA_VERSION then return end
 
-    -- v1 → v2: stamp each panel's frame name onto its record.
-    --
-    -- Before v2 the frame name was derived from the panel's name on every read, so a rename produced
-    -- a DIFFERENT frame name — which abandoned the old frame and silently orphaned every external
-    -- anchor pointed at it. Storing it makes it identity, like the id, and a rename becomes a
-    -- relabel.
-    --
-    -- Deriving it here from the name is what makes the upgrade invisible: it reproduces exactly the
-    -- name the previous build already gave that panel's frame, so nothing anchored to it moves.
-    -- Guarded on the key being absent rather than rewritten unconditionally, so this is idempotent
-    -- and so a record already stamped by R.Sanitize on some earlier path is left alone.
-    if from < 2 then
-      local p = NS.db.profile
-      for _, rec in ipairs((p and p.panels) or {}) do
-        if type(rec.frameName) ~= "string" or rec.frameName == "" then
-          rec.frameName = NS.Util.FrameName(rec.name)
-          rows = rows + 1
-        end
-      end
-    end
+  local rows = 0
+  if from < 2 then rows = rows + stampEveryProfile(NS.db) end
 
-    g.schemaVersion = NS.SCHEMA_VERSION
-    NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, rows))
-  end
+  g.schemaVersion = NS.SCHEMA_VERSION
+  NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, rows))
 end
 
 -- Pure migration summary for the [Migrate] debug line.
@@ -167,7 +189,7 @@ end
 
 -- Pure [Init] session summary for the SetEnabled seam (debug-logging-§5/§8): addon name + version,
 -- schema version, active profile, and panel count — e.g.
--- "PanelMaster v1.1.1, schema v1, profile 'Mock - Realm', 3 panels".
+-- "PanelMaster v1.1.1, schema v2, profile 'Mock - Realm', 3 panels".
 -- Guarded so it can't error before the DB is ready. All values are plain constants, counts or the
 -- addon's own manifest strings, so a raw tostring is secret-safe here.
 --

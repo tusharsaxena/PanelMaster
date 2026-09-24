@@ -469,7 +469,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: switching from a bar to a single piece clears the sections it no longer draws
 - Artwork composite: an anchored FIT offsets each section from the same edge
 
-### test_database.lua (21)
+### test_database.lua (24)
 
 - Database: InitDB opened both scopes
 - Database: InitDB runs the migration runner, so the live DB comes back stamped
@@ -480,7 +480,10 @@ badge and any count quoted in the docs must agree with it.
 - Database: the debug flag is NOT persisted (debug-logging-§5)
 - Database: unlock state is NOT persisted
 - Database.RunMigrations: is idempotent
+- Database: defaults declare schemaVersion 0
 - Database.RunMigrations: stamps a version onto an unstamped DB
+- Database.RunMigrations: a legacy record in a NON-active stored profile gets its frame name
+- Database.RunMigrations: the stamp lands above the declared default
 - Database.RunMigrations: upgrades an older DB to the current version
 - Database.RunMigrations: v2 stamps a frame name onto every unstamped panel
 - Database.RunMigrations: v2 leaves an already-stamped frame name alone
@@ -1025,7 +1028,7 @@ badge and any count quoted in the docs must agree with it.
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
-| test_database.lua | 21 |
+| test_database.lua | 24 |
 | test_debuglog.lua | 38 |
 | test_schema.lua | 50 |
 | test_slash.lua | 74 |
@@ -1045,4 +1048,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **911** |
+| **Total** | **914** |

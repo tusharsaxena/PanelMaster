@@ -320,9 +320,10 @@ logged once, by its own handler: `[Set] reset profile '<name>' to defaults (N ro
 
 The reload does **not** re-run migrations, and `core/Database.lua` says why: the schema stamp lives
 in `db.global`, which is account-wide and already written by `InitDB` before any switch can happen,
-so a second call could only be a no-op. What an incoming profile actually needs is the per-record
-repair, and the reload re-sanitizes every record it finds — an incoming profile may predate the
-current build, or have been copied from one that did.
+so a second call could only be a no-op — and the v1 → v2 step already walked every stored profile at
+init, the inactive ones included. What a profile arriving later needs is the per-record repair, and
+the reload re-sanitizes every record it finds — an imported profile may predate the current build,
+or have been copied from one that did.
 
 **It also drops every session table keyed by panel id, before it sanitizes or broadcasts.** Ids are
 allocated per profile (`nextID` lives in `db.profile` and a fresh profile starts at 1), so an id held
