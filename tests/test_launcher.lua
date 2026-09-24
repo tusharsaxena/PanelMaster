@@ -16,7 +16,8 @@ local S = NS.Schema
 --   * a `hide` written without the inversion turns the button off when the player turns it on, and
 --     the checkbox reads back its own wrong answer, so nothing contradicts it;
 --   * a table COPIED rather than handed to LibDBIcon reads and writes correctly on both sides
---     until the player uses the library's own right-click menu;
+--     until the next login, when LibDBIcon draws the button from ITS copy of `hide` and not the
+--     one the row wrote;
 --   * a `Register` that is not idempotent builds a second button over the first, and the two
 --     answer different clicks.
 -- None of those raises. All of them are one assertion away from being impossible.
@@ -415,7 +416,8 @@ end)
 test("Minimap row: the path reads SHOWN, and the store is LibDBIcon's own key in the GLOBAL store", function()
   -- launcher-§3 (v2.65.0) fixes all three. The path is the row's CLI name, so it is spelled in the
   -- row's own sense: `/pm get global.minimap.shown` answers true while the button shows. The STORE
-  -- is `hide`, the boolean LibDBIcon itself writes when the player uses its right-click menu, so a
+  -- is `hide`, LibDBIcon's own key -- the boolean it reads to decide whether to draw the button,
+  -- and the one the row writes through NS.Launcher:SetShown -- so a
   -- stored `shown` beside it would be a second copy of one state (anti-pattern #81). And the scope
   -- is global so that switching profiles does not move a player's buttons and options-ui-§12's
   -- profile reset does not un-hide one they hid.
@@ -472,12 +474,16 @@ end)
 
 test("Minimap row: LibDBIcon holds the very table the row writes, not a copy", function()
   -- The identity is the rule (launcher-§3). Two tables holding one boolean read correctly on both
-  -- sides until the player uses LibDBIcon's OWN right-click menu, which writes `hide` directly --
-  -- after which the checkbox reports the opposite of the button and nothing anywhere says so.
+  -- sides only while nothing but the row writes: the row (through NS.Launcher:SetShown) writes
+  -- `hide` on ITS table, LibDBIcon draws the button from the table IT holds and writes
+  -- `minimapPos` there on drag, and the moment the two tables differ the checkbox reports the
+  -- opposite of the button and nothing anywhere says so. (LibDBIcon ships no right-click menu of
+  -- its own; right-click on this button opens the Ka0s options menu, which does not write `hide`.)
   assertEqual(button().db, NS.db.global.minimap,
     "LibDBIcon was handed a copy, so its own menu writes a boolean the checkbox never reads")
 
-  -- Drive it from LibDBIcon's end, as its menu does, and read the checkbox.
+  -- Drive it from LibDBIcon's end (the mock's Show/Hide write `hide` on the table the library
+  -- holds) and read the checkbox: only a shared table carries the write across.
   mocks.LibStub("LibDBIcon-1.0"):Hide(NAME)
   assertEqual(S:Get(S.MINIMAP_PATH), false,
     "the library hid the button and the checkbox still reads ticked")

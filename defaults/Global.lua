@@ -19,8 +19,10 @@ local _, NS = ...
 -- ── THE MINIMAP TABLE IS LibDBIcon'S OWN, AND IT LIVES HERE ────────────────────
 --
 -- `minimap` below is not a settings table of this addon's design: it is the table LibDBIcon-1.0
--- itself reads and writes, handed to it whole by core/LauncherSetup.lua. The library writes `hide`
--- when the player uses its own right-click menu and `minimapPos` when they drag the button, so a
+-- itself reads and writes, handed to it whole by core/LauncherSetup.lua. The library reads `hide`
+-- to decide whether to draw the button and writes `minimapPos` when the player drags it; `hide`
+-- itself is written by the *Minimap button* row (through NS.Launcher:SetShown) and by
+-- `/pm set global.minimap.shown`. So a
 -- second key of ours beside `hide` would be a copy of one state that is free to disagree the first
 -- time either surface is used (launcher-§3, anti-pattern #81).
 --

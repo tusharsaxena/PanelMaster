@@ -170,7 +170,8 @@ S.ENABLED_PATH = "settings.enabled"
 -- TWO NAMES, ONE STATE. `S.MINIMAP_PATH` is the ROW: its schema path, and so its CLI name
 -- (slash-commands-§3). It reads in the row's own sense, SHOWN, so `/pm get global.minimap.shown`
 -- answers true while the button is on the minimap. `S.MINIMAP_STORE` is where that state LIVES:
--- LibDBIcon's own `hide` key, the one its right-click menu writes, and the ONLY stored key. Nothing
+-- LibDBIcon's own `hide` key (the library reads it to draw the button; this row writes it through
+-- NS.Launcher:SetShown), and the ONLY stored key. Nothing
 -- is ever written or declared at the row's path -- a stored `shown` beside `hide` would be a second
 -- copy of one state (anti-pattern #81) -- so the row owns its storage through its own `get`/`set`.
 --
@@ -634,7 +635,7 @@ function S:InstallMaster(H)
   })
   -- THE INVERSION (launcher-§3), on the row itself. The row's path says SHOWN; LibDBIcon's key,
   -- S.MINIMAP_STORE, says HIDDEN; these two negate, and every surface -- the checkbox,
-  -- `/pm set global.minimap.shown false`, LibDBIcon's own right-click menu -- ends up agreeing
+  -- `/pm set global.minimap.shown false`, the button LibDBIcon draws from `hide` -- ends up agreeing
   -- because there is one negation and one store. The row's own path is never written: no `shown`
   -- key ever lands beside `hide` (anti-pattern #81).
   --
