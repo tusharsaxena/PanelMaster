@@ -70,7 +70,8 @@ panel with its outline and name, so `/pm unlock` and `/pm lock` are the switch.
 `lock` and `unlock` are **reserved** and the pair is a **MAY** this addon takes (`slash-commands-§8`,
 the canonical full-pair shape). Like `enable` / `disable` they are aliases and hold no state of
 their own: both write `state.locked` through `NS.Schema:Set` — the same path and the same seam the
-Master-controls *Lock frame* checkbox and the minimap button's left click write through — so
+Master-controls *Lock frame* checkbox writes through, and the minimap button's options menu calls
+these very handlers for its *Locked* entry (and `enable` / `disable`'s for *Enabled*) — so
 `/pm unlock` is literally `/pm set state.locked false` and confirms in the shared `path = value`
 shape. The echo is read back **after** the write, which matters here: `NS.Unlock:SetUnlocked`
 defers an unlock requested in combat, so the line reports `state.locked = true` rather than claiming

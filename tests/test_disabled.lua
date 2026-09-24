@@ -450,34 +450,36 @@ test("Disabled 7b: a reserved verb this addon never registered answers the SAME 
 
 -- ── 8. the launcher ────────────────────────────────────────────────────────────
 
-test("Disabled 8: left-click is refused and writes nothing; right-click still opens the panel",
+test("Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked",
   function()
-    -- launcher-§2: this addon is on rung (b) -- unlocking IS its preview -- so the left button
-    -- drives a feature and is refused. The rung-(c) carve-out (a left click that opens the settings
-    -- panel, which §7 keeps alive) does not reach it. Right-click is unchanged in either state,
-    -- because the owner's ruling narrows the SLASH surface and a mouse click is not a slash command.
+    -- launcher-§2 as of standard v2.67.0 (Launcher minor 4): the left button opens the settings
+    -- panel in either state -- the panel is setup, and where the addon is switched back on -- so it
+    -- is not refused. The right button opens the options menu, whose Enabled entry stays live while
+    -- Locked is grayed; a grayed entry clicked anyway writes nothing (slash-commands-§7).
     seed()
+    local Menu = dofile("tests/mock_menu.lua")(mocks)
     local object = NS.Launcher:Object()
     assertTrue(object ~= nil, "there is no broker object to click")
     S:Set(ENABLED, false)
 
     local before = svFingerprint()
     local at = #mocks.__chat
+    mocks.__openedCategory = nil
     object.OnClick(object, "LeftButton")
+    assertTrue(mocks.__openedCategory ~= nil, "left-click does not open the settings panel while disabled")
+
+    object.OnClick(object, "RightButton")
+    local menu = assert(Menu.last, "right-click opened no options menu while disabled")
+    assertTrue(menu:Find("Enabled").enabled, "the Enabled entry is grayed while disabled")
+    assertFalse(menu:Find("Locked").enabled, "the Locked entry is live while disabled")
+    menu:ForceClick("Locked")
     local lines = chatSince(at)
 
     assertEqual(svFingerprint(), before,
       "a launcher click wrote SavedVariables on an addon the player switched off")
     assertEqual(#shownPanels(), 0, "a launcher click showed a frame on a disabled addon")
-    assertEqual(#lines, 1, "the refused click printed " .. #lines .. " lines, not one")
-    assertEqual(lines[1], NS.PREFIX .. " " .. Sl:DisabledLine(),
-      "the refused click did not print the collection's line")
-    assertFalse(NS.State.unlocked, "the refused click unlocked the panels anyway")
-
-    mocks.__openedCategory = nil
-    object.OnClick(object, "RightButton")
-    assertTrue(mocks.__openedCategory ~= nil,
-      "right-click no longer opens the settings panel while disabled")
+    assertEqual(#lines, 0, "the launcher printed " .. #lines .. " lines while disabled")
+    assertFalse(NS.State.unlocked, "a launcher click unlocked the panels anyway")
     cleanup()
   end)
 

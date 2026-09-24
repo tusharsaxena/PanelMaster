@@ -442,24 +442,27 @@ worth doing in full after any change to the icon or the seam.
    uncompressed 32-bit; nothing will be printed and no error raised.
 2. Open the AddOns list (Esc ▸ AddOns). **Expect:** the same logo beside **Ka0s Panel Master**. One
    file, three places.
-3. **Left-click** the button → **Expect:** panels unlock, exactly as `/pm unlock` does — outlines and
-   name labels. Left-click again → they lock. Open `/pm config` → **General ▸ Master controls** and
-   check **Lock frame** agrees with what you just did.
-4. **Right-click** the button → **Expect:** the settings page opens on its landing page, and the
-   lock does **not** move.
-4b. **While the addon is DISABLED** (`/pm disable`), **left-click** the button → **Expect:** exactly
-   one line, `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`, the panels stay
-   locked, and **nothing is written** — check **Lock frame** on the settings page is where it was.
-   This addon is on rung (b), so its left button drives a feature and is refused; the rung-(c)
-   carve-out (a left click that only opens the panel) does not apply here. **Right-click** in the
-   same state → **Expect:** the settings page opens exactly as it does when enabled, because the
-   ruling narrows the slash surface and a mouse click is not a slash command (`launcher-§2`,
-   `slash-commands-§7`). `/pm enable` when done.
-4c. **Hover** the button → **Expect:** the library's status tooltip (`launcher-§1`, standard v2.66.0):
-   `Ka0s Panel Master  v<the TOC version>`, `Enabled: Yes` (green), `Locked: Yes`, `Left-click:
-   Unlock frame`, `Right-click: Open settings`, and **no** `Test mode` line. Unlock, hover again →
-   `Locked: No` (red) and `Left-click: Lock frame`. `/pm disable`, hover → the tooltip **still
-   shows**, with `Enabled: No` (red) and `Left-click: disabled — /pm enable`. `/pm enable` when done.
+3. **Left-click** the button → **Expect:** the settings page opens on its landing page, and the
+   panels do **not** unlock (`launcher-§2`, standard v2.67.0: left-click opens settings on every
+   addon).
+4. **Right-click** the button → **Expect:** a small menu titled **Ka0s Panel Master** with exactly
+   two ticks, in this order: **Enabled** (ticked) and **Locked** (ticked while the panels are
+   locked). No *Test mode* and no *Show window* entry. Click **Locked** → **Expect:** the menu closes,
+   the panels unlock exactly as `/pm unlock` does (outlines and name labels) and chat shows the same
+   `state.locked = false` line `/pm unlock` prints. Right-click again → **Locked** is now unticked;
+   click it → they lock. Open `/pm config` → **General ▸ Master controls** and check **Lock frame**
+   agrees. In combat, clicking **Locked** on locked panels unlocks nothing until combat ends, as
+   `/pm unlock` does.
+4b. Right-click → click **Enabled** → **Expect:** the addon disables exactly as `/pm disable` does
+   (panels go, `settings.enabled = false` in chat). Right-click again → **Enabled** is unticked and
+   **Locked** is **grayed** and reads `Locked (enable the addon first)`; clicking it does nothing and
+   writes nothing. **Left-click** in this state → **Expect:** the settings page opens, no chat line.
+   Right-click → click **Enabled** → the addon comes back as with `/pm enable`.
+4c. **Hover** the button → **Expect:** the library's status tooltip (`launcher-§1`):
+   `Ka0s Panel Master  v<the TOC version>`, `Enabled: Yes` (green), `Locked: Yes`,
+   `Left-click: Open settings`, `Right-click: Options menu`, and **no** `Test mode` line. Unlock,
+   hover again → `Locked: No` (red), hints unchanged. `/pm disable`, hover → the tooltip **still
+   shows**, with `Enabled: No` (red) and the same two hints. `/pm enable` when done.
 5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
    where you left it.
 6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move
@@ -475,11 +478,11 @@ worth doing in full after any change to the icon or the seam.
 7. Untick **General ▸ Master controls ▸ Minimap button** → **Expect:** the button goes at once, not
    at the next reload. `/reload` → it stays gone. Tick it → it comes back, at the angle you dragged
    it to.
-8. Right-click the button and use **LibDBIcon's own menu** to hide it → **Expect:** the **Minimap
-   button** checkbox is now unticked. They are one setting.
+8. Right-click the button → **Expect:** the options menu has **no** hide entry; hiding the button
+   is the **Minimap button** row's job (steps 6b and 7) and `/pm set global.minimap.shown` (8b).
 8b. The CLI name reads **shown** (`launcher-§3`, standard v2.65.0). With the button visible,
    `/pm get global.minimap.shown` → **Expect:** `true`. `/pm set global.minimap.shown false` →
-   **Expect:** the button goes at once. Bring it back, hide it with LibDBIcon's right-click menu,
+   **Expect:** the button goes at once. Bring it back, hide it with the **Minimap button** checkbox,
    then `/pm get global.minimap.shown` → **Expect:** `false`. `/reload` → it stays hidden.
    `/pm get global.minimap.hide` → **Expect:** *Setting not found* — the old path is not an alias.
    **Failure:** `get` answers `true` while the button is hidden, or the old path still answers.

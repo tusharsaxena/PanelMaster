@@ -4,14 +4,14 @@ local test, assertEqual, assertTrue, assertFalse =
   T.test, T.assertEqual, T.assertTrue, T.assertFalse
 local S = NS.Schema
 
--- The launcher's own suite: the minimap button, the broker plugin, the rung and the Minimap button
--- row (launcher). The two reserved verbs the same standard version added are in
+-- The launcher's own suite: the minimap button, the broker plugin, its two clicks and options menu,
+-- its status tooltip, and the Minimap button row (launcher). The two reserved verbs the same standard version added are in
 -- tests/test_slash.lua, beside the rest of this addon's slash surface -- they are aliases onto a
 -- schema path and have nothing to do with the button.
 --
 -- WHAT ONLY THIS FILE CAN ANSWER. Every one of these surfaces is invisible to the rest of the
 -- harness, and each fails silently in the client rather than raising:
---   * a launcher wired to a SECOND copy of the lock state behaves correctly the first time and
+--   * a menu entry wired to a SECOND copy of the lock state behaves correctly the first time and
 --     drifts on the first change made from the other surface (anti-pattern #81);
 --   * a `hide` written without the inversion turns the button off when the player turns it on, and
 --     the checkbox reads back its own wrong answer, so nothing contradicts it;
@@ -22,6 +22,13 @@ local S = NS.Schema
 -- None of those raises. All of them are one assertion away from being impossible.
 
 local Env = dofile("tests/degraded_env.lua")
+
+-- The client's context-menu API (`MenuUtil`, 11.0+), faked headlessly. The file is LibKa0s's own
+-- tests/mock_menu.lua at v1.58.0, copied into this repo because the kit does not ship it (the
+-- library's CHANGELOG, "What a consumer owes on re-vendoring v1.58.0"). Installing it puts
+-- `MenuUtil` and `MenuResponse` in the mock table the loader resolves globals through, so the
+-- vendored Launcher reads it at right-click time exactly as it would in the client.
+local Menu = dofile("tests/mock_menu.lua")(mocks)
 local loadPartial, loadDegraded = Env.loadPartial, Env.loadDegraded
 
 local NAME = "PanelMaster"
@@ -112,73 +119,163 @@ test("Launcher.Register: a second call builds no second button", function()
   assertEqual(button().object, before, "LibDBIcon was re-registered with a new object")
 end)
 
--- ── the rung: (b) lock / unlock (launcher-§2) ──────────────────────────────────
+-- ── the two clicks (launcher-§2, standard v2.67.0; Launcher minor 4) ───────────
 
-test("Launcher: LEFT-click toggles the addon's lock, which is its preview", function()
-  -- Rung (b). This addon has no primary window and no test mode -- unlocking IS the preview, which
-  -- is why settings/Schema.lua passes the composer no testModePath -- so the left button spends
-  -- itself on the switch that shows every panel with its outline and its name.
+local ENABLED = S.ENABLED_PATH
+
+--- Right-click the ONE object and answer the menu it opened (the mock's record of it).
+local function openMenu()
+  Menu.install()
+  Menu.reset()
+  click("RightButton")
+  assertEqual(Menu.opens, 1, "the right click did not open the options menu")
+  return Menu.last
+end
+
+test("Launcher: LEFT-click opens the settings panel and touches nothing else", function()
+  -- The rungs are retired: the left button has one meaning on every addon. This addon's old rung (b)
+  -- toggled the lock from here; that toggle is the menu's Locked entry now.
   NS.Unlock:SetUnlocked(false)
-  assertFalse(NS.State.unlocked, "the fixture did not start locked")
-
+  Menu.reset()
+  mocks.__openedCategory = nil
   click("LeftButton")
-  assertTrue(NS.State.unlocked, "the left click did not unlock")
-
-  click("LeftButton")
-  assertFalse(NS.State.unlocked, "the left click does not toggle -- it only ever unlocks")
+  assertEqual(mocks.__openedCategory, 1, "the left click did not open the settings panel")
+  assertFalse(NS.State.unlocked, "the left click still toggles the lock")
+  assertEqual(Menu.opens, 0, "the left click opened the options menu")
 end)
 
-test("Launcher: the left click drives the SAME state the Lock frame checkbox drives", function()
-  -- The load-bearing case of the whole rung (anti-pattern #81). A launcher holding a second copy of
-  -- the lock state behaves correctly until one surface is used and then the other is read.
+test("Launcher: RIGHT-click opens the options menu, titled with the brand, and not the panel",
+  function()
+    mocks.__openedCategory = nil
+    local menu = openMenu()
+    assertEqual(mocks.__openedCategory, nil, "the right click opened the settings panel as well")
+    assertEqual(menu.titles[1], "Ka0s Panel Master", "the menu is not titled with the label")
+  end)
+
+test("Launcher menu: exactly Enabled and Locked, in that order (the ADDONS.md row)", function()
+  -- No Test mode (unlocking IS the preview) and no Show window (no primary window). The standard's
+  -- ADDONS.md records this addon's menu as "Enabled · Locked".
   NS.Unlock:SetUnlocked(false)
+  assertEqual(table.concat(openMenu():Texts(), " | "), "Enabled | Locked")
+end)
 
-  -- Click, then read the CHECKBOX. The row's sense is LOCKED, so an unlocked addon reads false.
-  click("LeftButton")
+test("Launcher menu: the checkboxes read the current state on every open", function()
+  NS.Unlock:SetUnlocked(false)
+  S:Set("state.locked", true)
+  local first = openMenu()
+  assertTrue(first:Checked("Enabled"), "Enabled reads unchecked on an enabled addon")
+  assertTrue(first:Checked("Locked"), "Locked reads unchecked while locked")
+  S:Set("state.locked", false)
+  assertFalse(openMenu():Checked("Locked"), "the menu cached the lock state across opens")
+  NS.Unlock:SetUnlocked(false)
+end)
+
+test("Launcher menu: Locked routes to /pm lock|unlock's own handler, both ways", function()
+  -- NS.Slash:CliLock is the body of both verbs; the entry must call it, handed the NEW sense, and
+  -- nothing else.
+  local Sl, real, calls = NS.Slash, NS.Slash.CliLock, {}
+  Sl.CliLock = function(self, locked)
+    calls[#calls + 1] = locked
+    return real(self, locked)
+  end
+  NS.Unlock:SetUnlocked(false)
+  openMenu():Click("Locked")
+  local unlocked = NS.State.unlocked
+  openMenu():Click("Locked")
+  Sl.CliLock = real
+  assertEqual(table.concat({ tostring(calls[1]), tostring(calls[2]) }, ","), "false,true",
+    "the Locked entry did not call CliLock(false) then CliLock(true)")
+  assertTrue(unlocked, "the first click did not unlock the panels")
+  assertFalse(NS.State.unlocked, "the second click did not lock them again")
+end)
+
+test("Launcher menu: Locked drives the SAME state the Lock frame checkbox drives", function()
+  -- The load-bearing case (anti-pattern #81): one state, reached from both ends.
+  NS.Unlock:SetUnlocked(false)
+  openMenu():Click("Locked")
   assertFalse(S:Get("state.locked"),
-    "the button unlocked the panels and the Lock frame checkbox still reads ticked")
-
-  -- Write the CHECKBOX, then read the addon. Same one state, approached from the other end.
+    "the menu unlocked the panels and the Lock frame checkbox still reads ticked")
   S:Set("state.locked", true)
   assertFalse(NS.State.unlocked, "the checkbox re-locked and the addon stayed unlocked")
-  click("LeftButton")
+  openMenu():Click("Locked")
   assertTrue(NS.State.unlocked, "the click after a checkbox write toggled from a stale copy")
   NS.Unlock:SetUnlocked(false)
 end)
 
-test("Launcher: the left click goes through the write seam, so it is traced once", function()
-  -- Every settings mutation is logged ONCE at the write seam (debug-logging-§10). A click that
-  -- reached modules/Unlock.lua directly would move the panels and leave no [Set] line at all, which
-  -- is exactly how a second write path hides.
+test("Launcher menu: Locked goes through the write seam, so it is traced once and echoed", function()
+  -- Every settings mutation is logged ONCE at the write seam (debug-logging-§10), and the verb's
+  -- body echoes the canonical `path = value` read back from the store (slash-commands-§5).
   NS.Unlock:SetUnlocked(false)
   NS.DebugLog:SetEnabled(true)
   NS.DebugLog:Clear()
-  click("LeftButton")
+  local at = #mocks.__chat
+  openMenu():Click("Locked")
   NS.DebugLog:SetEnabled(false)
   assertTrue(NS.DebugLog:FindLine("state.locked") ~= nil,
     "the click left no [Set] line -- it did not take the single write seam")
+  assertTrue(#mocks.__chat > at, "the click did not echo the verb's acknowledgment")
   NS.Unlock:SetUnlocked(false)
 end)
 
-test("Launcher: the left click respects the unlock's combat deferral", function()
-  -- Unlocking hands the player draggable frames, so modules/Unlock.lua refuses during combat and
-  -- replays on PLAYER_REGEN_ENABLED. Reaching that module through the write seam is what keeps the
-  -- click on the same rules as the checkbox; a click that called SetMovable itself would not.
+test("Launcher menu: Locked respects the unlock's combat deferral", function()
   NS.Unlock:SetUnlocked(false)
   mocks.__inCombat = true
-  click("LeftButton")
-  assertFalse(NS.State.unlocked, "the click unlocked mid-combat")
+  openMenu():Click("Locked")
+  assertFalse(NS.State.unlocked, "the menu unlocked mid-combat")
   mocks.__inCombat = false
   NS.Unlock:ResumePending()
   assertTrue(NS.State.unlocked, "the deferred unlock was never replayed")
   NS.Unlock:SetUnlocked(false)
 end)
 
+test("Launcher menu: Enabled routes to /pm enable|disable's own handler, both ways", function()
+  local Sl, real, calls = NS.Slash, NS.Slash.CliEnable, {}
+  Sl.CliEnable = function(self, on)
+    calls[#calls + 1] = on
+    return real(self, on)
+  end
+  openMenu():Click("Enabled")
+  local off = S:Get(ENABLED)
+  openMenu():Click("Enabled")
+  Sl.CliEnable = real
+  assertEqual(table.concat({ tostring(calls[1]), tostring(calls[2]) }, ","), "false,true",
+    "the Enabled entry did not call CliEnable(false) then CliEnable(true)")
+  assertFalse(off, "the first click did not disable the addon")
+  assertTrue(S:Get(ENABLED), "the second click did not re-enable it")
+end)
+
+test("Launcher menu: while DISABLED, Enabled is live and Locked is grayed and writes nothing",
+  function()
+    NS.Unlock:SetUnlocked(false)
+    S:Set(ENABLED, false)
+    local menu = openMenu()
+    local locked, enabled = menu:Find("Locked"), menu:Find("Enabled")
+    local before = S:Get("state.locked")
+    menu:ForceClick("Locked")
+    local after = S:Get("state.locked")
+    S:Set(ENABLED, true)
+    assertTrue(enabled.enabled, "the Enabled entry is grayed while disabled")
+    assertFalse(locked.enabled, "the Locked entry is live while disabled")
+    assertEqual(locked.text, "Locked (enable the addon first)")
+    assertEqual(after, before, "a grayed Locked entry wrote the lock anyway")
+    assertFalse(NS.State.unlocked, "a grayed Locked entry unlocked the panels")
+  end)
+
+test("Launcher: with no context-menu API, RIGHT-click falls back to the settings panel", function()
+  -- A client before 11.0, or one whose menu system failed to load: the library resolves MenuUtil
+  -- on every right click and opens the panel instead, which holds every toggle the menu would.
+  Menu.remove()
+  mocks.__openedCategory = nil
+  click("RightButton")
+  Menu.install()
+  assertEqual(mocks.__openedCategory, 1, "the fallback right click did not open the panel")
+end)
+
 -- ── the status tooltip (launcher-§1, standard v2.66.0; Launcher minor 3) ───────
 --
 -- The library draws the whole tooltip; this addon only answers its questions through the
--- descriptor: `version` (the TOC's ## Version), `isEnabled` (the master switch), `isLocked` (the
--- Lock frame row) and `leftClickLabel` (what rung (b)'s left click is about to do). It passes no
+-- descriptor: `version` (the TOC's ## Version), `isEnabled` (the master switch) and `isLocked` (the
+-- Lock frame row); the click hints are fixed since Launcher minor 4. It passes no
 -- `isTestMode`, because it has no test mode, and no `onTooltipShow`, because it has no line of its
 -- own. So the tooltip is read here THROUGH THE OBJECT'S OnTooltipShow, exactly as LibDBIcon calls it
 -- on hover, into a recording stand-in for GameTooltip.
@@ -209,8 +306,6 @@ local function tocVersion()
   return mocks.C_AddOns.GetAddOnMetadata(NAME, "Version")
 end
 
-local ENABLED = S.ENABLED_PATH
-
 test("Launcher tooltip: enabled and locked, the whole block in the library's order", function()
   NS.Unlock:SetUnlocked(false)
   S:Set("state.locked", true)
@@ -218,9 +313,9 @@ test("Launcher tooltip: enabled and locked, the whole block in the library's ord
     "Ka0s Panel Master  v" .. tocVersion(),
     "Enabled: Yes",
     "Locked: Yes",
-    "Left-click: Unlock frame",
-    "Right-click: Open settings",
-  }, "\n"), "the tooltip is not the M5 shape for this addon")
+    "Left-click: Open settings",
+    "Right-click: Options menu",
+  }, "\n"), "the tooltip is not the M6 shape for this addon")
 end)
 
 test("Launcher tooltip: the version is the TOC's, through the addon's own version seam", function()
@@ -233,9 +328,9 @@ test("Launcher tooltip: the version is the TOC's, through the addon's own versio
     "the tooltip's version is not the TOC's")
 end)
 
-test("Launcher tooltip: Locked and the left-click hint are read on EVERY show", function()
-  -- Never cached: unlock between two hovers and the second one says so, and says the left button
-  -- now LOCKS. The hint names the act, which flips with the state.
+test("Launcher tooltip: Locked is read on EVERY show, and the hints stay fixed", function()
+  -- Never cached: unlock between two hovers and the second one says so. The left-click hint no
+  -- longer follows the lock (Launcher minor 4): the left button always opens settings.
   NS.Unlock:SetUnlocked(false)
   S:Set("state.locked", true)
   local first = plain(hover())
@@ -243,9 +338,9 @@ test("Launcher tooltip: Locked and the left-click hint are read on EVERY show", 
   local second = plain(hover())
   S:Set("state.locked", true)
   assertEqual(first[3], "Locked: Yes")
-  assertEqual(first[4], "Left-click: Unlock frame")
+  assertEqual(first[4], "Left-click: Open settings")
   assertEqual(second[3], "Locked: No", "the tooltip cached the lock state")
-  assertEqual(second[4], "Left-click: Lock frame", "the hint did not follow the lock")
+  assertEqual(second[4], "Left-click: Open settings", "the left hint moved with the lock")
   NS.Unlock:SetUnlocked(false)
 end)
 
@@ -270,10 +365,10 @@ test("Launcher tooltip: no Test mode line, and nothing of the addon's own", func
   end
 end)
 
-test("Launcher tooltip: it still shows while DISABLED, and the left hint names /pm enable", function()
+test("Launcher tooltip: it still shows while DISABLED, with the same fixed hints", function()
   -- The owner's M5 ruling: the button always answers a hover, disabled included, which is when a
-  -- player most needs to ask. Rung (b)'s left click is refused while disabled, so its hint says so
-  -- and points at the command; right-click is unchanged, because it never stops opening the panel.
+  -- player most needs to ask. Since M6 neither click is refused while disabled -- the left opens
+  -- the panel where the addon is switched back on -- so the hints do not change.
   NS.Unlock:SetUnlocked(false)
   S:Set("state.locked", true)
   S:Set(ENABLED, false)
@@ -283,53 +378,24 @@ test("Launcher tooltip: it still shows while DISABLED, and the left hint names /
     "Ka0s Panel Master  v" .. tocVersion(),
     "Enabled: No",
     "Locked: Yes",
-    "Left-click: disabled \226\128\148 /pm enable",
-    "Right-click: Open settings",
-  }, "\n"), "the disabled tooltip is not the M5 shape")
+    "Left-click: Open settings",
+    "Right-click: Options menu",
+  }, "\n"), "the disabled tooltip is not the M6 shape")
 end)
 
-test("Launcher: the disabled left click is refused by the LIBRARY's gate, once", function()
-  -- isEnabled / disabledLine are on the descriptor, which is what makes the tooltip's Enabled line
-  -- true; the library's gate is then the one refusal, and it prints the dispatcher's own line
-  -- exactly once through NS.Print.
+test("Launcher: a DISABLED left click opens the panel, prints nothing and writes nothing", function()
+  -- Launcher minor 4 retired the disabled refusal: the settings panel is setup, not a feature.
   NS.Unlock:SetUnlocked(false)
   S:Set(ENABLED, false)
   local at = #mocks.__chat
+  mocks.__openedCategory = nil
   click("LeftButton")
   local n = #mocks.__chat - at
-  local last = mocks.__chat[#mocks.__chat]
   S:Set(ENABLED, true)
-  assertEqual(n, 1, "the refused click printed " .. n .. " lines")
-  assertEqual(last, NS.PREFIX .. " " .. NS.Slash:DisabledLine())
-  assertFalse(NS.State.unlocked, "the refused click unlocked anyway")
+  assertEqual(mocks.__openedCategory, 1, "a disabled left click did not open the settings panel")
+  assertEqual(n, 0, "a disabled left click printed " .. n .. " lines")
+  assertFalse(NS.State.unlocked, "a disabled left click unlocked the panels")
 end)
-
--- ── right-click always opens the settings panel (launcher-§2) ──────────────────
-
-test("Launcher: RIGHT-click opens the settings panel", function()
-  -- On every addon, whatever rung its left click sits on. That is what lets rungs (a) and (b) spend
-  -- the left button on something better -- the panel is never more than one click away.
-  mocks.__openedCategory = nil
-  mocks.__inCombat = false
-  click("RightButton")
-  assertEqual(mocks.__openedCategory, 1, "the right click did not open the settings panel")
-end)
-
-test("Launcher: RIGHT-click does not touch the lock, and LEFT-click does not open the panel",
-  function()
-    -- The two buttons are separate acts. A launcher whose right click also toggled, or whose left
-    -- click opened the panel, would be one button doing both jobs -- and an addon on rung (b) whose
-    -- left click opens the settings panel has skipped the rule rather than chosen a design.
-    NS.Unlock:SetUnlocked(false)
-    mocks.__openedCategory = nil
-    click("RightButton")
-    assertFalse(NS.State.unlocked, "the right click moved the lock")
-
-    mocks.__openedCategory = nil
-    click("LeftButton")
-    assertEqual(mocks.__openedCategory, nil, "the left click opened the settings panel too")
-    NS.Unlock:SetUnlocked(false)
-  end)
 
 -- ── the Minimap button row (launcher-§3) ───────────────────────────────────────
 
@@ -603,8 +669,12 @@ test("Degraded install: LibDataBroker alone gets the broker plugin and no button
   assertFalse(ns.Launcher:IsRegistered(), "it claims the button is there with no LibDBIcon")
   assertTrue(ns.Launcher:Object() ~= nil, "the broker plugin went too")
   assertEqual(m.__minimapButtons[NAME], nil, "a button was registered with no library to draw it")
-  -- The one object is still clickable from the display that does exist.
+  -- The one object is still clickable from the display that does exist. This environment carries
+  -- no MenuUtil, so the right click takes the library's fallback to the panel as well.
   local object = ns.Launcher:Object()
+  m.__openedCategory = nil
+  object.OnClick(object, "LeftButton")
+  assertEqual(m.__openedCategory, 1, "the broker row's left click does not open the panel")
   m.__openedCategory = nil
   object.OnClick(object, "RightButton")
   assertEqual(m.__openedCategory, 1, "the broker row's right click does not open the panel")

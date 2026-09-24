@@ -760,25 +760,30 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
-### test_launcher.lua (32)
+### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
 - Launcher: the object is type 'launcher' and wears the addon's own icon
 - Launcher: the label is the BRAND NAME in plain text, not the Title and not the folder
 - Launcher.Register: a second call builds no second button
-- Launcher: LEFT-click toggles the addon's lock, which is its preview
-- Launcher: the left click drives the SAME state the Lock frame checkbox drives
-- Launcher: the left click goes through the write seam, so it is traced once
-- Launcher: the left click respects the unlock's combat deferral
+- Launcher: LEFT-click opens the settings panel and touches nothing else
+- Launcher: RIGHT-click opens the options menu, titled with the brand, and not the panel
+- Launcher menu: exactly Enabled and Locked, in that order (the ADDONS.md row)
+- Launcher menu: the checkboxes read the current state on every open
+- Launcher menu: Locked routes to /pm lock|unlock's own handler, both ways
+- Launcher menu: Locked drives the SAME state the Lock frame checkbox drives
+- Launcher menu: Locked goes through the write seam, so it is traced once and echoed
+- Launcher menu: Locked respects the unlock's combat deferral
+- Launcher menu: Enabled routes to /pm enable|disable's own handler, both ways
+- Launcher menu: while DISABLED, Enabled is live and Locked is grayed and writes nothing
+- Launcher: with no context-menu API, RIGHT-click falls back to the settings panel
 - Launcher tooltip: enabled and locked, the whole block in the library's order
 - Launcher tooltip: the version is the TOC's, through the addon's own version seam
-- Launcher tooltip: Locked and the left-click hint are read on EVERY show
+- Launcher tooltip: Locked is read on EVERY show, and the hints stay fixed
 - Launcher tooltip: the status values are green for Yes and red for No
 - Launcher tooltip: no Test mode line, and nothing of the addon's own
-- Launcher tooltip: it still shows while DISABLED, and the left hint names /pm enable
-- Launcher: the disabled left click is refused by the LIBRARY's gate, once
-- Launcher: RIGHT-click opens the settings panel
-- Launcher: RIGHT-click does not touch the lock, and LEFT-click does not open the panel
+- Launcher tooltip: it still shows while DISABLED, with the same fixed hints
+- Launcher: a DISABLED left click opens the panel, prints nothing and writes nothing
 - Minimap row: it is a STORED row in the canonical position, not a session flag
 - Minimap row: the path reads SHOWN, and the store is LibDBIcon's own key in the GLOBAL store
 - Minimap row: get INVERTS, so the label and the stored key disagree on purpose
@@ -805,7 +810,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing
 - Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
 - Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
-- Disabled 8: left-click is refused and writes nothing; right-click still opens the panel
+- Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked
 - Disabled 9: re-enabling restores the registration set, from state as it is NOW
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
 - Disabled 10: releasing one hold does not resurrect an addon the other still holds down
@@ -1048,7 +1053,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
-| test_launcher.lua | 32 |
+| test_launcher.lua | 37 |
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 49 |
@@ -1062,4 +1067,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **928** |
+| **Total** | **933** |

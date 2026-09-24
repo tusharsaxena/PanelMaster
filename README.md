@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-928%2F928_passing-green)
+![Tests](https://img.shields.io/badge/Tests-933%2F933_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -64,13 +64,15 @@ until your cursor crosses it, and it still never claims the click. Every charact
 panels out of the box, so an alt that should differ wants a profile of its own, with your existing
 layout copied in as a starting point.
 
-The **minimap button** wears the addon's own logo. Left-click unlocks your panels, and click it
-again to lock them; right-click opens the settings page. Drag it anywhere around the ring you like
+The **minimap button** wears the addon's own logo. Left-click opens the settings page. Right-click
+opens a small menu with two ticks: **Enabled**, which switches the whole addon on or off, and
+**Locked**, which unlocks your panels for dragging and locks them again. Each tick does exactly what
+`/pm enable` / `/pm disable` and `/pm lock` / `/pm unlock` do. Drag the button anywhere around the ring you like
 and it stays there. If you would rather not have it, untick **Minimap button** under General ▸
 Master controls. It goes, and it stays gone on every character until you tick it back. The same
 button shows up as a row in Titan Panel, ElvUI's data texts or Bazooka if you run one of those, and
 clicks there do the same two things. Hover it and the tooltip tells you where things stand: the
-version, whether the addon is enabled, whether your panels are locked, and what each click will do.
+version, whether the addon is enabled, whether your panels are locked, and what each click does.
 
 Every setting is readable from chat too, if you would rather type than click: `/pm list` prints
 each one with its current value, `/pm get settings.gridSize` answers for one, and
@@ -86,9 +88,9 @@ it in Blizzard's own AddOns list would, without the `/reload`. The way back in s
 still opens the settings page, and `help`, `version`, `config`, `debug` and the settings commands
 above still answer and still write, because reading and repairing your settings is what you are
 most likely to want while the addon is off. Only the verbs that make and edit panels refuse, with
-one line naming `/pm enable`. The minimap button stays too: right-click still opens the settings
-page, left-click prints that same line instead of unlocking panels that are not drawn, and its
-tooltip says **Enabled: No** and names `/pm enable`.
+one line naming `/pm enable`. The minimap button stays too: left-click still opens the settings
+page, the right-click menu's **Enabled** tick turns the addon back on, **Locked** is grayed out
+with a note to enable the addon first, and the tooltip says **Enabled: No**.
 
 Everything else is configuration, and it lives in three places: the button on your minimap, the
 addon's own page under Settings ▸ AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare

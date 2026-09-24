@@ -180,7 +180,7 @@ files["settings/PanelEditor.lua"] = {
 -- The schema seam's kept names. `NS.Schema:Set`, `:Get`, `:FindRow`, `:Default`, `:ReadPath`,
 -- `:Register`, `:SnapshotPersisted` and `:CountChangedSince` are colon methods because every caller
 -- in this addon reaches them by colon -- core/LifecycleSetup.lua's switch read, core/LauncherSetup.lua's
--- lock toggle, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates
+-- lock accessor, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates
 -- to the LibKa0s-Schema-1.0 instance, whose members are dot-called and take no receiver. The
 -- receiver is the addon's own convention around the instance.
 files["settings/Schema.lua"] = {
@@ -195,4 +195,13 @@ files["settings/Schema.lua"] = {
 -- settings/Panel.lua:333, and the verbs themselves through the COMMANDS table.
 files["settings/Slash.lua"] = {
   ignore = { "212/self" },
+}
+
+-- The client's context-menu API as tests/test_launcher.lua and tests/test_disabled.lua fake it: a
+-- copy of LibKa0s v1.58.0's own tests/mock_menu.lua, kept byte for byte below its provenance
+-- header so a later copy is a clean diff. Its element and root stand-ins mirror the client's colon
+-- methods (`root:CreateTitle`, `element:SetEnabled`), whose receivers the fake has no use for, and
+-- the nested `element:*` methods therefore also shadow `root:CreateCheckbox`'s own `self`.
+files["tests/mock_menu.lua"] = {
+  ignore = { "212/self", "432/self" },
 }

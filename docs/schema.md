@@ -38,7 +38,7 @@ profile renders differently:
 
 `global.minimap` is the one stored thing here that is not this addon's own shape. It is the table
 **LibDBIcon-1.0** reads and writes, handed to it whole by `core/LauncherSetup.lua` (`launcher-§3`):
-`hide` is the boolean the library writes when the player uses its right-click menu, and
+`hide` is the boolean the *Minimap button* row writes (through `NS.Launcher:SetShown`), and
 `minimapPos` is the angle it writes when they drag the button. There is deliberately no second key
 of ours beside them — a parallel `show` would be a copy of one state, free to disagree the first
 time either surface is used.

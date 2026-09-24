@@ -296,6 +296,7 @@ tests/
   run.lua            -- a thin consumer of the kit; also the --list inventory mode
   wow_mock.lua       -- this addon's mock, EXTENDING _kit/mock_base.lua (a fresh env per run)
   degraded_env.lua   -- builds an addon env from a PARTIAL libs/ list; not a suite, not listed
+  mock_menu.lua      -- a MenuUtil stand-in, copied from LibKa0s's tests/; not a suite, not listed
   test_<module>.lua  -- one suite per module
 ```
 
