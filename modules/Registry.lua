@@ -1,4 +1,4 @@
-local _, NS = ...
+local addonName, NS = ...
 NS.Registry = NS.Registry or {}
 local R = NS.Registry
 local C = NS.Constants
@@ -16,9 +16,13 @@ local Util = NS.Util
 -- else. `PanelsChanged` means the SET changed (a panel was added, deleted or renamed) and the whole
 -- view must be rebuilt; `PanelChanged` means one panel's fields changed and only it needs
 -- repainting. Keeping them distinct is what lets a drag repaint one frame instead of all of them.
-local MSG_PANELS = "Ka0s_PanelMaster_PanelsChanged"
-local MSG_PANEL  = "Ka0s_PanelMaster_PanelChanged"
-R.MSG_PANELS, R.MSG_PANEL = MSG_PANELS, MSG_PANEL
+-- Declared through LibKa0s-Bus-1.0's Catalog (core/BusSetup.lua): a STRICT table, so a mistyped
+-- key raises at the read rather than sending nil. Receivers read R.MSG.PANELS / R.MSG.PANEL.
+local MSG = NS.BusLib.Catalog(addonName, {
+  PANELS = "Ka0s_PanelMaster_PanelsChanged",
+  PANEL  = "Ka0s_PanelMaster_PanelChanged",
+})
+R.MSG = MSG
 
 local function fire(message, ...)
   if NS.bus then NS.bus:SendMessage(message, ...) end
@@ -369,7 +373,7 @@ end
 function R:New(name, overrides)
   local rec, reason = create(name, overrides)
   if not rec then return nil, reason end
-  fire(MSG_PANELS)
+  fire(MSG.PANELS)
   return rec
 end
 
@@ -397,7 +401,7 @@ function R:Delete(key)
   if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
 
   destroy(p, rec)
-  fire(MSG_PANELS)
+  fire(MSG.PANELS)
   return true, rec.name
 end
 
@@ -431,7 +435,7 @@ function R:Reset(key)
   NS.Schema.BulkLine("reset", ("'%s'"):format(rec.name), Util.CountChanged(before, rec))
   -- A field-level change, not a structural one: the SET of panels is unchanged, so the targeted
   -- repaint is the honest message, and the settings editor refreshes its stale widgets itself.
-  fire(MSG_PANEL, rec.id)
+  fire(MSG.PANEL, rec.id)
   return true, rec.name
 end
 
@@ -469,7 +473,7 @@ function R:CopyFrom(targetKey, sourceKey)
 
   NS.Schema.BulkLine("copy", ("from '%s' to '%s'"):format(source.name, target.name),
     Util.CountChanged(before, target))   -- a bulk copy: ONE [Set] line (debug-logging-§10)
-  fire(MSG_PANEL, target.id)
+  fire(MSG.PANEL, target.id)
   return true, source.name
 end
 
@@ -520,7 +524,7 @@ end
 function R:ReloadProfile()
   dropSessionIDs()
   for _, rec in ipairs(R:All()) do R.Sanitize(rec) end
-  fire(MSG_PANELS)
+  fire(MSG.PANELS)
 end
 
 -- Remove every panel. Returns how many went, so the caller can report it.
@@ -536,7 +540,7 @@ function R:DeleteAll()
   -- wholesale rather than id by id.
   clearPanelSessionState()
   -- One trace for the whole purge (debug-logging-§8): `destroy` is never called on this path.
-  if n > 0 then NS.Debug("Panel", "deleted all %s panel(s)", n); fire(MSG_PANELS) end
+  if n > 0 then NS.Debug("Panel", "deleted all %s panel(s)", n); fire(MSG.PANELS) end
   return n
 end
 
@@ -562,7 +566,7 @@ function R:Rename(key, newName)
   local old = rec.name
   rec.name = newName
   NS.Debug("Panel", "renamed '%s' -> '%s' (frame name stays %s)", old, newName, R.FrameName(rec))
-  fire(MSG_PANELS)   -- structural: the name is how every list and dropdown labels the panel
+  fire(MSG.PANELS)   -- structural: the name is how every list and dropdown labels the panel
   return true, old
 end
 
@@ -662,7 +666,7 @@ function R:FitToArtwork(key)
 
   NS.Debug("Panel", "fit '%s' to artwork: %sx%s -> %sx%s", rec.name, tostring(beforeW),
     tostring(beforeH), tostring(rec.width), tostring(rec.height))
-  fire(MSG_PANEL, rec.id)
+  fire(MSG.PANEL, rec.id)
   return true, rec.width, rec.height
 end
 
@@ -814,7 +818,7 @@ function R:Set(key, field, value)
   -- stop, every `/pm panel set`. describeWrite is called only once past the sink's gate, so a user
   -- with logging off pays nothing for a line nobody reads, and the gate stays in one place.
   NS.DebugBuild("Panel", "'%s'.%s = %s", describeWrite, rec, field)
-  fire(MSG_PANEL, rec.id)
+  fire(MSG.PANEL, rec.id)
   return true
 end
 
@@ -826,7 +830,7 @@ function R:SetPosition(key, x, y)
   rec.x, rec.y = tonumber(x) or rec.x, tonumber(y) or rec.y
   R.Sanitize(rec)
   NS.Debug("Panel", "'%s' moved to %s, %s", rec.name, rec.x, rec.y)
-  fire(MSG_PANEL, rec.id)
+  fire(MSG.PANEL, rec.id)
   return true
 end
 
@@ -912,7 +916,7 @@ function R:Recover()
     end
   end
   NS.Schema.BulkLine("recover", "positions", rows)   -- ONE [Set] line, N the offsets changed
-  if moved > 0 then fire(MSG_PANELS) end
+  if moved > 0 then fire(MSG.PANELS) end
   return moved
 end
 
@@ -945,6 +949,6 @@ function R:ResetPositions()
     if n > 0 then moved, rows = moved + 1, rows + n end
   end
   NS.Schema.BulkLine("reset", "positions", rows)   -- ONE [Set] line, N the fields changed
-  if moved > 0 then fire(MSG_PANELS) end
+  if moved > 0 then fire(MSG.PANELS) end
   return moved
 end

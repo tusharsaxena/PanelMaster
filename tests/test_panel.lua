@@ -351,8 +351,8 @@ test("Panel: the tracking registry is emptied between rebuilds", function()
 end)
 
 -- ── The Panels page's repaint policy (F-002, F-004) ─────────────────────────────
--- The page has exactly TWO triggers: MSG_PANELS (the set of panels changed) rebuilds it once, and
--- MSG_PANEL (one panel's field changed) refreshes the open editor in place. No widget callback
+-- The page has exactly TWO triggers: MSG.PANELS (the set of panels changed) rebuilds it once, and
+-- MSG.PANEL (one panel's field changed) refreshes the open editor in place. No widget callback
 -- rebuilds the page itself — doing so released the very widget whose handler was still running.
 --
 -- The real rebuilder is installed by buildPanelsPage, which needs AceGUI widgets and so never runs
@@ -1355,7 +1355,7 @@ test("Panels page: every color declares WHOSE class it means, and all five are t
 
 -- THE PER-PANEL UNLOCK TICK FOLLOWS THE PANEL'S REAL STATE (review F-008 / PanelMaster-R-08).
 --
--- It reads NS.Unlock:IsPanelUnlocked, which is session state no MSG_PANEL describes, so it had no
+-- It reads NS.Unlock:IsPanelUnlocked, which is session state no MSG.PANEL describes, so it had no
 -- refresher: a global unlock left it unticked-but-meaningless, a global lock left it ticked, and a
 -- combat-deferred tick replayed at PLAYER_REGEN_ENABLED left it unticked on an unlocked panel. The
 -- unlock module now pokes NS.PanelEditor:RefreshUnlock at the end of every transition.

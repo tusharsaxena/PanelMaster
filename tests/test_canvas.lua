@@ -294,7 +294,7 @@ test("Canvas: OnEnable subscribes the renderer to the bus", function()
   -- repaints left were the two that called RenderAll() directly (lock/unlock and test mode). run.lua
   -- drives the real OnInitialize/OnEnable, so this asserts the addon's own wiring, not the harness's.
   assertTrue(Canvas.__ev ~= nil, "OnEnable did not subscribe the renderer")
-  for _, message in ipairs({ R.MSG_PANELS, R.MSG_PANEL, NS.Schema.MSG_SETTINGS }) do
+  for _, message in ipairs({ R.MSG.PANELS, R.MSG.PANEL, NS.Schema.MSG.SETTINGS }) do
     local targets = T.mocks.__msgRegistry[message] or {}
     assertTrue(targets[Canvas.__ev] ~= nil, "the renderer is not listening for " .. message)
   end
@@ -304,7 +304,7 @@ test("Canvas: consumers register on their own bus target (architecture-§4)", fu
   -- CallbackHandler keys callbacks by (message, target). If Canvas and the settings panel shared a
   -- target, the second registrant would silently clobber the first. Both listen to PanelsChanged, so
   -- the registry for that message must hold two distinct targets.
-  local targets = T.mocks.__msgRegistry[R.MSG_PANELS] or {}
+  local targets = T.mocks.__msgRegistry[R.MSG.PANELS] or {}
   local n = 0
   for _ in pairs(targets) do n = n + 1 end
   assertTrue(n >= 1, "nothing is listening for PanelsChanged")

@@ -1,4 +1,4 @@
-local _, NS = ...
+local addonName, NS = ...
 NS.Schema = NS.Schema or {}
 local S = NS.Schema
 local C = NS.Constants
@@ -28,11 +28,11 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 -- Sole sender (architecture-§4): every settings mutation that the renderer must react to broadcasts
 -- this one message, from this file only.
-local MSG_SETTINGS = "Ka0s_PanelMaster_SettingsChanged"
-S.MSG_SETTINGS = MSG_SETTINGS
+-- Declared through LibKa0s-Bus-1.0's Catalog (core/BusSetup.lua); receivers read S.MSG.SETTINGS.
+S.MSG = NS.BusLib.Catalog(addonName, { SETTINGS = "Ka0s_PanelMaster_SettingsChanged" })
 
 local function announce(what)
-  if NS.bus then NS.bus:SendMessage(MSG_SETTINGS, what) end
+  if NS.bus then NS.bus:SendMessage(S.MSG.SETTINGS, what) end
 end
 
 S.Schema = {

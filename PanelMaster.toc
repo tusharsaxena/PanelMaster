@@ -57,6 +57,10 @@ core\Util.lua
 # CoreSetup AFTER Namespace (NS.PREFIX) and Util (NS.Util), and BEFORE PanelMaster.lua, whose
 # AceConsole embed reclaims NS.Print from NS.Util.print. See the header of the file.
 core\CoreSetup.lua
+# The LibKa0s-Bus-1.0 seam, and its position is LOAD-BEARING: modules\Registry.lua and
+# settings\Schema.lua call NS.BusLib.Catalog at FILE LOAD, so it must load before both. It needs
+# nothing but LibStub.
+core\BusSetup.lua
 # The LibKa0s-DebugLog seam. After Constants (C.FONT_MONO) and after CoreSetup
 # (NS.LIBKA0S_MISSING). Everything else it touches is reached through a closure, so the console no
 # longer has to sit down in modules/ the way modules/DebugLog.lua did.

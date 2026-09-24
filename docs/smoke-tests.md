@@ -1141,7 +1141,7 @@ client those names carry umlauts and accents, and two seams treat those bytes as
   **`Ärger` and `Örger` both slug to `rger`**. That slug is not cosmetic: it is the addon's public
   contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
   to.
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:278-285`) and the Panels list's
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-289`) and the Panels list's
   sort (`settings/PanelEditor.lua:263`) both use `string.lower`, which folds ASCII and nothing else.
   `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
 

@@ -326,7 +326,7 @@ end
 -- path beside it.
 --
 -- There WAS a second of these, P:RefreshPanels, doing the same for the Panels page's editor. It is
--- gone: its one caller was settings/PanelEditor.lua's MSG_PANEL handler, which now calls the
+-- gone: its one caller was settings/PanelEditor.lua's MSG.PANEL handler, which now calls the
 -- library's O.RefreshPanel(ctx, false) instead — same refresher run, but the shown/hidden decision
 -- and the dirty flag belong to the library rather than being hand-rolled here. Nothing else ever
 -- called it.

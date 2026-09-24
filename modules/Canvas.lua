@@ -818,7 +818,7 @@ function Canvas:Render(id, inCombat)
   -- is left is the genuine mismatch — an id whose record was replaced under it (a profile switch
   -- lands a different panel on the same id) — where swapping really is the right answer.
   --
-  -- This is now the FALLBACK, for the per-id MSG_PANEL path. A full rebuild never reaches it with a
+  -- This is now the FALLBACK, for the per-id MSG.PANEL path. A full rebuild never reaches it with a
   -- mismatch: RenderAll releases every mismatched frame first (releaseMismatched), which is what keeps
   -- a profile switch that SWAPS names between ids from creating a second frame under one name.
   if f and f.__frameName ~= spec.frameName then
@@ -914,9 +914,9 @@ function Canvas:Enable()
   local ev = NS.NewBusTarget()
   if not ev then return end
   Canvas.__ev = ev
-  ev:RegisterMessage(NS.Registry.MSG_PANELS, function() Canvas:RenderAll() end)
-  ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id) Canvas:Render(id) end)
-  ev:RegisterMessage(NS.Schema.MSG_SETTINGS, function() Canvas:RenderAll() end)
+  ev:RegisterMessage(NS.Registry.MSG.PANELS, function() Canvas:RenderAll() end)
+  ev:RegisterMessage(NS.Registry.MSG.PANEL, function(_, id) Canvas:Render(id) end)
+  ev:RegisterMessage(NS.Schema.MSG.SETTINGS, function() Canvas:RenderAll() end)
 end
 
 -- The other half of the seam, and the reason Enable's guard is on `__ev` rather than on a boolean:

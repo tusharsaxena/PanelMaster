@@ -328,9 +328,9 @@ test("Disabled 6: firing the events anyway writes nothing, prints nothing, shows
 
   -- (b) the bus, at the target the renderer used to hold. Nothing answers, because the
   -- subscriptions were unregistered rather than gated.
-  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Registry.MSG_PANELS), 0,
+  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Registry.MSG.PANELS), 0,
     "the renderer's PanelsChanged subscription survived the stand-down")
-  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Schema.MSG_SETTINGS), 0,
+  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Schema.MSG.SETTINGS), 0,
     "the renderer's SettingsChanged subscription survived the stand-down")
 
   -- (c) the handler methods themselves, reached past the registration set entirely. Combat entry is

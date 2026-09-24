@@ -866,7 +866,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (46)
+### test_libka0s.lua (49)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -911,11 +911,14 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: the help index still lists every verb
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
+- Bus seam: a mistyped Registry message key raises at the read
+- Bus seam: a mistyped Schema message key raises at the read
+- Bus seam: with no library the same reads answer nil and do not raise
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (6)
+### test_surface_parity.lua (7)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
@@ -923,6 +926,7 @@ badge and any count quoted in the docs must agree with it.
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
 - Parity: the Schema seam's degraded surface matches the live one, on both levels
+- Parity: the Bus seam's degraded surface matches the live one
 
 ### test_harness.lua (18)
 
@@ -1039,8 +1043,8 @@ badge and any count quoted in the docs must agree with it.
 | test_launcher.lua | 25 |
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 46 |
-| test_surface_parity.lua | 6 |
+| test_libka0s.lua | 49 |
+| test_surface_parity.lua | 7 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
@@ -1050,4 +1054,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **916** |
+| **Total** | **920** |

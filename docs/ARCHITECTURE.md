@@ -145,6 +145,14 @@ a target would silently clobber each other.
 | `Ka0s_PanelMaster_PanelChanged` | `modules/Registry.lua` | **One** panel's fields changed — repaint just it. | `Canvas` |
 | `Ka0s_PanelMaster_SettingsChanged` | `settings/Schema.lua` | An addon-level setting changed **in a way a panel can show**. | `Canvas` |
 
+The three wire names are declared **once each**, through `LibKa0s-Bus-1.0`'s `Catalog`
+(`core/BusSetup.lua`): `NS.Registry.MSG` (`PANELS`, `PANEL`) and `NS.Schema.MSG` (`SETTINGS`). The
+catalog validates the declaration at load and answers a **strict** table, so every reader —
+senders and the `Canvas` / Panels-page receivers alike — reads `MSG.<KEY>` and a mistyped key raises
+at the read instead of sending or subscribing to `nil`. Only `Catalog` is adopted; the receiver
+factory stays `NS.NewBusTarget`. With no library the catalog is the plain table, with the same wire
+names.
+
 Not every row broadcasts: `settings.snapToGrid` and `settings.gridSize` carry no `onChange`, because
 `Unlock.SnapPosition` reads them live at drag-stop and nothing renders from them. Announcing would
 repaint every panel on each tick of the Grid size slider for no visible difference.

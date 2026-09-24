@@ -141,7 +141,7 @@ function pageAction.delete(rec)
   NS.Registry:Delete(rec.id)
 end
 
--- Reset and CopyFrom both broadcast MSG_PANEL, not MSG_PANELS: the set of panels is unchanged and
+-- Reset and CopyFrom both broadcast MSG.PANEL, not MSG.PANELS: the set of panels is unchanged and
 -- only this editor's values are stale, so they refresh in place instead of rebuilding.
 function pageAction.reset(rec)
   local ok, err = NS.Registry:Reset(rec.id)
@@ -313,7 +313,7 @@ end
 
 -- ── Per-editor scalar refreshers (options-ui-§11) ───────────────────────────────
 -- Every control in the editor registers one: a closure that re-reads the LIVE record and pushes the
--- value back into the widget. MSG_PANEL runs them in place, so a drag, a `/pm panel Chat width 400`
+-- value back into the widget. MSG.PANEL runs them in place, so a drag, a `/pm panel Chat width 400`
 -- or a Reset updates the open editor without a teardown — a full rebuild per field write is
 -- anti-pattern #39, and would release the very control the user is still holding.
 --
@@ -433,7 +433,7 @@ local function makeColorPair(ctx, row, rec, field, label)
   row:AddChild(picker)
 
   -- SetColor, NEVER SetValue: SetColor updates the swatch without firing a callback, whereas
-  -- SetValue would re-enter `store` and turn a refresh into a write — a MSG_PANEL handler writing
+  -- SetValue would re-enter `store` and turn a refresh into a write — a MSG.PANEL handler writing
   -- back through Registry:Set is a loop, not a repaint.
   addRefresher(ctx, rec, function(live)
     local c = NS.Util.Color(live[field])
@@ -642,7 +642,7 @@ local function buildPanelEditor(ctx, parent, rec)
 
   -- Two controls to a line IS the canonical layout (rows 1 and 3 carry startsLine). O.RenderField is
   -- settings/Panel.lua's wrap (dropdowns join the scroll-close registry), and its makers push their
-  -- refreshers onto ctx.refreshers, the list MSG_PANEL runs.
+  -- refreshers onto ctx.refreshers, the list MSG.PANEL runs.
   local function renderBlock(rows)
     for i = 1, #rows, 2 do
       if i > 1 then editorSpacer(group, EDITOR_ROW_GAP) end
@@ -674,7 +674,7 @@ local function buildPanelEditor(ctx, parent, rec)
 
     -- Renaming changes the selector entry and every label the panel appears under, so it is
     -- structural (the frame name is NOT affected -- it is stamped at create) and R:Rename
-    -- broadcasts MSG_PANELS, which rebuilds this tab. Nothing below the rename call may touch
+    -- broadcasts MSG.PANELS, which rebuilds this tab. Nothing below the rename call may touch
     -- `widget` on the success path, because the rebuild releases it.
     local nameBox = AceGUI:Create("EditBox")
     nameBox:SetLabel("Panel name")
@@ -734,12 +734,12 @@ local function buildPanelEditor(ctx, parent, rec)
     attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
     toggleRow:AddChild(enabled)
     -- The one control here that wants the scalar tier: `/pm panel <name> enabled false`, a Reset
-    -- and a CopyFrom all broadcast MSG_PANEL without rebuilding, and the checkbox has to follow.
+    -- and a CopyFrom all broadcast MSG.PANEL without rebuilding, and the checkbox has to follow.
     addRefresher(ctx, rec, function(live) enabled:SetValue(live.enabled ~= false) end)
 
     -- Per-panel unlock. The global unlock is all-or-nothing; this one puts a drag handle on just
     -- the panel being edited, which is what you want with a dozen of them on screen.
-    -- Session state no MSG_PANEL describes: its refresher is driven by NS.PanelEditor:RefreshUnlock.
+    -- Session state no MSG.PANEL describes: its refresher is driven by NS.PanelEditor:RefreshUnlock.
     local unlocked = AceGUI:Create("CheckBox")
     unlocked:SetLabel("Unlock")
     unlocked:SetRelativeWidth(0.5)
@@ -973,7 +973,7 @@ local function buildPanelEditor(ctx, parent, rec)
       -- you type into a box whose contents nothing reads.
       pathBox:SetDisabled(live.artTexture ~= C.ARTWORK_CUSTOM)
       -- The TEXT is not, while the box has focus. This is the one control in the editor holding a
-      -- half-typed value, and a MSG_PANEL from somewhere else entirely — a drag, a `/pm panel set`,
+      -- half-typed value, and a MSG.PANEL from somewhere else entirely — a drag, a `/pm panel set`,
       -- another field in this very editor — would otherwise wipe the path mid-keystroke. The rename
       -- box solves the same problem by having no refresher at all; this one cannot, because it has a
       -- disabled state to keep honest.
@@ -1218,7 +1218,7 @@ end
 -- is the four bare acts.
 --
 -- Built ONCE, from BuildPage, and never released by a rebuild. The create box is the reason and it
--- was true before the move too: a create broadcasts MSG_PANELS from inside R:New, so the rebuild
+-- was true before the move too: a create broadcasts MSG.PANELS from inside R:New, so the rebuild
 -- lands while the user's own callback is still on the stack, and releasing the box would hand the
 -- widget they are typing into back to AceGUI's pool. Everything beside it is refreshed IN PLACE
 -- instead, by refreshHeaderActs below — which is the whole cost of the move, and the part a reader
@@ -1413,9 +1413,9 @@ end
 
 -- The Panels page's whole repaint policy, and its only two triggers (options-ui-§11).
 --
---   MSG_PANELS is STRUCTURAL — a panel was created, deleted or renamed, so the selector's contents
+--   MSG.PANELS is STRUCTURAL — a panel was created, deleted or renamed, so the selector's contents
 --   and the editor's identity both change. One rebuild.
---   MSG_PANEL is SCALAR — one field of one panel changed, from the CLI, a drag, Reset or CopyFrom.
+--   MSG.PANEL is SCALAR — one field of one panel changed, from the CLI, a drag, Reset or CopyFrom.
 --   The open editor re-syncs in place and nothing is released. Rebuilding here instead would be a
 --   full AceGUI teardown per field write (anti-pattern #39) and would take the control out from
 --   under a user mid-drag, which is precisely why it is not done.
@@ -1427,7 +1427,7 @@ end
 -- O.RefreshPanel. This file used to hand-roll the branch — `if ctx.panel:IsShown() then rebuild else
 -- ctx.dirty = true end` — and the flag was WRONG: the gate in LibKa0s's SetRenderer OnShow reads
 -- `ctx._dirty`, with the underscore, so `ctx.dirty` was written in four places and read in none. The
--- deferral silently never happened. A profile switch fires MSG_PANELS from Registry:ReloadProfile
+-- deferral silently never happened. A profile switch fires MSG.PANELS from Registry:ReloadProfile
 -- while this page is hidden (the user is on the Profiles page to make the switch), so the page kept
 -- the widget tree it had built for the OLD profile: its panel dropdown, its copy-from list and its
 -- editor still showed panels that were no longer in the registry, while Canvas — which is not a
@@ -1446,7 +1446,7 @@ local function wirePanelsBus(ctx)
   local ev = NS.NewBusTarget()
   if not ev then return end
 
-  ev:RegisterMessage(NS.Registry.MSG_PANELS, function()
+  ev:RegisterMessage(NS.Registry.MSG.PANELS, function()
     -- A create hands its selection over by NAME, because the id did not exist when the mutation
     -- started and this message arrives from inside R:New (see pageAction.create).
     if ctx.pendingSelect then
@@ -1457,7 +1457,7 @@ local function wirePanelsBus(ctx)
     NS.Helpers.RefreshPanel(ctx, true)
   end)
 
-  ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id)
+  ev:RegisterMessage(NS.Registry.MSG.PANEL, function(_, id)
     if id ~= selectedID then return end   -- some other panel changed; this editor is not showing it
     NS.Helpers.RefreshPanel(ctx, false)
   end)
@@ -1483,5 +1483,5 @@ end
 function E:BuildPage(ctx) buildPanelsPage(ctx) end
 
 -- Repaint the selector and the open editor. The one structural entry point: first paint, a page that
--- went dirty while hidden, and every MSG_PANELS.
+-- went dirty while hidden, and every MSG.PANELS.
 function E:Rebuild(ctx) runRebuilders(ctx) end

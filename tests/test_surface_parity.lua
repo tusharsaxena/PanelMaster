@@ -1,8 +1,8 @@
 -- tests/test_surface_parity.lua — every degradation stub carries the whole live surface.
 --
--- Six LibKa0s seams carry a degradation stub here — Core, DebugLog, Launcher, Slash, Options and
--- Schema — each an `if not lib then` branch (Schema's is a builder function, `hostSchemaStub`) whose
--- member set is what a library-less install actually runs on. A stub
+-- Seven LibKa0s seams carry a degradation stub here — Core, DebugLog, Launcher, Slash, Options,
+-- Schema and Bus — each an `if not lib then` branch (Schema's is a builder function,
+-- `hostSchemaStub`) whose member set is what a library-less install actually runs on. A stub
 -- is a second implementation of somebody else's surface, so it drifts the moment the live half
 -- grows a member the host starts calling: the live path stays green and the degraded path raises in
 -- exactly the install the stub exists for. That is not hypothetical here. `Sl.FormatKV` was
@@ -20,7 +20,7 @@
 --   * Where a member is live-only ON PURPOSE it is named in the `ignore` set with its reason,
 --     because otherwise a deliberate omission and a bug read identically.
 --
--- FOUR SEAMS CALL THE KIT'S BY-NAME FORM AND TWO DO NOT, and which is which is the thing to get
+-- FIVE SEAMS CALL THE KIT'S BY-NAME FORM AND TWO DO NOT, and which is which is the thing to get
 -- right rather than a style choice.
 --
 -- `assertSurfaceParity(stub, major, ignore)` arrived with kit 15 and was vendored by M4-01. What it
@@ -33,6 +33,8 @@
 --     `lib:New(descriptor)` returned — and `tests/run.lua` registers those instances by major name
 --     with `Kit.setSurfaceSource`, because LibStub answers the LIBRARY TABLE for the same name and
 --     that is not the surface the addon's files call.
+--   * Bus uses it against the LIBRARY TABLE, which is what core/BusSetup.lua publishes as
+--     NS.BusLib; only its dot-called `Catalog` is adopted.
 --   * Schema uses BOTH forms, because its stub stands in for both tables: the library by name (the
 --     runner registers the library table for that major) and the instance two-table, against the
 --     live NS.SchemaRuntime.
@@ -247,4 +249,27 @@ test("Parity: the Schema seam's degraded surface matches the live one, on both l
     -- constants here would be a string table with no reader.
     "STRINGS",
   })
+end)
+
+-- ── Bus ────────────────────────────────────────────────────────────────────────
+
+test("Parity: the Bus seam's degraded surface matches the live one", function()
+  -- core/BusSetup.lua publishes the LibKa0s-Bus-1.0 LIBRARY TABLE as NS.BusLib, registered under
+  -- that name by tests/run.lua. The addon's own call sites are
+  --   grep -rn "NS\.BusLib[:.]" core modules settings
+  -- and both are `Catalog`, dot-called at FILE LOAD by modules/Registry.lua and settings/Schema.lua.
+  local degradedNS = loadPartial({ Bus = true })
+  assertTrue(degradedNS.BusLib ~= nil, "the Bus degradation arm is missing")
+  assertTrue(degradedNS.BusLib ~= NS.BusLib, "the degraded load resolved the live library")
+  assertSurfaceParity(degradedNS.BusLib, "LibKa0s-Bus-1.0", {
+    -- The record half: `Bus:New` and its tracked targets. NOT adopted here -- NS.NewBusTarget in
+    -- core/PanelMaster.lua stays this addon's receiver factory -- so a stub answering it would be a
+    -- member with no caller.
+    "New",
+  })
+  -- Same wire names on both arms: the stub hands back the host's own table, so a library-less
+  -- install broadcasts exactly what a live one does.
+  assertEqual(degradedNS.Registry.MSG.PANELS, NS.Registry.MSG.PANELS)
+  assertEqual(degradedNS.Registry.MSG.PANEL, NS.Registry.MSG.PANEL)
+  assertEqual(degradedNS.Schema.MSG.SETTINGS, NS.Schema.MSG.SETTINGS)
 end)

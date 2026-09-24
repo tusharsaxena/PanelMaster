@@ -156,7 +156,7 @@ files["modules/Registry.lua"] = {
 
 -- The unlock overlay, probed from three files rather than one -- core/PanelMaster.lua:93
 -- (ResumePending, the deferred combat replay), modules/Canvas.lua:756 and :802 (StripOverlay and
--- Decorate, on every frame release and every render) and modules/Registry.lua:573 (ForgetPending).
+-- Decorate, on every frame release and every render) and modules/Registry.lua:517 (ForgetPending).
 -- Overlay state is a file-scope table here, which is why no body reads the receiver.
 files["modules/Unlock.lua"] = {
   ignore = { "212/self" },
@@ -171,7 +171,7 @@ files["settings/Panel.lua"] = {
 
 -- The Panels page's four published verbs. Three are called from settings/Panel.lua (:438 WireBus,
 -- :462 BuildPage, :464 Rebuild) with the page context as the argument, and ForgetSelection is
--- probed from modules/Registry.lua:576 so a delete can clear the editor's selection without
+-- probed from modules/Registry.lua:520 so a delete can clear the editor's selection without
 -- depending on the editor having loaded. The selection itself is this file's upvalue.
 files["settings/PanelEditor.lua"] = {
   ignore = { "212/self" },

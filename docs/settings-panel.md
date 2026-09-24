@@ -522,8 +522,8 @@ It has exactly **two** triggers, both on the bus, and no widget callback rebuild
 
 | Message | Meaning | Response |
 |---|---|---|
-| `MSG_PANELS` | the SET of panels changed (create, delete, rename, profile switch) | `O.RefreshPanel(ctx, true)` — structural, so one rebuild |
-| `MSG_PANEL` | one field of one panel changed (CLI, drag, `Reset`, `CopyFrom`) | `O.RefreshPanel(ctx, false)` — the open editor's per-control `refreshers`, in place; never a rebuild (anti-pattern #39) |
+| `MSG.PANELS` | the SET of panels changed (create, delete, rename, profile switch) | `O.RefreshPanel(ctx, true)` — structural, so one rebuild |
+| `MSG.PANEL` | one field of one panel changed (CLI, drag, `Reset`, `CopyFrom`) | `O.RefreshPanel(ctx, false)` — the open editor's per-control `refreshers`, in place; never a rebuild (anti-pattern #39) |
 
 Both go through the **library's** per-page refresh (LibKa0s `Options` minor 8), which owns the
 shown/hidden decision: an on-screen page repaints now, a hidden one is flagged and repaints on its
@@ -535,7 +535,7 @@ it had built for the previous profile: its dropdown, its copy-from list and its 
 panels that were no longer in the registry, while the panels themselves had correctly left the
 screen. Nothing here writes `_dirty` any more.
 
-`MSG_PANEL` returns early unless the id is the one the editor is showing. A mutating control sets the
+`MSG.PANEL` returns early unless the id is the one the editor is showing. A mutating control sets the
 selection *before* it mutates, so the single rebuild lands on the right panel; the create box, whose
 id does not exist yet, parks the new panel's **name** in `ctx.pendingSelect` and the bus handler
 resolves it. A rebuild clears `ctx.refreshers` first, since every closure in it holds a widget the

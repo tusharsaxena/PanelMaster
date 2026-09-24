@@ -974,12 +974,49 @@ test("L trap (matcher): the guard catches every offending spelling, not one", fu
     "a comment must not trip the guard")
 end)
 
+-- ── the Bus catalog ────────────────────────────────────────────────────────────
+--
+-- The three message constants are declared through LibKa0s-Bus-1.0's Catalog (core/BusSetup.lua),
+-- which hands back a STRICT copy: a mistyped key raises at the read instead of answering nil, which
+-- a publisher's SendMessage(nil) would swallow silently (kit 26, LK-02).
+
+test("Bus seam: a mistyped Registry message key raises at the read", function()
+  local MSG = NS.Registry.MSG
+  assertTrue(MSG ~= nil, "NS.Registry.MSG is not published")
+  T.assertErrorMatches(function() return MSG.PANELZ end, "no bus message named PANELZ")
+  assertEqual(MSG.PANELS, "Ka0s_PanelMaster_PanelsChanged")
+  assertEqual(MSG.PANEL, "Ka0s_PanelMaster_PanelChanged")
+end)
+
+test("Bus seam: a mistyped Schema message key raises at the read", function()
+  local MSG = NS.Schema.MSG
+  assertTrue(MSG ~= nil, "NS.Schema.MSG is not published")
+  T.assertErrorMatches(function() return MSG.SETTINGZ end, "no bus message named SETTINGZ")
+  assertEqual(MSG.SETTINGS, "Ka0s_PanelMaster_SettingsChanged")
+end)
+
+test("Bus seam: with no library the same reads answer nil and do not raise", function()
+  -- The degraded catalog is the host's plain table: a library-less install keeps the wire names
+  -- and loses only the strictness.
+  local degradedNS = loadPartial({ Bus = true })
+  local ok, a, b = pcall(function()
+    return degradedNS.Registry.MSG.PANELZ, degradedNS.Schema.MSG.SETTINGZ
+  end)
+  assertTrue(ok, "a degraded catalog read raised: " .. tostring(a))
+  assertEqual(a, nil)
+  assertEqual(b, nil)
+  assertEqual(degradedNS.Registry.MSG.PANELS, "Ka0s_PanelMaster_PanelsChanged")
+end)
+
 -- Every file that builds a LibKa0s descriptor. A seam added without being listed here is a seam
 -- with no guard, so the list is asserted against the filesystem rather than trusted.
 local SEAM_FILES = {
   "core/CoreSetup.lua",
   "core/EnvSetup.lua",
   "core/MediaSetup.lua",
+  -- LibKa0s-Bus-1.0: resolves the major for Catalog alone and builds no descriptor, so it has no
+  -- `L` to get wrong. Listed because it resolves a LibKa0s major, which is the list's criterion.
+  "core/BusSetup.lua",
   "core/DebugLogSetup.lua",
   "core/LauncherSetup.lua",
   "core/LifecycleSetup.lua",
