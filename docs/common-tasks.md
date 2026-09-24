@@ -34,8 +34,8 @@ path that already has a row.
 
 This is the change with the most places to touch, and `core/Constants.lua` is nearly all of them.
 
-1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:262`) with its shipped default.
-2. Add it to `C.PANEL_FIELD_TYPE`, and to `C.PANEL_FIELD_ORDER` (`:504`) at the position it should
+1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:267`) with its shipped default.
+2. Add it to `C.PANEL_FIELD_TYPE`, and to `C.PANEL_FIELD_ORDER` (`:509`) at the position it should
    appear in `/pm panel <name>` output and in the editor.
 3. Add its media / enum / color map entry if it needs one.
 4. Teach `Registry:Sanitize` to validate and clamp it. **Sanitize is the repair path, not just the
@@ -46,11 +46,11 @@ This is the change with the most places to touch, and `core/Constants.lua` is ne
    headless test with no frames involved. `applySpec` stays a thin application of the result.
 6. If the field should **not** be reachable from the CLI, leave it out of `PANEL_FIELD_TYPE`,
    `PANEL_FIELD_ORDER` and `PANEL_TEMPLATE` — that omission is the mechanism, and
-   `core/Constants.lua:548` documents the existing case.
+   `core/Constants.lua:546` documents the existing case.
 
 ## Add a slash verb
 
-Append one triple to `NS.COMMANDS` (`settings/Slash.lua:285`), shaped
+Append one triple to `NS.COMMANDS` (`settings/Slash.lua:322`), shaped
 `{ name, description, handler }`. The help index and the settings landing page's command list are
 both generated from it, so nothing else needs editing.
 

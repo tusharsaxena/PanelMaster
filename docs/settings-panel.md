@@ -549,8 +549,8 @@ that page), behind `KA0S_PANELMASTER_DELETEALL`. Blizzard's own un-gated footer 
 the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the footer and the header
 button are one implementation and the confirmation cannot be reached round.
 
-**The General page's Defaults tooltip still reads *"Your panels are untouched"*, and so does the
-comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:365`, `:372`).** Both predate
-`options-ui-§12` turning `resetall` into a profile reset and neither matches what the button now
-does. That is a code fix, not a doc one, and it is recorded here so the next reader does not take
-the tooltip for the contract.
+**The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:372`,
+`:379-384`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
+`options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
+tooltip and the contract agree again.
