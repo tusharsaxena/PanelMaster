@@ -188,12 +188,13 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: leaving and entering combat both reach the renderer
 - Canvas: an Only-in-combat panel appears at the combat-start event, not a repaint later
 
-### test_unlock.lua (21)
+### test_unlock.lua (22)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
 - Unlock.SnapPosition: snapping is symmetric across zero
 - Unlock.SnapPosition: an out-of-range grid is clamped, not obeyed
+- Unlock.SnapPosition: a grid above the slider's 64 snaps on a grid of 64
 - Unlock.SnapPosition: a missing settings table does not error
 - Unlock.SetUnlocked: flips the session flag
 - Unlock.Toggle: alternates
@@ -533,7 +534,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (47)
+### test_schema.lua (48)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -582,6 +583,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema stub: row.normalize replaces the value, and a nil from it refuses
 - Schema stub: Get and ApplyDefault forward the instance id
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
+- Schema: the grid-size slider and the write seam share one maximum
 
 ### test_slash.lua (74)
 
@@ -1010,13 +1012,13 @@ badge and any count quoted in the docs must agree with it.
 | test_envsetup.lua | 4 |
 | test_registry.lua | 45 |
 | test_canvas.lua | 37 |
-| test_unlock.lua | 21 |
+| test_unlock.lua | 22 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 21 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 47 |
+| test_schema.lua | 48 |
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
@@ -1034,4 +1036,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **900** |
+| **Total** | **902** |

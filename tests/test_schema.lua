@@ -762,3 +762,15 @@ test("Schema seam: the live seam is the library's instance, and NS.Schema's name
   assertEqual(select("#", S:Set("settings.gridSize", -1)), 3)
   assertEqual(select(3, S:Set("settings.gridSize", -1)), nil)
 end)
+
+test("Schema: the grid-size slider and the write seam share one maximum", function()
+  -- The slider's max was a literal 64 while validate and the drag clamp read C.MAX_GRID (128), so
+  -- the three disagreed on what the largest grid is. One constant now bounds all of them.
+  local C = NS.Constants
+  assertEqual(S:FindRow("settings.gridSize").max, C.MAX_GRID, "the slider's max is not C.MAX_GRID")
+  local before = S:Get("settings.gridSize")
+  assertFalse(S:Set("settings.gridSize", C.MAX_GRID + 1), "a grid above C.MAX_GRID was accepted")
+  assertEqual(S:Get("settings.gridSize"), before, "the refused write still landed")
+  assertTrue(S:Set("settings.gridSize", C.MAX_GRID), "C.MAX_GRID itself was refused")
+  S:Set("settings.gridSize", S:Default("settings.gridSize"))
+end)

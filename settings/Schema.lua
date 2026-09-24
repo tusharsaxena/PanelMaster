@@ -69,7 +69,7 @@ S.Schema = {
   -- a line whose left half is already taken. It is drawn as this tab's afterGroup footer instead
   -- (settings/Panel.lua), which is where the flow engine puts a group's buttons.
   { path = "settings.gridSize", default = 4, type = "number",
-    min = C.MIN_GRID, max = 64, step = 1,
+    min = C.MIN_GRID, max = C.MAX_GRID, step = 1,
     fmt = "%d px",   -- grid → "4 px" in the slash list/get output (slash-commands-§5)
     group = "Editing", label = "Grid size",
     tooltip = "The grid a dragged panel snaps to, in UI units. Ignored when snapping is off.",

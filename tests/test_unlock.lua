@@ -29,8 +29,17 @@ end)
 
 test("Unlock.SnapPosition: an out-of-range grid is clamped, not obeyed", function()
   local x = U.SnapPosition(100, 0, { snapToGrid = true, gridSize = 99999 })
-  -- Clamped to MAX_GRID (128), so 100 snaps to 128 rather than to some absurd multiple.
+  -- Clamped to MAX_GRID (64), so 100 snaps to 128 (two grid steps) rather than to 0 or some absurd
+  -- multiple of 99999.
   assertEqual(x, 128)
+end)
+
+test("Unlock.SnapPosition: a grid above the slider's 64 snaps on a grid of 64", function()
+  -- A hand-edited SavedVariables value of 65-128 is the only way to hold one; the drag maths bounds it
+  -- at the same maximum the slider and the write seam do. On a grid of 100, 70 would snap to 100.
+  local x, y = U.SnapPosition(70, 150, { snapToGrid = true, gridSize = 100 })
+  assertEqual(x, 64)
+  assertEqual(y, 128)
 end)
 
 test("Unlock.SnapPosition: a missing settings table does not error", function()
