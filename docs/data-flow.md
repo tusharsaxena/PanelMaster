@@ -201,7 +201,7 @@ Two things are gated, in the two different shapes the standard defines:
 
 | Event | Handler | Why |
 |---|---|---|
-| `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
+| `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: every panel is anchored to `UIParent`, and `UIParent`'s final size and the frame anchors are settled by this event, not that early. (Off-screen recovery is on demand only, `/pm recover`.) |
 | `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat(false)` | Replays a combat-deferred unlock, and repaints for the general-visibility rule. |
 | `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat(true)` | The entering-combat half of the same rule. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration, for the load order where `Settings`/AceGUI were not there yet in `OnInitialize`. `Register` is idempotent, so it is a no-op on a normal login. Not a deferral to first `/pm config` (anti-pattern #22). Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing — the only one a non-LoD addon gets. |

@@ -118,9 +118,9 @@ end
 --- profile switched while the addon was off comes back correct rather than stale.
 ---
 --- THE REPAINT IS GATED ON THE BOOT STAND-UP, which is not a micro-optimization: panels are drawn on
---- PLAYER_ENTERING_WORLD rather than at OnEnable because UIParent's size is what the registry's
---- off-screen recovery measures against and it is not final that early. The FIRST stand-up of a
---- session runs from inside `addon:OnEnable` and must leave the painting to that event; every later
+--- PLAYER_ENTERING_WORLD rather than at OnEnable because UIParent's final size and the frame
+--- anchors every panel hangs from are settled by that event and not that early. The FIRST stand-up
+--- of a session runs from inside `addon:OnEnable` and must leave the painting to that event; every later
 --- one runs long after it and must paint immediately, or a player who re-enables mid-session looks
 --- at a blank screen until the next zone change.
 ---

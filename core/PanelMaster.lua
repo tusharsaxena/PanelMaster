@@ -7,9 +7,10 @@ NS.bus = addon   -- closed message bus: SendMessage / RegisterMessage (architect
 
 -- Reclaim NS.Print from AceConsole. NewAddon(NS, …, "AceConsole-3.0") embeds AceConsole's mixins
 -- directly onto NS, and its :Print method OVERWRITES the secret-safe, cyan-[PM]-prefixed NS.Print
--- defined in core/Util.lua — after which every `local print = NS.Print` call site would render
--- AceConsole's green "|cff33ff99<msg>|r:" form (no tag, trailing colon) and lose secret-safety. The
--- embed never touches NS.Util.print, so restore the real printer from it (architecture-§2).
+-- built by core/CoreSetup.lua (the LibKa0s-Core printer) — after which every `local print =
+-- NS.Print` call site would render AceConsole's green "|cff33ff99<msg>|r:" form (no tag, trailing
+-- colon) and lose secret-safety. The embed never touches NS.Util.print, so restore the real printer
+-- from it (architecture-§2).
 if NS.Util and NS.Util.print then NS.Print = NS.Util.print end
 
 -- Bus-receiver factory. A module that CONSUMES Ka0s_PanelMaster_* messages must register on its OWN
@@ -101,9 +102,10 @@ function addon:OnEnable()
   -- emitted when capture is actually enabled (debug-logging-§5/§8).
 end
 
--- Panels are drawn on PLAYER_ENTERING_WORLD rather than at OnEnable. UIParent's size is what the
--- registry's off-screen recovery measures against, and it is not final at OnEnable — reading it too
--- early would judge every stored position against the wrong screen.
+-- Panels are drawn on PLAYER_ENTERING_WORLD rather than at OnEnable. Every panel is anchored to
+-- UIParent (modules/Canvas.lua), and UIParent's final size and the frame anchors are settled by this
+-- event, not at OnEnable — painting earlier would lay panels out against a screen still changing
+-- under them. (Off-screen recovery never runs here: it is on demand only, `/pm recover`.)
 --
 -- Registered by NS.StandUp and unregistered by NS.StandDown, so a disabled addon does not watch for
 -- it at all (slash-commands-§7).

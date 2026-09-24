@@ -14,7 +14,7 @@ local addonName, NS = ...
 --     function form of `prefix` for hosts that cannot satisfy this; PanelMaster can, so it passes
 --     the plain string and the ordering is what makes that safe.)
 --   * AFTER core/Util.lua, which still owns NS.Util (this file writes NS.Util.print into it).
---   * BEFORE core/PanelMaster.lua, whose AceConsole-3.0 embed overwrites NS.Print with AceGUI's own
+--   * BEFORE core/PanelMaster.lua, whose AceConsole-3.0 embed overwrites NS.Print with AceConsole's
 --     :Print and whose reclaim line restores it FROM NS.Util.print. Publishing on both keys is what
 --     keeps that reclaim load-bearing and correct — it now restores the library's printer.
 --   * BEFORE every file taking the printer as a load-time upvalue: modules/Unlock.lua,
