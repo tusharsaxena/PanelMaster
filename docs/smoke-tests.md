@@ -1142,7 +1142,7 @@ client those names carry umlauts and accents, and two seams treat those bytes as
   contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
   to.
 - **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-289`) and the Panels list's
-  sort (`settings/PanelEditor.lua:263`) both use `string.lower`, which folds ASCII and nothing else.
+  sort (`settings/PanelEditor.lua:247`) both use `string.lower`, which folds ASCII and nothing else.
   `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
 
 Every label the addon prints is hardcoded English and stays English here. That is the addon's scope,

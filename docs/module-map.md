@@ -68,7 +68,7 @@ reword — `tests/test_libka0s.lua` pins the clause on both paths.
 The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
 
 - `libs\LibKa0s\LibKa0s.xml` sits **after** LibStub and Ace3. `Core` resolves LibStub; the other
-  nine resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
+  fourteen resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
   too old, so the major is simply never registered.
 - `core/CoreSetup.lua` after `core/Namespace.lua` (which defines `NS.PREFIX`, passed to the printer
   descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**
@@ -103,3 +103,62 @@ The TOC order is not arbitrary. Each seam's own header states its constraints; t
 
 `tests/test_harness.lua` derives the suite's load list from the TOC rather than keeping a second
 copy, so a file added to one and not the other cannot go untested.
+
+## tests/
+
+The headless harness (`docs/testing.md`). `tests/_kit/` is the shared kit, vendored from LibKa0s
+beside `libs/LibKa0s/` and never edited here, so it is not listed. Case counts live in the generated
+`docs/test-cases.md`, not here.
+
+| File | Role |
+|---|---|
+| `tests/run.lua` | The runner. Loads every source in TOC order, calls the real `OnInitialize` / `OnEnable`, exposes `_G.PM_TEST`, runs every suite; `--list` writes `docs/test-cases.md`. |
+| `tests/wow_mock.lua` | The WoW-API mock: an extender over `tests/_kit/mock_base.lua`, overriding only what is this addon's own. |
+| `tests/degraded_env.lua` | Not a suite. Builds a whole environment from a partial LibKa0s file list, for the degraded arms of `test_libka0s.lua` and `test_surface_parity.lua`. |
+| `tests/prose_waivers.lua` | Not a suite. The per-file, per-word waivers the kit's US-English prose gate reads. |
+
+The suites, one per subject:
+
+| Suite | Covers |
+|---|---|
+| `tests/test_accent.lua` | The accent bars: default look, per-edge geometry, their borders, and how `Canvas` builds them. |
+| `tests/test_artwork.lua` | The artwork catalog, `Artwork.BuildArtSpec` and composites, and the artwork child frame. |
+| `tests/test_canvas.lua` | `Canvas.BuildSpec`, `Canvas.Render`, the frame pool, the bus repaints and combat visibility. |
+| `tests/test_compat.lua` | The `core/Compat.lua` shims: screen size, UI scale, media registration and lookup, cursor test. |
+| `tests/test_constants.lua` | The enums, bounds and templates in `core/Constants.lua`. |
+| `tests/test_database.lua` | `InitDB`, the migration runner, the preview-panel sweep and the `[Init]` summary. |
+| `tests/test_debuglog.lua` | The DebugLog seam: formatters, the `NS.Debug` gate, `NS.DebugBuild`, bulk logging. |
+| `tests/test_disabled.lua` | The stand-down latch (a disabled addon unregisters, draws nothing, and stands back up from current state) and `NS.SafeRegisterEvent`'s rejected-event record. |
+| `tests/test_docs.lua` | `docs/smoke-tests.md` still carries its non-English-client section. |
+| `tests/test_envsetup.lua` | The Env seam: `NS.Meta` / `NS.Version` answer what the deleted shim answered. |
+| `tests/test_harness.lua` | The harness itself: suite inventory, TOC-derived load order, load-order pins. |
+| `tests/test_launcher.lua` | The Launcher seam: the broker object, both click rungs, the minimap row, the degraded install. |
+| `tests/test_libka0s.lua` | Every seam against the live library, the shared cause clause, and the degraded install. |
+| `tests/test_lintconfig.lua` | The no-blanket-suppression gate over `.luacheckrc`. |
+| `tests/test_media.lua` | Media on the canvas: background and border textures, `Registry.Reset`, `Util.Slugify`. |
+| `tests/test_mediasetup.lua` | The Media seam: `NS.Icon`, `NS.MediaFont`, LibSharedMedia registration. |
+| `tests/test_options_groups.lua` | The `options-ui-§16` gate over the Panels page's composed blocks. |
+| `tests/test_panel.lua` | The settings pages: registration, opening, the Panels page's band, strip and editor. |
+| `tests/test_profiles.lua` | `Registry.CopyFrom`, profile switching, and the Profiles page. |
+| `tests/test_register.lua` | Every deviation id `docs/ARCHITECTURE.md` cites resolves to an audit bundle. |
+| `tests/test_registry.lua` | `Registry` create, set, rename, sanitize, recover and delete. |
+| `tests/test_schema.lua` | The schema rows, the Schema seam and its stub, `Schema.Set`, the tab partition. |
+| `tests/test_slash.lua` | The Slash seam, the schema CLI, every panel verb and the reserved enable/disable pair. |
+| `tests/test_sunnart.lua` | The Sunn adapter: discovery, fallback manifest, fit. |
+| `tests/test_surface_parity.lua` | Each degradation stub's member set against the live surface. |
+| `tests/test_unlock.lua` | Unlock mode, global and per panel, and grid snapping. |
+| `tests/test_util.lua` | `core/Util.lua`'s helpers. |
+| `tests/test_vendor_sync.lua` | The vendored-payload gate over `libs/LibKa0s/` and `tests/_kit/`, registered from the kit's `vendor_sync.lua`. |
+
+## tools/
+
+Offline generators, run by hand and never loaded by the client. Each writes through a `.tmp` file
+and `os.replace`. `tools/artwork/bin/` (the upscaler) and `tools/artwork/fonts/` (the poster's
+pinned faces) are vendored inputs, not tools.
+
+| File | Writes |
+|---|---|
+| `tools/artwork/artwork_cleaner.py` | A transparent, square, power-of-two 32-bit TGA per source image (`--single` beside the source, `--batch` into a mirrored tree), plus the machine-local `tools/artwork/.stamps.tsv` rebuild record. |
+| `tools/artwork/update_catalog.py` | The generated catalog in `modules/Artwork.lua`, from the tree under `media/artwork/` (`--check` writes nothing and fails on drift). |
+| `tools/artwork/make_poster.py` | `media/poster/artwork-poster.png` and its `.txt` provenance record, from the same scan as the catalog. |
+| `tools/sunn/build_manifest.py` | The generated block in `modules/SunnArtPacks.lua`, from an installed AddOns directory's Sunn packs. |

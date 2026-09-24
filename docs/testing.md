@@ -103,7 +103,7 @@ this addon?* That is release planning, not a gate.
 |---|---|---|
 | Both empty | The vendored copies are exactly what the library ships. | Nothing. |
 | Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see closed issue [`LIBKA0S-09`](https://github.com/tusharsaxena/PanelMaster/issues/33)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
-| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Nine of the ten majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
+| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Fourteen of the fifteen majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
 
 A fifth check answers "which LibKa0s is this?" without grepping minors out of source: the
 `Bundles [LibKa0s] vX.Y.Z (MIT).` provenance line in the root **`CLAUDE.md`**, which moves with every
@@ -304,8 +304,8 @@ covered by the same vendor gate and the same never-edit-it rule. `run.lua` is a 
 (`Kit.expose` + `Kit.run`) that keeps no copy of either load order: the addon's own files come from
 the TOC via `Loader.tocFiles`, and the vendored library's come from `libs/LibKa0s/LibKa0s.xml` via
 `Loader.xmlFiles`, which is how a `libs\` line the TOC scan deliberately skips still gets loaded.
-The library half **was** hand-listed here, and it was hand-listed short — six of the eight scripts
-the XML pulls in — which nothing could see: a short load list does not raise, it leaves the missing
+The library half **was** hand-listed here, and it was hand-listed short — it named six scripts
+when the XML pulled in eight — which nothing could see: a short load list does not raise, it leaves the missing
 modules undefined for whichever cases never reach them.
 
 `wow_mock.lua` **extends** `_kit/mock_base.lua` rather than replacing it. The base is the only source

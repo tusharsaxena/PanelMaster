@@ -157,46 +157,25 @@ function pageAction.copyFrom(widget, rec, sourceID)
 end
 
 -- ── The editor's tabs (options-ui-§13) ──────────────────────────────────────────
--- The five subjects one panel's APPEARANCE is edited under, in strip order. This page's content is
--- BESPOKE -- a panel is a registry record, not a set of schema rows with paths -- so
--- H.RenderTabbedSchema has nothing here to partition and the strip is drawn directly with
+-- `General`, then the five subjects one panel's APPEARANCE is edited under, in strip order. This
+-- page's content is BESPOKE -- a panel is a registry record, not a set of schema rows with paths --
+-- so H.RenderTabbedSchema has nothing here to partition and the strip is drawn directly with
 -- H.TabStrip, exactly as the reference implementation draws its own two bespoke pages.
---
--- The strip is only the EDITOR's, and the band above it holds everything that is about the panel
--- rather than about one aspect of it: making a panel, choosing which panel to work on, naming it,
--- copying another's look onto it, turning it on, unlocking it, resetting it and deleting it.
 --
 -- Named constants rather than repeated literals, because each one is used three times -- the tab
 -- button, the section it dispatches to, and the strip's order array -- and a typo in any of the
 -- three is a tab that draws an empty editor.
 --
--- "Background" and "Border" used to be two subsections of two and four controls. They are one tab:
--- the fill and the edge are two halves of one question, and a two-control tab is not a subject.
--- "Visibility" is now "Opacity and fade", which is what its three controls actually are -- the old
--- name promised the where/when rules of a visibility engine this addon does not have.
+-- "Background and border" is one tab: the fill and the edge are two halves of one question, and a
+-- two-control tab is not a subject. "Opacity and fade" is what its three controls are; the old
+-- name, "Visibility", promised the where/when rules of a visibility engine this addon lacks.
 --
--- "General" is GONE, and it is the only tab ever removed rather than renamed. It held six controls
--- and not one of them was about a subject the other five divide: the name, the copy-from dropdown,
--- Enabled, Unlock, Reset and Delete all act on the panel WHOLE, so every one of them was a
--- page-wide control drawn under one tab. That is the shape options-ui-§14 forbids, and the library
--- names this exact set at O.PageHeader -- "creating the thing the page edits, choosing which one is
--- being edited, and the acts that apply to it whole (enable, unlock, copy, reset, delete) are all
--- page-wide". They are in the chrome band now, beside the create box and the picker.
---
--- The NAME BOX went with them, which the finding's list of five acts does not mention. It had to:
--- leaving it behind makes General a one-control tab, and this file already refuses a two-control
--- tab on the grounds that it is not a subject. It belongs there on the merits as well -- a panel's
--- name is its identity, it is what the picker in the band displays, and renaming from the band is
--- what finally makes the create box and the rename box read as the pair they have always been.
--- `General` is FIRST, and that is what makes it legal rather than a matter of taste.
--- options-ui-§14 (v2.40.0) bounds the chrome band at one row -- the picker and the create box --
--- and lets a page's remaining page-wide acts move here on three conditions, the load-bearing one
--- being that the page OPENS on this tab. A page-wide control under a tab is hidden; a page-wide
--- control on the tab the page lands on is simply where the player already is.
---
--- This tab existed before, was deleted in v2.38.0 under the previous wording of §14, and is back
--- because the rule was wrong about a page this size: six acts stacked into the band made a second
--- page above the page, which is the same cost §14 already refuses to pay for a second chrome block.
+-- `General` holds the acts on the panel WHOLE: the name box, copy-from, Enabled, Unlock, Reset and
+-- Delete. It is FIRST, and that is what makes it legal. options-ui-§14 (v2.40.0) bounds the chrome
+-- band at one row -- the picker and the create box -- and lets a page's other page-wide acts sit
+-- on the tab the page OPENS on, where nothing is hidden behind a click. The tab was deleted in
+-- v2.38.0 under the older wording of §14 and is back because six acts stacked into the band made
+-- a second page above the page.
 local TAB_GENERAL  = "General"
 local TAB_POSITION = "Position and size"
 local TAB_SURFACE  = "Background and border"
@@ -204,8 +183,8 @@ local TAB_ACCENT   = "Accent bar"
 local TAB_ARTWORK  = "Artwork"
 local TAB_FADE     = "Opacity and fade"
 
--- Strip order: where the panel sits, then the three appearance tabs read together, then the one you
--- set once. "Which panel, and is it on" used to open the strip; it opens the band now.
+-- Strip order: the panel whole (the tab the page opens on), where it sits, the three appearance
+-- tabs read together, then the one you set once.
 local EDITOR_TABS = {
   TAB_GENERAL, TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
 }
@@ -1192,39 +1171,20 @@ end
 
 -- ── The page-wide block, ABOVE the strip (options-ui-§14) ───────────────────────
 --
--- EVERYTHING that acts on the panel as a whole lives here, in the band the page banner occupies,
--- rather than in the scroll below the strip: making a panel, choosing which one to edit, naming it,
--- copying another's look onto it, turning it on, unlocking it, resetting it and deleting it. The
--- rule names the shape this replaces — a control that governs the whole page but is drawn under one
--- tab reads as belonging to that tab, and it disappears the moment the player clicks a different
--- one — and the library's own O.PageHeader documentation lists this exact set.
---
--- The move happened in two passes. Create and Edit were two untabbed sections at the top of the
--- SCROLL and came up first; the other six sat under a "General" tab, which is now gone entirely
--- (see the tab constants above for why the name box came with the five acts the finding named).
+-- ONE ROW: the Panel picker and the Create new panel box, the two controls that stay put on every
+-- tab. The panel's other page-wide acts are on the `General` tab; the tab constants above say why.
 --
 -- ONE chrome block per page, and this is it. H.PageHeader and H.PageBanner release the same ledger
 -- and write the same reserved height, so the picker goes INSIDE this block and no banner is drawn
 -- separately: two blocks would be two bands, and the second would push the page down for nothing.
 --
 -- NOT BOXED, either. The band is already separated from the page by its own divider and by the
--- content panel's top edge, and a bounded box around these controls would be a border stating a
--- boundary the band already states.
+-- content panel's top edge, and a bounded box would state a boundary the band already states.
 --
--- THREE EXPLICIT ROWS, not one Flow with eight children in it, for the reason `editorRow` gives
--- below the strip: a single Flow reflows controls of differing heights into whatever gaps it can
--- find, and a checkbox riding up beside an edit box's label is exactly what this page looked like
--- the first time. Row one makes and chooses a panel, row two names it and copies onto it, row three
--- is the four bare acts.
---
--- Built ONCE, from BuildPage, and never released by a rebuild. The create box is the reason and it
--- was true before the move too: a create broadcasts MSG.PANELS from inside R:New, so the rebuild
--- lands while the user's own callback is still on the stack, and releasing the box would hand the
--- widget they are typing into back to AceGUI's pool. Everything beside it is refreshed IN PLACE
--- instead, by refreshHeaderActs below — which is the whole cost of the move, and the part a reader
--- coming from the old file will not expect: these six controls used to be rebuilt from scratch
--- against a `rec` upvalue on every repaint, and they now have to re-point themselves at whatever
--- the picker is showing.
+-- Built ONCE, from BuildPage, and never released by a rebuild. The create box is the reason: a
+-- create broadcasts MSG.PANELS from inside R:New, so the rebuild lands while the user's own
+-- callback is still on the stack, and releasing the box would hand the widget they are typing into
+-- back to AceGUI's pool. The picker is refreshed in place instead, through ctx.__pmPicker.
 local function drawPageHeader(ctx)
   local H = NS.Helpers
   if not (H and H.PageHeader) then return end

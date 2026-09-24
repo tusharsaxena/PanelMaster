@@ -18,12 +18,11 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and six of the eight LibKa0s
-seams;
-`modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer and unlock
-mode; `settings/` holds the schema, the other two seams and the four panel pages. Load order is
-fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin several
-steps of it.
+`core/` holds the bootstrap, the Compat firewall, the AceDB layer and seven of the ten LibKa0s
+seams; `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer
+and unlock mode; `settings/` holds the schema, the other three seams and the four panel pages. Load
+order is fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin
+several steps of it.
 
 File-by-file table and the seam/load-order contract in **[module-map.md](module-map.md)**.
 
@@ -289,7 +288,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `test-cases.md` | The generated case inventory (authoritative pass count) |
 | `performance.md` | The performance position and the sweep behind it |
 | `automated-tests/README.md` | What the automated-test record is and how to produce it |
-| `automated-tests/RESULTS.md` | One row per run; generated, never hand-edited |
+| `automated-tests/RESULTS.md` | One row per run; generated, except the watch list's authored Disposition column |
 
 ### Addon-specific (documentation-§3, Tier 3)
 
