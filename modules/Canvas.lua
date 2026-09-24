@@ -18,10 +18,11 @@ local Util = NS.Util
 -- sibling here is not a degraded build, it is a broken load order — and a guard would convert that
 -- into a panel that silently renders wrong instead of an error naming the file that failed to load.
 --
--- The two `if NS.Unlock and NS.Unlock.X` guards (StripOverlay on the retire path, Decorate on the
--- render path) are NOT load-order guards and are NOT the convention: they are METHOD-presence
--- checks on the overlay surface, the one part of Unlock these two paths call into optionally — an
--- undecorated frame is a complete, correct, locked panel, so retire and render must stay total.
+-- The `if NS.Unlock and NS.Unlock.X` guards (StripOverlay on the retire path; on the render path,
+-- StripOverlay in the stood-down branch and Decorate in the other) are NOT load-order guards and are
+-- NOT the convention: they are METHOD-presence checks on the overlay surface, the one part of Unlock
+-- these paths call into optionally — an undecorated frame is a complete, correct, locked panel, so
+-- retire and render must stay total whichever branch runs.
 
 -- Frame pool (hard rule #14: ≥10 dynamic frames use a pool). A user with thirty panels who toggles
 -- the master switch twice would otherwise leak sixty frames — WoW frames are never garbage
@@ -799,7 +800,16 @@ function Canvas:Render(id)
   -- It is NOT the same rung as `settings.enabled`, which BuildSpec already folds into `spec.shown`.
   -- That one answers the player's master switch; this one answers the latch, whose `perf` hold has
   -- nothing to do with the master switch at all.
-  if NS.Lifecycle and NS.Lifecycle:IsDown() then spec.shown = false end
+  --
+  -- The same rung also STRIPS THE UNLOCK OVERLAY, below. Unlock:Decorate shows an unlocked panel
+  -- whatever spec.shown says (you cannot move a panel you cannot see) and arms drag on it, so if it
+  -- ran here while the latch is down, its own f:Show() would undo the hide one line after applySpec
+  -- made it. Read once, the latch picks which of the two overlay calls runs: stood down, the frame is
+  -- stripped -- hidden, mouse-transparent, not movable -- and Decorate never runs. The session unlock
+  -- state (NS.State.unlocked, unlockedPanels) is left alone, so NS.StandUp -> RenderAll decorates
+  -- again from state as it is then (performance-§6), with no imperative lock in NS.StandDown.
+  local down = NS.Lifecycle and NS.Lifecycle:IsDown()
+  if down then spec.shown = false end
   local f = active[id]
   -- A frame can only ever answer to the name it was created with, so a frame holding the wrong name
   -- has to be retired and the one belonging to the right name brought in.
@@ -820,7 +830,11 @@ function Canvas:Render(id)
   end
   f.panelID = rec.id
   applySpec(f, spec)
-  if NS.Unlock and NS.Unlock.Decorate then NS.Unlock:Decorate(f, rec) end
+  if down then
+    if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
+  elseif NS.Unlock and NS.Unlock.Decorate then
+    NS.Unlock:Decorate(f, rec)
+  end
   return f
 end
 

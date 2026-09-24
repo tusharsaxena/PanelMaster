@@ -425,6 +425,12 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 12. **The profile route.** While disabled, switch to a profile where the addon is **enabled**
    (Profiles page) → **Expect:** the panels come up without touching a checkbox or a verb. Switch
    back → **Expect:** they go down again.
+13. **Unlock does not beat the stand-down** (`slash-commands-§7`). With two panels, `/pm unlock`,
+   then `/pm disable` → **Expect:** no outline, no panel, no label, and dragging the empty spot moves
+   nothing. **While disabled**, untick **Master controls ▸ Lock frame**, and tick a panel's
+   **Unlock** on the Panels page → **Expect:** still nothing drawn. `/pm enable` → **Expect:** the
+   outlines come back and the panels drag. **Fail:** any outline or draggable panel while disabled;
+   a drag there writes positions while the addon is off.
 
 ## 7b. The launcher — the minimap button and the broker row
 

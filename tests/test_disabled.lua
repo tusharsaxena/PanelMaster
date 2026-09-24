@@ -250,6 +250,57 @@ test("Disabled 5: every frame that was shown is hidden, and stays hidden", funct
   cleanup()
 end)
 
+test("Disabled 5b: an unlocked panel is hidden, stripped and undraggable while stood down (routes A, B, C)",
+  function()
+    -- Unlock:Decorate shows the frame and arms drag on its own (an unlocked panel is shown whatever
+    -- its enabled flag says), so the latch has to decide WHICH of the two overlay calls Render makes,
+    -- not only spec.shown. Three routes reach an unlocked panel on a stood-down addon: unlock then
+    -- disable (A), unlock via the Lock frame row or `/pm set` while disabled (B), and the per-panel
+    -- tick while disabled (C). The session unlock state survives all three, so re-enabling brings
+    -- the outlines back from state as it is now.
+    --
+    -- red under: call NS.Unlock:Decorate unconditionally in Canvas:Render (modules/Canvas.lua)
+    local a, b = seed()
+    local function assertStoodDown(route)
+      assertEqual(#shownPanels(), 0, "route " .. route .. ": a panel is drawn on a disabled addon")
+      for _, rec in ipairs(R:All()) do
+        assertFalse(NS.Canvas:FrameFor(rec.id):IsMouseEnabled(),
+          "route " .. route .. ": panel " .. rec.id .. " takes the mouse on a disabled addon")
+      end
+    end
+
+    -- Route A: unlock, then disable.
+    NS.Unlock:SetUnlocked(true)
+    S:Set(ENABLED, false)
+    assertStoodDown("A")
+    NS.Unlock:SetUnlocked(false)
+
+    -- Route B: disabled, then the Lock frame row, and again through the slash surface.
+    S:Set("state.locked", false)
+    assertStoodDown("B (schema)")
+    NS.Unlock:SetUnlocked(false)
+    Sl:OnSlash("set state.locked false")
+    assertStoodDown("B (slash)")
+    NS.Unlock:SetUnlocked(false)
+
+    -- Route C: disabled, then one panel's own Unlock tick.
+    NS.Unlock:SetPanelUnlocked(a, true)
+    assertStoodDown("C")
+
+    -- The positive half: the session unlock state was left alone, so re-enabling decorates again.
+    NS.Unlock:SetUnlocked(true)
+    assertStoodDown("A (re-unlocked while disabled)")
+    S:Set(ENABLED, true)
+    assertEqual(#shownPanels(), 2, "re-enabling did not bring the unlocked panels back")
+    for _, id in ipairs({ a, b }) do
+      assertTrue(NS.Canvas:FrameFor(id):IsMouseEnabled(),
+        "re-enabling did not re-arm drag on panel " .. id)
+    end
+
+    NS.Unlock:SetUnlocked(false)
+    cleanup()
+  end)
+
 -- ── 6. fire everything anyway ──────────────────────────────────────────────────
 
 test("Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing", function()

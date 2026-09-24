@@ -770,12 +770,13 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (14)
+### test_disabled.lua (15)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
 - Disabled 4: no timer, ticker or OnUpdate is left armed
 - Disabled 5: every frame that was shown is hidden, and stays hidden
+- Disabled 5b: an unlocked panel is hidden, stripped and undraggable while stood down (routes A, B, C)
 - Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing
 - Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
 - Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
@@ -1011,7 +1012,7 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 62 |
 | test_profiles.lua | 23 |
 | test_launcher.lua | 23 |
-| test_disabled.lua | 14 |
+| test_disabled.lua | 15 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 43 |
 | test_surface_parity.lua | 6 |
@@ -1024,4 +1025,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **890** |
+| **Total** | **891** |
