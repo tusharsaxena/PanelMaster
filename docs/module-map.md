@@ -114,7 +114,7 @@ beside `libs/LibKa0s/` and never edited here, so it is not listed. Case counts l
 |---|---|
 | `tests/run.lua` | The runner. Loads every source in TOC order, calls the real `OnInitialize` / `OnEnable`, exposes `_G.PM_TEST`, runs every suite; `--list` writes `docs/test-cases.md`. |
 | `tests/wow_mock.lua` | The WoW-API mock: an extender over `tests/_kit/mock_base.lua`, overriding only what is this addon's own. |
-| `tests/degraded_env.lua` | Not a suite. Builds a whole environment from a partial LibKa0s file list, for the degraded arms of `test_libka0s.lua` and `test_surface_parity.lua`. |
+| `tests/degraded_env.lua` | Not a suite. Builds a whole environment from a partial LibKa0s file list, for the degraded arms of `test_disabled.lua`, `test_launcher.lua`, `test_libka0s.lua`, `test_schema.lua` and `test_surface_parity.lua`. |
 | `tests/prose_waivers.lua` | Not a suite. The per-file, per-word waivers the kit's US-English prose gate reads. |
 
 The suites, one per subject:
@@ -152,8 +152,10 @@ The suites, one per subject:
 
 ## tools/
 
-Offline generators, run by hand and never loaded by the client. Each writes through a `.tmp` file
-and `os.replace`. `tools/artwork/bin/` (the upscaler) and `tools/artwork/fonts/` (the poster's
+Offline generators, run by hand and never loaded by the client. `update_catalog.py`,
+`make_poster.py` and `artwork_cleaner.py`'s `.stamps.tsv` write through a `.tmp` file and
+`os.replace`; `artwork_cleaner.py`'s TGAs and `build_manifest.py`'s `modules/SunnArtPacks.lua`
+are written in place. `tools/artwork/bin/` (the upscaler) and `tools/artwork/fonts/` (the poster's
 pinned faces) are vendored inputs, not tools.
 
 | File | Writes |
