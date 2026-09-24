@@ -1351,3 +1351,48 @@ test("Panels page: every color declares WHOSE class it means, and all five are t
         field .. " declares a class source but has no class-color companion")
     end
   end)
+
+-- THE PER-PANEL UNLOCK TICK FOLLOWS THE PANEL'S REAL STATE (review F-008 / PanelMaster-R-08).
+--
+-- It reads NS.Unlock:IsPanelUnlocked, which is session state no MSG_PANEL describes, so it had no
+-- refresher: a global unlock left it unticked-but-meaningless, a global lock left it ticked, and a
+-- combat-deferred tick replayed at PLAYER_REGEN_ENABLED left it unticked on an unlocked panel. The
+-- unlock module now pokes NS.PanelEditor:RefreshUnlock at the end of every transition.
+--
+-- red under: dropping the refresher, the RefreshUnlock calls in modules/Unlock.lua, or the
+-- SetDisabled while the global unlock is on.
+test("Panels page: the per-panel Unlock tick tracks global, per-panel and deferred unlocks",
+  function()
+  T.mocks.__inCombat = false
+  NS.Unlock:SetUnlocked(false)
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Unlock tick")
+  E.__setSelectedID(rec.id)
+  local ctx = freshPanelsCtx()
+  local savedCtx = E.__ctx
+  E.__ctx = ctx
+  local box = assert(actsOnGeneral(ctx).unlocked, "no Unlock tick on the General tab")
+  assertFalse(box:GetValue() == true, "a locked panel's tick starts ticked")
+
+  -- (a) The global unlock ticks and grays the box; the global lock puts it back.
+  NS.Unlock:SetUnlocked(true)
+  assertTrue(box:GetValue() == true, "the tick does not show the global unlock")
+  assertTrue(box.disabled == true, "the tick stays live while every panel is already unlocked")
+  NS.Unlock:SetUnlocked(false)
+  assertFalse(box:GetValue() == true, "the tick survived a global lock")
+  assertFalse(box.disabled == true, "the tick stayed grayed after the global lock")
+
+  -- (b) A tick in combat is deferred and reads false; leaving combat replays it and the tick follows.
+  T.mocks.__inCombat = true
+  box:__fire("OnValueChanged", true)
+  assertFalse(box:GetValue() == true, "a deferred unlock claims the panel is unlocked")
+  T.mocks.__inCombat = false
+  NS.addon:OnRegenEnabled()
+  assertTrue(NS.Unlock:IsPanelUnlocked(rec.id), "the deferred unlock was not replayed")
+  assertTrue(box:GetValue() == true, "the tick did not follow the replayed unlock")
+
+  NS.Unlock:SetUnlocked(false)
+  E.__ctx = savedCtx
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+end)

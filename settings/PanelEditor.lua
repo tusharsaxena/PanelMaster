@@ -739,13 +739,16 @@ local function buildPanelEditor(ctx, parent, rec)
 
     -- Per-panel unlock. The global unlock is all-or-nothing; this one puts a drag handle on just
     -- the panel being edited, which is what you want with a dozen of them on screen.
-    --
-    -- No refresher: this is session state (NS.State.unlockedPanels), not a record field, so no
-    -- MSG_PANEL ever describes it, and a rebuild is the only thing that can change it.
+    -- Session state no MSG_PANEL describes: its refresher is driven by NS.PanelEditor:RefreshUnlock.
     local unlocked = AceGUI:Create("CheckBox")
     unlocked:SetLabel("Unlock")
     unlocked:SetRelativeWidth(0.5)
     unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
+    unlocked:SetDisabled(NS.State.unlocked == true)
+    addRefresher(ctx, rec, function()
+      unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
+      unlocked:SetDisabled(NS.State.unlocked == true)
+    end)
     unlocked:SetCallback("OnValueChanged", function(widget, _, v)
       local result = NS.Unlock:SetPanelUnlocked(rec.id, v and true or false)
       -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
@@ -754,7 +757,8 @@ local function buildPanelEditor(ctx, parent, rec)
     end)
     attachTooltip(unlocked, "Unlock",
       "Give just this panel a drag handle and a name label, so it can be moved. "
-      .. "Session-only \226\128\148 always locked again after a reload.")
+      .. "Session-only \226\128\148 always locked again after a reload. Grayed out while Lock "
+      .. "frame is unticked \226\128\148 every panel is already unlocked.")
     toggleRow:AddChild(unlocked)
 
     local actionRow = editorRow(group)
@@ -1437,6 +1441,7 @@ end
 -- Wired at REGISTRATION rather than from the page build, because the build is lazy: a page that has
 -- never been shown would otherwise miss every change made before its first OnShow.
 local function wirePanelsBus(ctx)
+  E.__ctx = ctx
   if E.__evPanels then return end
   local ev = NS.NewBusTarget()
   if not ev then return end
@@ -1464,6 +1469,12 @@ end
 -- Subscribe the page's context to the panel bus. Called from P:Register, not from the build, so a
 -- page that has never been shown still tracks changes made while it was hidden.
 function E:WireBus(ctx) wirePanelsBus(ctx) end
+
+-- Re-read the Unlock tick after an unlock transition (modules/Unlock.lua); scalar tier, no new message.
+function E:RefreshUnlock()
+  local ctx = E.__ctx
+  if ctx and NS.Helpers and NS.Helpers.RefreshPanel then NS.Helpers.RefreshPanel(ctx, false) end
+end
 
 -- Emit the page's static furniture (the create box, the two section headings, the selector's
 -- container) and install the rebuilder that draws the tab strip and the editor itself. First OnShow

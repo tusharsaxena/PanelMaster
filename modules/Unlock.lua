@@ -140,6 +140,7 @@ function U:SetPanelUnlocked(id, on)
   -- Through DebugBuild rather than Debug: R:Get scans every panel to turn the id into a name, which
   -- is work nobody with logging off should pay for. describeLock runs only past the sink's gate.
   NS.DebugBuild("Unlock", "'%s' %s", describeLock, id, on)
+  if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return on
 end
 
@@ -250,6 +251,7 @@ function U:SetUnlocked(on)
   end
   if NS.Canvas then NS.Canvas:RenderAll() end
   NS.Debug("Unlock", "panels %s", on and "unlocked" or "locked")
+  if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return on
 end
 
@@ -295,6 +297,7 @@ function U:ResumePending()
     end
   end
 
+  if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return resumed
 end
 

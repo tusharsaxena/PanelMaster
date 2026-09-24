@@ -660,7 +660,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 
-### test_panel.lua (62)
+### test_panel.lua (63)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -724,6 +724,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: every color swatch is followed by a 'Use class color' companion
 - Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
+- Panels page: the per-panel Unlock tick tracks global, per-panel and deferred unlocks
 
 ### test_profiles.lua (24)
 
@@ -1017,7 +1018,7 @@ badge and any count quoted in the docs must agree with it.
 | test_debuglog.lua | 38 |
 | test_schema.lua | 47 |
 | test_slash.lua | 74 |
-| test_panel.lua | 62 |
+| test_panel.lua | 63 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 23 |
 | test_disabled.lua | 15 |
@@ -1033,4 +1034,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **899** |
+| **Total** | **900** |

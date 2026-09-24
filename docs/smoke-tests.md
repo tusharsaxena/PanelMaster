@@ -634,6 +634,9 @@ worth doing in full after any change to the icon or the seam.
 10. Change a panel's width slider and color picker → **Expect:** the panel updates as you release.
 11. Tick **Unlock** on the selected panel → **Expect:** *only that panel* grows an outline and a
     drag handle; the others stay inert. Drag it, then untick.
+    With the Panels page open on a panel, untick **Lock frame** on General → **Expect:** back on
+    Panels, **Unlock** shows ticked and grayed. Tick **Lock frame** again → unticked and enabled.
+    Tick **Unlock** in combat → it stays unticked (queued); leave combat → it shows ticked.
 12. Hover the **Panel name** box → **Expect:** its tooltip reads `Frame name: PanelMaster_Panel_<slug>`
     for that panel.
 13. Click **Delete** → **Expect:** the panel goes from the screen and the dropdown, and the editor
