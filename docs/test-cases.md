@@ -188,7 +188,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: leaving and entering combat both reach the renderer
 - Canvas: an Only-in-combat panel appears at the combat-start event, not a repaint later
 
-### test_unlock.lua (22)
+### test_unlock.lua (23)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
@@ -212,6 +212,7 @@ badge and any count quoted in the docs must agree with it.
 - Unlock: the overlay follows the panel's level when the panel's level changes
 - Unlock: the outline thickness comes from the setting, and ships at the old literal
 - Unlock: a hand-edited outline thickness is clamped, not drawn
+- Unlock.PendingSnapshot: reports the combat queue as a copy, and reading it changes nothing
 
 ### test_media.lua (84)
 
@@ -1048,7 +1049,7 @@ badge and any count quoted in the docs must agree with it.
 | test_envsetup.lua | 4 |
 | test_registry.lua | 45 |
 | test_canvas.lua | 37 |
-| test_unlock.lua | 22 |
+| test_unlock.lua | 23 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
@@ -1073,4 +1074,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 1 |
-| **Total** | **935** |
+| **Total** | **936** |

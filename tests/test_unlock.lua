@@ -258,3 +258,40 @@ test("Unlock: a hand-edited outline thickness is clamped, not drawn", function()
   assertFalse((NS.Schema:Set("settings.unlockOutlineSize", 0)))
   assertFalse((NS.Schema:Set("settings.unlockOutlineSize", 4000)))
 end)
+test("Unlock.PendingSnapshot: reports the combat queue as a copy, and reading it changes nothing", function()
+  -- The diagnostics report reads the queue through this accessor. It must never flush the queue or
+  -- hand out the live table: a report taken mid-fight would otherwise cancel or corrupt the unlocks
+  -- the player asked for.
+  fresh()
+  local a, b = R:New("QueuedA"), R:New("QueuedB")
+  local snap = U:PendingSnapshot()
+  assertFalse(snap.unlock, "an empty queue reported a global unlock")
+  assertEqual(#snap.panels, 0, "an empty queue reported panel ids")
+
+  T.mocks.__inCombat = true
+  U:SetUnlocked(true)
+  U:SetPanelUnlocked(b.id, true)
+  U:SetPanelUnlocked(a.id, true)
+  snap = U:PendingSnapshot()
+  assertTrue(snap.unlock, "the queued global unlock was not reported")
+  assertEqual(#snap.panels, 2)
+  assertEqual(snap.panels[1], math.min(a.id, b.id), "panel ids are not sorted")
+  assertEqual(snap.panels[2], math.max(a.id, b.id), "panel ids are not sorted")
+
+  -- Mutating the snapshot must not reach the queue.
+  snap.unlock = false
+  snap.panels[1] = nil
+  snap.panels[2] = nil
+  assertTrue(U.__hasPending(), "the snapshot aliased the global flag")
+  assertTrue(U.__hasPending(a.id) and U.__hasPending(b.id), "the snapshot aliased the panel queue")
+
+  -- Reading twice is not a flush.
+  U:PendingSnapshot()
+  assertTrue(U.__hasPending(), "reading the snapshot flushed the queue")
+  assertFalse(NS.State.unlocked, "reading the snapshot applied the unlock")
+
+  T.mocks.__inCombat = false
+  U:SetUnlocked(false)
+  assertFalse(U:PendingSnapshot().unlock)
+  assertEqual(#U:PendingSnapshot().panels, 0)
+end)

@@ -301,6 +301,20 @@ function U:ResumePending()
   return resumed
 end
 
+-- Read-only view of the combat unlock queue, for the diagnostics report (debug-logging-§14): a
+-- fresh table every call, `unlock` the global request and `panels` the queued per-panel ids in
+-- ascending order. A copy rather than the live table so no reader can flush or edit the queue, and
+-- reading it never replays anything; only ResumePending and the lock paths change the queue.
+function U:PendingSnapshot()
+  local ids = {}
+  for id in pairs(pendingPanels) do ids[#ids + 1] = id end
+  table.sort(ids, function(a, b)
+    if type(a) == "number" and type(b) == "number" then return a < b end
+    return tostring(a) < tostring(b)
+  end)
+  return { unlock = pendingUnlock, panels = ids }
+end
+
 -- Test seam. `pendingUnlock` and `pendingPanels` are file-locals with no other way in, and the
 -- combat-deferral rules are worth asserting, so the state is readable rather than guessed at from
 -- its side effects.
