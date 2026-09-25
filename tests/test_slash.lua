@@ -880,9 +880,9 @@ test("Disabled: the gate is the VERB TABLE's, so the live set is the standard's 
   -- ALWAYS_LIVE is data, named once, and this is what stops it drifting into an ad-hoc list. Every
   -- name the standard puts on the live list is here whether or not this addon registers the verb --
   -- `perf` does not exist in NS.COMMANDS today, and a `perf` arriving later must not have to
-  -- remember to come back and add itself.
+  -- remember to come back and add itself. `diagnostics` joined the set at Slash minor 16.
   for _, verb in ipairs({ "help", "config", "version", "enable", "disable", "debug", "perf",
-                          "get", "set", "list", "reset", "resetall" }) do
+                          "get", "set", "list", "reset", "resetall", "diagnostics" }) do
     assertTrue(Sl.ALWAYS_LIVE[verb], "'" .. verb .. "' is a feature verb here, and the standard "
       .. "says it may never be refused")
   end
@@ -891,7 +891,7 @@ test("Disabled: the gate is the VERB TABLE's, so the live set is the standard's 
   for verb in pairs(Sl.ALWAYS_LIVE) do
     local named = false
     for _, ok in ipairs({ "help", "config", "version", "enable", "disable", "debug", "perf",
-                          "get", "set", "list", "reset", "resetall" }) do
+                          "get", "set", "list", "reset", "resetall", "diagnostics" }) do
       if verb == ok then named = true end
     end
     if not named then extra = extra + 1 end

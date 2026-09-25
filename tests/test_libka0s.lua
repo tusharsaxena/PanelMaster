@@ -778,6 +778,40 @@ test("Degraded install: /pm debug dump still answers", function()
   assertTrue(type(lines) == "table" and #lines > 0, "Diagnose returned nothing in a degraded install")
 end)
 
+test("Degraded install: the diagnostics report says the library is absent and writes nothing",
+  function()
+    -- debug-logging-§14 / DebugLog 14.1: the report is the library's, so the stub answers with the
+    -- collection's library-absent line naming the command, writes nothing and returns 0.
+    local ns, m = loadDegraded()
+    ns.Print("warm up the notice")
+    local D = ns.DebugLog
+    local before = #m.__chat
+    assertEqual(D:RunDiagnostics(), 0, "the stub's report claims to have written lines")
+    assertEqual(#m.__chat, before + 1, "the stub's report is one chat line")
+    assertEqual(m.__chat[#m.__chat], ns.PREFIX .. " "
+      .. "/pm diagnostics is unavailable: the LibKa0s library did not load.")
+    assertEqual(D:BufferSize(), 0, "the stub's report wrote into a console that does not exist")
+
+    local data = D:BuildDiagnostics()
+    assertEqual(#data.lines, 0)
+    assertEqual(data.dropped, 0)
+    assertFalse(data.capped)
+    assertFalse(data.capsHit)
+
+    -- DebugVerb: the library's three words answer true, anything else false for the host's fallback.
+    before = #m.__chat
+    assertTrue(D:DebugVerb("Diagnostics"), "the debug word is matched in any case")
+    assertTrue(m.__chat[#m.__chat]:find("/pm diagnostics is unavailable", 1, true) ~= nil)
+    assertTrue(D:DebugVerb("on"))
+    assertTrue(ns.State.debug, "`on` did not reach SetEnabled")
+    assertTrue(D:DebugVerb("off"))
+    assertFalse(ns.State.debug, "`off` did not reach SetEnabled")
+    assertFalse(D:DebugVerb("diag"), "a short name must not run the report")
+    assertFalse(D:DebugVerb("dump"))
+    assertFalse(D:DebugVerb(nil))
+    assertTrue(#m.__chat > before)
+  end)
+
 test("Degraded install: the fallback printer renders the same bytes as the library's", function()
   local ns, m = loadDegraded()
   ns.Print("warm up the notice")

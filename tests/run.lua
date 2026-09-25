@@ -122,6 +122,10 @@ local SUITES = {
   -- Kit.assertSuiteInventory fails the run until it is declared, so it cannot arrive with a
   -- re-vendor and then quietly run nothing.
   { name = "test_eol", dir = "tests/_kit/" },
+  -- The kit's diagnostics contract (revision 27, debug-logging-§14): the dispatcher half of the
+  -- rule, run against this addon's own dispatcher. Until Kit.diagnostics is set it registers one
+  -- declared skip naming the rule, which keeps a re-vendor green before the report exists.
+  { name = "test_diagnostics_contract", dir = "tests/_kit/" },
 }
 
 -- Published so tests/test_harness.lua can state the inventory gate as a NAMED case over the
