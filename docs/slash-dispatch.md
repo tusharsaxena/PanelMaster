@@ -27,8 +27,8 @@ reading and repairing settings included, which is precisely when a player most n
 Standard v2.56.0 narrowed that to `enable` and `help`; v2.57.0 **reversed it**, on the case that
 `/pm` on a disabled addon answered with a refusal instead of the one surface a player uses to switch
 it back on by hand. This addon carries the restored set and narrows nothing: the descriptor passes
-**no `liveVerbs`**, so the live set is `lib.LIVE_VERBS` — the standard's twelve reserved verbs at
-Slash minor 13 — and `Sl.ALWAYS_LIVE` is a *read* of that array rather than a second source for it.
+**no `liveVerbs`**, so the live set is `lib.LIVE_VERBS` — the standard's thirteen reserved verbs
+at Slash minor 16 — and `Sl.ALWAYS_LIVE` is a *read* of that array rather than a second source for it.
 
 **A disabled addon refuses its FEATURE verbs**, on one tagged line naming `/pm enable`, and does
 nothing else (`slash-commands-§2`; a SHOULD, taken here). Everything else — `new delete rename
