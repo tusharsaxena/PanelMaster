@@ -878,7 +878,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (49)
+### test_libka0s.lua (50)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -915,6 +915,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: the console explains itself once and every member still answers
 - Degraded install: /pm debug on|off still flips the flag and acknowledges
 - Degraded install: /pm debug dump still answers
+- Degraded install: the diagnostics report says the library is absent and writes nothing
 - Degraded install: the fallback printer renders the same bytes as the library's
 - Degraded install: /pm config answers on EVERY invocation, not once
 - Degraded install: a bare /pm runs `config`, and falls back to help without one
@@ -1032,6 +1033,10 @@ badge and any count quoted in the docs must agree with it.
 - eol: every tracked file carries the terminator .gitattributes declares for it
 - eol: .gitattributes is line-endings-§5's canonical body for this repo kind
 
+### test_diagnostics_contract.lua (1)
+
+- diagnostics contract: debug-logging-§14 (skipped: Kit.diagnostics is not set in the runner, so this repo's dispatcher is not wired to the shared contract yet. Every Ka0s addon owes debug-logging-§14's report; wire Kit.diagnostics once the report exists)
+
 ## Totals
 
 | Suite | Cases |
@@ -1056,7 +1061,7 @@ badge and any count quoted in the docs must agree with it.
 | test_launcher.lua | 37 |
 | test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 49 |
+| test_libka0s.lua | 50 |
 | test_surface_parity.lua | 8 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
@@ -1067,4 +1072,5 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **933** |
+| test_diagnostics_contract.lua | 1 |
+| **Total** | **935** |

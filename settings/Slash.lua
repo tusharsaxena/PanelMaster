@@ -438,8 +438,8 @@ local lib = LibStub and LibStub("LibKa0s-Slash-1.0", true)
 -- (slash-commands-§3's unqualified MUST -- "the addon is disabled" is a true sentence and the wrong
 -- answer to a misspelling).
 --
--- `liveVerbs` IS DELIBERATELY NOT PASSED. Its default is `lib.LIVE_VERBS`, which at Slash minor 13
--- IS the standard's twelve reserved verbs; passing a copy would be this addon carrying its own
+-- `liveVerbs` IS DELIBERATELY NOT PASSED. Its default is `lib.LIVE_VERBS`, which at Slash minor 16
+-- IS the standard's thirteen reserved verbs; passing a copy would be this addon carrying its own
 -- spelling of a collection-wide list, and passing a SHORTER one is exactly the narrowing v2.57.0
 -- reversed. `Sl.ALWAYS_LIVE` below is a READ of the library's array, never a second source for it.
 --
@@ -449,9 +449,10 @@ local lib = LibStub and LibStub("LibKa0s-Slash-1.0", true)
 local LIVE_VERBS = lib and lib.LIVE_VERBS or {
   -- The fallback is reached only on the degraded arm, where there is no library to read it from.
   -- `perf` is listed although this addon registers no such verb: the set is the rule, not an
-  -- inventory of today's table (docs/performance.md keeps the verb reserved).
+  -- inventory of today's table (docs/performance.md keeps the verb reserved). `diagnostics` joined
+  -- the set at Slash minor 16 (debug-logging-§14) on the same terms.
   "help", "config", "version", "enable", "disable", "debug", "perf",
-  "get", "set", "list", "reset", "resetall",
+  "get", "set", "list", "reset", "resetall", "diagnostics",
 }
 
 --- The live set as a lookup, for the degraded arm's gate below and for the suites that assert the

@@ -160,6 +160,34 @@ if not lib then
     explainOnce()
   end
 
+  -- The diagnostics report's three members (debug-logging-§14, DebugLog 14.1). The report is the
+  -- library's, so on this arm there is none to write: RunDiagnostics says so in the collection's
+  -- library-absent line, naming the command as typed, writes nothing and returns 0. NS.L is
+  -- resolved at CALL time, so the load order of locales/ does not bind this file.
+  function D:RunDiagnostics()
+    NS.Print(NS.L["%s is unavailable: the LibKa0s library did not load."]:format("/pm diagnostics"))
+    return 0
+  end
+  -- The report as data, in the library's shape and empty, so a caller reads no report rather than
+  -- raising.
+  function D:BuildDiagnostics()
+    return { lines = {}, dropped = 0, capped = false, capsHit = false }
+  end
+  -- The library's `debug` words: `diagnostics`, `on` and `off` answer true and anything else false,
+  -- so the caller keeps its own fallback. Each routes to the member above that answers it here.
+  function D:DebugVerb(rest)
+    local word = type(rest) == "string" and rest:lower():match("^%s*(%S+)") or nil
+    if word == "diagnostics" then
+      self:RunDiagnostics()
+      return true
+    end
+    if word == "on" or word == "off" then
+      self:SetEnabled(word == "on")
+      return true
+    end
+    return false
+  end
+
   NS.DebugLog = D
   NS.Debug = function() end
   NS.DebugBuild = function() end
