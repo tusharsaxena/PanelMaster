@@ -250,6 +250,57 @@ test("Disabled 5: every frame that was shown is hidden, and stays hidden", funct
   cleanup()
 end)
 
+test("Disabled 5b: an unlocked panel is hidden, stripped and undraggable while stood down (routes A, B, C)",
+  function()
+    -- Unlock:Decorate shows the frame and arms drag on its own (an unlocked panel is shown whatever
+    -- its enabled flag says), so the latch has to decide WHICH of the two overlay calls Render makes,
+    -- not only spec.shown. Three routes reach an unlocked panel on a stood-down addon: unlock then
+    -- disable (A), unlock via the Lock frame row or `/pm set` while disabled (B), and the per-panel
+    -- tick while disabled (C). The session unlock state survives all three, so re-enabling brings
+    -- the outlines back from state as it is now.
+    --
+    -- red under: call NS.Unlock:Decorate unconditionally in Canvas:Render (modules/Canvas.lua)
+    local a, b = seed()
+    local function assertStoodDown(route)
+      assertEqual(#shownPanels(), 0, "route " .. route .. ": a panel is drawn on a disabled addon")
+      for _, rec in ipairs(R:All()) do
+        assertFalse(NS.Canvas:FrameFor(rec.id):IsMouseEnabled(),
+          "route " .. route .. ": panel " .. rec.id .. " takes the mouse on a disabled addon")
+      end
+    end
+
+    -- Route A: unlock, then disable.
+    NS.Unlock:SetUnlocked(true)
+    S:Set(ENABLED, false)
+    assertStoodDown("A")
+    NS.Unlock:SetUnlocked(false)
+
+    -- Route B: disabled, then the Lock frame row, and again through the slash surface.
+    S:Set("state.locked", false)
+    assertStoodDown("B (schema)")
+    NS.Unlock:SetUnlocked(false)
+    Sl:OnSlash("set state.locked false")
+    assertStoodDown("B (slash)")
+    NS.Unlock:SetUnlocked(false)
+
+    -- Route C: disabled, then one panel's own Unlock tick.
+    NS.Unlock:SetPanelUnlocked(a, true)
+    assertStoodDown("C")
+
+    -- The positive half: the session unlock state was left alone, so re-enabling decorates again.
+    NS.Unlock:SetUnlocked(true)
+    assertStoodDown("A (re-unlocked while disabled)")
+    S:Set(ENABLED, true)
+    assertEqual(#shownPanels(), 2, "re-enabling did not bring the unlocked panels back")
+    for _, id in ipairs({ a, b }) do
+      assertTrue(NS.Canvas:FrameFor(id):IsMouseEnabled(),
+        "re-enabling did not re-arm drag on panel " .. id)
+    end
+
+    NS.Unlock:SetUnlocked(false)
+    cleanup()
+  end)
+
 -- ── 6. fire everything anyway ──────────────────────────────────────────────────
 
 test("Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing", function()
@@ -277,9 +328,9 @@ test("Disabled 6: firing the events anyway writes nothing, prints nothing, shows
 
   -- (b) the bus, at the target the renderer used to hold. Nothing answers, because the
   -- subscriptions were unregistered rather than gated.
-  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Registry.MSG_PANELS), 0,
+  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Registry.MSG.PANELS), 0,
     "the renderer's PanelsChanged subscription survived the stand-down")
-  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Schema.MSG_SETTINGS), 0,
+  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Schema.MSG.SETTINGS), 0,
     "the renderer's SettingsChanged subscription survived the stand-down")
 
   -- (c) the handler methods themselves, reached past the registration set entirely. Combat entry is
@@ -399,34 +450,36 @@ test("Disabled 7b: a reserved verb this addon never registered answers the SAME 
 
 -- ── 8. the launcher ────────────────────────────────────────────────────────────
 
-test("Disabled 8: left-click is refused and writes nothing; right-click still opens the panel",
+test("Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked",
   function()
-    -- launcher-§2: this addon is on rung (b) -- unlocking IS its preview -- so the left button
-    -- drives a feature and is refused. The rung-(c) carve-out (a left click that opens the settings
-    -- panel, which §7 keeps alive) does not reach it. Right-click is unchanged in either state,
-    -- because the owner's ruling narrows the SLASH surface and a mouse click is not a slash command.
+    -- launcher-§2 as of standard v2.67.0 (Launcher minor 4): the left button opens the settings
+    -- panel in either state -- the panel is setup, and where the addon is switched back on -- so it
+    -- is not refused. The right button opens the options menu, whose Enabled entry stays live while
+    -- Locked is grayed; a grayed entry clicked anyway writes nothing (slash-commands-§7).
     seed()
+    local Menu = dofile("tests/mock_menu.lua")(mocks)
     local object = NS.Launcher:Object()
     assertTrue(object ~= nil, "there is no broker object to click")
     S:Set(ENABLED, false)
 
     local before = svFingerprint()
     local at = #mocks.__chat
+    mocks.__openedCategory = nil
     object.OnClick(object, "LeftButton")
+    assertTrue(mocks.__openedCategory ~= nil, "left-click does not open the settings panel while disabled")
+
+    object.OnClick(object, "RightButton")
+    local menu = assert(Menu.last, "right-click opened no options menu while disabled")
+    assertTrue(menu:Find("Enabled").enabled, "the Enabled entry is grayed while disabled")
+    assertFalse(menu:Find("Locked").enabled, "the Locked entry is live while disabled")
+    menu:ForceClick("Locked")
     local lines = chatSince(at)
 
     assertEqual(svFingerprint(), before,
       "a launcher click wrote SavedVariables on an addon the player switched off")
     assertEqual(#shownPanels(), 0, "a launcher click showed a frame on a disabled addon")
-    assertEqual(#lines, 1, "the refused click printed " .. #lines .. " lines, not one")
-    assertEqual(lines[1], NS.PREFIX .. " " .. Sl:DisabledLine(),
-      "the refused click did not print the collection's line")
-    assertFalse(NS.State.unlocked, "the refused click unlocked the panels anyway")
-
-    mocks.__openedCategory = nil
-    object.OnClick(object, "RightButton")
-    assertTrue(mocks.__openedCategory ~= nil,
-      "right-click no longer opens the settings panel while disabled")
+    assertEqual(#lines, 0, "the launcher printed " .. #lines .. " lines while disabled")
+    assertFalse(NS.State.unlocked, "a launcher click unlocked the panels anyway")
     cleanup()
   end)
 
@@ -578,3 +631,96 @@ test("Disabled: `/pm disable` and the checkbox are one write, and the latch is i
     assertTrue(#featureRegistrations() > 0, "/pm enable did not stand it back up")
     cleanup()
   end)
+
+-- ── Events: a refused name costs only itself (events-frames-taint-§1) ────────────
+--
+-- Every registration goes through NS.SafeRegisterEvent (core/CoreSetup.lua), which pcalls the one
+-- call and appends a refused name to NS.State.rejectedEvents. The kit's `M.__badEvents` makes the
+-- client refuse a name; `C_EventUtils.IsEventValid` answers from the same table, so the live arm is
+-- front-gated by it, and the second case below removes it so the probe-frame rung decides instead.
+
+local function wipe(t) for i = #t, 1, -1 do t[i] = nil end end
+
+local function registeredEvents()
+  local out = {}
+  for _, r in ipairs(mocks.__registrations()) do
+    if r.kind == "event" then out[r.event] = true end
+  end
+  return out
+end
+
+--- Two full stand-down/stand-up cycles through the single write seam with PLAYER_REGEN_DISABLED
+--- refused, then the assertions the finding asks for. Restores the bad-event table, the list and a
+--- clean registration set afterwards, whether the body passed or not.
+local function driveRejection(label)
+  local rejected = NS.State.rejectedEvents
+  assertTrue(type(rejected) == "table", "NS.State.rejectedEvents does not exist")
+  wipe(rejected)
+  S:Set(ENABLED, true)
+  local savedBad = mocks.__badEvents
+  mocks.__badEvents = { [COMBAT_ENTRY] = true }
+  local ok, err = pcall(function()
+    for _ = 1, 2 do
+      S:Set(ENABLED, false)
+      S:Set(ENABLED, true)
+    end
+  end)
+  mocks.__badEvents = savedBad
+  local ev = registeredEvents()
+  local list = table.concat(rejected, ",")
+  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
+  local hadCanvas = NS.Canvas.__ev ~= nil
+
+  wipe(rejected)
+  S:Set(ENABLED, false)
+  S:Set(ENABLED, true)
+
+  assertTrue(ok, label .. ": a refused event name raised out of the stand-up: " .. tostring(err))
+  assertTrue(ev.PLAYER_ENTERING_WORLD, label .. ": PLAYER_ENTERING_WORLD did not register")
+  assertTrue(ev.PLAYER_REGEN_ENABLED, label .. ": PLAYER_REGEN_ENABLED did not register")
+  assertTrue(hadCanvas, label .. ": Canvas:Enable never ran after the refused registration")
+  assertEqual(list, COMBAT_ENTRY, label .. ": the rejected list is not exactly the refused name, once")
+  assertTrue(dump:find("rejected events: 1 (" .. COMBAT_ENTRY .. ")", 1, true) ~= nil,
+    label .. ": /pm debug dump does not report the rejected name")
+end
+
+test("Events: a rejected event name is recorded and the rest still register", function()
+  -- red under: bare NS.addon:RegisterEvent in NS.StandUp -- the Set raises
+  -- 'Attempt to register unknown event "PLAYER_REGEN_DISABLED"' and Canvas:Enable never runs.
+  driveRejection("IsEventValid rung")
+end)
+
+test("Events: with no C_EventUtils the refused name is still caught and recorded", function()
+  -- An older client has no IsEventValid; the probe frame and the target's own pcall decide.
+  local saved = mocks.C_EventUtils
+  mocks.C_EventUtils = nil
+  local ok, err = pcall(driveRejection, "pcall rung")
+  mocks.C_EventUtils = saved
+  assertTrue(ok, tostring(err))
+end)
+
+test("Events: the dump says 'rejected events: 0' when nothing was refused", function()
+  wipe(NS.State.rejectedEvents)
+  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
+  assertTrue(dump:find("rejected events: 0", 1, true) ~= nil, "the dump has no rejected-events line")
+end)
+
+test("Events: the degraded Core stub's SafeRegisterEvent pcalls and records once", function()
+  -- No LibKa0s-Core: the one-rung stub in core/CoreSetup.lua is all that stands between a refused
+  -- name and a raise out of NS.StandUp.
+  local degradedNS = dofile("tests/degraded_env.lua").loadPartial({ Core = true })
+  local calls = 0
+  local target = {
+    RegisterEvent = function(_, event)
+      calls = calls + 1
+      if event == "BAD_EVENT" then error("Attempt to register unknown event \"BAD_EVENT\"") end
+    end,
+  }
+  local list = {}
+  assertTrue(degradedNS.SafeRegisterEvent(target, "GOOD_EVENT", "H", list), "a valid name was refused")
+  assertFalse(degradedNS.SafeRegisterEvent(target, "BAD_EVENT", "H", list), "a refused name answered true")
+  assertFalse(degradedNS.SafeRegisterEvent(target, "BAD_EVENT", "H", list), "a refused name answered true")
+  assertEqual(table.concat(list, ","), "BAD_EVENT", "the stub did not record the refusal exactly once")
+  assertEqual(calls, 3, "the stub did not hand every name to the target")
+  assertTrue(degradedNS.SafeRegisterEvent(target, "GOOD_EVENT", "H", nil), "a nil list broke the stub")
+end)

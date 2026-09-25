@@ -268,6 +268,43 @@ function Sl:CliRecover()
   end
 end
 
+-- ── The composed-row verbs (slash-commands-§1 / §2 / §8, options-ui-§1) ─────────
+--
+-- `enable`, `disable`, `lock` and `unlock` write rows the Options COMPOSER declares, so whenever the
+-- Options major is absent -- the whole library, or Options alone on a partial load -- those rows do
+-- not exist, and a verb routed straight at `CliSet` would be refused (or, on the stub arm, answer
+-- with the settings-CLI notice) on the one load it most needs to survive. With the row present each
+-- of these is LITERALLY the `CliSet` it always was, byte for byte.
+
+--- The collection's library-absent line (slash-commands-§1, standard v2.65.0), verb as typed.
+--- The one string this addon routes through NS.L (locales/enUS.lua says why).
+function Sl:LibraryAbsentLine(verb)
+  return NS.L["%s is unavailable: the LibKa0s library did not load."]:format(verb)
+end
+
+--- `/pm enable` and `/pm disable`: route (a). Without the row, `settings.enabled` is in the Schema
+--- seam's `writeThrough` list (settings/Schema.lua), so the write lands raw -- and because a
+--- written-through value runs no onChange, the latch is re-evaluated here, as the row's own
+--- onChange would have done. The echo is the same `path = value` read back from the store.
+function Sl:CliEnable(on)
+  local S, path = NS.Schema, NS.Schema.ENABLED_PATH
+  if S:FindRow(path) then return Sl:CliSet(path .. " " .. tostring(on)) end
+  if S:Set(path, on) then
+    NS.RefreshEnabled()
+    print(Sl.FormatKV(path, tostring(S:Get(path))))
+  else
+    print(Sl:LibraryAbsentLine("/pm " .. (on and "enable" or "disable")))
+  end
+end
+
+--- `/pm lock` and `/pm unlock`: route (b). Lock frame is session state with its own get/set on the
+--- composed row, so there is nothing to write through: without the row the verb says why, writes
+--- nothing and raises nothing.
+function Sl:CliLock(locked)
+  if NS.Schema:FindRow("state.locked") then return Sl:CliSet("state.locked " .. tostring(locked)) end
+  print(Sl:LibraryAbsentLine("/pm " .. (locked and "lock" or "unlock")))
+end
+
 -- Slash command table. It sits at the BOTTOM of this file, below every Cli* function its entries
 -- call, so the whole slash surface — table, dispatcher, generated help and the implementations —
 -- reads as one thing. `/pm help`, the README's command table and the settings landing page all
@@ -289,19 +326,21 @@ NS.COMMANDS = {
   -- THE RESERVED PAIR (slash-commands-§2), and they are ALIASES rather than a second switch. Both
   -- write `NS.Schema.ENABLED_PATH` -- the very path the Master controls *Enable Ka0s Panel Master*
   -- checkbox writes -- through the very seam it writes through, so the two surfaces can never show
-  -- the player two different answers and `settings/Schema.lua`'s `announce("enabled")` runs
-  -- whichever one was used. They hold NO state of their own: no second key, no session flag, no
-  -- `NS.enabled` local.
+  -- the player two different answers and the enabled row's onChange, `NS.RefreshEnabled()`, runs
+  -- whichever one was used. That row does NOT announce: its reaction is the latch, not a repaint
+  -- (settings/Schema.lua says why). They hold NO state of their own: no second key, no session
+  -- flag, no `NS.enabled` local.
   --
   -- Routed through `CliSet` rather than calling `NS.Schema:Set` directly, and that is the point
   -- rather than a shortcut. `/pm enable` is then LITERALLY `/pm set settings.enabled true` -- the
   -- same parse, the same write, and the same canonical `path = value` echo read back from the
   -- STORE after the write (slash-commands-§5). Formatting the acknowledgment here instead would be
-  -- a private variant of the one shared formatter, which §5 forbids in as many words.
+  -- a private variant of the one shared formatter, which §5 forbids in as many words. Sl:CliEnable
+  -- above is that CliSet whenever the row exists, and route (a) when it does not.
   { "enable",   "Turn the addon on",
-    function() NS.Slash:CliSet(NS.Schema.ENABLED_PATH .. " true") end },
+    function() NS.Slash:CliEnable(true) end },
   { "disable",  "Turn the addon off without unloading it",
-    function() NS.Slash:CliSet(NS.Schema.ENABLED_PATH .. " false") end },
+    function() NS.Slash:CliEnable(false) end },
   { "new",      "Create a panel: /pm new <name>",
     function(a) NS.Slash:CliNew(a) end },
   { "delete",   "Delete a panel: /pm delete <name>",
@@ -330,11 +369,12 @@ NS.COMMANDS = {
   -- Calling `NS.Unlock:SetUnlocked` directly is what these used to do, and it was the one surface
   -- that bypassed the seam -- no validation, no single `[Set]` line, and a second wording for the
   -- acknowledgment. The launcher's own header already says the click must not reach that module
-  -- directly; the same is true of the verbs.
+  -- directly; the same is true of the verbs. Sl:CliLock above is that CliSet whenever the composed
+  -- row exists, and the library-absent line when it does not.
   { "unlock",   "Unlock panels for dragging",
-    function() NS.Slash:CliSet("state.locked false") end },
+    function() NS.Slash:CliLock(false) end },
   { "lock",     "Lock panels again",
-    function() NS.Slash:CliSet("state.locked true") end },
+    function() NS.Slash:CliLock(true) end },
   { "recover",  "Bring off-screen panels back into view",
     function() NS.Slash:CliRecover() end },
   { "version",  "Print addon version", function() NS.Slash:CliVersion() end },
@@ -378,8 +418,7 @@ NS.COMMANDS = {
 -- settings/Panel.lua, whose landing page calls Sl:LandingRows(). Every callback below resolves
 -- through NS at CALL time, so the only ordering that actually binds is NS.COMMANDS existing above.
 
-local UNAVAILABLE = NS.LIBKA0S_MISSING ..
-  ", so the slash help index and the settings CLI (list/get/set/reset) are unavailable."
+local UNAVAILABLE = NS.LIBKA0S_MISSING .. ", so the settings CLI (list/get/set/reset) is unavailable."
 
 local lib = LibStub and LibStub("LibKa0s-Slash-1.0", true)
 
@@ -447,7 +486,13 @@ if not lib then
   Sl.FormatKV       = function(path, valueStr)
     return ("|cFFFFFF00%s|r = |cFFFFFFFF%s|r"):format(tostring(path), tostring(valueStr))
   end
-  Sl.PrintHelp      = explain
+  -- The degraded help index (docs/api/Slash/version-15-docs.md, "The degradation stub"): the
+  -- notice once, then one `/pm <cmd>  <desc>` row per NS.COMMANDS entry -- two spaces, no color,
+  -- no FormatRow copy. A degraded index is allowed to look degraded; it is not allowed to vanish.
+  function Sl:PrintHelp()
+    explain()
+    for _, cmd in ipairs(NS.COMMANDS) do print("/pm " .. cmd[1] .. "  " .. cmd[2]) end
+  end
   Sl.BuildListLines = function() return { UNAVAILABLE } end
   Sl.CliList        = explain
   Sl.CliGet         = explain
@@ -461,15 +506,17 @@ if not lib then
   -- ConfirmResetAll ends in `db:ResetProfile()`, which is AceDB's and needs nothing of LibKa0s.
   function Sl:CliResetAll() Sl:ConfirmResetAll() end
   -- THE REFUSAL LINE, reproduced here for the same reason FormatKV is: there is no library on this
-  -- arm to route to. The format string is `lib.DISABLED_LINE_FORMAT` byte for byte -- brand name,
-  -- an em dash with a single space either side, the command in the help index's gold and carrying
-  -- its leading slash, no trailing period -- and tests/test_libka0s.lua asserts the two against each
-  -- other so they cannot drift. The wording is the COLLECTION'S and not this addon's, which is why
-  -- it does not route through NS.L (localization-§4's identifier rule read the other way round: a
-  -- line eleven addons must print identically is not this addon's prose to translate).
-  local DISABLED_LINE_FORMAT = "%s is disabled \226\128\148 enable it with |cFFFFFF00%s|r"
+  -- arm to route to. `Sl.DISABLED_LINE_FORMAT` is `lib.DISABLED_LINE_FORMAT` byte for byte -- brand
+  -- name, an em dash with a single space either side, the command in the help index's gold and
+  -- carrying its leading slash, no trailing period -- the ONE library string a Slash stub may carry
+  -- (slash-commands-§1), and tests/test_surface_parity.lua pins it with
+  -- `assertLibraryConstant` so the two cannot drift. Published on both arms under one name. The
+  -- wording is the COLLECTION'S and not this addon's, which is why it does not route through NS.L
+  -- (localization-§4's identifier rule read the other way round: a line eleven addons must print
+  -- identically is not this addon's prose to translate).
+  Sl.DISABLED_LINE_FORMAT = "%s is disabled \226\128\148 enable it with |cFFFFFF00%s|r"
   function Sl:DisabledLine()
-    return DISABLED_LINE_FORMAT:format(NS.BRAND, "/pm enable")
+    return Sl.DISABLED_LINE_FORMAT:format(NS.BRAND, "/pm enable")
   end
 
   -- The gate, on the arm where the library's own is absent. It is the VERB TABLE that is gated and
@@ -490,7 +537,7 @@ if not lib then
   -- A bare `/pm` runs the `config` row, the same rule the library's dispatcher follows
   -- (slash-commands-§4), and it runs it IN EITHER STATE (§7: the bare command opening the panel is
   -- the case that settled the v2.57.0 reversal). The row is looked up rather than called directly,
-  -- so a table with no `config` falls back to the help answer.
+  -- so a table with no `config` falls back to the help index, as an unknown verb does.
   local function run(verb, rest)
     for _, cmd in ipairs(NS.COMMANDS) do
       if cmd[1] == verb then cmd[3](rest); return true end
@@ -499,14 +546,14 @@ if not lib then
   end
   function Sl:OnSlash(input)
     if input == nil or input:match("^%s*$") then
-      if not run("config", "") then explain() end
+      if not run("config", "") then Sl:PrintHelp() end
       return
     end
     local verb, rest = input:match("^(%S+)%s*(.-)$")
     verb = verb and verb:lower()
     if run(verb, rest) then return end
     print("unknown command '" .. tostring(verb) .. "'")
-    explain()
+    Sl:PrintHelp()
   end
   return
 end
@@ -604,6 +651,9 @@ function Sl:Text(key)            return dispatcher:Text(key)        end
 -- `slash`. Republished because the LAUNCHER'S left click prints it too (launcher-§2, §7) and must
 -- not write the line again -- one shape, collection-wide, from one place.
 function Sl:DisabledLine()       return dispatcher:DisabledLine()   end
+-- The format string that line is built from, published on BOTH arms under one name: the degraded
+-- arm carries a byte-for-byte copy, and the parity suite pins that copy against this.
+Sl.DISABLED_LINE_FORMAT = lib.DISABLED_LINE_FORMAT
 
 -- The one `key = value` formatter, now the library's, so a panel field printed by BuildPanelLines
 -- and a setting printed by CliGet render identically. This is a byte-level change: the library's

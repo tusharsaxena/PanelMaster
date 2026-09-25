@@ -49,8 +49,8 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:650-656` is the
-tick and `:660` installs it on a single shared driver, the first time any panel is tracked for
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:647-652` is the
+tick and `:662` installs it on a single shared driver, the first time any panel is tracked for
 mouseover:
 
 ```lua
@@ -67,7 +67,7 @@ setting alpha. There is no `InCombatLockdown` gate and none is wanted — the wh
 is that it keeps working while the player is busy.
 
 The driver exists only once a panel has **Show on mouseover only** ticked (`mouseover` defaults to
-`false`, `core/Constants.lua:306`), and the frame is never destroyed afterwards — only its script,
+`false`, `core/Constants.lua:311`), and the frame is never destroyed afterwards — only its script,
 which `Canvas.SetMouseoverTracked` removes when the tracked set empties and re-installs when it
 refills. That makes it a user-reachable hot path, not dead code, so:
 
@@ -92,7 +92,7 @@ The reason is the shape of the one path, not a claim that the path does not exis
   `NS.Compat.MouseIsOver(f)` and one `SetAlpha(...)` for each panel in the tracked set. There is no
   per-record work, no allocation, no string building, and no scan that grows with saved data.
 - **The set is bounded by a number the player sets.** A panel joins it only with *Show on mouseover
-  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:306`). With none ticked
+  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:311`). With none ticked
   `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the frame
   survives but its `OnUpdate` does not — `SetMouseoverTracked` clears the script on the untrack that
   empties the set, so the dormant cost is a bare frame and no per-frame callback at all.
@@ -130,20 +130,20 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:650-656` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:647-652` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
 
 ### `RegisterEvent` — 4 hits
 
 | Site | Event | Work | Runs in combat? |
 |---|---|---|---|
-| `core/PanelMaster.lua:51` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
-| `core/PanelMaster.lua:72` | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
-| `core/PanelMaster.lua:73` | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat()` | fires on **leaving** combat, by definition |
-| `core/PanelMaster.lua:76` | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat()` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
+| `core/PanelMaster.lua:67` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
+| `core/LifecycleSetup.lua:73` (handler `core/PanelMaster.lua:112`) | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
+| `core/LifecycleSetup.lua:74` (handler `core/PanelMaster.lua:124`) | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
+| `core/LifecycleSetup.lua:75` (handler `core/PanelMaster.lua:137`) | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
 
 ### `C_Timer` — 0 hits
 
-None. The one scheduling seam is `settings/OptionsSetup.lua:234`, which forwards to the addon's
+None. The one scheduling seam is `settings/OptionsSetup.lua:248`, which forwards to the addon's
 AceTimer embed for a **one-shot** panel-refresh delay — not a repeating ticker.
 
 ### `ScheduleRepeatingTimer` — 0 hits

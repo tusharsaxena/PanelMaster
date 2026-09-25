@@ -30,7 +30,7 @@ exclude_files = { "libs/", "docs/audits/", "docs/reviews/", "_dev/", "tests/_kit
 read_globals = {
   -- Core Lua/WoW globals
   "_G", "LibStub", "CreateFrame", "GetTime", "time", "date", "unpack",
-  "GetLocale", "C_Timer", "hooksecurefunc", "InCombatLockdown", "PlaySound",
+  "GetLocale", "C_Timer", "hooksecurefunc", "InCombatLockdown", "UnitAffectingCombat", "PlaySound",
   "C_AddOns", "GetAddOnMetadata", "GetNumAddOns", "GetAddOnInfo", "strtrim",
   -- Class color (the classFile token and the palette every UI addon agrees on) and the
   -- cursor test the mouseover fade polls with.
@@ -149,14 +149,14 @@ files["modules/Canvas.lua"] = {
 -- The panel registry's one writer (architecture-§5, named in docs/ARCHITECTURE.md -> Settings
 -- Schema), and the most-called table in the addon. Records live in `NS.db.profile`, which every
 -- method reaches through the file's `NS` upvalue, so the receiver is spare in all nineteen; the
--- colon is what the call sites and the probe at core/Database.lua:80 are written with.
+-- colon is what the call sites and the probe at core/Database.lua:99 are written with.
 files["modules/Registry.lua"] = {
   ignore = { "212/self" },
 }
 
 -- The unlock overlay, probed from three files rather than one -- core/PanelMaster.lua:93
 -- (ResumePending, the deferred combat replay), modules/Canvas.lua:756 and :802 (StripOverlay and
--- Decorate, on every frame release and every render) and modules/Registry.lua:573 (ForgetPending).
+-- Decorate, on every frame release and every render) and modules/Registry.lua:517 (ForgetPending).
 -- Overlay state is a file-scope table here, which is why no body reads the receiver.
 files["modules/Unlock.lua"] = {
   ignore = { "212/self" },
@@ -171,7 +171,7 @@ files["settings/Panel.lua"] = {
 
 -- The Panels page's four published verbs. Three are called from settings/Panel.lua (:438 WireBus,
 -- :462 BuildPage, :464 Rebuild) with the page context as the argument, and ForgetSelection is
--- probed from modules/Registry.lua:576 so a delete can clear the editor's selection without
+-- probed from modules/Registry.lua:520 so a delete can clear the editor's selection without
 -- depending on the editor having loaded. The selection itself is this file's upvalue.
 files["settings/PanelEditor.lua"] = {
   ignore = { "212/self" },
@@ -180,7 +180,7 @@ files["settings/PanelEditor.lua"] = {
 -- The schema seam's kept names. `NS.Schema:Set`, `:Get`, `:FindRow`, `:Default`, `:ReadPath`,
 -- `:Register`, `:SnapshotPersisted` and `:CountChangedSince` are colon methods because every caller
 -- in this addon reaches them by colon -- core/LifecycleSetup.lua's switch read, core/LauncherSetup.lua's
--- lock toggle, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates
+-- lock accessor, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates
 -- to the LibKa0s-Schema-1.0 instance, whose members are dot-called and take no receiver. The
 -- receiver is the addon's own convention around the instance.
 files["settings/Schema.lua"] = {
@@ -195,4 +195,13 @@ files["settings/Schema.lua"] = {
 -- settings/Panel.lua:333, and the verbs themselves through the COMMANDS table.
 files["settings/Slash.lua"] = {
   ignore = { "212/self" },
+}
+
+-- The client's context-menu API as tests/test_launcher.lua and tests/test_disabled.lua fake it: a
+-- copy of LibKa0s v1.58.0's own tests/mock_menu.lua, kept byte for byte below its provenance
+-- header so a later copy is a clean diff. Its element and root stand-ins mirror the client's colon
+-- methods (`root:CreateTitle`, `element:SetEnabled`), whose receivers the fake has no use for, and
+-- the nested `element:*` methods therefore also shadow `root:CreateCheckbox`'s own `self`.
+files["tests/mock_menu.lua"] = {
+  ignore = { "212/self", "432/self" },
 }

@@ -74,11 +74,23 @@ end
 -- keeps a panel on screen: a general visibility of "Only out of combat" reading `true` on a client
 -- that cannot answer would hide the player's whole backdrop for the session with nothing said.
 --
--- Read through this seam rather than calling InCombatLockdown at the render site, so the renderer's
--- spec builder stays pure and the headless suite can drive both answers.
+-- It reads the COMBAT FLAG, UnitAffectingCombat("player"), and not InCombatLockdown. This is a
+-- display question -- is the player fighting? -- and combat-reactive display reads the combat flag
+-- (events-frames-taint-§2). Lockdown is the wrong clock for it: it starts AFTER
+-- PLAYER_REGEN_DISABLED, so a render at combat start that asked lockdown drew the out-of-combat
+-- look for the whole fight. InCombatLockdown stays as the fallback for a client without the flag.
+-- The unlock deferral (modules/Unlock.lua) keeps asking lockdown directly, which is its question.
+--
+-- Read through this seam rather than calling either API at the render site, so the renderer's spec
+-- builder stays pure and the headless suite can drive both answers.
 function Compat.InCombat()
-  if type(InCombatLockdown) ~= "function" then return false end
-  return InCombatLockdown() and true or false
+  if type(UnitAffectingCombat) == "function" then
+    return UnitAffectingCombat("player") and true or false
+  end
+  if type(InCombatLockdown) == "function" then
+    return InCombatLockdown() and true or false
+  end
+  return false
 end
 
 -- ── Class color ────────────────────────────────────────────────────────────────

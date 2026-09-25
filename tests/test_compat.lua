@@ -98,6 +98,49 @@ test("Compat.MouseIsOver: answers without the frame taking mouse input", functio
   assertFalse(frame:IsMouseEnabled())
 end)
 
+-- Compat.InCombat answers the DISPLAY question -- is the player fighting? -- and that is
+-- UnitAffectingCombat's flag, not InCombatLockdown's (events-frames-taint-§2). The two differ exactly
+-- where it matters: lockdown starts after PLAYER_REGEN_DISABLED. The kit mock ties both APIs to the
+-- one __inCombat flag, so these cases diverge them locally, inside the case, and put them back.
+test("Compat.InCombat follows UnitAffectingCombat, not lockdown", function()
+  local lockdown = T.mocks.InCombatLockdown
+  T.mocks.__inCombat = true
+  T.mocks.InCombatLockdown = function() return false end
+  local ok, answer = pcall(NS.Compat.InCombat)
+  T.mocks.InCombatLockdown = lockdown
+  T.mocks.__inCombat = false
+  assertTrue(ok, "Compat.InCombat raised")
+  assertEqual(answer, true, "the combat flag was up, lockdown was not, and InCombat said false")
+end)
+
+test("Compat.InCombat falls back to InCombatLockdown when UnitAffectingCombat is absent", function()
+  local unitCombat = T.mocks.UnitAffectingCombat
+  T.mocks.UnitAffectingCombat = nil
+  local ok1, inside = pcall(NS.Compat.InCombat)
+  T.mocks.__inCombat = true
+  local ok2, during = pcall(NS.Compat.InCombat)
+  T.mocks.__inCombat = false
+  local ok3, after = pcall(NS.Compat.InCombat)
+  T.mocks.UnitAffectingCombat = unitCombat
+  assertTrue(ok1 and ok2 and ok3, "Compat.InCombat raised on the fallback")
+  assertEqual(inside, false)
+  assertEqual(during, true, "the fallback did not follow InCombatLockdown")
+  assertEqual(after, false)
+end)
+
+test("Compat.InCombat answers false when neither combat API exists", function()
+  -- False keeps a panel on screen: an "Only out of combat" profile reading true on a client that
+  -- cannot answer would hide the whole backdrop for the session.
+  local unitCombat, lockdown = T.mocks.UnitAffectingCombat, T.mocks.InCombatLockdown
+  T.mocks.UnitAffectingCombat, T.mocks.InCombatLockdown = nil, nil
+  T.mocks.__inCombat = true
+  local ok, answer = pcall(NS.Compat.InCombat)
+  T.mocks.__inCombat = false
+  T.mocks.UnitAffectingCombat, T.mocks.InCombatLockdown = unitCombat, lockdown
+  assertTrue(ok, "Compat.InCombat raised with no API")
+  assertEqual(answer, false)
+end)
+
 test("Compat owns the deprecated-API surface: no flavor branching in the addon", function()
   -- compat / anti-patterns: a Retail-only addon must never branch on WOW_PROJECT_ID. Asserted here
   -- rather than by eye because it is a rule that only breaks when someone adds a line years later.

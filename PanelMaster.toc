@@ -51,12 +51,21 @@ core\EnvSetup.lua
 # vararg and LibStub, both of which are already here.
 core\MediaSetup.lua
 core\Constants.lua
+# Conventional from here through State: Namespace and State only publish tables and constants, and
+# nothing in either reads another file at load. Namespace has to precede CoreSetup (NS.PREFIX, noted
+# below); where it sits before that is convention.
 core\Namespace.lua
 core\State.lua
+# Util AFTER Constants, load-bearing: core/Util.lua:4 captures `local C = NS.Constants` at file
+# scope, so Util loading first would hold nil forever.
 core\Util.lua
 # CoreSetup AFTER Namespace (NS.PREFIX) and Util (NS.Util), and BEFORE PanelMaster.lua, whose
 # AceConsole embed reclaims NS.Print from NS.Util.print. See the header of the file.
 core\CoreSetup.lua
+# The LibKa0s-Bus-1.0 seam, and its position is LOAD-BEARING: modules\Registry.lua and
+# settings\Schema.lua call NS.BusLib.Catalog at FILE LOAD, so it must load before both. It needs
+# nothing but LibStub.
+core\BusSetup.lua
 # The LibKa0s-DebugLog seam. After Constants (C.FONT_MONO) and after CoreSetup
 # (NS.LIBKA0S_MISSING). Everything else it touches is reached through a closure, so the console no
 # longer has to sit down in modules/ the way modules/DebugLog.lua did.
@@ -66,6 +75,9 @@ core\DebugLogSetup.lua
 # NS.db, NS.Schema, NS.Canvas, NS.addon -- is reached through a closure and resolved at call time,
 # so the rest of its position is conventional. Nothing calls the latch until addon:OnEnable.
 core\LifecycleSetup.lua
+# Conventional from here through Database, beyond the one pin CoreSetup notes above (PanelMaster.lua
+# after CoreSetup and Util): Database defines functions only, and NS:InitDB reads NS.defaults at
+# call time, from OnInitialize.
 core\PanelMaster.lua
 core\Database.lua
 # The LibKa0s-Launcher-1.0 seam: one LibDataBroker object, registered twice (launcher-§1). After
@@ -74,11 +86,14 @@ core\Database.lua
 # of its position is conventional. Register() runs from OnInitialize, after NS:InitDB().
 core\LauncherSetup.lua
 
-# Defaults
+# Defaults -- conventional from here: both files only fill NS.defaults, which nothing reads until
+# NS:InitDB runs from OnInitialize.
 defaults\Profile.lua
 defaults\Global.lua
 
-# Modules (Registry before Canvas — the renderer reads the registry)
+# Modules (Registry before Canvas — the renderer reads the registry). The notes below pin
+# Registry, Artwork, SunnArtPacks and SunnArt ahead of Canvas; Unlock is conventional: it captures
+# only core/ tables at file scope and reaches Canvas at call time.
 modules\Registry.lua
 # Artwork before Canvas — the renderer reads its art list and geometry math
 modules\Artwork.lua
@@ -94,6 +109,8 @@ modules\Unlock.lua
 
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
+# Slash AFTER Schema, load-bearing: its dispatcher descriptor takes NS.SchemaRuntime's members as
+# VALUES at file load (settings/Slash.lua:601-605).
 settings\Slash.lua
 settings\PanelEditor.lua
 # The LibKa0s-Options seam. After Schema.lua (the descriptor reads it) and Slash.lua (the landing

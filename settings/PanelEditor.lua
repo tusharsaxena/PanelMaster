@@ -141,7 +141,7 @@ function pageAction.delete(rec)
   NS.Registry:Delete(rec.id)
 end
 
--- Reset and CopyFrom both broadcast MSG_PANEL, not MSG_PANELS: the set of panels is unchanged and
+-- Reset and CopyFrom both broadcast MSG.PANEL, not MSG.PANELS: the set of panels is unchanged and
 -- only this editor's values are stale, so they refresh in place instead of rebuilding.
 function pageAction.reset(rec)
   local ok, err = NS.Registry:Reset(rec.id)
@@ -157,46 +157,25 @@ function pageAction.copyFrom(widget, rec, sourceID)
 end
 
 -- ── The editor's tabs (options-ui-§13) ──────────────────────────────────────────
--- The five subjects one panel's APPEARANCE is edited under, in strip order. This page's content is
--- BESPOKE -- a panel is a registry record, not a set of schema rows with paths -- so
--- H.RenderTabbedSchema has nothing here to partition and the strip is drawn directly with
+-- `General`, then the five subjects one panel's APPEARANCE is edited under, in strip order. This
+-- page's content is BESPOKE -- a panel is a registry record, not a set of schema rows with paths --
+-- so H.RenderTabbedSchema has nothing here to partition and the strip is drawn directly with
 -- H.TabStrip, exactly as the reference implementation draws its own two bespoke pages.
---
--- The strip is only the EDITOR's, and the band above it holds everything that is about the panel
--- rather than about one aspect of it: making a panel, choosing which panel to work on, naming it,
--- copying another's look onto it, turning it on, unlocking it, resetting it and deleting it.
 --
 -- Named constants rather than repeated literals, because each one is used three times -- the tab
 -- button, the section it dispatches to, and the strip's order array -- and a typo in any of the
 -- three is a tab that draws an empty editor.
 --
--- "Background" and "Border" used to be two subsections of two and four controls. They are one tab:
--- the fill and the edge are two halves of one question, and a two-control tab is not a subject.
--- "Visibility" is now "Opacity and fade", which is what its three controls actually are -- the old
--- name promised the where/when rules of a visibility engine this addon does not have.
+-- "Background and border" is one tab: the fill and the edge are two halves of one question, and a
+-- two-control tab is not a subject. "Opacity and fade" is what its three controls are; the old
+-- name, "Visibility", promised the where/when rules of a visibility engine this addon lacks.
 --
--- "General" is GONE, and it is the only tab ever removed rather than renamed. It held six controls
--- and not one of them was about a subject the other five divide: the name, the copy-from dropdown,
--- Enabled, Unlock, Reset and Delete all act on the panel WHOLE, so every one of them was a
--- page-wide control drawn under one tab. That is the shape options-ui-§14 forbids, and the library
--- names this exact set at O.PageHeader -- "creating the thing the page edits, choosing which one is
--- being edited, and the acts that apply to it whole (enable, unlock, copy, reset, delete) are all
--- page-wide". They are in the chrome band now, beside the create box and the picker.
---
--- The NAME BOX went with them, which the finding's list of five acts does not mention. It had to:
--- leaving it behind makes General a one-control tab, and this file already refuses a two-control
--- tab on the grounds that it is not a subject. It belongs there on the merits as well -- a panel's
--- name is its identity, it is what the picker in the band displays, and renaming from the band is
--- what finally makes the create box and the rename box read as the pair they have always been.
--- `General` is FIRST, and that is what makes it legal rather than a matter of taste.
--- options-ui-§14 (v2.40.0) bounds the chrome band at one row -- the picker and the create box --
--- and lets a page's remaining page-wide acts move here on three conditions, the load-bearing one
--- being that the page OPENS on this tab. A page-wide control under a tab is hidden; a page-wide
--- control on the tab the page lands on is simply where the player already is.
---
--- This tab existed before, was deleted in v2.38.0 under the previous wording of §14, and is back
--- because the rule was wrong about a page this size: six acts stacked into the band made a second
--- page above the page, which is the same cost §14 already refuses to pay for a second chrome block.
+-- `General` holds the acts on the panel WHOLE: the name box, copy-from, Enabled, Unlock, Reset and
+-- Delete. It is FIRST, and that is what makes it legal. options-ui-§14 (v2.40.0) bounds the chrome
+-- band at one row -- the picker and the create box -- and lets a page's other page-wide acts sit
+-- on the tab the page OPENS on, where nothing is hidden behind a click. The tab was deleted in
+-- v2.38.0 under the older wording of §14 and is back because six acts stacked into the band made
+-- a second page above the page.
 local TAB_GENERAL  = "General"
 local TAB_POSITION = "Position and size"
 local TAB_SURFACE  = "Background and border"
@@ -204,8 +183,8 @@ local TAB_ACCENT   = "Accent bar"
 local TAB_ARTWORK  = "Artwork"
 local TAB_FADE     = "Opacity and fade"
 
--- Strip order: where the panel sits, then the three appearance tabs read together, then the one you
--- set once. "Which panel, and is it on" used to open the strip; it opens the band now.
+-- Strip order: the panel whole (the tab the page opens on), where it sits, the three appearance
+-- tabs read together, then the one you set once.
 local EDITOR_TABS = {
   TAB_GENERAL, TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
 }
@@ -313,7 +292,7 @@ end
 
 -- ── Per-editor scalar refreshers (options-ui-§11) ───────────────────────────────
 -- Every control in the editor registers one: a closure that re-reads the LIVE record and pushes the
--- value back into the widget. MSG_PANEL runs them in place, so a drag, a `/pm panel Chat width 400`
+-- value back into the widget. MSG.PANEL runs them in place, so a drag, a `/pm panel Chat width 400`
 -- or a Reset updates the open editor without a teardown — a full rebuild per field write is
 -- anti-pattern #39, and would release the very control the user is still holding.
 --
@@ -433,7 +412,7 @@ local function makeColorPair(ctx, row, rec, field, label)
   row:AddChild(picker)
 
   -- SetColor, NEVER SetValue: SetColor updates the swatch without firing a callback, whereas
-  -- SetValue would re-enter `store` and turn a refresh into a write — a MSG_PANEL handler writing
+  -- SetValue would re-enter `store` and turn a refresh into a write — a MSG.PANEL handler writing
   -- back through Registry:Set is a loop, not a repaint.
   addRefresher(ctx, rec, function(live)
     local c = NS.Util.Color(live[field])
@@ -642,7 +621,7 @@ local function buildPanelEditor(ctx, parent, rec)
 
   -- Two controls to a line IS the canonical layout (rows 1 and 3 carry startsLine). O.RenderField is
   -- settings/Panel.lua's wrap (dropdowns join the scroll-close registry), and its makers push their
-  -- refreshers onto ctx.refreshers, the list MSG_PANEL runs.
+  -- refreshers onto ctx.refreshers, the list MSG.PANEL runs.
   local function renderBlock(rows)
     for i = 1, #rows, 2 do
       if i > 1 then editorSpacer(group, EDITOR_ROW_GAP) end
@@ -674,7 +653,7 @@ local function buildPanelEditor(ctx, parent, rec)
 
     -- Renaming changes the selector entry and every label the panel appears under, so it is
     -- structural (the frame name is NOT affected -- it is stamped at create) and R:Rename
-    -- broadcasts MSG_PANELS, which rebuilds this tab. Nothing below the rename call may touch
+    -- broadcasts MSG.PANELS, which rebuilds this tab. Nothing below the rename call may touch
     -- `widget` on the success path, because the rebuild releases it.
     local nameBox = AceGUI:Create("EditBox")
     nameBox:SetLabel("Panel name")
@@ -734,18 +713,21 @@ local function buildPanelEditor(ctx, parent, rec)
     attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
     toggleRow:AddChild(enabled)
     -- The one control here that wants the scalar tier: `/pm panel <name> enabled false`, a Reset
-    -- and a CopyFrom all broadcast MSG_PANEL without rebuilding, and the checkbox has to follow.
+    -- and a CopyFrom all broadcast MSG.PANEL without rebuilding, and the checkbox has to follow.
     addRefresher(ctx, rec, function(live) enabled:SetValue(live.enabled ~= false) end)
 
     -- Per-panel unlock. The global unlock is all-or-nothing; this one puts a drag handle on just
     -- the panel being edited, which is what you want with a dozen of them on screen.
-    --
-    -- No refresher: this is session state (NS.State.unlockedPanels), not a record field, so no
-    -- MSG_PANEL ever describes it, and a rebuild is the only thing that can change it.
+    -- Session state no MSG.PANEL describes: its refresher is driven by NS.PanelEditor:RefreshUnlock.
     local unlocked = AceGUI:Create("CheckBox")
     unlocked:SetLabel("Unlock")
     unlocked:SetRelativeWidth(0.5)
     unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
+    unlocked:SetDisabled(NS.State.unlocked == true)
+    addRefresher(ctx, rec, function()
+      unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
+      unlocked:SetDisabled(NS.State.unlocked == true)
+    end)
     unlocked:SetCallback("OnValueChanged", function(widget, _, v)
       local result = NS.Unlock:SetPanelUnlocked(rec.id, v and true or false)
       -- nil means the unlock was deferred to the end of combat, so the box goes back to unticked
@@ -754,7 +736,8 @@ local function buildPanelEditor(ctx, parent, rec)
     end)
     attachTooltip(unlocked, "Unlock",
       "Give just this panel a drag handle and a name label, so it can be moved. "
-      .. "Session-only \226\128\148 always locked again after a reload.")
+      .. "Session-only \226\128\148 always locked again after a reload. Grayed out while Lock "
+      .. "frame is unticked \226\128\148 every panel is already unlocked.")
     toggleRow:AddChild(unlocked)
 
     local actionRow = editorRow(group)
@@ -969,7 +952,7 @@ local function buildPanelEditor(ctx, parent, rec)
       -- you type into a box whose contents nothing reads.
       pathBox:SetDisabled(live.artTexture ~= C.ARTWORK_CUSTOM)
       -- The TEXT is not, while the box has focus. This is the one control in the editor holding a
-      -- half-typed value, and a MSG_PANEL from somewhere else entirely — a drag, a `/pm panel set`,
+      -- half-typed value, and a MSG.PANEL from somewhere else entirely — a drag, a `/pm panel set`,
       -- another field in this very editor — would otherwise wipe the path mid-keystroke. The rename
       -- box solves the same problem by having no refresher at all; this one cannot, because it has a
       -- disabled state to keep honest.
@@ -1188,39 +1171,20 @@ end
 
 -- ── The page-wide block, ABOVE the strip (options-ui-§14) ───────────────────────
 --
--- EVERYTHING that acts on the panel as a whole lives here, in the band the page banner occupies,
--- rather than in the scroll below the strip: making a panel, choosing which one to edit, naming it,
--- copying another's look onto it, turning it on, unlocking it, resetting it and deleting it. The
--- rule names the shape this replaces — a control that governs the whole page but is drawn under one
--- tab reads as belonging to that tab, and it disappears the moment the player clicks a different
--- one — and the library's own O.PageHeader documentation lists this exact set.
---
--- The move happened in two passes. Create and Edit were two untabbed sections at the top of the
--- SCROLL and came up first; the other six sat under a "General" tab, which is now gone entirely
--- (see the tab constants above for why the name box came with the five acts the finding named).
+-- ONE ROW: the Panel picker and the Create new panel box, the two controls that stay put on every
+-- tab. The panel's other page-wide acts are on the `General` tab; the tab constants above say why.
 --
 -- ONE chrome block per page, and this is it. H.PageHeader and H.PageBanner release the same ledger
 -- and write the same reserved height, so the picker goes INSIDE this block and no banner is drawn
 -- separately: two blocks would be two bands, and the second would push the page down for nothing.
 --
 -- NOT BOXED, either. The band is already separated from the page by its own divider and by the
--- content panel's top edge, and a bounded box around these controls would be a border stating a
--- boundary the band already states.
+-- content panel's top edge, and a bounded box would state a boundary the band already states.
 --
--- THREE EXPLICIT ROWS, not one Flow with eight children in it, for the reason `editorRow` gives
--- below the strip: a single Flow reflows controls of differing heights into whatever gaps it can
--- find, and a checkbox riding up beside an edit box's label is exactly what this page looked like
--- the first time. Row one makes and chooses a panel, row two names it and copies onto it, row three
--- is the four bare acts.
---
--- Built ONCE, from BuildPage, and never released by a rebuild. The create box is the reason and it
--- was true before the move too: a create broadcasts MSG_PANELS from inside R:New, so the rebuild
--- lands while the user's own callback is still on the stack, and releasing the box would hand the
--- widget they are typing into back to AceGUI's pool. Everything beside it is refreshed IN PLACE
--- instead, by refreshHeaderActs below — which is the whole cost of the move, and the part a reader
--- coming from the old file will not expect: these six controls used to be rebuilt from scratch
--- against a `rec` upvalue on every repaint, and they now have to re-point themselves at whatever
--- the picker is showing.
+-- Built ONCE, from BuildPage, and never released by a rebuild. The create box is the reason: a
+-- create broadcasts MSG.PANELS from inside R:New, so the rebuild lands while the user's own
+-- callback is still on the stack, and releasing the box would hand the widget they are typing into
+-- back to AceGUI's pool. The picker is refreshed in place instead, through ctx.__pmPicker.
 local function drawPageHeader(ctx)
   local H = NS.Helpers
   if not (H and H.PageHeader) then return end
@@ -1409,9 +1373,9 @@ end
 
 -- The Panels page's whole repaint policy, and its only two triggers (options-ui-§11).
 --
---   MSG_PANELS is STRUCTURAL — a panel was created, deleted or renamed, so the selector's contents
+--   MSG.PANELS is STRUCTURAL — a panel was created, deleted or renamed, so the selector's contents
 --   and the editor's identity both change. One rebuild.
---   MSG_PANEL is SCALAR — one field of one panel changed, from the CLI, a drag, Reset or CopyFrom.
+--   MSG.PANEL is SCALAR — one field of one panel changed, from the CLI, a drag, Reset or CopyFrom.
 --   The open editor re-syncs in place and nothing is released. Rebuilding here instead would be a
 --   full AceGUI teardown per field write (anti-pattern #39) and would take the control out from
 --   under a user mid-drag, which is precisely why it is not done.
@@ -1423,7 +1387,7 @@ end
 -- O.RefreshPanel. This file used to hand-roll the branch — `if ctx.panel:IsShown() then rebuild else
 -- ctx.dirty = true end` — and the flag was WRONG: the gate in LibKa0s's SetRenderer OnShow reads
 -- `ctx._dirty`, with the underscore, so `ctx.dirty` was written in four places and read in none. The
--- deferral silently never happened. A profile switch fires MSG_PANELS from Registry:ReloadProfile
+-- deferral silently never happened. A profile switch fires MSG.PANELS from Registry:ReloadProfile
 -- while this page is hidden (the user is on the Profiles page to make the switch), so the page kept
 -- the widget tree it had built for the OLD profile: its panel dropdown, its copy-from list and its
 -- editor still showed panels that were no longer in the registry, while Canvas — which is not a
@@ -1437,11 +1401,12 @@ end
 -- Wired at REGISTRATION rather than from the page build, because the build is lazy: a page that has
 -- never been shown would otherwise miss every change made before its first OnShow.
 local function wirePanelsBus(ctx)
+  E.__ctx = ctx
   if E.__evPanels then return end
   local ev = NS.NewBusTarget()
   if not ev then return end
 
-  ev:RegisterMessage(NS.Registry.MSG_PANELS, function()
+  ev:RegisterMessage(NS.Registry.MSG.PANELS, function()
     -- A create hands its selection over by NAME, because the id did not exist when the mutation
     -- started and this message arrives from inside R:New (see pageAction.create).
     if ctx.pendingSelect then
@@ -1452,7 +1417,7 @@ local function wirePanelsBus(ctx)
     NS.Helpers.RefreshPanel(ctx, true)
   end)
 
-  ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id)
+  ev:RegisterMessage(NS.Registry.MSG.PANEL, function(_, id)
     if id ~= selectedID then return end   -- some other panel changed; this editor is not showing it
     NS.Helpers.RefreshPanel(ctx, false)
   end)
@@ -1465,6 +1430,12 @@ end
 -- page that has never been shown still tracks changes made while it was hidden.
 function E:WireBus(ctx) wirePanelsBus(ctx) end
 
+-- Re-read the Unlock tick after an unlock transition (modules/Unlock.lua); scalar tier, no new message.
+function E:RefreshUnlock()
+  local ctx = E.__ctx
+  if ctx and NS.Helpers and NS.Helpers.RefreshPanel then NS.Helpers.RefreshPanel(ctx, false) end
+end
+
 -- Emit the page's static furniture (the create box, the two section headings, the selector's
 -- container) and install the rebuilder that draws the tab strip and the editor itself. First OnShow
 -- only: the strip and the editor belong to the rebuilder, because both change with the panel list
@@ -1472,5 +1443,5 @@ function E:WireBus(ctx) wirePanelsBus(ctx) end
 function E:BuildPage(ctx) buildPanelsPage(ctx) end
 
 -- Repaint the selector and the open editor. The one structural entry point: first paint, a page that
--- went dirty while hidden, and every MSG_PANELS.
+-- went dirty while hidden, and every MSG.PANELS.
 function E:Rebuild(ctx) runRebuilders(ctx) end

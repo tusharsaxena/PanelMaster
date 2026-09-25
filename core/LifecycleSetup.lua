@@ -67,6 +67,14 @@ local addonName, NS = ...
 
 local Lifecycle = LibStub and LibStub("LibKa0s-Lifecycle-1.0", true)
 
+-- The three game events NS.StandUp registers, as { event, handler method } in registration order.
+-- NS.StandDown unregisters the same three by name.
+local STAND_UP_EVENTS = {
+  { "PLAYER_ENTERING_WORLD", "OnEnterWorld" },
+  { "PLAYER_REGEN_ENABLED",  "OnRegenEnabled" },
+  { "PLAYER_REGEN_DISABLED", "OnRegenDisabled" },
+}
+
 --- Is the addon's own master switch ON? Read from the SCHEMA, never from a flag of this file's
 --- own: `settings.enabled` is the one path the *Enable Ka0s Panel Master* checkbox, `/pm enable`
 --- and `/pm disable` all write (slash-commands-§2), and a second copy here would answer the player
@@ -110,9 +118,9 @@ end
 --- profile switched while the addon was off comes back correct rather than stale.
 ---
 --- THE REPAINT IS GATED ON THE BOOT STAND-UP, which is not a micro-optimization: panels are drawn on
---- PLAYER_ENTERING_WORLD rather than at OnEnable because UIParent's size is what the registry's
---- off-screen recovery measures against and it is not final that early. The FIRST stand-up of a
---- session runs from inside `addon:OnEnable` and must leave the painting to that event; every later
+--- PLAYER_ENTERING_WORLD rather than at OnEnable because UIParent's final size and the frame
+--- anchors every panel hangs from are settled by that event and not that early. The FIRST stand-up
+--- of a session runs from inside `addon:OnEnable` and must leave the painting to that event; every later
 --- one runs long after it and must paint immediately, or a player who re-enables mid-session looks
 --- at a blank screen until the next zone change.
 ---
@@ -124,15 +132,39 @@ end
 --- is a question about the addon's own boot rather than about the client's.
 function NS.StandUp()
   if NS.addon and NS.addon.RegisterEvent then
-    NS.addon:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnterWorld")
-    NS.addon:RegisterEvent("PLAYER_REGEN_ENABLED", "OnRegenEnabled")
-    NS.addon:RegisterEvent("PLAYER_REGEN_DISABLED", "OnRegenDisabled")
+    -- Through Core's pcalled helper (events-frames-taint-§1): a name the client refuses is recorded
+    -- in NS.State.rejectedEvents, which /pm debug dump prints, and costs only itself -- the other
+    -- registrations, Canvas:Enable and the repaint below still happen.
+    for _, reg in ipairs(STAND_UP_EVENTS) do
+      if not NS.SafeRegisterEvent(NS.addon, reg[1], reg[2], NS.State.rejectedEvents) then
+        NS.Debug("Events", "rejected %s", reg[1])
+      end
+    end
   end
   if NS.Canvas then
     NS.Canvas:Enable()
     if NS.__booted then NS.Canvas:RenderAll() end
   end
   NS.Debug("Lifecycle", "stood up")
+end
+
+--- The one entry point every surface that can change the answer calls: the composed *Enable Ka0s
+--- Panel Master* row's onChange, `/pm enable`, `/pm disable` (which are that row's write by another
+--- name), and the three AceDB profile callbacks. Written once, in the library's shape, rather than
+--- as a branch each caller writes for itself -- a branch written four times is a branch one caller
+--- writes backwards.
+---
+--- `Reevaluate` after `Set` is what the profile callbacks need and what costs the other callers
+--- nothing: it is idempotent and fires a callback only on an actual edge, so a profile switch that
+--- agrees with the outgoing one is silent.
+---
+--- Defined ABOVE the degradation branch, which returns early: it reads `NS.Lifecycle` at call time,
+--- so it serves the stub latch and the library's alike. Below the branch it did not exist on a
+--- Lifecycle-less load, where the profile callbacks call it and Sl:CliEnable's write-through
+--- route needs it to move the latch (PM-09).
+function NS.RefreshEnabled()
+  NS.Lifecycle:Set(NS.HOLD_DISABLED, not NS.IsAddonEnabled())
+  NS.Lifecycle:Reevaluate()
 end
 
 if not Lifecycle then
@@ -204,17 +236,3 @@ NS.Lifecycle = Lifecycle:New({
   -- narrated every edge would print into a player's chat on every profile switch.
   print     = function(line) NS.Print(line) end,
 })
-
---- The one entry point every surface that can change the answer calls: the composed *Enable Ka0s
---- Panel Master* row's onChange, `/pm enable`, `/pm disable` (which are that row's write by another
---- name), and the three AceDB profile callbacks. Written once, in the library's shape, rather than
---- as a branch each caller writes for itself -- a branch written four times is a branch one caller
---- writes backwards.
----
---- `Reevaluate` after `Set` is what the profile callbacks need and what costs the other callers
---- nothing: it is idempotent and fires a callback only on an actual edge, so a profile switch that
---- agrees with the outgoing one is silent.
-function NS.RefreshEnabled()
-  NS.Lifecycle:Set(NS.HOLD_DISABLED, not NS.IsAddonEnabled())
-  NS.Lifecycle:Reevaluate()
-end

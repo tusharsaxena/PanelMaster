@@ -1,8 +1,8 @@
 local _, NS = ...
 
 -- Profile defaults; every character starts on the shared "Default" profile (core/Database.lua).
--- Everything the user configures lives here; `global` (defaults/Global.lua) carries only the
--- schema stamp.
+-- Everything the user configures lives here; `global` (defaults/Global.lua) declares the
+-- schemaVersion floor and LibDBIcon's minimap table, neither of which the user configures here.
 NS.defaults = NS.defaults or {}
 NS.defaults.profile = {
   -- The panel registry: an array of panel records, in creation order. Ships EMPTY on purpose — a

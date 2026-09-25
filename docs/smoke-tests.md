@@ -425,6 +425,12 @@ Both of these broke panels that have **no artwork at all**, so run them on a pla
 12. **The profile route.** While disabled, switch to a profile where the addon is **enabled**
    (Profiles page) → **Expect:** the panels come up without touching a checkbox or a verb. Switch
    back → **Expect:** they go down again.
+13. **Unlock does not beat the stand-down** (`slash-commands-§7`). With two panels, `/pm unlock`,
+   then `/pm disable` → **Expect:** no outline, no panel, no label, and dragging the empty spot moves
+   nothing. **While disabled**, untick **Master controls ▸ Lock frame**, and tick a panel's
+   **Unlock** on the Panels page → **Expect:** still nothing drawn. `/pm enable` → **Expect:** the
+   outlines come back and the panels drag. **Fail:** any outline or draggable panel while disabled;
+   a drag there writes positions while the addon is off.
 
 ## 7b. The launcher — the minimap button and the broker row
 
@@ -436,19 +442,27 @@ worth doing in full after any change to the icon or the seam.
    uncompressed 32-bit; nothing will be printed and no error raised.
 2. Open the AddOns list (Esc ▸ AddOns). **Expect:** the same logo beside **Ka0s Panel Master**. One
    file, three places.
-3. **Left-click** the button → **Expect:** panels unlock, exactly as `/pm unlock` does — outlines and
-   name labels. Left-click again → they lock. Open `/pm config` → **General ▸ Master controls** and
-   check **Lock frame** agrees with what you just did.
-4. **Right-click** the button → **Expect:** the settings page opens on its landing page, and the
-   lock does **not** move.
-4b. **While the addon is DISABLED** (`/pm disable`), **left-click** the button → **Expect:** exactly
-   one line, `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`, the panels stay
-   locked, and **nothing is written** — check **Lock frame** on the settings page is where it was.
-   This addon is on rung (b), so its left button drives a feature and is refused; the rung-(c)
-   carve-out (a left click that only opens the panel) does not apply here. **Right-click** in the
-   same state → **Expect:** the settings page opens exactly as it does when enabled, because the
-   ruling narrows the slash surface and a mouse click is not a slash command (`launcher-§2`,
-   `slash-commands-§7`). `/pm enable` when done.
+3. **Left-click** the button → **Expect:** the settings page opens on its landing page, and the
+   panels do **not** unlock (`launcher-§2`, standard v2.67.0: left-click opens settings on every
+   addon).
+4. **Right-click** the button → **Expect:** a small menu titled **Ka0s Panel Master** with exactly
+   two ticks, in this order: **Enabled** (ticked) and **Locked** (ticked while the panels are
+   locked). No *Test mode* and no *Show window* entry. Click **Locked** → **Expect:** the menu closes,
+   the panels unlock exactly as `/pm unlock` does (outlines and name labels) and chat shows the same
+   `state.locked = false` line `/pm unlock` prints. Right-click again → **Locked** is now unticked;
+   click it → they lock. Open `/pm config` → **General ▸ Master controls** and check **Lock frame**
+   agrees. In combat, clicking **Locked** on locked panels unlocks nothing until combat ends, as
+   `/pm unlock` does.
+4b. Right-click → click **Enabled** → **Expect:** the addon disables exactly as `/pm disable` does
+   (panels go, `settings.enabled = false` in chat). Right-click again → **Enabled** is unticked and
+   **Locked** is **grayed** and reads `Locked (enable the addon first)`; clicking it does nothing and
+   writes nothing. **Left-click** in this state → **Expect:** the settings page opens, no chat line.
+   Right-click → click **Enabled** → the addon comes back as with `/pm enable`.
+4c. **Hover** the button → **Expect:** the library's status tooltip (`launcher-§1`):
+   `Ka0s Panel Master  v<the TOC version>`, `Enabled: Yes` (green), `Locked: Yes`,
+   `Left-click: Open settings`, `Right-click: Options menu`, and **no** `Test mode` line. Unlock,
+   hover again → `Locked: No` (red), hints unchanged. `/pm disable`, hover → the tooltip **still
+   shows**, with `Enabled: No` (red) and the same two hints. `/pm enable` when done.
 5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
    where you left it.
 6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move
@@ -464,8 +478,15 @@ worth doing in full after any change to the icon or the seam.
 7. Untick **General ▸ Master controls ▸ Minimap button** → **Expect:** the button goes at once, not
    at the next reload. `/reload` → it stays gone. Tick it → it comes back, at the angle you dragged
    it to.
-8. Right-click the button and use **LibDBIcon's own menu** to hide it → **Expect:** the **Minimap
-   button** checkbox is now unticked. They are one setting.
+8. Right-click the button → **Expect:** the options menu has **no** hide entry; hiding the button
+   is the **Minimap button** row's job (steps 6b and 7) and `/pm set global.minimap.shown` (8b).
+8b. The CLI name reads **shown** (`launcher-§3`, standard v2.65.0). With the button visible,
+   `/pm get global.minimap.shown` → **Expect:** `true`. `/pm set global.minimap.shown false` →
+   **Expect:** the button goes at once. Bring it back, hide it with the **Minimap button** checkbox,
+   then `/pm get global.minimap.shown` → **Expect:** `false`. `/reload` → it stays hidden.
+   `/pm get global.minimap.hide` → **Expect:** *Setting not found* — the old path is not an alias.
+   **Failure:** `get` answers `true` while the button is hidden, or the old path still answers.
+   Tick the button back on before moving on.
 9. Only if you run Titan Panel, ElvUI or Bazooka: **Expect:** a row labeled **Ka0s Panel Master**
    in its plugin list -- the brand name in plain text, not `PanelMaster` and not a string with color
    escapes in it (`launcher-§1`) -- wearing the same logo, whose left and right clicks do the same
@@ -494,6 +515,11 @@ worth doing in full after any change to the icon or the seam.
    category in the sidebar raises no Lua error and the window stays open; exactly **one** gray chat
    notice per combat, however many clicks. Leave combat → **Expect:** the cover lifts and the page is
    live and shows current values.
+8. Set **General visibility** to **Only in combat**. **Expect:** panels hidden out of combat. Pull
+   a training dummy → **Expect:** they appear on the first swing, not at some later repaint. Leave
+   combat → **Expect:** they hide again.
+9. Set it to **Only out of combat** and repeat. **Expect:** the reverse — panels vanish on the pull
+   and come back when combat ends. Set it back to **Always** afterwards.
 
 ## 9. Options panel
 
@@ -623,6 +649,9 @@ worth doing in full after any change to the icon or the seam.
 10. Change a panel's width slider and color picker → **Expect:** the panel updates as you release.
 11. Tick **Unlock** on the selected panel → **Expect:** *only that panel* grows an outline and a
     drag handle; the others stay inert. Drag it, then untick.
+    With the Panels page open on a panel, untick **Lock frame** on General → **Expect:** back on
+    Panels, **Unlock** shows ticked and grayed. Tick **Lock frame** again → unticked and enabled.
+    Tick **Unlock** in combat → it stays unticked (queued); leave combat → it shows ticked.
 12. Hover the **Panel name** box → **Expect:** its tooltip reads `Frame name: PanelMaster_Panel_<slug>`
     for that panel.
 13. Click **Delete** → **Expect:** the panel goes from the screen and the dropdown, and the editor
@@ -643,6 +672,12 @@ worth doing in full after any change to the icon or the seam.
 3. `/pm recover` again → **Expect:** "every panel is already on screen".
 4. Confirm recovery did **not** run by itself at login: park a panel half off-screen deliberately,
    `/reload`, and expect it to still be where you put it.
+5. Recover bounds offsets in the panel's **scaled** units (own scale x Master scale). Set Master
+   scale to 0.5, drag a panel into the far right half of the screen, then `/pm recover` →
+   **Expect:** "every panel is already on screen"; the panel does not move.
+6. Set Master scale to 2 and `/pm panel <name> x 1500` on a TOPLEFT-anchored panel (off-screen
+   once scaled), then `/pm recover` → **Expect:** "moved 1 panel back on screen" and it comes
+   back into view. Put Master scale back to 1 afterwards.
 
 ## 11. Debug console
 
@@ -751,6 +786,12 @@ rather than carried.
    profile before it drops). **Expect:** on leaving combat nothing unlocks. The queued request named
    a panel that no longer exists; the *global* `/pm unlock` request is deliberately kept and does
    still fire.
+3. Make two profiles whose panels carry **swapped names**: on profile A create `Alpha` then `Xray`
+   (ids 1 and 2); on profile B create `Xray` then `Alpha`. Switch between them five times, then
+   `/pm debug dump`. **Expect:** the `frames: N active, M pooled, 0 orphaned` line shows **no**
+   orphans, and `/framestack` over each panel names the expected `PanelMaster_Panel_<slug>`. A
+   rebuild releases every mismatched frame before any id acquires one; resolving it one id at a
+   time used to create a second frame under a name still in use, on every switch.
 
 ## 12c. Copy settings from another panel
 
@@ -806,8 +847,14 @@ addon still *works*.
     addon's texture goes away (§5b step 10). Nothing raises, and nothing is overwritten: reinstate
     `libs/LibKa0s` and the names come straight back.
 10. `/pm debug dump` → still answers with the state dump.
-11. `/pm list` → `…, so the slash help index and the settings CLI (list/get/set/reset) are
-    unavailable.`
+11. `/pm list` → `…, so the settings CLI (list/get/set/reset) is unavailable.`
+11b. `/pm help` → that same line once, then one plain `/pm <cmd>  <desc>` row per verb (no colors, no
+    em dash): the degraded index is allowed to look degraded, never to vanish.
+11c. `/pm disable`, then `/pm enable` → the panels go and come back, and each prints the
+    `settings.enabled = false` / `= true` echo. No Lua error: the path is written through the Schema
+    seam's `writeThrough` list with no composed row behind it.
+11d. `/pm unlock` → `/pm unlock is unavailable: the LibKa0s library did not load.` and nothing moves;
+    `/pm lock` the same with its own verb.
 12. `/pm resetall` → **still works**, popup and all: it is the one schema verb with no library
     dependency, and since `options-ui-§12` its body is `db:ResetProfile()`, which needs the db
     rather than the library.
@@ -1102,8 +1149,8 @@ client those names carry umlauts and accents, and two seams treat those bytes as
   **`Ärger` and `Örger` both slug to `rger`**. That slug is not cosmetic: it is the addon's public
   contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
   to.
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:278-285`) and the Panels list's
-  sort (`settings/PanelEditor.lua:263`) both use `string.lower`, which folds ASCII and nothing else.
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-289`) and the Panels list's
+  sort (`settings/PanelEditor.lua:247`) both use `string.lower`, which folds ASCII and nothing else.
   `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
 
 Every label the addon prints is hardcoded English and stays English here. That is the addon's scope,

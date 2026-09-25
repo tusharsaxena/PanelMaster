@@ -294,7 +294,7 @@ test("Canvas: OnEnable subscribes the renderer to the bus", function()
   -- repaints left were the two that called RenderAll() directly (lock/unlock and test mode). run.lua
   -- drives the real OnInitialize/OnEnable, so this asserts the addon's own wiring, not the harness's.
   assertTrue(Canvas.__ev ~= nil, "OnEnable did not subscribe the renderer")
-  for _, message in ipairs({ R.MSG_PANELS, R.MSG_PANEL, NS.Schema.MSG_SETTINGS }) do
+  for _, message in ipairs({ R.MSG.PANELS, R.MSG.PANEL, NS.Schema.MSG.SETTINGS }) do
     local targets = T.mocks.__msgRegistry[message] or {}
     assertTrue(targets[Canvas.__ev] ~= nil, "the renderer is not listening for " .. message)
   end
@@ -304,7 +304,7 @@ test("Canvas: consumers register on their own bus target (architecture-§4)", fu
   -- CallbackHandler keys callbacks by (message, target). If Canvas and the settings panel shared a
   -- target, the second registrant would silently clobber the first. Both listen to PanelsChanged, so
   -- the registry for that message must hold two distinct targets.
-  local targets = T.mocks.__msgRegistry[R.MSG_PANELS] or {}
+  local targets = T.mocks.__msgRegistry[R.MSG.PANELS] or {}
   local n = 0
   for _ in pairs(targets) do n = n + 1 end
   assertTrue(n >= 1, "nothing is listening for PanelsChanged")
@@ -430,16 +430,48 @@ test("Canvas: leaving and entering combat both reach the renderer", function()
   local rec = R:New("Combatant")
   assertTrue(Canvas:FrameFor(rec.id):IsShown(), "an out-of-combat panel was hidden out of combat")
 
-  -- Through the mock's own combat FLAG, never by replacing InCombatLockdown: the unlock deferral
-  -- and the options-panel refusal read the same function, and a case that swapped it out would
-  -- leave those suites running against a stand-in that no longer consults the flag they set.
-  T.mocks.__inCombat = true
+  -- IN THE CLIENT'S ORDER. PLAYER_REGEN_DISABLED fires BEFORE lockdown begins and before the combat
+  -- flag reads true, so the handler is delivered with the mock's flag still FALSE. An earlier
+  -- version of this case raised the flag first and passed against a renderer that re-read the
+  -- combat state at the event, which is the one reading that is wrong at that moment (testing-§12).
+  -- The event itself is the truth of the transition, and the handler has to pass it on.
+  --
+  -- red under: drop the explicit inCombat argument from OnRegenDisabled (core/PanelMaster.lua)
   NS.addon:OnRegenDisabled()
   assertFalse(Canvas:FrameFor(rec.id):IsShown(), "entering combat did not hide the panel")
 
+  -- The fight itself: the flag is up now. Leaving combat, the flag is down again before
+  -- PLAYER_REGEN_ENABLED arrives, which is the client's order on the way out.
+  T.mocks.__inCombat = true
   T.mocks.__inCombat = false
   NS.addon:OnRegenEnabled()
   assertTrue(Canvas:FrameFor(rec.id):IsShown(), "leaving combat did not bring the panel back")
+
+  settings.visibility = before
+  R:DeleteAll()
+end)
+
+test("Canvas: an Only-in-combat panel appears at the combat-start event, not a repaint later", function()
+  -- The mirror of the case above, and the one a player sees: panels set to appear only in combat
+  -- stayed hidden for the whole fight while the renderer asked a lockdown that had not begun yet.
+  --
+  -- red under: drop the explicit inCombat argument from OnRegenDisabled (core/PanelMaster.lua)
+  local settings = NS.db.profile.settings
+  local before = settings.visibility
+  settings.visibility = "inCombat"
+
+  R:DeleteAll()
+  local rec = R:New("Brawler")
+  assertFalse(Canvas:FrameFor(rec.id):IsShown(), "an in-combat panel was shown out of combat")
+
+  -- Flag still FALSE, as it is when the client fires PLAYER_REGEN_DISABLED.
+  NS.addon:OnRegenDisabled()
+  assertTrue(Canvas:FrameFor(rec.id):IsShown(), "entering combat did not show the panel")
+
+  T.mocks.__inCombat = true
+  T.mocks.__inCombat = false
+  NS.addon:OnRegenEnabled()
+  assertFalse(Canvas:FrameFor(rec.id):IsShown(), "leaving combat did not hide the panel again")
 
   settings.visibility = before
   R:DeleteAll()

@@ -12,6 +12,16 @@ NS.L = setmetatable(NS.L or {}, { __index = function(_, k) return k end })
 -- Keys are the English source strings (localization-§2); only overrides need listing, e.g.:
 -- NS.L["Enable panels"] = "Enable panels"
 --
+-- ── THE ONE STRING THAT ROUTES THROUGH THE SEAM ────────────────────────────────
+--
+-- The collection's LIBRARY-ABSENT line: what a composed-row verb (`/pm lock`, `/pm unlock`, and
+-- `/pm enable` / `/pm disable` if even their write-through is refused) prints when the LibKa0s
+-- composer that declares its row did not load. slash-commands-§1 says it routes through the
+-- host's locale, one sentence with one placeholder -- the full verb as the player typed it -- so
+-- it is the one key listed here. settings/Slash.lua's Sl:LibraryAbsentLine formats it.
+NS.L["%s is unavailable: the LibKa0s library did not load."] =
+  "%s is unavailable: the LibKa0s library did not load."
+--
 -- ── THE ONE STRING THAT IS DELIBERATELY NOT HERE ───────────────────────────────
 --
 -- The disabled-verb refusal used to be listed here, in this addon's own wording, as the single

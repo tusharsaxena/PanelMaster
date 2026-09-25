@@ -140,6 +140,7 @@ function U:SetPanelUnlocked(id, on)
   -- Through DebugBuild rather than Debug: R:Get scans every panel to turn the id into a name, which
   -- is work nobody with logging off should pay for. describeLock runs only past the sink's gate.
   NS.DebugBuild("Unlock", "'%s' %s", describeLock, id, on)
+  if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return on
 end
 
@@ -229,6 +230,9 @@ end
 -- Locking is never deferred — it only ever makes the UI quieter, and refusing to lock during combat
 -- would be the one case where the gate made things worse. Nothing bypasses the gate: the CLI, the
 -- schema switch and Toggle all come through here.
+--
+-- It asks InCombatLockdown, NOT NS.Compat.InCombat (the combat flag): an unlock is a lockdown
+-- question, not a display one.
 function U:SetUnlocked(on)
   on = not not on
   if on and InCombatLockdown and InCombatLockdown() then
@@ -247,6 +251,7 @@ function U:SetUnlocked(on)
   end
   if NS.Canvas then NS.Canvas:RenderAll() end
   NS.Debug("Unlock", "panels %s", on and "unlocked" or "locked")
+  if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return on
 end
 
@@ -292,6 +297,7 @@ function U:ResumePending()
     end
   end
 
+  if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return resumed
 end
 

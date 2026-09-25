@@ -30,7 +30,7 @@ local UNAVAILABLE = NS.LIBKA0S_MISSING .. ", so the debug console window is unav
 -- the registry but has no frame (or the reverse) is the exact shape of every rendering bug this
 -- addon can have. Everything is resolved at CALL time, which is what lets this file sit in core/.
 --
--- The three writers below — addHeader, addPanel, addFrames — are file-local rather than nested
+-- The four writers below — addHeader, addPanel, addFrames, addRejected — are file-local rather than nested
 -- inside attachDiagnose: they capture nothing, so hoisting them means they are built once at load
 -- rather than once per attachDiagnose call — and attachDiagnose runs on the library path OR the
 -- degraded one. Each still resolves every module through NS at CALL time, which is the property
@@ -78,6 +78,18 @@ local function addFrames(add)
     (NS.Canvas and NS.Canvas.PooledCount and NS.Canvas.PooledCount()) or 0, orphans)
 end
 
+-- The event names the client refused this session (NS.State.rejectedEvents, appended by
+-- NS.SafeRegisterEvent). events-frames-taint-§1 requires the record be reachable by the player; this
+-- line is how /pm debug dump reaches it, and it says 0 rather than going quiet when nothing was.
+local function addRejected(add)
+  local rejected = (NS.State and NS.State.rejectedEvents) or {}
+  if #rejected == 0 then
+    add("rejected events: 0")
+  else
+    add("rejected events: %d (%s)", #rejected, table.concat(rejected, ", "))
+  end
+end
+
 local function attachDiagnose(D)
   function D:Diagnose()
     local out = {}
@@ -94,6 +106,7 @@ local function attachDiagnose(D)
     end
 
     addFrames(add)
+    addRejected(add)
 
     return out
   end

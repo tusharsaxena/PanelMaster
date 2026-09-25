@@ -41,7 +41,7 @@ game's own Settings ▸ AddOns list.
 | Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
 | Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
 | Master controls | Debug console | Show the debug window. Resets when you reload. |
-| Master controls | Minimap button | Show this addon's button on the minimap. Unlike the two rows above it, this one is **remembered** — a button you hide stays hidden across a reload, across a profile switch, and across **both** resets on this page — the **Defaults** button in the header and **Reset all settings** below. Where the button sits is a per-installation display preference, like the angle you dragged it to, and no reset touches either (`launcher-§3`). Untick it and the button goes at once; LibDBIcon's own right-click menu writes the same setting, so the two always agree. |
+| Master controls | Minimap button | Show this addon's button on the minimap. Unlike the two rows above it, this one is **remembered** — a button you hide stays hidden across a reload, across a profile switch, and across **both** resets on this page — the **Defaults** button in the header and **Reset all settings** below. Where the button sits is a per-installation display preference, like the angle you dragged it to, and no reset touches either (`launcher-§3`). Untick it and the button goes at once, and it comes back at the angle you left it. The button itself is drawn by `LibKa0s-Launcher-1.0` (`launcher-§2`, standard v2.67.0): **left-click opens this settings page**, in either state; **right-click opens the options menu**, whose entries here are **Enabled** (the *Enable Ka0s Panel Master* row above, through `/pm enable` / `disable`'s handler) and **Locked** (the *Lock frame* row, through `/pm lock` / `unlock`'s handler) — no *Test mode* (unlocking is the preview) and no *Show window* (no primary window). While the addon is disabled, **Locked** is grayed with the note *enable the addon first*. Hovering shows the status tooltip (`launcher-§1`), disabled included: `Ka0s Panel Master  v<version>`, **Enabled** and **Locked** (Yes/No, green/red), `Left-click: Open settings` and `Right-click: Options menu`. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
 | Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not affected."* |
 | Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
@@ -320,9 +320,10 @@ logged once, by its own handler: `[Set] reset profile '<name>' to defaults (N ro
 
 The reload does **not** re-run migrations, and `core/Database.lua` says why: the schema stamp lives
 in `db.global`, which is account-wide and already written by `InitDB` before any switch can happen,
-so a second call could only be a no-op. What an incoming profile actually needs is the per-record
-repair, and the reload re-sanitizes every record it finds — an incoming profile may predate the
-current build, or have been copied from one that did.
+so a second call could only be a no-op — and the v1 → v2 step already walked every stored profile at
+init, the inactive ones included. What a profile arriving later needs is the per-record repair, and
+the reload re-sanitizes every record it finds — an imported profile may predate the current build,
+or have been copied from one that did.
 
 **It also drops every session table keyed by panel id, before it sanitizes or broadcasts.** Ids are
 allocated per profile (`nextID` lives in `db.profile` and a fresh profile starts at 1), so an id held
@@ -404,7 +405,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:77`, called at `:1328` — because the page
+`currentRecord()` survives — `settings/PanelEditor.lua:78`, called at `:1354` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enabled** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
@@ -521,8 +522,8 @@ It has exactly **two** triggers, both on the bus, and no widget callback rebuild
 
 | Message | Meaning | Response |
 |---|---|---|
-| `MSG_PANELS` | the SET of panels changed (create, delete, rename, profile switch) | `O.RefreshPanel(ctx, true)` — structural, so one rebuild |
-| `MSG_PANEL` | one field of one panel changed (CLI, drag, `Reset`, `CopyFrom`) | `O.RefreshPanel(ctx, false)` — the open editor's per-control `refreshers`, in place; never a rebuild (anti-pattern #39) |
+| `MSG.PANELS` | the SET of panels changed (create, delete, rename, profile switch) | `O.RefreshPanel(ctx, true)` — structural, so one rebuild |
+| `MSG.PANEL` | one field of one panel changed (CLI, drag, `Reset`, `CopyFrom`) | `O.RefreshPanel(ctx, false)` — the open editor's per-control `refreshers`, in place; never a rebuild (anti-pattern #39) |
 
 Both go through the **library's** per-page refresh (LibKa0s `Options` minor 8), which owns the
 shown/hidden decision: an on-screen page repaints now, a hidden one is flagged and repaints on its
@@ -534,7 +535,7 @@ it had built for the previous profile: its dropdown, its copy-from list and its 
 panels that were no longer in the registry, while the panels themselves had correctly left the
 screen. Nothing here writes `_dirty` any more.
 
-`MSG_PANEL` returns early unless the id is the one the editor is showing. A mutating control sets the
+`MSG.PANEL` returns early unless the id is the one the editor is showing. A mutating control sets the
 selection *before* it mutates, so the single rebuild lands on the right panel; the create box, whose
 id does not exist yet, parks the new panel's **name** in `ctx.pendingSelect` and the bus handler
 resolves it. A rebuild clears `ctx.refreshers` first, since every closure in it holds a widget the
@@ -548,8 +549,8 @@ that page), behind `KA0S_PANELMASTER_DELETEALL`. Blizzard's own un-gated footer 
 the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the footer and the header
 button are one implementation and the confirmation cannot be reached round.
 
-**The General page's Defaults tooltip still reads *"Your panels are untouched"*, and so does the
-comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:365`, `:372`).** Both predate
-`options-ui-§12` turning `resetall` into a profile reset and neither matches what the button now
-does. That is a code fix, not a doc one, and it is recorded here so the next reader does not take
-the tooltip for the contract.
+**The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:372`,
+`:379-384`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
+`options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
+tooltip and the contract agree again.

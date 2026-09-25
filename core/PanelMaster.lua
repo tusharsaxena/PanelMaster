@@ -7,9 +7,10 @@ NS.bus = addon   -- closed message bus: SendMessage / RegisterMessage (architect
 
 -- Reclaim NS.Print from AceConsole. NewAddon(NS, …, "AceConsole-3.0") embeds AceConsole's mixins
 -- directly onto NS, and its :Print method OVERWRITES the secret-safe, cyan-[PM]-prefixed NS.Print
--- defined in core/Util.lua — after which every `local print = NS.Print` call site would render
--- AceConsole's green "|cff33ff99<msg>|r:" form (no tag, trailing colon) and lose secret-safety. The
--- embed never touches NS.Util.print, so restore the real printer from it (architecture-§2).
+-- built by core/CoreSetup.lua (the LibKa0s-Core printer) — after which every `local print =
+-- NS.Print` call site would render AceConsole's green "|cff33ff99<msg>|r:" form (no tag, trailing
+-- colon) and lose secret-safety. The embed never touches NS.Util.print, so restore the real printer
+-- from it (architecture-§2).
 if NS.Util and NS.Util.print then NS.Print = NS.Util.print end
 
 -- Bus-receiver factory. A module that CONSUMES Ka0s_PanelMaster_* messages must register on its OWN
@@ -60,9 +61,12 @@ function addon:OnInitialize()
   -- down would be the addon deciding, while it is off, to make the one surface a player uses to
   -- switch it back on unreachable on the load order that lost the race. It is one of exactly three
   -- registrations tests/test_disabled.lua names as the survivor set; a fourth fails that suite.
-  self:RegisterEvent("PLAYER_LOGIN", function()
+  --
+  -- Pcalled through Core like every other registration (events-frames-taint-§1): a refusal lands in
+  -- NS.State.rejectedEvents, which /pm debug dump prints, instead of raising out of OnInitialize.
+  NS.SafeRegisterEvent(self, "PLAYER_LOGIN", function()
     if NS.Panel and NS.Panel.Register then NS.Panel:Register() end
-  end)
+  end, NS.State.rejectedEvents)
 end
 
 function addon:OnEnable()
@@ -98,9 +102,10 @@ function addon:OnEnable()
   -- emitted when capture is actually enabled (debug-logging-§5/§8).
 end
 
--- Panels are drawn on PLAYER_ENTERING_WORLD rather than at OnEnable. UIParent's size is what the
--- registry's off-screen recovery measures against, and it is not final at OnEnable — reading it too
--- early would judge every stored position against the wrong screen.
+-- Panels are drawn on PLAYER_ENTERING_WORLD rather than at OnEnable. Every panel is anchored to
+-- UIParent (modules/Canvas.lua), and UIParent's final size and the frame anchors are settled by this
+-- event, not at OnEnable — painting earlier would lay panels out against a screen still changing
+-- under them. (Off-screen recovery never runs here: it is on demand only, `/pm recover`.)
 --
 -- Registered by NS.StandUp and unregistered by NS.StandDown, so a disabled addon does not watch for
 -- it at all (slash-commands-§7).
@@ -113,15 +118,22 @@ end
 -- frames mid-pull is a UX hazard rather than a taint one. Unlock refuses during combat and is
 -- replayed here, which is the events-frames-taint-§2 deferred-write shape (and NOT the options-panel
 -- case, which refuses outright and never replays — options-ui-§2).
+--
+-- The pending unlock is resumed FIRST, then the combat repaint runs with `false` passed explicitly:
+-- the event is the truth of the transition, so the render does not re-ask a combat API about it.
 function addon:OnRegenEnabled()
   if NS.Unlock and NS.Unlock.ResumePending then NS.Unlock:ResumePending() end
-  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
+  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat(false) end
 end
 
 -- Leaving combat has a second job above; entering it has only this one. Both go through
 -- RenderForCombat, which repaints only when the general-visibility setting is one of the two that
 -- actually depend on the combat state — so the overwhelmingly common "Always" costs one table read
 -- per pull rather than a repaint of every panel.
+--
+-- `true` is passed EXPLICITLY because PLAYER_REGEN_DISABLED fires before lockdown begins and before
+-- the combat flag can be relied on, so a render that re-read the state here drew the out-of-combat
+-- look for the whole fight (events-frames-taint-§2: transitions ride the REGEN events).
 function addon:OnRegenDisabled()
-  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat() end
+  if NS.Canvas and NS.Canvas.RenderForCombat then NS.Canvas:RenderForCombat(true) end
 end

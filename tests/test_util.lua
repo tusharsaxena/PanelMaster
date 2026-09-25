@@ -31,6 +31,20 @@ test("Util.SplitPath: a single segment is one part", function()
   assertEqual(#Util.SplitPath("panels"), 1)
 end)
 
+test("Util.EffectiveScale: the own scale clamped to the panel bounds, times the master scale", function()
+  local C = NS.Constants
+  assertEqual(Util.EffectiveScale({ scale = 1.5 }, { scale = 2 }), 3)
+  assertEqual(Util.EffectiveScale({ scale = 0.01 }, { scale = 1 }), C.MIN_PANEL_SCALE)
+  assertEqual(Util.EffectiveScale({ scale = 99 }, { scale = 1 }), C.MAX_PANEL_SCALE)
+  assertEqual(Util.EffectiveScale({}, { scale = 1 }), C.PANEL_TEMPLATE.scale)
+  assertEqual(Util.EffectiveScale(nil, nil), C.PANEL_TEMPLATE.scale)
+  -- A master scale that is missing, zero or negative is guarded to 1, never multiplied in.
+  assertEqual(Util.EffectiveScale({ scale = 2 }, {}), 2)
+  assertEqual(Util.EffectiveScale({ scale = 2 }, { scale = 0 }), 2)
+  assertEqual(Util.EffectiveScale({ scale = 2 }, { scale = -1 }), 2)
+  assertEqual(Util.EffectiveScale({ scale = 2 }, { scale = "junk" }), 2)
+end)
+
 test("Util.Clamp: passes a value already in range", function()
   assertEqual(Util.Clamp(5, 0, 10), 5)
 end)

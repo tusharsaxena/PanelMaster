@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-884%2F884_passing-green)
+![Tests](https://img.shields.io/badge/Tests-933%2F933_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -48,7 +48,7 @@ on a busy screen. `/pm lock` puts it all back. The outline and the label go away
 taking the mouse entirely, and clicks, tooltips and keybinds pass straight through to whatever is on
 top of it. Unlocking mid-fight is queued, with a gray notice saying so, and happens by itself the
 second you drop out of combat. A panel that has wandered past a screen edge comes back with
-`/pm recover`. A panel you are done with goes away with `/pm delete <name>`, which takes
+`/pm recover`. A panel you are done with goes away with `/pm delete ChatBG`, which takes
 the panel and its settings with it.
 
 How it looks is the Panels page in the settings window. Pick a panel from the picker at the top and
@@ -64,35 +64,37 @@ until your cursor crosses it, and it still never claims the click. Every charact
 panels out of the box, so an alt that should differ wants a profile of its own, with your existing
 layout copied in as a starting point.
 
-Everything else is configuration, and it lives in three places now: the button on your minimap, the
+The **minimap button** wears the addon's own logo. Left-click opens the settings page. Right-click
+opens a small menu with two ticks: **Enabled**, which switches the whole addon on or off, and
+**Locked**, which unlocks your panels for dragging and locks them again. Each tick does exactly what
+`/pm enable` / `/pm disable` and `/pm lock` / `/pm unlock` do. Drag the button anywhere around the ring you like
+and it stays there. If you would rather not have it, untick **Minimap button** under General ▸
+Master controls. It goes, and it stays gone on every character until you tick it back. The same
+button shows up as a row in Titan Panel, ElvUI's data texts or Bazooka if you run one of those, and
+clicks there do the same two things. Hover it and the tooltip tells you where things stand: the
+version, whether the addon is enabled, whether your panels are locked, and what each click does.
+
+Every setting is readable from chat too, if you would rather type than click: `/pm list` prints
+each one with its current value, `/pm get settings.gridSize` answers for one, and
+`/pm reset settings.gridSize` puts one back to its default. `/pm resetall` returns the whole profile
+to defaults and asks before it does. `/pm version` prints the version, which is the thing to quote
+in a bug report.
+
+`/pm disable` turns the whole addon off without unloading it, and `/pm enable` brings it back. Both
+are the same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page. Off
+means off, not hidden: your panels keep their places but are not drawn, and the addon stops
+watching the game's events, stops its mouseover ticker and writes nothing. It costs what unticking
+it in Blizzard's own AddOns list would, without the `/reload`. The way back in stays open. `/pm`
+still opens the settings page, and `help`, `version`, `config`, `debug` and the settings commands
+above still answer and still write, because reading and repairing your settings is what you are
+most likely to want while the addon is off. Only the verbs that make and edit panels refuse, with
+one line naming `/pm enable`. The minimap button stays too: left-click still opens the settings
+page, the right-click menu's **Enabled** tick turns the addon back on, **Locked** is grayed out
+with a note to enable the addon first, and the tooltip says **Enabled: No**.
+
+Everything else is configuration, and it lives in three places: the button on your minimap, the
 addon's own page under Settings ▸ AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare
 `/pm` opens that settings page, and `/pm help` prints the full command list.
-
-The **minimap button** wears the addon's own logo. Left-click unlocks your panels, and click it
-again to lock them; right-click opens the settings page. Drag it anywhere around the ring you like
-and it stays there. If you would rather not have it, untick **Minimap button** under General ▸
-Master controls and it goes — and stays gone, on every character, until you tick it back. The same
-button shows up as a row in Titan Panel, ElvUI's data texts or Bazooka if you run one of those, and
-clicks there do the same two things.
-
-Those settings are readable from chat too, if that suits you better than clicking: `/pm list`
-prints every setting with its current value, `/pm get <setting>` answers for one, and
-`/pm reset <setting>` puts one back to its default. `/pm resetall` returns the whole profile to
-defaults and asks before it does. `/pm version` prints the version, which is the thing to quote in
-a bug report. `/pm disable` turns the whole addon off without unloading it — your panels stay
-exactly where they are, they just stop being drawn — and `/pm enable` brings it back. Both are the
-same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page.
-
-**Off means off.** Not hidden: the addon stops watching the game's events as well as drawing, stops
-its mouseover ticker, and writes nothing while it is off. It costs you what unticking it in
-Blizzard's own AddOns list would, without the `/reload`.
-
-What stays is the way back in. `/pm` still opens the settings page, and `help`, `version`, `config`,
-`debug` and the whole settings CLI above still answer and still write — reading and repairing your
-settings is exactly what you are most likely to want while the addon is standing down. Only the
-verbs that make and edit panels say so rather than acting, on one line naming `/pm enable`. The
-minimap button stays where it is: right-click still opens the settings page, and left-click says the
-same line instead of unlocking panels that are not drawn.
 
 ## How panels work
 

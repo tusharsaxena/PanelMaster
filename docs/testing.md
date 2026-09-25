@@ -45,7 +45,7 @@ convention that forces the receiver. Next to the blanket sat nineteen files open
 `local addonName, NS = ...` over a folder name they never read, each behind an inline
 `-- luacheck: ignore addonName` — narrow by the letter of the other three rules, and hiding dead code
 in nineteen files. Those nineteen are fixed at source rather than re-parked; the one inline directive
-the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:203`).
+the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:217`).
 
 Adding a suppression is a two-minute job and removing one is an afternoon's. If a warning is genuine,
 fix the code; if the code is right, put the narrowest suppression the gate allows beside it and say
@@ -103,7 +103,7 @@ this addon?* That is release planning, not a gate.
 |---|---|---|
 | Both empty | The vendored copies are exactly what the library ships. | Nothing. |
 | Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see closed issue [`LIBKA0S-09`](https://github.com/tusharsaxena/PanelMaster/issues/33)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
-| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Nine of the ten majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
+| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Fourteen of the fifteen majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
 
 A fifth check answers "which LibKa0s is this?" without grepping minors out of source: the
 `Bundles [LibKa0s] vX.Y.Z (MIT).` provenance line in the root **`CLAUDE.md`**, which moves with every
@@ -289,12 +289,14 @@ each. That file answers *what to install*; this one answers *how to verify*.
 ```
 tests/
   _kit/              -- the SHARED kit, vendored from ../LibKa0s/testkit; never edited here
-    framework.lua    -- the case registry, the assertions and the --list renderer
+    framework.lua    -- the case registry, the runner and the --list renderer; loads asserts.lua
+    asserts.lua      -- the assertions and the surface-parity gate, installed by framework.lua
     loader.lua       -- loads each source with loadfile + setfenv over the mock env
     mock_base.lua    -- the base WoW/Ace mock every Ka0s addon starts from
   run.lua            -- a thin consumer of the kit; also the --list inventory mode
   wow_mock.lua       -- this addon's mock, EXTENDING _kit/mock_base.lua (a fresh env per run)
   degraded_env.lua   -- builds an addon env from a PARTIAL libs/ list; not a suite, not listed
+  mock_menu.lua      -- a MenuUtil stand-in, copied from LibKa0s's tests/; not a suite, not listed
   test_<module>.lua  -- one suite per module
 ```
 
@@ -304,8 +306,8 @@ covered by the same vendor gate and the same never-edit-it rule. `run.lua` is a 
 (`Kit.expose` + `Kit.run`) that keeps no copy of either load order: the addon's own files come from
 the TOC via `Loader.tocFiles`, and the vendored library's come from `libs/LibKa0s/LibKa0s.xml` via
 `Loader.xmlFiles`, which is how a `libs\` line the TOC scan deliberately skips still gets loaded.
-The library half **was** hand-listed here, and it was hand-listed short — six of the eight scripts
-the XML pulls in — which nothing could see: a short load list does not raise, it leaves the missing
+The library half **was** hand-listed here, and it was hand-listed short — it named six scripts
+when the XML pulled in eight — which nothing could see: a short load list does not raise, it leaves the missing
 modules undefined for whichever cases never reach them.
 
 `wow_mock.lua` **extends** `_kit/mock_base.lua` rather than replacing it. The base is the only source
@@ -337,9 +339,10 @@ override one by one; the *Mock fidelity that is load-bearing* list below is the 
 
 ### The degradation stubs, and the gate over them
 
-Four LibKa0s seams are adopted — Core, DebugLog, Slash and Options — and each setup file carries an
-`if not lib then` branch that is what a library-less install actually runs on. A branch like that is
-a second implementation of somebody else's surface, so it drifts the moment the live half grows a
+Eight adopted LibKa0s seams carry a degradation stub — Core, DebugLog, Launcher, Slash, Options,
+Schema, Bus and Lifecycle — and each setup file carries an `if not lib then` branch that is what a
+library-less install actually runs on. A branch like that is a second implementation of somebody
+else's surface, so it drifts the moment the live half grows a
 member the addon starts calling: the live path stays green and the degraded path raises in exactly
 the install the branch exists for. That is not hypothetical — `Sl.FormatKV` was once assigned on the
 live path and not in the branch, and `/pm panel <name>` raised on it.
@@ -347,12 +350,14 @@ live path and not in the branch, and `/pm panel <name>` raised on it.
 `tests/test_surface_parity.lua` is the gate. One case per seam, each comparing the branch against the
 live surface as a **set** through `Kit.assertSurfaceParity`, and each degraded arm built by a **real
 load** with a partial `libs/` list (`tests/degraded_env.lua`) rather than by hand — hand-stubbing
-`lib = nil` inside a seam tests a branch instead of an install. Two of the four call the kit's
+`lib = nil` inside a seam tests a branch instead of an install. Five of the eight call the kit's
 **by-name** form, `assertSurfaceParity(stub, major, ignore)`, which walks only `Kit.publicMembers`
-and so drops every `__`-prefixed internal; `tests/run.lua` tells it where to look with
-`Kit.setSurfaceSource`, because both of those stubs mirror the **instance** `lib:New(descriptor)`
-returned and not the library table LibStub answers for the same name. Core and Slash stay on the
-four-argument form, and the suite's header says why for each.
+and so drops every `__`-prefixed internal: DebugLog, Options and Launcher, Bus against the library
+table, and Schema for its library half. `tests/run.lua` tells it where to look with
+`Kit.setSurfaceSource`, because the DebugLog, Options, Launcher and Lifecycle stubs mirror the
+**instance** `lib:New(descriptor)` returned and not the library table LibStub answers for the same
+name. Core, Slash and Lifecycle (and Schema's instance half) use the two-table form, and the suite's
+header says why for each.
 
 A member left out on purpose goes in that case's `ignore` list **with its reason**, because otherwise
 a deliberate omission and a bug read identically.

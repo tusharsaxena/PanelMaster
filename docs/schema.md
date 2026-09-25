@@ -1,7 +1,8 @@
 # Schema
 
 What Panel Master persists: the two SavedVariables scopes, the panel record and every field on it,
-the artwork fields, and the sanitizing pass that runs before anything is stored. What is *drawn* from
+the artwork fields, the sanitizing pass that runs before anything is stored, and the schema runtime
+that reads and writes the settings rows. What is *drawn* from
 these records is [data-flow.md](data-flow.md); the controls that edit them are
 [settings-panel.md](settings-panel.md).
 
@@ -37,7 +38,7 @@ profile renders differently:
 
 `global.minimap` is the one stored thing here that is not this addon's own shape. It is the table
 **LibDBIcon-1.0** reads and writes, handed to it whole by `core/LauncherSetup.lua` (`launcher-§3`):
-`hide` is the boolean the library writes when the player uses its right-click menu, and
+`hide` is the boolean the *Minimap button* row writes (through `NS.Launcher:SetShown`), and
 `minimapPos` is the angle it writes when they drag the button. There is deliberately no second key
 of ours beside them — a parallel `show` would be a copy of one state, free to disagree the first
 time either surface is used.
@@ -45,10 +46,13 @@ time either surface is used.
 It is **global** rather than profile-scoped because a minimap button belongs to the installation:
 switching profiles must not move a player's buttons. `defaults/Global.lua` declares `hide = false`,
 and that declaration is what materializes the table — nothing seeds it at runtime
-(`architecture-§5`). The *Minimap button* settings row addresses `global.minimap.hide` and
-**inverts**: the row says shown, the key says hidden, and both halves of the negation live on the
-row itself, as the `get` / `set` `S:InstallMaster` wires onto it. The write seam calls them on every
-surface's write.
+(`architecture-§5`). The *Minimap button* settings row is `/pm get global.minimap.shown`, stored at
+`db.global.minimap.hide`, and **inverts**: the row says shown, the key says hidden, and both halves
+of the negation live on the row itself, as the `get` / `set` `S:InstallMaster` wires onto it. The
+write seam calls them on every surface's write. The row's path is its CLI name and is never stored
+or declared — a `shown` key beside `hide` would be the copy the paragraph above rules out — so the
+old `/pm get global.minimap.hide` answers *Setting not found*, and no SavedVariables migration was
+owed when the path was renamed: the stored key never moved.
 
 That it **survives a reset** is a separate property of the setting rather than a consequence of that
 scope (`launcher-§3`, amended at standard v2.54.0): it must survive *Reset all settings* **and** a
@@ -131,14 +135,16 @@ Settings Schema names all three. The fields **on** a panel are a separate questi
 Schema rows either. The field controls and the CLI write them through `NS.Registry:Set`, a drag
 through `:SetPosition` plus a direct anchor write in `modules/Unlock.lua`, and the whole-record and
 bulk verbs (`:Reset`, `:CopyFrom`, `:FitToArtwork`, `:Recover`, `:ResetPositions`) write them in
-place. None of these is the schema helper, and `ARCHITECTURE.md` → Settings Schema lists them.
+place. None of these is the schema helper; the register row below lists every one of them.
 Under standard v2.43.0 they would need instance-relative rows or a register row, and the owner
 ruled for a register row on 2026-09-12
 ([#49](https://github.com/tusharsaxena/PanelMaster/issues/49)): the schema helper addresses paths,
 not records. The row is `architecture-§5` (the fields on a panel) in
-[`ARCHITECTURE.md` → Documented deviations](ARCHITECTURE.md#documented-deviations). It retires when
-the schema helper gains instance addressing for registry records (an explicit record argument on
-`NS.Schema:Set`).
+[`ARCHITECTURE.md` → Documented deviations](ARCHITECTURE.md#documented-deviations). Its trigger is
+host-side: it retires when `resolveRoot` maps an instance id to a registry record and
+`NS.Schema:Set` / `:Get` forward that id ([#54](https://github.com/tusharsaxena/PanelMaster/issues/54)).
+The record-backed bind arm in `LibKa0s-Options-1.0` is not that trigger: it changes how a control
+binds to a record, not where the write goes.
 
 #### The artwork fields
 
@@ -216,3 +222,81 @@ half-screen: the offset is measured from `relPoint`, so a `LEFT`-anchored panel 
 `RIGHT`-anchored one `-w…0`, and only a `CENTER`-anchored one `-w/2…+w/2` (the vertical axis the same
 way, keyed on `TOP`/`BOTTOM`). Applying the CENTER range to all nine points is what used to drag a
 perfectly visible `TOPLEFT` panel inward.
+
+The range is also measured in the panel's **own scaled units**, not `UIParent`'s: the renderer calls
+`SetScale` before `SetPoint`, so a stored offset is in units of the effective scale `s` (the panel's
+own scale times the Master scale) and the screen spans `w / s` by `h / s` of them. `Util.EffectiveScale`
+is the one definition both the renderer and `Registry:Recover` read, so at `s = 0.5` a visible panel
+is no longer dragged inward and at `s = 2` a genuinely lost one is no longer left where it is.
+
+## The schema runtime
+
+`settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
+carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
+(`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
+the array's order is the strip a player sees on the General page — `Master controls` (7),
+`Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
+through their own `get`/`set` and are never persisted.
+
+#### The Master controls composition
+
+The **first** seven rows are not literals in that file. `Master controls` is COMPOSED, out of
+`LibKa0s-Options-1.0`'s `MasterControls` (`options-ui-§15`), and spliced at the head of the array by
+`S:InstallMaster` — which `settings/OptionsSetup.lua` calls the moment the library instance exists,
+because that instance is what carries the composer and it is built after this file loads. A row
+carries no `widget` field: the flow engine dispatches on `type` alone, so a second field naming the
+widget was a selector with no reader.
+
+**The enable path when the row is missing.** `settings.enabled` (`S.ENABLED_PATH`) is one of the
+composed rows, so whenever the Options composer is absent — the whole library, or Options alone —
+it has no row. The descriptor lists it in `writeThrough` (Schema minor 2; `options-ui-§1` route (a),
+`slash-commands-§1`): `Set` and `SetMany` store a listed path that has no row **raw** — a copy, no
+`validate`, `normalize` or `onChange` — and announce it with a synthetic `{ path, writeThrough }`
+row, while every other row-less path is still refused. `Sl:CliEnable` (`settings/Slash.lua`) takes
+the row when it exists, else writes through and re-evaluates the latch itself with
+`NS.RefreshEnabled()`, which is what the row's `onChange` would have done; if even that is refused
+it prints the library-absent line. On a full load the composed row takes the write, list or no
+list. `/pm lock` / `/pm unlock` take route (b) instead: session state with its own `get`/`set`.
+
+#### The minimap row: `global.minimap.shown`
+
+**One** row — `global.minimap.shown`, the *Minimap button* row — is stored but lives in `db.global`
+rather than `db.profile`, the only row in the schema that does (`launcher-§3`). Its path is its CLI
+name and reads in the row's own sense, so `/pm get global.minimap.shown` answers `true` while the
+button shows; the state is stored at `db.global.minimap.hide`, LibDBIcon's own key and the only
+stored one (`S.MINIMAP_STORE`). The row carries its own `get`/`set`, wired onto it by
+`S:InstallMaster`. They read and write the store from the DB root, and they NEGATE, because the row
+says shown while LibDBIcon's key says hidden. Nothing is ever written or declared at the row's path
+(anti-pattern #81), so `S:Register` skips that path and checks the store against the global
+defaults instead.
+
+#### The library instance
+
+**The runtime is `LibKa0s-Schema-1.0`** (adopted at LibKa0s v1.55.0;
+`docs/revendor/2026-09-23-v1.55.0/`). The rows are this addon's. The machinery around them is one
+library instance, `NS.SchemaRuntime`, built in `settings/Schema.lua`: the path walk, the row index,
+the single write seam, the bulk bracket (`debug-logging-§10`) and the boot shape check. The seam
+**keeps this addon's names**: `NS.Schema:Set`, `:Get`, `:FindRow`, `:Default` and `:Register`, plus
+`S.BulkBegin`, `S.BulkEnd` and `S.BulkLine`, each delegate to the instance, so no caller moved. The
+Options and Slash descriptors take the instance's members **as values** (`set =
+NS.SchemaRuntime.Set`, and the same for `get`, `applyDefault`, `findRow`, `allRows` and the bracket
+pair). That is safe because nothing sits in front of the seam: the minimap inversion is the row's
+own `get`/`set`, and a refusal belongs in a row's `validate`, which `ApplyDefault` reaches too.
+Stored rows resolve against the active profile (`resolveRoot`). The refusal texts are this addon's
+own (`unknown path: <path>`, `invalid value`), restored through the descriptor's plain-table `L`.
+`S:Register` is the instance's `Validate` with a `global.`-aware defaults root, and it counts shape
+errors as well as unresolved paths. The profile reset's row count stays host-side
+(`S:SnapshotPersisted` / `S:CountChangedSince`), as the design allows.
+
+#### The degradation stub
+
+**Without the library** the seam degrades to `hostSchemaStub`, which stands in for both the
+library's pure primitives and the instance. The stub is **write-completing and log-silent**
+(`docs/api/Schema/version-2-docs.md`, "The degradation stub"). Reads, writes (`Set` and the
+all-or-nothing `SetMany`), each row's `validate`, `normalize` and `onChange`, the `writeThrough`
+list above, and the bracket's depth all work, so the host writers keep writing: `/pm set` and
+`/pm disable` where the Slash major survives, Reset All, the page Defaults sweep, and the
+Registry's bulk verbs. The stub does not reproduce the per-write `[Set]` line or the bracket's
+tally, and it skips the boot shape check silently. This is a documented duplication of a runtime
+write path, not of a rendering helper. `tests/test_surface_parity.lua` holds both of its levels to
+the live surface, and `tests/test_schema.lua` drives one degraded write per writer kind.

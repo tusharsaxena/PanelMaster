@@ -176,6 +176,10 @@ that visibly failed to follow a settings change mid-pull. That is also what lets
 transition itself drive a repaint — `Canvas:RenderForCombat` runs on both regen events and repaints
 **only** when `settings.visibility` is `inCombat` or `outOfCombat`, since `Always` and `Never`
 answer the same thing either side of a pull and the common case is meant to cost one table read.
+Each handler passes the transition's own truth (`true` entering, `false` leaving) rather than letting
+the render re-ask: `PLAYER_REGEN_DISABLED` fires before lockdown begins, so a render that asked then
+drew the out-of-combat look for the whole fight. Every other render reads `Compat.InCombat()`, which
+prefers the combat flag `UnitAffectingCombat("player")` over `InCombatLockdown` (`events-frames-taint-§2`).
 
 Two things are gated, in the two different shapes the standard defines:
 
@@ -197,7 +201,7 @@ Two things are gated, in the two different shapes the standard defines:
 
 | Event | Handler | Why |
 |---|---|---|
-| `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: `UIParent`'s size is what recovery measures against and it is not final that early. |
-| `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat()` | Replays a combat-deferred unlock, and repaints for the general-visibility rule. |
-| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat()` | The entering-combat half of the same rule. |
+| `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: every panel is anchored to `UIParent`, and `UIParent`'s final size and the frame anchors are settled by this event, not that early. (Off-screen recovery is on demand only, `/pm recover`.) |
+| `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat(false)` | Replays a combat-deferred unlock, and repaints for the general-visibility rule. |
+| `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat(true)` | The entering-combat half of the same rule. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration, for the load order where `Settings`/AceGUI were not there yet in `OnInitialize`. `Register` is idempotent, so it is a no-op on a normal login. Not a deferral to first `/pm config` (anti-pattern #22). Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing — the only one a non-LoD addon gets. |

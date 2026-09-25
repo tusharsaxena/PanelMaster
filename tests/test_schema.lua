@@ -188,12 +188,12 @@ test("Schema: the defaults match the shipped profile", function()
   --
   -- The minimap row is checked against the GLOBAL defaults and INVERTED, because both halves of
   -- that row are different from every other stored row's: it lives in db.global (launcher-§3) and
-  -- its boolean says SHOWN where the stored key says hidden. Skipping it would leave the one row
+  -- its boolean says SHOWN where its store, S.MINIMAP_STORE, says hidden. Skipping it would leave the one row
   -- whose default is written down twice AND negated between the two spellings unchecked, which is
   -- the drift this case exists for.
   for _, row in ipairs(S.Schema) do
     if row.path == S.MINIMAP_PATH then
-      assertEqual(S:ReadPath(NS.defaults, row.path), not row.default,
+      assertEqual(S:ReadPath(NS.defaults, S.MINIMAP_STORE), not row.default,
         row.path .. " default disagrees with defaults/Global.lua, or the inversion has been dropped")
     elseif not row.sessionOnly then
       local shipped = S:ReadPath(NS.defaults.profile, row.path)
@@ -356,7 +356,7 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
       { path = "settings.alpha",      label = "Master alpha" },
       { path = "state.locked",        label = "Lock frame" },
       { path = "state.debugConsole",  label = "Debug console" },
-      { path = "global.minimap.hide", label = "Minimap button" },
+      { path = "global.minimap.shown", label = "Minimap button" },
     }
 
     assertEqual(S.Schema[1].group, "Master controls",
@@ -631,6 +631,161 @@ test("Schema stub: with no LibKa0s at all, the boot check is silent and a write 
   assertTrue(ns.IsAddonEnabled(), "the master switch read wrong through the stub")
 end)
 
+-- The stub keeps pace with Schema minor 2 (LibKa0s v1.56.0): the all-or-nothing batch SetMany,
+-- row.normalize, and the instance id forwarded through Get and ApplyDefault.
+-- red under: delete R.SetMany from hostSchemaStub
+
+--- Every answer of a call, with its count, so an arity difference is visible too.
+local function pack(...) return { n = select("#", ...), ... } end
+
+--- The two grid rows of `ns`, each with an onChange spy appending `path=value` to the returned log.
+local function spyGridRows(ns)
+  local log = {}
+  for _, path in ipairs({ "settings.gridSize", "settings.snapToGrid" }) do
+    ns.Schema:FindRow(path).onChange = function(v) log[#log + 1] = path .. "=" .. tostring(v) end
+  end
+  return log
+end
+
+test("Schema stub: SetMany stores every entry in order and runs each onChange", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local log = spyGridRows(ns)
+  local ok = ns.SchemaRuntime.SetMany({ { path = "settings.gridSize", value = 16 },
+                                        { path = "settings.snapToGrid", value = false } })
+  assertEqual(ok, true)
+  assertEqual(ns.db.profile.settings.gridSize, 16)
+  assertEqual(ns.db.profile.settings.snapToGrid, false)
+  assertEqual(table.concat(log, ","), "settings.gridSize=16,settings.snapToGrid=false")
+end)
+
+test("Schema stub: SetMany is all-or-nothing", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  local log = spyGridRows(ns)
+  local before = ns.db.profile.settings.snapToGrid
+  local r = pack(R.SetMany({ { path = "settings.snapToGrid", value = not before },
+                             { path = "settings.gridSize", value = 999 } }))
+  assertEqual(r.n, 4)
+  assertEqual(r[1], false)
+  assertEqual(r[2], "invalid value")
+  assertEqual(r[3], nil)
+  assertEqual(r[4], 2)
+  assertEqual(ns.db.profile.settings.snapToGrid, before, "entry 1 was stored by a refused batch")
+  assertEqual(#log, 0, "a refused batch ran an onChange")
+  r = pack(R.SetMany({ { path = "settings.nonsense", value = 1 } }))
+  assertEqual(r[1], false)
+  assertEqual(r[2], "unknown path: settings.nonsense")
+  assertEqual(r[4], 1)
+end)
+
+test("Schema stub: SetMany with opts.act runs inside one bracket", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  local inside
+  ns.Schema:FindRow("settings.gridSize").onChange = function() inside = R.InBulk() end
+  assertTrue((R.SetMany({ { path = "settings.gridSize", value = 12 } }, { act = "Import", scope = "grid" })))
+  assertEqual(inside, true, "onChange ran outside the batch's bracket")
+  assertFalse(R.InBulk(), "SetMany left the bracket open")
+  assertTrue((R.SetMany({ { path = "settings.gridSize", value = 10 } })))
+  assertEqual(inside, false, "a batch without opts.act opened a bracket")
+end)
+
+test("Schema: the live runtime and the stub answer SetMany identically", function()
+  local arms = { live = NS, stub = Env.loadPartial({ Schema = true }) }
+  local live = NS.db.profile.settings
+  local saved = { gridSize = live.gridSize, snapToGrid = live.snapToGrid }
+  local batches = {
+    { { path = "settings.gridSize", value = 20 }, { path = "settings.snapToGrid", value = false } },
+    { { path = "settings.gridSize", value = 8 }, { path = "settings.gridSize", value = 999 } },
+    { { path = "settings.snapToGrid", value = true }, { path = "settings.nonsense", value = 1 } },
+  }
+  local answers = {}
+  for name, ns in pairs(arms) do
+    answers[name] = {}
+    for b, entries in ipairs(batches) do
+      local r = pack(ns.SchemaRuntime.SetMany(entries))
+      local st = ns.db.profile.settings
+      answers[name][b] = string.format("%d|%s|%s|%s|%s|grid=%s|snap=%s", r.n, tostring(r[1]),
+        tostring(r[2]), tostring(r[3]), tostring(r[4]), tostring(st.gridSize), tostring(st.snapToGrid))
+    end
+  end
+  live.gridSize, live.snapToGrid = saved.gridSize, saved.snapToGrid
+  for b = 1, #batches do
+    assertEqual(answers.stub[b], answers.live[b], "batch " .. b .. " answered differently")
+  end
+end)
+
+test("Schema stub: row.normalize replaces the value, and a nil from it refuses", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  ns.Schema:FindRow("settings.gridSize").normalize = function(v)
+    if v == 13 then return nil, "unlucky" end
+    return math.floor(v)
+  end
+  assertTrue((R.Set("settings.gridSize", 7.6)))
+  assertEqual(ns.db.profile.settings.gridSize, 7, "Set stored the value before normalize")
+  local r = pack(R.Set("settings.gridSize", 13))
+  assertEqual(r[1], false)
+  assertEqual(r[2], "invalid value")
+  assertEqual(r[3], "unlucky")
+  assertEqual(ns.db.profile.settings.gridSize, 7, "a refused normalize stored")
+  r = pack(R.SetMany({ { path = "settings.gridSize", value = 9.9 }, { path = "settings.gridSize", value = 13 } }))
+  assertEqual(r[3], "unlucky")
+  assertEqual(r[4], 2)
+  assertTrue((R.SetMany({ { path = "settings.gridSize", value = 9.9 } })))
+  assertEqual(ns.db.profile.settings.gridSize, 9, "SetMany stored the value before normalize")
+end)
+
+test("Schema stub: Get and ApplyDefault forward the instance id", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local R = ns.SchemaRuntime
+  local gotId, changedId
+  R.AddRows({ { path = "settings.probe", default = 1, type = "number",
+    get = function(id) gotId = id return 1 end, set = function() end } })
+  R.Get("settings.probe", "inst-1")
+  assertEqual(gotId, "inst-1", "Get did not hand the id to row.get")
+  local row = ns.Schema:FindRow("settings.gridSize")
+  row.onChange = function(_, rid) changedId = rid end
+  assertTrue((R.ApplyDefault(row, "inst-2")))
+  assertEqual(changedId, "inst-2", "ApplyDefault did not forward the id to Set")
+end)
+
+-- writeThrough (Schema minor 2, options-ui-§1 route (a)): `settings.enabled` is declared by the
+-- Options composer, so a load without it has no row, yet `/pm enable` and `/pm disable` must land.
+-- The path is stored raw with no row -- no validate, no onChange, so the latch does not move on
+-- the write alone -- and every other row-less path is still refused.
+local function assertWritesThrough(ns, label)
+  local R = ns.SchemaRuntime
+  assertEqual(ns.Schema:FindRow("settings.enabled"), nil, label .. ": the enabled row exists")
+  local r = pack(R.Set("settings.enabled", false))
+  assertEqual(r.n, 1, label .. ": a written-through Set did not answer exactly true")
+  assertEqual(r[1], true, label .. ": the writeThrough path was refused")
+  assertEqual(ns.db.profile.settings.enabled, false, label .. ": the writeThrough value did not land")
+  assertEqual(ns.Schema:Get("settings.enabled"), false, label .. ": Get does not read it back")
+  assertFalse(ns.Lifecycle:IsDown(), label .. ": a raw write ran a reaction it has no row for")
+  assertEqual(ns.Schema:FindRow("settings.enabled"), nil, label .. ": the write grew a row")
+  local ok, err = ns.Schema:Set("settings.nonsense", 1)
+  assertFalse(ok, label .. ": a row-less path outside the list was stored")
+  assertEqual(err, "unknown path: settings.nonsense", label)
+  assertEqual(ns.db.profile.settings.nonsense, nil, label)
+  assertTrue((R.Set("settings.enabled", true)))
+end
+
+test("Schema stub: a writeThrough path is stored without a row; any other row-less path is refused",
+  function()
+    local ns = Env.loadDegraded()
+    assertTrue(ns.SchemaLib ~= NS.SchemaLib, "the degraded load resolved the live library")
+    assertWritesThrough(ns, "stub")
+  end)
+
+test("Schema seam: the live instance writes a writeThrough path through when Options is absent",
+  function()
+    local ns, m = Env.loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true,
+                                    OptionsCompose = true })
+    assertTrue(ns.SchemaLib == m.LibStub("LibKa0s-Schema-1.0"), "the partial load fell back to the stub")
+    assertWritesThrough(ns, "live")
+  end)
+
 test("Schema seam: the live seam is the library's instance, and NS.Schema's names answer it", function()
   -- The adoption in one assertion per half: the instance came from LibKa0s-Schema-1.0 rather than
   -- the stub, and NS.Schema's kept names answer what the instance answers.
@@ -642,4 +797,16 @@ test("Schema seam: the live seam is the library's instance, and NS.Schema's name
   -- answer no `why`.
   assertEqual(select("#", S:Set("settings.gridSize", -1)), 3)
   assertEqual(select(3, S:Set("settings.gridSize", -1)), nil)
+end)
+
+test("Schema: the grid-size slider and the write seam share one maximum", function()
+  -- The slider's max was a literal 64 while validate and the drag clamp read C.MAX_GRID (128), so
+  -- the three disagreed on what the largest grid is. One constant now bounds all of them.
+  local C = NS.Constants
+  assertEqual(S:FindRow("settings.gridSize").max, C.MAX_GRID, "the slider's max is not C.MAX_GRID")
+  local before = S:Get("settings.gridSize")
+  assertFalse(S:Set("settings.gridSize", C.MAX_GRID + 1), "a grid above C.MAX_GRID was accepted")
+  assertEqual(S:Get("settings.gridSize"), before, "the refused write still landed")
+  assertTrue(S:Set("settings.gridSize", C.MAX_GRID), "C.MAX_GRID itself was refused")
+  S:Set("settings.gridSize", S:Default("settings.gridSize"))
 end)

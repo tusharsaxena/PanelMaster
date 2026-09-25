@@ -35,13 +35,14 @@ Start here, then read the docs:
 - Topic detail in `docs/` — **Tier 1 is always present**: `scope.md`, `module-map.md`, `schema.md`, `settings-panel.md`, `data-flow.md`, `common-tasks.md`. Conditional and addon-specific docs vary; `docs/ARCHITECTURE.md` → `## Documentation map` lists every page under `docs/` and says which conditional ones do not apply here (`documentation-§3`).
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Nine of the fifteen majors are adopted
-(`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`); `Perf` is declined. **Never edit anything
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Ten of the fifteen majors are adopted
+(`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`, and
+`Bus` for its `Catalog` alone); `Perf` is declined. **Never edit anything
 under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.55.0 (MIT). That line is the
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.58.0 (MIT). That line is the
 **provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
 file for it and compares both vendored payloads — `libs/LibKa0s/` and `tests/_kit/` — against that
 tag in the sibling checkout. So it moves in the **same commit** as the vendored bytes; a line and a
@@ -55,7 +56,7 @@ The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/
 [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and
 [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). It is a deviation from `§1` itself and
 **not** a `performance-§12` exemption — `§12` is neither claimed nor claimable here, because its
-no-combat-path criterion (a) fails: `modules/Canvas.lua:650-656` runs a shared 10Hz `OnUpdate`.
+no-combat-path criterion (a) fails: `modules/Canvas.lua:647-652` runs a shared 10Hz `OnUpdate`.
 `docs/performance.md` carries the sweep and the cost argument.
 
 Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever

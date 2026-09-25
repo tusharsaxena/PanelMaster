@@ -73,6 +73,7 @@ test("Panel.Register: the retry is SUBSCRIBED before PLAYER_LOGIN fires (F-013)"
   -- OnEnable is dead on arrival. OnInitialize runs at ADDON_LOADED, strictly before PLAYER_LOGIN,
   -- which is the bootstrap shape options-ui-§1 sanctions. The mock stores whatever handler it is
   -- given, so only the source can show which lifecycle hook made the call.
+  -- The call goes through Core's pcalled helper (events-frames-taint-§1), so that is the form scanned.
   -- CR-stripped: this repo is CRLF-pinned (line-endings-§2), so a scan that anchors on "\nend\n"
   -- must not depend on the checkout's representation.
   local function slurp(path)
@@ -85,11 +86,11 @@ test("Panel.Register: the retry is SUBSCRIBED before PLAYER_LOGIN fires (F-013)"
   local src = slurp("core/PanelMaster.lua")
   local init = src:match("function addon:OnInitialize%(%)(.-)\nend\n")
   assertTrue(init ~= nil, "OnInitialize is no longer a plain function block; the scan needs updating")
-  assertTrue(init:find('RegisterEvent%("PLAYER_LOGIN"') ~= nil,
+  assertTrue(init:find('SafeRegisterEvent%(self, "PLAYER_LOGIN"') ~= nil,
     "the settings-registration retry is not subscribed from OnInitialize")
 
   local seen = 0
-  for _ in src:gmatch('RegisterEvent%("PLAYER_LOGIN"') do seen = seen + 1 end
+  for _ in src:gmatch('SafeRegisterEvent%(self, "PLAYER_LOGIN"') do seen = seen + 1 end
   assertEqual(seen, 1, "PLAYER_LOGIN is registered more than once")
 end)
 
@@ -350,8 +351,8 @@ test("Panel: the tracking registry is emptied between rebuilds", function()
 end)
 
 -- ── The Panels page's repaint policy (F-002, F-004) ─────────────────────────────
--- The page has exactly TWO triggers: MSG_PANELS (the set of panels changed) rebuilds it once, and
--- MSG_PANEL (one panel's field changed) refreshes the open editor in place. No widget callback
+-- The page has exactly TWO triggers: MSG.PANELS (the set of panels changed) rebuilds it once, and
+-- MSG.PANEL (one panel's field changed) refreshes the open editor in place. No widget callback
 -- rebuilds the page itself — doing so released the very widget whose handler was still running.
 --
 -- The real rebuilder is installed by buildPanelsPage, which needs AceGUI widgets and so never runs
@@ -1351,3 +1352,48 @@ test("Panels page: every color declares WHOSE class it means, and all five are t
         field .. " declares a class source but has no class-color companion")
     end
   end)
+
+-- THE PER-PANEL UNLOCK TICK FOLLOWS THE PANEL'S REAL STATE (review F-008 / PanelMaster-R-08).
+--
+-- It reads NS.Unlock:IsPanelUnlocked, which is session state no MSG.PANEL describes, so it had no
+-- refresher: a global unlock left it unticked-but-meaningless, a global lock left it ticked, and a
+-- combat-deferred tick replayed at PLAYER_REGEN_ENABLED left it unticked on an unlocked panel. The
+-- unlock module now pokes NS.PanelEditor:RefreshUnlock at the end of every transition.
+--
+-- red under: dropping the refresher, the RefreshUnlock calls in modules/Unlock.lua, or the
+-- SetDisabled while the global unlock is on.
+test("Panels page: the per-panel Unlock tick tracks global, per-panel and deferred unlocks",
+  function()
+  T.mocks.__inCombat = false
+  NS.Unlock:SetUnlocked(false)
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Unlock tick")
+  E.__setSelectedID(rec.id)
+  local ctx = freshPanelsCtx()
+  local savedCtx = E.__ctx
+  E.__ctx = ctx
+  local box = assert(actsOnGeneral(ctx).unlocked, "no Unlock tick on the General tab")
+  assertFalse(box:GetValue() == true, "a locked panel's tick starts ticked")
+
+  -- (a) The global unlock ticks and grays the box; the global lock puts it back.
+  NS.Unlock:SetUnlocked(true)
+  assertTrue(box:GetValue() == true, "the tick does not show the global unlock")
+  assertTrue(box.disabled == true, "the tick stays live while every panel is already unlocked")
+  NS.Unlock:SetUnlocked(false)
+  assertFalse(box:GetValue() == true, "the tick survived a global lock")
+  assertFalse(box.disabled == true, "the tick stayed grayed after the global lock")
+
+  -- (b) A tick in combat is deferred and reads false; leaving combat replays it and the tick follows.
+  T.mocks.__inCombat = true
+  box:__fire("OnValueChanged", true)
+  assertFalse(box:GetValue() == true, "a deferred unlock claims the panel is unlocked")
+  T.mocks.__inCombat = false
+  NS.addon:OnRegenEnabled()
+  assertTrue(NS.Unlock:IsPanelUnlocked(rec.id), "the deferred unlock was not replayed")
+  assertTrue(box:GetValue() == true, "the tick did not follow the replayed unlock")
+
+  NS.Unlock:SetUnlocked(false)
+  E.__ctx = savedCtx
+  NS.Registry:DeleteAll()
+  E.__setSelectedID(nil)
+end)

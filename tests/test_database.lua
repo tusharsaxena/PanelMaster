@@ -9,7 +9,7 @@ end)
 
 test("Database: InitDB runs the migration runner, so the live DB comes back stamped", function()
   -- What this case is for is the INVOCATION: NS:InitDB calls NS:RunMigrations before any panel is
-  -- read (core/Database.lua:19), and the runner is the only thing that writes the stamp. Drop that
+  -- read (core/Database.lua:20), and the runner is the only thing that writes the stamp. Drop that
   -- call and an upgrading account reaches the renderer un-migrated.
   --
   -- It deliberately says nothing about the SHAPE of NS.defaults.global. Whether the stamp is absent
@@ -88,11 +88,44 @@ test("Database.RunMigrations: is idempotent", function()
   assertEqual(NS.db.global.schemaVersion, before)
 end)
 
+test("Database: defaults declare schemaVersion 0", function()
+  -- savedvariables-§1 / toc-file-§2 (standard v2.65.0): the default is the runner's FLOOR, not the
+  -- current version. 0 masks no legacy account -- an unstamped file reads 0 and the gate opens --
+  -- and a current-version default would be stripped by AceDB's removeDefaults and never persist.
+  assertEqual(NS.defaults.global.schemaVersion, 0)
+end)
+
 test("Database.RunMigrations: stamps a version onto an unstamped DB", function()
   local saved = NS.db.global.schemaVersion
   NS.db.global.schemaVersion = nil
   NS:RunMigrations()
-  assertTrue(NS.db.global.schemaVersion ~= nil, "an unstamped DB was left unstamped")
+  assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION, "an unstamped DB was left unstamped")
+  NS.db.global.schemaVersion = saved
+end)
+
+test("Database.RunMigrations: a legacy record in a NON-active stored profile gets its frame name", function()
+  -- The stamp is ACCOUNT-WIDE but the v1 -> v2 body is PROFILE-scoped, so the body has to walk every
+  -- profile the SavedVariables file stores, not just the active one: once the stamp is written, no
+  -- later run reaches an inactive profile again.
+  local saved, savedSV = NS.db.global.schemaVersion, NS.db.sv
+  NS.db.sv = { profiles = { Other = { panels = { { id = 1, name = "Chat BG" } } } } }
+  NS.db.global.schemaVersion = nil   -- reads the declared 0 default on a real AceDB
+
+  NS:RunMigrations()
+
+  assertEqual(NS.db.sv.profiles.Other.panels[1].frameName, NS.Util.FrameName("Chat BG"),
+    "an inactive stored profile was declared current without being migrated")
+  NS.db.sv = savedSV
+  NS.db.global.schemaVersion = saved
+end)
+
+test("Database.RunMigrations: the stamp lands above the declared default", function()
+  local saved = NS.db.global.schemaVersion
+  NS.db.global.schemaVersion = NS.defaults.global.schemaVersion
+  NS:RunMigrations()
+  assertEqual(NS.db.global.schemaVersion, NS.SCHEMA_VERSION)
+  assertTrue(NS.db.global.schemaVersion > NS.defaults.global.schemaVersion,
+    "the stamp did not move off the declared default, so removeDefaults would strip it")
   NS.db.global.schemaVersion = saved
 end)
 
@@ -149,7 +182,7 @@ test("Database.RunMigrations: survives being called before the DB exists", funct
 end)
 
 test("Database.MigrationSummary: is a pure, readable line", function()
-  assertEqual(NS.MigrationSummary(1, 2, 4), "v1 -> v2, 4 panels touched")
+  assertEqual(NS.MigrationSummary(0, 2, 4), "v0 -> v2, 4 panels touched")
 end)
 
 test("Database.InitSummary: names the addon, version, schema, profile and count", function()

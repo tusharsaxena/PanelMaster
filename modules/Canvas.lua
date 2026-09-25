@@ -18,10 +18,11 @@ local Util = NS.Util
 -- sibling here is not a degraded build, it is a broken load order — and a guard would convert that
 -- into a panel that silently renders wrong instead of an error naming the file that failed to load.
 --
--- The two `if NS.Unlock and NS.Unlock.X` guards (StripOverlay on the retire path, Decorate on the
--- render path) are NOT load-order guards and are NOT the convention: they are METHOD-presence
--- checks on the overlay surface, the one part of Unlock these two paths call into optionally — an
--- undecorated frame is a complete, correct, locked panel, so retire and render must stay total.
+-- The `if NS.Unlock and NS.Unlock.X` guards (StripOverlay on the retire path; on the render path,
+-- StripOverlay in the stood-down branch and Decorate in the other) are NOT load-order guards and are
+-- NOT the convention: they are METHOD-presence checks on the overlay surface, the one part of Unlock
+-- these paths call into optionally — an undecorated frame is a complete, correct, locked panel, so
+-- retire and render must stay total whichever branch runs.
 
 -- Frame pool (hard rule #14: ≥10 dynamic frames use a pool). A user with thirty panels who toggles
 -- the master switch twice would otherwise leak sixty frames — WoW frames are never garbage
@@ -38,6 +39,11 @@ local Util = NS.Util
 -- keeps the panel on the frame it already had, so renaming ten times costs no frames at all — which
 -- is what makes the bound "one per panel the user has ever created this session" rather than the
 -- open-ended "one per name they have ever typed".
+--
+-- One frame per name also holds across a profile switch that SWAPS names between ids (profile A has
+-- id 1 = Alpha, id 2 = Xray; profile B the other way round), because Canvas:RenderAll releases every
+-- mismatched frame before any id acquires one: by the time id 1 asks for Xray's name, id 2 has
+-- already handed that frame back to the pool.
 --
 -- The alternative (anonymous pooled frames plus `_G` aliases) keeps a flat pool but hands out frames
 -- whose `GetName()` is nil, which breaks every consumer that expects a real named frame.
@@ -78,16 +84,6 @@ function Canvas.VisibilityShows(mode, inCombat)
   return true   -- "always", and anything a hand-edited file put there that is not one of the four
 end
 
--- The master scale. Guarded rather than clamped to a range restated here: the canonical bounds are
--- the composer's, the schema's validate refuses anything outside them at the write seam, and a
--- second copy of the numbers in this file is the copy that goes stale (options-ui-§8's reasoning).
--- What the renderer needs is only that it never multiplies a size by nil, a string or zero.
-local function masterScale(settings)
-  local v = tonumber(settings.scale)
-  if not v or v <= 0 then return 1 end
-  return v
-end
-
 -- The master opacity. 0..1 is not a library constant, it is what alpha IS, so it is clamped here.
 local function masterAlpha(settings)
   return Util.Clamp(settings.alpha, 0, 1, 1)
@@ -108,9 +104,9 @@ local function addGeometry(spec, rec, settings)
   --
   -- Multiplied by the addon-wide master scale, and multiplied rather than replaced for the same
   -- reason it is not folded into width/height: the per-panel scale is what the player set for THIS
-  -- panel and the master one moves all of them together.
-  spec.scale    = Util.Clamp(rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale)
-                  * masterScale(settings)
+  -- panel and the master one moves all of them together. Util.EffectiveScale is the one definition,
+  -- shared with `/pm recover`, which bounds the offsets in these same scaled units.
+  spec.scale    = Util.EffectiveScale(rec, settings)
   spec.point    = Util.IsPoint(rec.point) and rec.point or C.PANEL_TEMPLATE.point
   spec.relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
   spec.x        = tonumber(rec.x) or 0
@@ -776,7 +772,10 @@ end
 
 -- Repaint one panel by id. Cheap and targeted: the drag path and every single-field edit come
 -- through here, so moving a panel does not touch the other twenty-nine.
-function Canvas:Render(id)
+--
+-- `inCombat` is optional. A combat transition passes the truth its event carries (see
+-- RenderForCombat); every other caller omits it and the state is read through NS.Compat.InCombat.
+function Canvas:Render(id, inCombat)
   local rec = NS.Registry:Get(id)
   if not rec then
     -- The record is gone: retire its frame rather than leaving it on screen. This is what makes a
@@ -784,7 +783,8 @@ function Canvas:Render(id)
     if active[id] then release(active[id]); active[id] = nil end
     return nil
   end
-  local spec = Canvas.BuildSpec(rec, currentSettings(), NS.Compat.InCombat())
+  if inCombat == nil then inCombat = NS.Compat.InCombat() end
+  local spec = Canvas.BuildSpec(rec, currentSettings(), inCombat)
   -- THE STAND-DOWN RUNG (slash-commands-§7). Hiding while the addon is stood down is enforced HERE,
   -- inside the one show decision every frame passes through, rather than by an imperative sweep of
   -- Hide() from core/LifecycleSetup.lua -- because a hidden frame comes back. A combat transition, a
@@ -799,7 +799,16 @@ function Canvas:Render(id)
   -- It is NOT the same rung as `settings.enabled`, which BuildSpec already folds into `spec.shown`.
   -- That one answers the player's master switch; this one answers the latch, whose `perf` hold has
   -- nothing to do with the master switch at all.
-  if NS.Lifecycle and NS.Lifecycle:IsDown() then spec.shown = false end
+  --
+  -- The same rung also STRIPS THE UNLOCK OVERLAY, below. Unlock:Decorate shows an unlocked panel
+  -- whatever spec.shown says (you cannot move a panel you cannot see) and arms drag on it, so if it
+  -- ran here while the latch is down, its own f:Show() would undo the hide one line after applySpec
+  -- made it. Read once, the latch picks which of the two overlay calls runs: stood down, the frame is
+  -- stripped -- hidden, mouse-transparent, not movable -- and Decorate never runs. The session unlock
+  -- state (NS.State.unlocked, unlockedPanels) is left alone, so NS.StandUp -> RenderAll decorates
+  -- again from state as it is then (performance-§6), with no imperative lock in NS.StandDown.
+  local down = NS.Lifecycle and NS.Lifecycle:IsDown()
+  if down then spec.shown = false end
   local f = active[id]
   -- A frame can only ever answer to the name it was created with, so a frame holding the wrong name
   -- has to be retired and the one belonging to the right name brought in.
@@ -808,6 +817,10 @@ function Canvas:Render(id)
   -- it alone, so a renamed panel keeps its frame and everything anchored to it stays attached. What
   -- is left is the genuine mismatch — an id whose record was replaced under it (a profile switch
   -- lands a different panel on the same id) — where swapping really is the right answer.
+  --
+  -- This is now the FALLBACK, for the per-id MSG.PANEL path. A full rebuild never reaches it with a
+  -- mismatch: RenderAll releases every mismatched frame first (releaseMismatched), which is what keeps
+  -- a profile switch that SWAPS names between ids from creating a second frame under one name.
   if f and f.__frameName ~= spec.frameName then
     release(f)
     active[id] = nil
@@ -820,24 +833,47 @@ function Canvas:Render(id)
   end
   f.panelID = rec.id
   applySpec(f, spec)
-  if NS.Unlock and NS.Unlock.Decorate then NS.Unlock:Decorate(f, rec) end
+  if down then
+    if NS.Unlock and NS.Unlock.StripOverlay then NS.Unlock:StripOverlay(f) end
+  elseif NS.Unlock and NS.Unlock.Decorate then
+    NS.Unlock:Decorate(f, rec)
+  end
   return f
 end
 
 -- Rebuild the whole set: render every record, and retire any frame whose record no longer exists.
--- The structural path — a create, a delete, a rename or a master-switch flip.
-function Canvas:RenderAll()
-  local seen = {}
-  for _, rec in ipairs(NS.Registry:All()) do
-    seen[rec.id] = true
-    Canvas:Render(rec.id)
-  end
+-- The structural path — a create, a delete, a rename or a master-switch flip. `inCombat` is optional
+-- and handed to every Render unchanged (nil means "read it").
+--
+-- TWO PASSES, and the order is the point. Every frame that will not survive -- a retired id, or an id
+-- whose record now wants a different frame name -- goes back to the pool BEFORE any id acquires one.
+-- Resolving it one id at a time, as Render's own mismatch branch does, breaks when a profile switch
+-- swaps names between ids: id 1 asks for the name still held by active[2], finds the pool empty, and
+-- CreateFrame's a second frame under that global name, orphaning one on every switch.
+local want = {}   -- panel id → the frame name its record wants; scratch, wiped on every call
+
+-- Release every active frame whose id is gone or wants another name. Reads `want`, which the caller
+-- has just filled; deleting the current key from `active` inside pairs() is legal in Lua.
+local function releaseMismatched()
   for id, f in pairs(active) do
-    if not seen[id] then
+    if want[id] ~= f.__frameName then
       release(f)
       active[id] = nil
     end
   end
+end
+
+-- Refill `want` from the live record list in place, so a rebuild allocates nothing.
+local function fillWant(records)
+  for id in pairs(want) do want[id] = nil end
+  for _, rec in ipairs(records) do want[rec.id] = NS.Registry.FrameName(rec) end
+end
+
+function Canvas:RenderAll(inCombat)
+  local records = NS.Registry:All()
+  fillWant(records)
+  releaseMismatched()
+  for _, rec in ipairs(records) do Canvas:Render(rec.id, inCombat) end
   NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
 end
 
@@ -847,10 +883,13 @@ end
 --
 -- Returns whether it repainted, which is the part a headless test can see: the alternative is a
 -- case that asserts on frame state and passes for the wrong reason when nothing was drawn at all.
-function Canvas:RenderForCombat()
+--
+-- `inCombat` is the transition's own truth, passed by the REGEN handlers (core/PanelMaster.lua):
+-- at PLAYER_REGEN_DISABLED no combat API reliably reads true yet, so the event is the answer.
+function Canvas:RenderForCombat(inCombat)
   local mode = currentSettings().visibility
   if mode ~= "inCombat" and mode ~= "outOfCombat" then return false end
-  Canvas:RenderAll()
+  Canvas:RenderAll(inCombat)
   return true
 end
 
@@ -875,9 +914,9 @@ function Canvas:Enable()
   local ev = NS.NewBusTarget()
   if not ev then return end
   Canvas.__ev = ev
-  ev:RegisterMessage(NS.Registry.MSG_PANELS, function() Canvas:RenderAll() end)
-  ev:RegisterMessage(NS.Registry.MSG_PANEL, function(_, id) Canvas:Render(id) end)
-  ev:RegisterMessage(NS.Schema.MSG_SETTINGS, function() Canvas:RenderAll() end)
+  ev:RegisterMessage(NS.Registry.MSG.PANELS, function() Canvas:RenderAll() end)
+  ev:RegisterMessage(NS.Registry.MSG.PANEL, function(_, id) Canvas:Render(id) end)
+  ev:RegisterMessage(NS.Schema.MSG.SETTINGS, function() Canvas:RenderAll() end)
 end
 
 -- The other half of the seam, and the reason Enable's guard is on `__ev` rather than on a boolean:

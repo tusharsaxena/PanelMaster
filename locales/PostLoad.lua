@@ -2,7 +2,8 @@
 -- key's, so a translator never duplicates work. Runs after every locale file, so it reads whatever
 -- the active locale resolved.
 --
--- Empty in 1.0.0 — no string routes through NS.L yet (see locales/enUS.lua). The file ships as the
+-- Empty — the one string that routes through NS.L (the library-absent line, locales/enUS.lua) has
+-- no alias. The file ships as the
 -- seam a later localization pass fills. It carries NO `local _, NS = ...` header, because with
 -- no alias to write there is nothing to hold the namespace FOR, and a header over two names the
 -- file never reads is the dead code `M4c-06` swept out of eighteen of its siblings. The first

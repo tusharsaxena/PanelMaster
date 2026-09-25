@@ -6,12 +6,13 @@ badge and any count quoted in the docs must agree with it.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (31)
+### test_util.lua (32)
 
 - Util.DeepEqual: compares plain data by value, nested tables included
 - Util.CountChanged: counts keys written, added or removed, and not keys left alone
 - Util.SplitPath: splits a dotted path
 - Util.SplitPath: a single segment is one part
+- Util.EffectiveScale: the own scale clamped to the panel bounds, times the master scale
 - Util.Clamp: passes a value already in range
 - Util.Clamp: clamps below and above
 - Util.Clamp: a non-number falls back, then to the low bound
@@ -40,7 +41,7 @@ badge and any count quoted in the docs must agree with it.
 - NS.Print: prepends the cyan [PM] tag
 - NS.Print survived the AceConsole embed (architecture-§2)
 
-### test_compat.lua (11)
+### test_compat.lua (14)
 
 - Compat.GetScreenSize: returns the UIParent dimensions
 - Compat.GetUIScale: defaults to 1 when the frame cannot answer
@@ -52,6 +53,9 @@ badge and any count quoted in the docs must agree with it.
 - Compat.RegisterMedia: reports failure without LibSharedMedia rather than erroring
 - Compat: the class-color lookup is the library's, not a private copy here
 - Compat.MouseIsOver: answers without the frame taking mouse input
+- Compat.InCombat follows UnitAffectingCombat, not lockdown
+- Compat.InCombat falls back to InCombatLockdown when UnitAffectingCombat is absent
+- Compat.InCombat answers false when neither combat API exists
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
 ### test_constants.lua (19)
@@ -96,7 +100,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (43)
+### test_registry.lua (45)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -135,6 +139,8 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Recover: survives a record whose anchor is missing or junk (F-006)
 - Registry.Recover: leaves on-screen panels alone
 - Registry.Recover: pulls an off-screen panel back into view
+- Registry.Recover: at an effective scale of 0.5 a visible TOPLEFT panel at 1.5 x screen width is left alone
+- Registry.Recover: at an effective scale of 2 a panel at 0.75 x screen width is off-screen and is moved
 - Registry: the panel messages have exactly one sender
 - Registry.New: a panel really lands on the documented defaults, not just the template
 - Registry.Reset: puts position and scale back to the defaults too
@@ -142,7 +148,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
 
-### test_canvas.lua (36)
+### test_canvas.lua (37)
 
 - Canvas.BuildSpec: carries the record's geometry through
 - Canvas.BuildSpec: repairs invalid values rather than passing them to a frame
@@ -180,13 +186,15 @@ badge and any count quoted in the docs must agree with it.
 - Canvas.BuildSpec: master alpha fades the panel AND its mouseover floor
 - Canvas.RenderForCombat: repaints only for the two settings that depend on combat
 - Canvas: leaving and entering combat both reach the renderer
+- Canvas: an Only-in-combat panel appears at the combat-start event, not a repaint later
 
-### test_unlock.lua (21)
+### test_unlock.lua (22)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
 - Unlock.SnapPosition: snapping is symmetric across zero
 - Unlock.SnapPosition: an out-of-range grid is clamped, not obeyed
+- Unlock.SnapPosition: a grid above the slider's 64 snaps on a grid of 64
 - Unlock.SnapPosition: a missing settings table does not error
 - Unlock.SetUnlocked: flips the session flag
 - Unlock.Toggle: alternates
@@ -461,7 +469,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: switching from a bar to a single piece clears the sections it no longer draws
 - Artwork composite: an anchored FIT offsets each section from the same edge
 
-### test_database.lua (21)
+### test_database.lua (24)
 
 - Database: InitDB opened both scopes
 - Database: InitDB runs the migration runner, so the live DB comes back stamped
@@ -472,7 +480,10 @@ badge and any count quoted in the docs must agree with it.
 - Database: the debug flag is NOT persisted (debug-logging-§5)
 - Database: unlock state is NOT persisted
 - Database.RunMigrations: is idempotent
+- Database: defaults declare schemaVersion 0
 - Database.RunMigrations: stamps a version onto an unstamped DB
+- Database.RunMigrations: a legacy record in a NON-active stored profile gets its frame name
+- Database.RunMigrations: the stamp lands above the declared default
 - Database.RunMigrations: upgrades an older DB to the current version
 - Database.RunMigrations: v2 stamps a frame name onto every unstamped panel
 - Database.RunMigrations: v2 leaves an already-stamped frame name alone
@@ -526,7 +537,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
 
-### test_schema.lua (41)
+### test_schema.lua (50)
 
 - Schema.Register: every path resolves against the defaults (architecture-§5)
 - Schema: EVERY row declares a group, and a label and a type with it
@@ -568,7 +579,16 @@ badge and any count quoted in the docs must agree with it.
 - Schema stub: a host verb's write lands, reacts, and refuses in the host's own words
 - Schema stub: Reset All, the page Defaults and a Registry bulk act all complete
 - Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands
+- Schema stub: SetMany stores every entry in order and runs each onChange
+- Schema stub: SetMany is all-or-nothing
+- Schema stub: SetMany with opts.act runs inside one bracket
+- Schema: the live runtime and the stub answer SetMany identically
+- Schema stub: row.normalize replaces the value, and a nil from it refuses
+- Schema stub: Get and ApplyDefault forward the instance id
+- Schema stub: a writeThrough path is stored without a row; any other row-less path is refused
+- Schema seam: the live instance writes a writeThrough path through when Options is absent
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
+- Schema: the grid-size slider and the write seam share one maximum
 
 ### test_slash.lua (74)
 
@@ -647,7 +667,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 
-### test_panel.lua (62)
+### test_panel.lua (63)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -711,8 +731,9 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: every color swatch is followed by a 'Use class color' companion
 - Panels page: no swatch label carries '(opacity)', class color on or off
 - Panels page: every color declares WHOSE class it means, and all five are the player's
+- Panels page: the per-panel Unlock tick tracks global, per-panel and deferred unlocks
 
-### test_profiles.lua (23)
+### test_profiles.lua (24)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -731,6 +752,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: switching profile sanitizes the incoming records
 - Database: a profile switch drops per-panel unlocks rather than reissuing them
 - Database: the profile reload goes through Registry, keeping one sender
+- Profiles: swapping frame names across ids creates no second named frame
 - Panel: the Profiles subcategory is registered
 - Panel: Profiles registers AceDB's own options table
 - Panel: the Profiles page carries the framework contract like every other
@@ -738,24 +760,38 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page builds lazily on OnShow
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
-### test_launcher.lua (23)
+### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
 - Launcher: the object is type 'launcher' and wears the addon's own icon
 - Launcher: the label is the BRAND NAME in plain text, not the Title and not the folder
 - Launcher.Register: a second call builds no second button
-- Launcher: LEFT-click toggles the addon's lock, which is its preview
-- Launcher: the left click drives the SAME state the Lock frame checkbox drives
-- Launcher: the left click goes through the write seam, so it is traced once
-- Launcher: the left click respects the unlock's combat deferral
-- Launcher: RIGHT-click opens the settings panel
-- Launcher: RIGHT-click does not touch the lock, and LEFT-click does not open the panel
+- Launcher: LEFT-click opens the settings panel and touches nothing else
+- Launcher: RIGHT-click opens the options menu, titled with the brand, and not the panel
+- Launcher menu: exactly Enabled and Locked, in that order (the ADDONS.md row)
+- Launcher menu: the checkboxes read the current state on every open
+- Launcher menu: Locked routes to /pm lock|unlock's own handler, both ways
+- Launcher menu: Locked drives the SAME state the Lock frame checkbox drives
+- Launcher menu: Locked goes through the write seam, so it is traced once and echoed
+- Launcher menu: Locked respects the unlock's combat deferral
+- Launcher menu: Enabled routes to /pm enable|disable's own handler, both ways
+- Launcher menu: while DISABLED, Enabled is live and Locked is grayed and writes nothing
+- Launcher: with no context-menu API, RIGHT-click falls back to the settings panel
+- Launcher tooltip: enabled and locked, the whole block in the library's order
+- Launcher tooltip: the version is the TOC's, through the addon's own version seam
+- Launcher tooltip: Locked is read on EVERY show, and the hints stay fixed
+- Launcher tooltip: the status values are green for Yes and red for No
+- Launcher tooltip: no Test mode line, and nothing of the addon's own
+- Launcher tooltip: it still shows while DISABLED, with the same fixed hints
+- Launcher: a DISABLED left click opens the panel, prints nothing and writes nothing
 - Minimap row: it is a STORED row in the canonical position, not a session flag
-- Minimap row: the path is LibDBIcon's own key, in the GLOBAL store
+- Minimap row: the path reads SHOWN, and the store is LibDBIcon's own key in the GLOBAL store
 - Minimap row: get INVERTS, so the label and the stored key disagree on purpose
 - Minimap row: set INVERTS and moves the button in the same act
 - Minimap row: the write seam inverts on its own, not only through the library
 - Minimap row: LibDBIcon holds the very table the row writes, not a copy
+- Launcher: /pm get global.minimap.shown answers true while the button shows, and writes land on hide
+- Minimap row: a legacy store keeps its setting across the rename, with no migration
 - Minimap row: Reset all settings does not un-hide the button
 - Minimap row: the General page's Defaults button does not un-hide the button
 - Minimap row: Register validates it, rather than exempting it
@@ -764,22 +800,27 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (14)
+### test_disabled.lua (19)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
 - Disabled 4: no timer, ticker or OnUpdate is left armed
 - Disabled 5: every frame that was shown is hidden, and stays hidden
+- Disabled 5b: an unlocked panel is hidden, stripped and undraggable while stood down (routes A, B, C)
 - Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing
 - Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
 - Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
-- Disabled 8: left-click is refused and writes nothing; right-click still opens the panel
+- Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked
 - Disabled 9: re-enabling restores the registration set, from state as it is NOW
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
 - Disabled 10: releasing one hold does not resurrect an addon the other still holds down
 - Disabled 10b: the hold keys are the library's exported constants, not local literals
 - Disabled: a profile switch that flips the enable path re-evaluates the latch
 - Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
+- Events: a rejected event name is recorded and the rest still register
+- Events: with no C_EventUtils the refused name is still caught and recorded
+- Events: the dump says 'rejected events: 0' when nothing was refused
+- Events: the degraded Core stub's SafeRegisterEvent pcalls and records once
 
 ### test_sunnart.lua (53)
 
@@ -837,7 +878,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (43)
+### test_libka0s.lua (49)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -877,13 +918,19 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: the fallback printer renders the same bytes as the library's
 - Degraded install: /pm config answers on EVERY invocation, not once
 - Degraded install: a bare /pm runs `config`, and falls back to help without one
+- Degraded install: /pm disable and /pm enable write through and flip the latch without raising
+- Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing
+- Degraded install: the help index still lists every verb
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
+- Bus seam: a mistyped Registry message key raises at the read
+- Bus seam: a mistyped Schema message key raises at the read
+- Bus seam: with no library the same reads answer nil and do not raise
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (6)
+### test_surface_parity.lua (8)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
@@ -891,6 +938,8 @@ badge and any count quoted in the docs must agree with it.
 - Parity: the Slash seam's degraded surface matches the live one
 - Parity: the Options seam's degraded surface matches the live one
 - Parity: the Schema seam's degraded surface matches the live one, on both levels
+- Parity: the Bus seam's degraded surface matches the live one
+- Parity: the Lifecycle seam's degraded surface matches the live one
 
 ### test_harness.lua (18)
 
@@ -915,8 +964,8 @@ badge and any count quoted in the docs must agree with it.
 
 ### test_prose.lua (15)
 
-- prose: no authored file carries a British spelling from localization-5's published list
-- prose: the gate carries localization-5's two lists whole, and nothing of its own
+- prose: no authored file carries a British spelling from localization-§5's published list
+- prose: the gate carries localization-§5's two lists whole, and nothing of its own
 - prose self-test: the carve-out suppresses the named generated folder, and only it
 - prose self-test: a path the carve-out does not name is not covered by one that looks like it
 - prose self-test: a carve-out that is not a set of path strings is a failure, not a silence
@@ -941,7 +990,7 @@ badge and any count quoted in the docs must agree with it.
 
 - layoutcap: every authored file over the 1500-line cap is named in the census
 - layoutcap: no census row outlives the breach it records
-- layoutcap: every over-cap census row carries one of layout-1's three terminal states
+- layoutcap: every over-cap census row carries one of layout-§1's three terminal states
 - layoutcap: the census and the exempt set agree about which paths were exempted
 - layoutcap: an empty census is written as a result rather than left standing empty
 - layoutcap self-test: the parser reads the census nested under the register, and stops there
@@ -981,34 +1030,34 @@ badge and any count quoted in the docs must agree with it.
 ### test_eol.lua (2)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
-- eol: .gitattributes is line-endings-5's canonical body for this repo kind
+- eol: .gitattributes is line-endings-§5's canonical body for this repo kind
 
 ## Totals
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 31 |
-| test_compat.lua | 11 |
+| test_util.lua | 32 |
+| test_compat.lua | 14 |
 | test_constants.lua | 19 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 43 |
-| test_canvas.lua | 36 |
-| test_unlock.lua | 21 |
+| test_registry.lua | 45 |
+| test_canvas.lua | 37 |
+| test_unlock.lua | 22 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
-| test_database.lua | 21 |
+| test_database.lua | 24 |
 | test_debuglog.lua | 38 |
-| test_schema.lua | 41 |
+| test_schema.lua | 50 |
 | test_slash.lua | 74 |
-| test_panel.lua | 62 |
-| test_profiles.lua | 23 |
-| test_launcher.lua | 23 |
-| test_disabled.lua | 14 |
+| test_panel.lua | 63 |
+| test_profiles.lua | 24 |
+| test_launcher.lua | 37 |
+| test_disabled.lua | 19 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 43 |
-| test_surface_parity.lua | 6 |
+| test_libka0s.lua | 49 |
+| test_surface_parity.lua | 8 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
@@ -1018,4 +1067,4 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| **Total** | **884** |
+| **Total** | **933** |

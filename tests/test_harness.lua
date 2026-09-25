@@ -158,6 +158,15 @@ test("Harness: the runner derives the addon's load list from the TOC", function(
   for _, p in ipairs(files) do
     assertTrue(not p:match("^libs/"), "libs/ must not come through tocFiles: " .. p)
   end
+  -- core/BusSetup.lua's position IS load-bearing: modules/Registry.lua and settings/Schema.lua call
+  -- NS.BusLib.Catalog at FILE LOAD, so the seam must have published before either runs.
+  local index = {}
+  for i, p in ipairs(files) do index[p] = i end
+  assertTrue(index["core/BusSetup.lua"] ~= nil, "the TOC-derived load list is missing core/BusSetup.lua")
+  for _, reader in ipairs({ "modules/Registry.lua", "settings/Schema.lua" }) do
+    assertTrue(index["core/BusSetup.lua"] < (index[reader] or 0),
+      "core/BusSetup.lua must load before " .. reader .. ", which calls NS.BusLib.Catalog at file load")
+  end
 end)
 
 test("Harness: the runner derives the vendored library's load list from LibKa0s.xml", function()

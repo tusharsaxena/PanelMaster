@@ -1,4 +1,4 @@
-local _, NS = ...
+local addonName, NS = ...
 NS.Schema = NS.Schema or {}
 local S = NS.Schema
 local C = NS.Constants
@@ -28,11 +28,11 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 -- Sole sender (architecture-§4): every settings mutation that the renderer must react to broadcasts
 -- this one message, from this file only.
-local MSG_SETTINGS = "Ka0s_PanelMaster_SettingsChanged"
-S.MSG_SETTINGS = MSG_SETTINGS
+-- Declared through LibKa0s-Bus-1.0's Catalog (core/BusSetup.lua); receivers read S.MSG.SETTINGS.
+S.MSG = NS.BusLib.Catalog(addonName, { SETTINGS = "Ka0s_PanelMaster_SettingsChanged" })
 
 local function announce(what)
-  if NS.bus then NS.bus:SendMessage(MSG_SETTINGS, what) end
+  if NS.bus then NS.bus:SendMessage(S.MSG.SETTINGS, what) end
 end
 
 S.Schema = {
@@ -69,7 +69,7 @@ S.Schema = {
   -- a line whose left half is already taken. It is drawn as this tab's afterGroup footer instead
   -- (settings/Panel.lua), which is where the flow engine puts a group's buttons.
   { path = "settings.gridSize", default = 4, type = "number",
-    min = C.MIN_GRID, max = 64, step = 1,
+    min = C.MIN_GRID, max = C.MAX_GRID, step = 1,
     fmt = "%d px",   -- grid → "4 px" in the slash list/get output (slash-commands-§5)
     group = "Editing", label = "Grid size",
     tooltip = "The grid a dragged panel snaps to, in UI units. Ignored when snapping is off.",
@@ -165,13 +165,21 @@ S.Schema = {
 -- `prefix .. "enabled"` produces. Spelled once here rather than at each of the three call sites.
 S.ENABLED_PATH = "settings.enabled"
 
--- ── The minimap button's stored path (launcher-§3) ─────────────────────────────
+-- ── The minimap button's row path and its store (launcher-§3) ─────────────────
 --
--- The ONE path in this schema that is stored OUTSIDE `db.profile`, and it is named here because
--- four places have to agree on it: `S:InstallMaster` hands it to the composer and wires the row's
--- own `get`/`set` onto it, `S:SnapshotPersisted` leaves it out of the profile picture, and
--- `S:Register` reads it against the GLOBAL defaults. Four literals would be four chances to typo a
--- path that reads and writes nowhere while raising nothing.
+-- TWO NAMES, ONE STATE. `S.MINIMAP_PATH` is the ROW: its schema path, and so its CLI name
+-- (slash-commands-§3). It reads in the row's own sense, SHOWN, so `/pm get global.minimap.shown`
+-- answers true while the button is on the minimap. `S.MINIMAP_STORE` is where that state LIVES:
+-- LibDBIcon's own `hide` key (the library reads it to draw the button; this row writes it through
+-- NS.Launcher:SetShown), and the ONLY stored key. Nothing
+-- is ever written or declared at the row's path -- a stored `shown` beside `hide` would be a second
+-- copy of one state (anti-pattern #81) -- so the row owns its storage through its own `get`/`set`.
+--
+-- Both are named here because four places have to agree on them: `S:InstallMaster` hands the path
+-- to the composer and wires the row's `get`/`set` onto the store, `S:SnapshotPersisted` leaves the
+-- row out of the profile picture, and `S:Register` skips the row's path and checks the store
+-- against the GLOBAL defaults instead. Four literals would be four chances to typo a path that
+-- reads and writes nowhere while raising nothing.
 --
 -- TAKEN VERBATIM BY THE COMPOSER, unprefixed -- like the debug console's, and for a stricter
 -- reason: the console's path is merely outside the block's `settings.` prefix, while this one is
@@ -179,12 +187,17 @@ S.ENABLED_PATH = "settings.enabled"
 -- minimap button belongs to the installation rather than to a profile (defaults/Global.lua states
 -- the argument).
 --
--- THE SENSE INVERTS. The row's label says *Minimap button* and its boolean says SHOWN; LibDBIcon's
--- key says HIDDEN. That inversion is the HOST's, not the library's -- the composer emits an
--- ordinary bool row and the row's own `get`/`set`, wired in `S:InstallMaster`, negate. The single
--- write seam calls them on every surface's write, which is the same place Lock frame's
--- un-inversion happens and for the same reason.
-S.MINIMAP_PATH = "global.minimap.hide"
+-- THE SENSE INVERTS between the two. That inversion is the HOST's, not the library's -- the
+-- composer emits an ordinary bool row and the row's own `get`/`set`, wired in `S:InstallMaster`,
+-- negate. The single write seam calls them on every surface's write, which is the same place Lock
+-- frame's un-inversion happens and for the same reason.
+--
+-- The path used to be the store's (`global.minimap.hide`), which made the CLI answer the opposite
+-- of the checkbox. The rename moved NO storage: an existing `hide = true` reads as shown = false
+-- with no SavedVariables migration and no schema-version bump, and the old path now answers the
+-- unknown-setting refusal like any other path no row declares.
+S.MINIMAP_PATH = "global.minimap.shown"
+S.MINIMAP_STORE = "global.minimap.hide"
 
 -- ── The runtime: LibKa0s-Schema-1.0 (architecture-§5, debug-logging-§10) ──────
 --
@@ -197,10 +210,14 @@ S.MINIMAP_PATH = "global.minimap.hide"
 -- front of this seam: the minimap inversion that used to branch inside it is the row's own
 -- `get`/`set` now.
 --
--- The degradation stub (docs/api/Schema/version-1-docs.md, "The degradation stub"). A load without
--- the library is WRITE-COMPLETING and LOG-SILENT: reads, writes, each row's onChange and the sweep
--- bracket's depth all work, because host writers (the Registry's bulk verbs, Reset All, `/pm set`
--- where the Slash major survives) reach this seam on a degraded load too. What it does not
+-- The degradation stub (docs/api/Schema/version-2-docs.md, "The degradation stub"). A load without
+-- the library is WRITE-COMPLETING and LOG-SILENT: reads, writes (Set, and minor 2's all-or-nothing
+-- SetMany), each row's validate, normalize and onChange, the instance id forwarded through Get and
+-- ApplyDefault, and the sweep bracket's depth all work, because host writers (the Registry's bulk
+-- verbs, Reset All, `/pm set` where the Slash major survives) reach this seam on a degraded load
+-- too. So does minor 2's `writeThrough`: `Set` and `SetMany` store a listed path that has no row
+-- raw -- a copy, no validate, normalize or onChange -- and announce it with a synthetic
+-- `{ path, writeThrough }` row, while every other row-less path is still refused. What it does not
 -- reproduce is what only feeds the debug console -- the per-write `[Set]` line and the bracket's
 -- tally -- and the degraded console stub discards those lines anyway. This is a documented
 -- duplication rather than anti-pattern #47: options-ui-§1's no-copy MUST names widget makers, the
@@ -257,6 +274,16 @@ local function hostSchemaStub()
   function stubLib.New(_, d)
     local R, depth = {}, 0
     local rows = d.rows
+    -- writeThrough (minor 2): read ONCE, here, as the live instance reads it. One synthetic row per
+    -- listed path, handed to announce by identity so a write allocates nothing.
+    local throughRows = {}
+    if type(d.writeThrough) == "table" then
+      for _, path in ipairs(d.writeThrough) do
+        if type(path) == "string" and path ~= "" then
+          throughRows[path] = { path = path, writeThrough = true }
+        end
+      end
+    end
     local function resolve(parts, id)
       if type(d.resolveRoot) ~= "function" then return nil end
       return d.resolveRoot(parts, id)
@@ -278,7 +305,7 @@ local function hostSchemaStub()
     function R.Reindex() end
     function R.Get(path, id)
       local row = R.FindRow(path)
-      if row and type(row.get) == "function" then return row.get() end
+      if row and type(row.get) == "function" then return row.get(id) end
       if type(path) ~= "string" or (row and row.sessionOnly) then return nil end
       local parts = stubLib.SplitPath(path)
       local root, first = resolve(parts, id)
@@ -293,36 +320,118 @@ local function hostSchemaStub()
       if rid == nil then rid = id end
       return parts, root, first, rid
     end
-    -- The seam's order without its log and tally: refuse, validate, store, react, announce.
-    function R.Set(path, value, id)
-      local row = R.FindRow(path)
-      if not row then return false, "unknown path: " .. tostring(path) end
+    -- The value the row wants stored: `value`, or what row.normalize(value, rid) answers. A nil
+    -- from it is a refusal, so a normalize cannot clear a setting to absence.
+    local function normalized(row, value, rid)
+      if type(row.normalize) ~= "function" then return value end
+      local out, why = row.normalize(value, rid)
+      if out == nil then return nil, "invalid value", why end
+      return out
+    end
+    -- Everything checked before a store, shared by Set and SetMany so a batch refuses on the
+    -- rules a single write does: validate, normalize, then nowhere-to-store. A plan to commit,
+    -- or `nil, err, why` with nothing stored.
+    local function prepare(row, path, value, id)
       local stored = type(row.set) ~= "function" and not row.sessionOnly
       local parts, root, first, rid = nil, nil, nil, id
       if stored then parts, root, first, rid = target(path, id) end
       if type(row.validate) == "function" then
         local ok, why = row.validate(value, rid)
-        if not ok then return false, "invalid value", why end
+        if not ok then return nil, "invalid value", why end
       end
-      if stored and not root then return false, "nowhere to store " .. path .. " yet" end
-      if type(row.set) == "function" then
-        row.set(value)
-      elseif stored then
-        stubLib.Write(root, parts, copy(value), first)
+      local err, why
+      value, err, why = normalized(row, value, rid)
+      if err then return nil, err, why end
+      if stored and not root then return nil, "nowhere to store " .. path .. " yet" end
+      return { row = row, path = path, parts = parts, root = root, first = first, rid = rid,
+               value = value, stored = stored }
+    end
+    local function store(plan)
+      if type(plan.row.set) == "function" then
+        plan.row.set(plan.value)
+      elseif plan.stored then
+        stubLib.Write(plan.root, plan.parts, copy(plan.value), plan.first)
       end
-      if type(row.onChange) == "function" then row.onChange(value, rid) end
-      if type(d.announce) == "function" then d.announce(row, path, value, rid) end
+    end
+    local function react(plan)
+      if type(plan.row.onChange) == "function" then plan.row.onChange(plan.value, plan.rid) end
+    end
+    local function announceOne(plan)
+      if type(d.announce) == "function" then d.announce(plan.row, plan.path, plan.value, plan.rid) end
+    end
+    -- The row a write goes through: the indexed row, else the path's synthetic writeThrough row.
+    -- That row carries no set, validate, normalize or onChange, so the ordinary plan below stores
+    -- it raw (a copy, at the resolved root) and announces it with nothing reacting.
+    local function writeRow(path)
+      return R.FindRow(path) or (type(path) == "string" and throughRows[path]) or nil
+    end
+    -- The seam's order without its log and tally: refuse, validate, store, react, announce.
+    function R.Set(path, value, id)
+      local row = writeRow(path)
+      if not row then return false, "unknown path: " .. tostring(path) end
+      local plan, err, why = prepare(row, path, value, id)
+      if not plan then return false, err, why end
+      store(plan)
+      react(plan)
+      announceOne(plan)
+      return true
+    end
+    -- Phase 1: every entry checked before any is stored. The plans, or `nil, err, why, i`.
+    local function prepareBatch(entries, id)
+      local plans = {}
+      for i, e in ipairs(entries) do
+        local path = type(e) == "table" and e.path or nil
+        local row = writeRow(path)
+        if not row then return nil, "unknown path: " .. tostring(path), nil, i end
+        local plan, err, why = prepare(row, path, e.value, id)
+        if not plan then return nil, err, why, i end
+        plans[i] = plan
+      end
+      return plans
+    end
+    -- Phase 2 in the live seam's order: every store, then every onChange, so a reaction reading
+    -- a sibling row sees the whole batch.
+    local function commitBatch(plans)
+      for _, plan in ipairs(plans) do store(plan) end
+      for _, plan in ipairs(plans) do react(plan) end
+    end
+    -- The batch's tail: the host's announceBatch once when it has one, else announce per write.
+    local function announceBatch(plans)
+      if #plans == 0 then return end
+      if type(d.announceBatch) ~= "function" then
+        for _, plan in ipairs(plans) do announceOne(plan) end
+        return
+      end
+      local writes = {}
+      for i, p in ipairs(plans) do
+        writes[i] = { row = p.row, path = p.path, value = p.value, rid = p.rid }
+      end
+      d.announceBatch(writes, plans[1].rid)
+    end
+    -- Several rows as ONE act, all or nothing: one refusal answers `false, err, why, index` with
+    -- nothing stored and nothing called. `opts.act` runs the stores inside one bracket.
+    function R.SetMany(entries, opts)
+      if type(entries) ~= "table" then entries = {} end
+      if type(opts) ~= "table" then opts = {} end
+      local plans, err, why, at = prepareBatch(entries, opts.instanceId)
+      if not plans then return false, err, why, at end
+      if opts.act ~= nil then
+        R.BulkRun(opts.act, opts.scope, function() commitBatch(plans) end)
+      else
+        commitBatch(plans)
+      end
+      announceBatch(plans)
       return true
     end
     function R.Default(path)
       local row = R.FindRow(path)
       return row and copy(row.default)
     end
-    function R.ApplyDefault(row)
+    function R.ApplyDefault(row, id)
       if type(row) ~= "table" or type(row.path) ~= "string" or row.default == nil then return false end
       local exempt = d.resetExempt
       if depth > 0 and type(exempt) == "table" and exempt[row.path] then return false end
-      return R.Set(row.path, copy(row.default))
+      return R.Set(row.path, copy(row.default), id)
     end
     -- The bracket keeps its depth, because the sweep veto above reads it; it counts nothing.
     function R.BulkBegin() depth = depth + 1 end
@@ -368,6 +477,15 @@ local R = SchemaLib:New({
   L = { NOT_FOUND = "unknown path: %s", INVALID = "invalid value" },
   -- No `announce`: every row that broadcasts does it from its own onChange. No `resetExempt`: see
   -- docs/revendor/2026-09-23-v1.55.0/05_SUMMARY.md -- no player reaches a library sweep of these rows.
+  --
+  -- `writeThrough` (Schema minor 2; options-ui-§1 route (a), slash-commands-§1). The master switch
+  -- is a COMPOSED row, so whenever the Options composer is absent -- the whole library, or Options
+  -- alone -- `settings.enabled` has no row, and `/pm enable` / `/pm disable` would be refused on the
+  -- very load they most need to work. Listed here, the path is stored raw without a row: no
+  -- validate and no onChange, so Sl:CliEnable re-evaluates the latch itself after the write. On a
+  -- full load the composed row exists and takes the write, list or no list. The same list reaches
+  -- the stub above, which reads it from this one descriptor.
+  writeThrough = { S.ENABLED_PATH },
 })
 
 -- The resolved library (or the stub standing in for it) and the instance, published for the two
@@ -515,22 +633,23 @@ function S:InstallMaster(H)
       if v then NS.DebugLog:Show() else NS.DebugLog:Hide() end
     end,
   })
-  -- THE INVERSION (launcher-§3), on the row itself. The row says SHOWN; LibDBIcon's key says HIDDEN;
-  -- these two negate, and every surface -- the checkbox, `/pm set global.minimap.hide true`,
-  -- LibDBIcon's own right-click menu -- ends up agreeing because there is one negation and one
-  -- store, never a second boolean beside `hide` (anti-pattern #81).
+  -- THE INVERSION (launcher-§3), on the row itself. The row's path says SHOWN; LibDBIcon's key,
+  -- S.MINIMAP_STORE, says HIDDEN; these two negate, and every surface -- the checkbox,
+  -- `/pm set global.minimap.shown false`, the button LibDBIcon draws from `hide` -- ends up agreeing
+  -- because there is one negation and one store. The row's own path is never written: no `shown`
+  -- key ever lands beside `hide` (anti-pattern #81).
   --
   -- `db.global`, not `db.profile`: the ONE stored row outside the profile, which is why it carries
-  -- its own storage rather than going through the runtime's profile resolver. The path is read and
+  -- its own storage rather than going through the runtime's profile resolver. The store is read and
   -- written whole from the DB ROOT, so `global.minimap.hide` resolves as itself.
   --
   -- Answers SHOWN for a DB that is not up yet: `hide` absent means a button that was never hidden,
   -- the same answer the library's own IsShown gives and the one defaults/Global.lua produces the
   -- moment AceDB is there.
   wire(rows, S.MINIMAP_PATH, {
-    get = function() return not SchemaLib.Read(NS.db, S.MINIMAP_PATH) end,
+    get = function() return not SchemaLib.Read(NS.db, S.MINIMAP_STORE) end,
     set = function(v)
-      SchemaLib.Write(NS.db, S.MINIMAP_PATH, not v)
+      SchemaLib.Write(NS.db, S.MINIMAP_STORE, not v)
       -- Then the button follows immediately rather than at the next reload. SetShown writes `hide`
       -- a second time with the same value, which is the library's own documented behavior. It
       -- answers false where LibDBIcon is absent; the store is still correct.
@@ -652,16 +771,24 @@ function S:Default(path) return R.Default(path) end
 -- never consults the row's own default (savedvariables-§2: the declaration site is defaults/).
 --
 -- Session-only rows (state.*) are the ONE exemption: they route through their own get/set and are
--- never persisted. The minimap row is CHECKED, not exempted, and only its ROOT differs: its path is
--- spelled from the DB root and begins `global.`, so it is read against NS.defaults whole
--- (launcher-§3), which is the same check every other row gets against NS.defaults.profile.
+-- never persisted. The minimap row is the one CLOSURE-BACKED row (architecture-§5, launcher-§3):
+-- its path names the row and is never stored or declared, so the runtime is told it has no root
+-- (`defaultsRoot` answers nil for it) and its STORE is checked instead, against NS.defaults whole
+-- because it is spelled from the DB root and begins `global.`. Checked, not exempted: a store that
+-- does not resolve counts one missing, with the same printed schema error the runtime gives.
 function S:Register()
   if not (NS.defaults and NS.defaults.profile) then return 0 end
   local errors, _, missing = R.Validate({
-    defaultsRoot = function(parts)
+    defaultsRoot = function(parts, row)
+      if row and row.path == S.MINIMAP_PATH then return nil end
       if parts[1] == "global" then return NS.defaults, 1 end
       return NS.defaults.profile, 1
     end,
   })
+  if SchemaLib.Read(NS.defaults, S.MINIMAP_STORE) == nil then
+    missing = missing + 1
+    print(("|cffff0000schema error|r: %s: store `%s` does not resolve against the defaults")
+      :format(S.MINIMAP_PATH, S.MINIMAP_STORE))
+  end
   return errors + missing
 end

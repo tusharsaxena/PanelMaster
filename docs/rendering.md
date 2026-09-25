@@ -149,7 +149,7 @@ for a composed row is the virtual bar rather than one section), transposed when 
 or 270, then multiplied by `artScale`. Both are read through the same enum and clamp seams the fill
 math uses, so a record holding junk fits to the size it will actually be drawn at. It sanitizes
 afterwards so the result meets the
-same MIN/MAX clamp as any stored size, fires `MSG_PANEL`, and returns `false` plus a printable
+same MIN/MAX clamp as any stored size, fires `MSG.PANEL`, and returns `false` plus a printable
 reason when there is nothing to fit to.
 
 Adopting the native size outright was rejected while fitting was an always-on flag, on the grounds

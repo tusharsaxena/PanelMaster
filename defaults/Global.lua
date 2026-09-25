@@ -5,25 +5,24 @@ local _, NS = ...
 -- the BUILD, not of a profile, so a migration must run once per SavedVariables file rather than once
 -- per profile.
 --
--- `schemaVersion` IS DELIBERATELY NOT SEEDED HERE (savedvariables-§1).
+-- `schemaVersion = 0` IS THE RUNNER'S FLOOR, NOT THE CURRENT VERSION (savedvariables-§1,
+-- toc-file-§2, standard v2.65.0). The runner owns the stamp; this default only declares it.
 --
--- An AceDB default is served for any key the SavedVariables file does not carry, so seeding the
--- stamp with NS.SCHEMA_VERSION made `db.global.schemaVersion` read as CURRENT on every account that
--- had never been stamped — which is every account, because the runner only writes the field from
--- inside its own `<` gate. The gate could therefore never open, and every migration body behind it
--- (core/Database.lua's v1 -> v2 frame-name stamp) was unreachable for every real install: an
--- upgrading v1 profile was silently declared current and never repaired.
---
--- Absent, the field reads nil, NS:RunMigrations floors it to 1, the gate opens, the bodies run and
--- the runner writes the real stamp into the SavedVariables file — after which the run is idempotent
--- for the same reason it always was. A genuinely fresh install pays one pass over an empty registry,
--- which touches zero rows.
+-- 0 masks no legacy account. An AceDB default is served for any key the SavedVariables file does not
+-- carry, so an account that has never been stamped reads 0, NS:RunMigrations' gate opens, every
+-- step runs and the runner writes NS.SCHEMA_VERSION into the file. Declaring the CURRENT version
+-- here instead is the bug this file once shipped: every unstamped account read as current, the gate
+-- never opened, and the v1 -> v2 frame-name stamp was unreachable for every real install. A
+-- current-version default would also never persist, because AceDB's removeDefaults strips a value
+-- equal to its default at logout -- so the stamp would be re-derived, not remembered.
 --
 -- ── THE MINIMAP TABLE IS LibDBIcon'S OWN, AND IT LIVES HERE ────────────────────
 --
 -- `minimap` below is not a settings table of this addon's design: it is the table LibDBIcon-1.0
--- itself reads and writes, handed to it whole by core/LauncherSetup.lua. The library writes `hide`
--- when the player uses its own right-click menu and `minimapPos` when they drag the button, so a
+-- itself reads and writes, handed to it whole by core/LauncherSetup.lua. The library reads `hide`
+-- to decide whether to draw the button and writes `minimapPos` when the player drags it; `hide`
+-- itself is written by the *Minimap button* row (through NS.Launcher:SetShown) and by
+-- `/pm set global.minimap.shown`. So a
 -- second key of ours beside `hide` would be a copy of one state that is free to disagree the first
 -- time either surface is used (launcher-§3, anti-pattern #81).
 --
@@ -72,5 +71,6 @@ local _, NS = ...
 -- it has no row, so a declared default would only be this addon guessing an angle.
 NS.defaults = NS.defaults or {}
 NS.defaults.global = {
+  schemaVersion = 0,
   minimap = { hide = false },
 }

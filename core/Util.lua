@@ -279,6 +279,22 @@ function Util.CountChanged(before, after)
   return n
 end
 
+-- The scale a panel is actually drawn at: its own scale, clamped to the panel bounds, times the
+-- addon-wide master scale (options-ui-§15: master rows are multipliers). This is the ONE definition
+-- the renderer (Canvas addGeometry, which hands it to SetScale) and `/pm recover` (which bounds the
+-- stored offsets, expressed in these scaled units) share, so the two can never disagree about it.
+--
+-- The master scale is guarded rather than clamped to a range restated here: the canonical bounds are
+-- the composer's, the schema's validate refuses anything outside them at the write seam, and a
+-- second copy of the numbers is the copy that goes stale (options-ui-§8's reasoning). What the
+-- callers need is only that a size or a bound is never multiplied by nil, a string or zero.
+function Util.EffectiveScale(rec, settings)
+  local own = Util.Clamp(rec and rec.scale, C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, C.PANEL_TEMPLATE.scale)
+  local master = tonumber(settings and settings.scale)
+  if not master or master <= 0 then master = 1 end
+  return own * master
+end
+
 -- Is `point` one of the nine anchor points? Kept here rather than inline so the CLI, the settings
 -- panel and the sanitizer all agree on what a valid anchor is.
 function Util.IsPoint(point)

@@ -97,7 +97,12 @@ C.MAX_ACCENT_THICKNESS = 32
 C.MIN_ACCENT_OFFSET = -32
 C.MAX_ACCENT_OFFSET = 32
 C.MIN_GRID = 1
-C.MAX_GRID = 128
+-- One grid maximum, read by the Grid size slider (settings/Schema.lua), its validate at the write
+-- seam, and the drag clamp in modules/Unlock.lua, so the three cannot disagree again. It was 128 while
+-- the slider stopped at 64, and no UI or CLI path could ever store more than 64 (the CLI clamps to the
+-- row's max). A hand-edited SavedVariables value of 65-128 is the only way to hold one: it snaps on a
+-- grid of 64 at the next drag and is otherwise harmless.
+C.MAX_GRID = 64
 -- Per-panel scale, multiplying the whole frame -- background, border, accent bars and artwork
 -- together -- so a panel and everything drawn on it grow and shrink as one piece.
 --
