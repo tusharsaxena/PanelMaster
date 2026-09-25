@@ -1,0 +1,1 @@
+clean: PendingSnapshot is a read-only sorted copy of the combat unlock queue; test fails without it (method nil), gate re-run 935/0/1 skip, luacheck 0/0, lizard clean, CRLF kept
