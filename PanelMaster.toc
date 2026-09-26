@@ -95,8 +95,11 @@ defaults\Global.lua
 # Registry, Artwork, SunnArtPacks and SunnArt ahead of Canvas; Unlock is conventional: it captures
 # only core/ tables at file scope and reaches Canvas at call time.
 modules\Registry.lua
-# Artwork before Canvas — the renderer reads its art list and geometry math
+# Artwork before Canvas — the renderer reads its art list and geometry math. The catalog half
+# first, then the geometry peeled out of it (layout-§1); they share NS.Artwork and the geometry
+# reaches the catalog half only at call time, so the pair's own order is conventional.
 modules\Artwork.lua
+modules\ArtworkGeometry.lua
 # The known-pack manifest, before the adapter that reads it. Pure data, no behavior: what the
 # official Sunn packs contain, so the feature survives SunnArt itself being disabled or unloadable.
 modules\SunnArtPacks.lua

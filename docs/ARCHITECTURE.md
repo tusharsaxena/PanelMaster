@@ -356,16 +356,19 @@ above carrying a re-check trigger. This census records which one each breach sit
 suite on an over-cap file it does not name, on a row naming a file that is no longer over the cap,
 and on a heading that is missing, misplaced or standing empty.
 
-**Nothing is over the cap today.** Measured 2026-09-26 with
+**Nothing is over the cap today.** Measured 2026-09-27 with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
 The largest authored file is `tests/test_artwork.lua` at 1356 lines, and the largest shipped one
-`modules/Artwork.lua` at 1188. `settings/PanelEditor.lua`, which held both places at 1464, was
+`modules/Registry.lua` at 969. `settings/PanelEditor.lua`, which held both places at 1464, was
 peeled on 2026-09-26 by the automated-tests sweep ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47))
-into itself (746) and `settings/PanelEditorTabs.lua` (798).
+into itself (746) and `settings/PanelEditorTabs.lua` (798). `modules/Artwork.lua`, the largest
+shipped file after it at 1188, was peeled on 2026-09-27 along the catalog / geometry seam into
+itself (693), which keeps the catalog and its lookups, and `modules/ArtworkGeometry.lua` (518),
+which takes `BuildArtSpec`, `NativeSize` and the fill math.
 
 **The 1000–1500 band is not recorded here.** `layout-§1` and `automated-tests-§4` disposition it in
 the release watch list and only there: the *Files by `layout-§1` band* table in
@@ -379,8 +382,9 @@ automated-tests sweep peeled it: the editor's six tabs moved into
 behind, and both files under 1000; `tests/test_panel.lua` (1399), which
 reached 1491 on 2026-09-26 and was peeled ahead of #47 by the automated-tests sweep: the built
 Panels page's cases — the tab strip, the chrome band and the editor tabs — moved whole into
-`tests/test_panels_page.lua`, leaving both suites under 1000; `modules/Artwork.lua` (1188) with its mirror suite
-`tests/test_artwork.lua` (1356), which split together along the catalog / geometry seam; and
+`tests/test_panels_page.lua`, leaving both suites under 1000; `modules/Artwork.lua` (1188), peeled
+on 2026-09-27 along the catalog / geometry seam into itself (693) and `modules/ArtworkGeometry.lua`
+(518), with its mirror suite `tests/test_artwork.lua` (1356), which splits along the same seam; and
 `tests/test_libka0s.lua` (1086), new to the band in the 2026-09-23 remediation, whose degraded-install
 cases are its own seam. The next file to reach 1000 arrives in that table with a blank
 `Disposition` cell, which is the file saying something crossed and nobody has ruled on it yet.

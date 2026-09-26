@@ -206,7 +206,7 @@ function Canvas.BuildSpec(rec, settings, inCombat)
   addAppearance(spec, rec, settings)
   spec.accent = buildAccentSpec(rec)
 
-  -- The artwork layer, resolved entirely by modules/Artwork.lua — every fill, crop, flip and
+  -- The artwork layer, resolved entirely by modules/ArtworkGeometry.lua — every fill, crop, flip and
   -- quarter-turn is arithmetic on the record, and none of it belongs in a renderer. nil means
   -- "this panel draws no artwork", which is the default and stays the cheapest answer.
   --

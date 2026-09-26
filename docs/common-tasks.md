@@ -66,11 +66,11 @@ output shape is asserted in tests without capturing chat.
 
 1. Prepare the image per [artwork-spec.md](artwork-spec.md) — the folder tree, the naming rules and
    the cleaner are all specified there, and **the `id` is permanent** once shipped.
-2. Add the catalog row in `modules/Artwork.lua`. That module is **pure**: it holds the catalog and the
-   `BuildArtSpec` geometry — fill math, UV crop/flip/rotation composition, tint resolution — and it
-   touches no frames and calls no WoW API. Keep it that way; it is what makes the geometry
-   headlessly testable.
-3. `modules/Artwork.lua` loads **before** `modules/Canvas.lua`, which reads it. Do not invert that.
+2. Add the catalog row in `modules/Artwork.lua`. That module and its geometry half,
+   `modules/ArtworkGeometry.lua`, are **pure**: one holds the catalog, the other the `BuildArtSpec`
+   geometry — fill math, UV crop/flip/rotation composition, tint resolution — and neither touches a
+   frame or calls a WoW API. Keep it that way; it is what makes the geometry headlessly testable.
+3. Both load **before** `modules/Canvas.lua`, which reads them. Do not invert that.
 
 For a **Sunn** pack, nothing goes in the catalog by hand: `modules/SunnArtPacks.lua` is the generated
 manifest (`tools/sunn/build_manifest.py`, with **measured** section dimensions) and

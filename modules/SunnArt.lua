@@ -412,7 +412,7 @@ function S.Rows(themes)
     local paths = {}
     for i = 1, theme.sections do paths[i] = S.SectionPath(theme.file, i) end
 
-    -- The overlap crop, expressed the way modules/Artwork.lua consumes it: `h` is the CONTENT
+    -- The overlap crop, expressed the way modules/ArtworkGeometry.lua consumes it: `h` is the CONTENT
     -- height, and contentV0 says where that content starts in the file. Both halves have to move
     -- together or the art is drawn at the right size from the wrong part of the texture.
     --

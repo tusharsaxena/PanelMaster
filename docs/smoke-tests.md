@@ -3,8 +3,8 @@
 In-client checks for the things the headless harness genuinely cannot reach: how a panel actually
 looks, dragging with a real mouse, layering against other addons' frames, and the debug console's
 rendering. Run these before tagging a release, after any change to `modules/Canvas.lua`,
-`modules/Artwork.lua`, `modules/Unlock.lua`, `settings/Panel.lua`, `settings/PanelEditor.lua` or
-`settings/PanelEditorTabs.lua`, and whenever the `## Interface:` is bumped.
+`modules/Artwork.lua`, `modules/ArtworkGeometry.lua`, `modules/Unlock.lua`, `settings/Panel.lua`,
+`settings/PanelEditor.lua` or `settings/PanelEditorTabs.lua`, and whenever the `## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 

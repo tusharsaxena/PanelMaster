@@ -68,8 +68,9 @@ four more frames created for nothing.
 
 #### Artwork
 
-`modules/Artwork.lua` owns two things and touches no frames: `Artwork.Catalog`, the list of
-bundled art, and `Artwork.BuildArtSpec(rec, panelW, panelH)`, the record-to-geometry math.
+`NS.Artwork` owns two things and touches no frames: `Artwork.Catalog`, the list of bundled art, in
+`modules/Artwork.lua`, and `Artwork.BuildArtSpec(rec, panelW, panelH)`, the record-to-geometry math,
+in `modules/ArtworkGeometry.lua`.
 `Canvas.BuildSpec` calls it with the panel's **clamped** render size and hangs the result on
 `spec.art`, `nil` meaning "this panel draws no artwork" — the default, and the cheapest answer.
 `applyArtwork` then applies that spec and decides nothing.
