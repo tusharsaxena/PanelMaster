@@ -641,6 +641,14 @@ test("Disabled: `/pm disable` and the checkbox are one write, and the latch is i
 
 local function wipe(t) for i = #t, 1, -1 do t[i] = nil end end
 
+--- The diagnostics report's text (debug-logging-§14), built as data and written nowhere. It is how
+--- events-frames-taint-§1's record reaches the player: `/pm diagnostics` prints it.
+local function reportText()
+  local out = {}
+  for i, line in ipairs(NS.DebugLog:BuildDiagnostics().lines) do out[i] = line[2] end
+  return table.concat(out, "\n")
+end
+
 local function registeredEvents()
   local out = {}
   for _, r in ipairs(mocks.__registrations()) do
@@ -668,7 +676,7 @@ local function driveRejection(label)
   mocks.__badEvents = savedBad
   local ev = registeredEvents()
   local list = table.concat(rejected, ",")
-  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
+  local dump = reportText()
   local hadCanvas = NS.Canvas.__ev ~= nil
 
   wipe(rejected)
@@ -680,8 +688,8 @@ local function driveRejection(label)
   assertTrue(ev.PLAYER_REGEN_ENABLED, label .. ": PLAYER_REGEN_ENABLED did not register")
   assertTrue(hadCanvas, label .. ": Canvas:Enable never ran after the refused registration")
   assertEqual(list, COMBAT_ENTRY, label .. ": the rejected list is not exactly the refused name, once")
-  assertTrue(dump:find("rejected events: 1 (" .. COMBAT_ENTRY .. ")", 1, true) ~= nil,
-    label .. ": /pm debug dump does not report the rejected name")
+  assertTrue(dump:find("rejected events (1): " .. COMBAT_ENTRY, 1, true) ~= nil,
+    label .. ": /pm diagnostics does not report the rejected name")
 end
 
 test("Events: a rejected event name is recorded and the rest still register", function()
@@ -699,10 +707,11 @@ test("Events: with no C_EventUtils the refused name is still caught and recorded
   assertTrue(ok, tostring(err))
 end)
 
-test("Events: the dump says 'rejected events: 0' when nothing was refused", function()
+test("Events: the report says 'rejected events (0)' when nothing was refused", function()
   wipe(NS.State.rejectedEvents)
-  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
-  assertTrue(dump:find("rejected events: 0", 1, true) ~= nil, "the dump has no rejected-events line")
+  local dump = reportText()
+  assertTrue(dump:find("rejected events (0): -", 1, true) ~= nil,
+    "the diagnostics report has no rejected-events line")
 end)
 
 test("Events: the degraded Core stub's SafeRegisterEvent pcalls and records once", function()

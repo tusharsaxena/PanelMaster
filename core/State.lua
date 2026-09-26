@@ -24,7 +24,7 @@ State.unlockedPanels = {}
 
 -- Event names the client refused to register this session, in the order they were refused, each
 -- at most once. NS.SafeRegisterEvent (core/CoreSetup.lua) appends to it on every registration path
--- and `/pm debug dump` prints it (core/DebugLogSetup.lua), which is the record events-frames-taint-§1
+-- and `/pm diagnostics` prints it (modules/Diagnostics.lua), which is the record events-frames-taint-§1
 -- requires the player can reach. Session-only: a refusal is a fact about this client build, and the
 -- next login asks again.
 State.rejectedEvents = {}

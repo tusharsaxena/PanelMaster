@@ -388,22 +388,22 @@ NS.COMMANDS = {
   -- read these strings and nothing else. The README's command prose is hand-written and does NOT
   -- read them, so it drifts separately and is checked separately. A sub-verb missing here is a
   -- sub-verb nobody can discover (slash-commands-§4).
-  { "debug",    "Window; 'on'/'off' set logging, 'dump' writes a state dump",
+  { "debug",    "Window; 'on'/'off' set logging, 'diagnostics' writes a diagnostics report",
     function(rest)
-      -- `/pm debug` toggles the WINDOW only (the logging flag is untouched); `/pm debug on|off` sets
-      -- the session-only logging flag through the DebugLog seam. Logging runs even with the console
-      -- closed, so a bug can be reproduced first and the log read afterwards.
-      local arg = rest and tostring(rest):lower():match("^%s*(%S*)") or ""
+      -- `/pm debug diagnostics` runs the report (debug-logging-§14), tested FIRST and in any case;
+      -- `/pm debug on|off` sets the session-only logging flag. Both go through the library's
+      -- DebugVerb, which answers false for any other word, so `/pm debug` and an unknown word
+      -- toggle the WINDOW only (the logging flag is untouched). Logging runs even with the console
+      -- closed, so a bug can be reproduced first and the log read afterwards. `dump`, the report's
+      -- old name, is an ordinary unknown word now.
       if not NS.DebugLog then return end
-      if arg == "on" then NS.DebugLog:SetEnabled(true)
-      elseif arg == "off" then NS.DebugLog:SetEnabled(false)
-      elseif arg == "dump" then
-        -- Structured dump verb (debug-logging-§4): the registry's and the renderer's views of the
-        -- world, side by side. Uses the RAW append, so it works whether or not logging is enabled.
-        NS.DebugLog:Show()
-        for _, line in ipairs(NS.DebugLog:Diagnose()) do NS.DebugLog:Add("Dump", line) end
-      else NS.DebugLog:Toggle() end
+      if not NS.DebugLog:DebugVerb(rest) then NS.DebugLog:Toggle() end
     end },
+  -- The diagnostics report's own verb (debug-logging-§14), the other of its exactly two forms. A
+  -- reserved live verb (Slash 16's LIVE_VERBS), so it answers while the addon is disabled. The
+  -- report appends to the debug console after whatever trace is there and never clears it.
+  { "diagnostics", "Write a diagnostics report to the debug console",
+    function() if NS.DebugLog then NS.DebugLog:RunDiagnostics() end end },
   { "help",     "Show this help", function() NS.Slash:PrintHelp() end },
 }
 

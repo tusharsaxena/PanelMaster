@@ -118,9 +118,10 @@ own (`slash-commands-§2`). While the addon is **disabled** the whole reserved s
 — a bare `/pm` opens the settings panel, and the standard's thirteen reserved verbs (`help config
 version enable disable debug perf diagnostics get set list reset resetall`, read from
 `lib.LIVE_VERBS`) stay live, which standard v2.57.0 restored after v2.56.0 briefly narrowed it.
-`perf` and `diagnostics` sit in that set as **reservations**, not commands: this addon registers
-neither verb — `NS.COMMANDS` (`settings/Slash.lua:322`) holds 19 verbs and neither of them is among
-them — so the eleven reserved verbs it does ship are the ones that behave normally. The only
+`perf` sits in that set as a **reservation**, not a command: this addon does not register it —
+`NS.COMMANDS` (`settings/Slash.lua:322`) holds 20 verbs and `perf` is not among them — so the
+twelve reserved verbs it does ship, `diagnostics` among them (`debug-logging-§14`), are the ones
+that behave normally. The only
 refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`, and that gate is **the library's**:
 `settings/Slash.lua` passes `isEnabled` and `brandName` and narrows nothing (no `liveVerbs`). Verb
 detail and the host/library split in
@@ -272,9 +273,9 @@ generated directories are named once each and never enumerated per run: `docs/au
 
 | Doc | Status | Trigger |
 |---|---|---|
-| `slash-dispatch.md` | Present | 19 verbs in `NS.COMMANDS` (threshold is 8) |
+| `slash-dispatch.md` | Present | 20 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
-| `debug.md` | Present | `D:Diagnose()` and `NS.DebugBuild` are the addon's own, beyond the library console |
+| `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) and `NS.DebugBuild` are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. The one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and it is no longer this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15) owns it for the whole collection, called from `settings/OptionsSetup.lua` |
 | `compat-layer.md` | Present | 8 shims in `core/Compat.lua` (threshold is 3) |

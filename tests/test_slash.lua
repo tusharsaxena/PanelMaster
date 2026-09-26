@@ -643,14 +643,17 @@ test("COMMANDS: the standard's required verbs are present (slash-commands-§3)",
 end)
 
 test("COMMANDS: the descs name the sub-verbs their handlers accept (F-011)", function()
-  -- `/pm debug dump` and `/pm panel deleteall` both work, and neither used to appear in the
-  -- generated help index or on the settings landing page — both of which generate from these descs
-  -- (slash-commands-§3 forbids a hand-maintained help string, so the desc is the only place the
-  -- text can go).
+  -- `/pm debug diagnostics` and `/pm panel deleteall` both work, and a sub-verb that is missing
+  -- here appears neither in the generated help index nor on the settings landing page -- both of
+  -- which generate from these descs (slash-commands-§3 forbids a hand-maintained help string, so
+  -- the desc is the only place the text can go). `dump`, the report's old name, is retired
+  -- (debug-logging-§14) and must not be advertised.
   local desc = {}
   for _, cmd in ipairs(NS.COMMANDS) do desc[cmd[1]] = cmd[2] end
-  assertTrue(desc.debug:find("dump", 1, true) ~= nil,
-    "the debug row never mentions 'dump', the verb a bug report asks for")
+  assertTrue(desc.debug:find("diagnostics", 1, true) ~= nil,
+    "the debug row never mentions 'diagnostics', the word a bug report asks for")
+  assertEqual(desc.debug:find("dump", 1, true), nil, "the debug row still advertises 'dump'")
+  assertTrue(desc.diagnostics ~= nil, "there is no `diagnostics` verb (debug-logging-§14)")
   assertTrue(desc.panel:find("deleteall", 1, true) ~= nil,
     "the panel row never mentions 'deleteall', which destroys every panel")
 end)
@@ -659,12 +662,12 @@ test("PrintHelp: the generated rows carry the sub-verbs too", function()
   -- The help index is generated, so surfacing a sub-verb in the desc is enough. This is the
   -- assertion that the generation still holds — a hand-written help block would break it.
   local lines = capture(function() Sl:PrintHelp() end)
-  local found = { dump = false, deleteall = false }
+  local found = { diagnostics = false, deleteall = false }
   for _, line in ipairs(lines) do
-    if line:find("dump", 1, true) then found.dump = true end
+    if line:find("diagnostics", 1, true) then found.diagnostics = true end
     if line:find("deleteall", 1, true) then found.deleteall = true end
   end
-  assertTrue(found.dump, "'dump' reaches no help row")
+  assertTrue(found.diagnostics, "'diagnostics' reaches no help row")
   assertTrue(found.deleteall, "'deleteall' reaches no help row")
 end)
 

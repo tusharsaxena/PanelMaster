@@ -884,32 +884,47 @@ local function currentSettings()
   return db and db.profile and db.profile.settings or {}
 end
 
+-- Where `/pm recover` would put one record's anchor offsets on a w x h screen: the stored offsets,
+-- clamped to the range its relPoint allows. PURE, reads nothing but its arguments and writes
+-- nothing, so the diagnostics report (modules/Diagnostics.lua) can ask the same question recover
+-- asks without recovering anything.
+--
+-- A panel counts as lost when its anchor offset alone puts it beyond the screen edge. The bound is
+-- taken from `relPoint` — the point on UIParent the offset is measured FROM, i.e. where on the
+-- screen the panel's origin sits — not from `point`, which only says which corner of the panel
+-- lands there.
+--
+-- The offsets are in the panel's OWN scaled units, not UIParent's: applySpec calls SetScale before
+-- SetPoint (modules/Canvas.lua), so at an effective scale `s` the screen spans w / s by h / s of
+-- them. Util.EffectiveScale is the same definition the renderer drew the panel with.
+--
+-- relPoint is guarded the way the renderer guards it (Canvas.BuildSpec): Sanitize runs per write and
+-- on a profile switch, never as a login sweep, so a hand-edited or pre-anchor SavedVariables record
+-- arrives with relPoint missing or non-string. Indexing it would throw out of recover's loop,
+-- leaving the panels already visited rewritten in the DB with no broadcast and no repaint — a
+-- half-applied recover is worse than none.
+function R.RecoveredOffsets(rec, w, h, settings)
+  local relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
+  local s = Util.EffectiveScale(rec, settings)
+  local minX, maxX = offsetRange(relPoint, w / s)
+  local minY, maxY = offsetRangeY(relPoint, h / s)
+  return Util.Clamp(rec.x, minX, maxX, 0), Util.Clamp(rec.y, minY, maxY, 0)
+end
+
+-- Would `/pm recover` move this record? The same test recover applies, answered without moving it.
+function R.IsOffScreen(rec, w, h, settings)
+  local x, y = R.RecoveredOffsets(rec, w, h, settings)
+  return x ~= rec.x or y ~= rec.y
+end
+
 function R:Recover()
   local w, h = NS.Compat.GetScreenSize()
   if not w then return 0 end   -- cannot measure the screen: do nothing rather than guess
 
-  -- A panel counts as lost when its anchor offset alone puts it beyond the screen edge. The bound is
-  -- taken from `relPoint` — the point on UIParent the offset is measured FROM, i.e. where on the
-  -- screen the panel's origin sits — not from `point`, which only says which corner of the panel
-  -- lands there.
-  --
-  -- The offsets are in the panel's OWN scaled units, not UIParent's: applySpec calls SetScale before
-  -- SetPoint (modules/Canvas.lua), so at an effective scale `s` the screen spans w / s by h / s of
-  -- them. Util.EffectiveScale is the same definition the renderer drew the panel with.
   local settings = currentSettings()
   local moved, rows = 0, 0
   for _, rec in ipairs(R:All()) do
-    -- Guarded the way the renderer guards it (Canvas.BuildSpec): Sanitize runs per write and on a
-    -- profile switch, never as a login sweep, so a hand-edited or pre-anchor SavedVariables record
-    -- reaches this loop with relPoint missing or non-string. Indexing it would throw out of the
-    -- loop, leaving the panels already visited rewritten in the DB with no broadcast and no
-    -- repaint — a half-applied recover is worse than none.
-    local relPoint = Util.IsPoint(rec.relPoint) and rec.relPoint or C.PANEL_TEMPLATE.relPoint
-    local s = Util.EffectiveScale(rec, settings)
-    local minX, maxX = offsetRange(relPoint, w / s)
-    local minY, maxY = offsetRangeY(relPoint, h / s)
-    local x = Util.Clamp(rec.x, minX, maxX, 0)
-    local y = Util.Clamp(rec.y, minY, maxY, 0)
+    local x, y = R.RecoveredOffsets(rec, w, h, settings)
     if x ~= rec.x or y ~= rec.y then
       rows = rows + (x ~= rec.x and 1 or 0) + (y ~= rec.y and 1 or 0)
       rec.x, rec.y, moved = x, y, moved + 1

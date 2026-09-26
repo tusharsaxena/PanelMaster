@@ -750,7 +750,7 @@ local function release(f)
   if f.panelID then Canvas.SetMouseoverTracked(f.panelID, nil, false) end
   -- Cleared only after the untrack above, which reads it. A pooled frame that kept `panelID` would
   -- name a record it no longer draws — harmless (Canvas:Render reassigns it) but misleading in a
-  -- `/pm debug dump`.
+  -- `/pm diagnostics` report.
   f.panelID = nil
   clearBackdrop(f)
   releaseAccents(f)

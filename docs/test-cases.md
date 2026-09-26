@@ -497,7 +497,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (38)
+### test_debuglog.lua (35)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -516,9 +516,6 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog: the title-bar toggle drives the same seam
 - DebugLog: window visibility is independent of the logging flag
 - DebugLog.Toggle: alternates window visibility
-- DebugLog.Diagnose: reports the registry and the renderer together
-- DebugLog.Diagnose: counts active, pooled and orphaned frames
-- DebugLog.Diagnose: works with logging off
 - NS.Debug: call sites do not restate the gate
 - NS.Debug: the ungated call sites still log when logging is on
 - NS.Debug: deleting every panel at once is traced, with the count (debug-logging-§8)
@@ -537,6 +534,31 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: an act inside another logs once, the outermost, with the total
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
+
+### test_diagnostics.lua (22)
+
+- Diagnostics: the report carries the brand and this addon's sections, in order
+- Diagnostics: the identity section names the schema, the profile, the switch and the latch
+- Diagnostics: stood down, every section still runs and the renderer says it is stood down
+- Diagnostics: the master switches and the individually unlocked panels
+- Diagnostics: the combat unlock queue is reported and left exactly as it was
+- Diagnostics: settings print only where they differ, plus the two always-print rows
+- Diagnostics: each panel prints its id, name, frame name and what differs from the template
+- Diagnostics: a live frame that drifted from its record is flagged
+- Diagnostics: the alpha line compares the live alpha with the mouseover target
+- Diagnostics: an anchor beyond the screen edge is flagged off-screen, without moving it
+- Diagnostics: media names report how they resolved, and the fallback when they did not
+- Diagnostics: artwork prints a custom path verbatim and a vanished catalog id as such
+- Diagnostics: frames count active, pooled and orphaned
+- Diagnostics: the mouseover ticker reports what it tracks and whether it is running
+- Diagnostics: the artwork catalog and the Sunn packs are counted
+- Diagnostics: the rejected-events record reads 0 rather than going quiet
+- Diagnostics: a raising section costs exactly one line and the report goes on
+- Diagnostics: one panel that raises costs one line, and the next panel still prints
+- Diagnostics: an over-cap report ends in the truncated line, then the end marker
+- Diagnostics: a secret value reads as <secret> and raises nothing
+- Diagnostics: running the report writes no setting, moves no frame and repairs nothing
+- Diagnostics: /pm debug dump is an ordinary unknown word now, and toggles the window
 
 ### test_schema.lua (50)
 
@@ -820,7 +842,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
 - Events: a rejected event name is recorded and the rest still register
 - Events: with no C_EventUtils the refused name is still caught and recorded
-- Events: the dump says 'rejected events: 0' when nothing was refused
+- Events: the report says 'rejected events (0)' when nothing was refused
 - Events: the degraded Core stub's SafeRegisterEvent pcalls and records once
 
 ### test_sunnart.lua (53)
@@ -915,7 +937,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: the notice is announced exactly ONCE, before the first line
 - Degraded install: the console explains itself once and every member still answers
 - Degraded install: /pm debug on|off still flips the flag and acknowledges
-- Degraded install: /pm debug dump still answers
+- Degraded install: both report forms answer with the library-absent line
 - Degraded install: the diagnostics report says the library is absent and writes nothing
 - Degraded install: the fallback printer renders the same bytes as the library's
 - Degraded install: /pm config answers on EVERY invocation, not once
@@ -1034,9 +1056,15 @@ badge and any count quoted in the docs must agree with it.
 - eol: every tracked file carries the terminator .gitattributes declares for it
 - eol: .gitattributes is line-endings-§5's canonical body for this repo kind
 
-### test_diagnostics_contract.lua (1)
+### test_diagnostics_contract.lua (7)
 
-- diagnostics contract: debug-logging-§14 (skipped: Kit.diagnostics is not set in the runner, so this repo's dispatcher is not wired to the shared contract yet. Every Ka0s addon owes debug-logging-§14's report; wire Kit.diagnostics once the report exists)
+- diagnostics contract: both forms run the report
+- diagnostics contract: the debug word is matched in any case
+- diagnostics contract: both markers carry the brand and the end counts the report
+- diagnostics contract: the report appends after what the console already holds
+- diagnostics contract: the report lands with logging off and leaves it off
+- diagnostics contract: both forms run while the addon is disabled
+- diagnostics contract: no other name runs the report
 
 ## Totals
 
@@ -1054,7 +1082,8 @@ badge and any count quoted in the docs must agree with it.
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 38 |
+| test_debuglog.lua | 35 |
+| test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
@@ -1073,5 +1102,5 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| test_diagnostics_contract.lua | 1 |
-| **Total** | **936** |
+| test_diagnostics_contract.lua | 7 |
+| **Total** | **961** |

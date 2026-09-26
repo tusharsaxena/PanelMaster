@@ -63,7 +63,7 @@ function addon:OnInitialize()
   -- registrations tests/test_disabled.lua names as the survivor set; a fourth fails that suite.
   --
   -- Pcalled through Core like every other registration (events-frames-taint-§1): a refusal lands in
-  -- NS.State.rejectedEvents, which /pm debug dump prints, instead of raising out of OnInitialize.
+  -- NS.State.rejectedEvents, which /pm diagnostics prints, instead of raising out of OnInitialize.
   NS.SafeRegisterEvent(self, "PLAYER_LOGIN", function()
     if NS.Panel and NS.Panel.Register then NS.Panel:Register() end
   end, NS.State.rejectedEvents)

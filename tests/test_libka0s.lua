@@ -130,7 +130,10 @@ test("DebugLog seam: the survivors kept their names and their shapes", function(
   assertTrue(type(NS.Debug) == "function")
   assertTrue(type(NS.DebugBuild) == "function", "NS.DebugBuild has no library equivalent and must " ..
     "survive the swap")
-  assertTrue(type(NS.DebugLog.Diagnose) == "function", "D:Diagnose has no library equivalent")
+  -- The diagnostics report is the library's (DebugLog 14.1); what the seam adds is the brand and
+  -- the sections, both on the descriptor. The first report line is the branded begin marker.
+  assertEqual(NS.DebugLog:BuildDiagnostics().lines[1][2],
+    "==== " .. NS.BRAND .. " diagnostics begin ====", "the descriptor does not pass brandName")
 end)
 
 test("DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped", function()
@@ -709,7 +712,8 @@ test("Degraded install: the console explains itself once and every member still 
   assertTrue(D ~= nil, "NS.DebugLog is nil in a degraded install — settings/Schema.lua's console " ..
     "row calls IsShown on every panel refresh")
   -- Every member the addon actually calls, per `grep -n "NS.DebugLog" -r`.
-  for _, member in ipairs({ "IsShown", "Show", "Hide", "Toggle", "SetEnabled", "Add", "Diagnose" }) do
+  for _, member in ipairs({ "IsShown", "Show", "Hide", "Toggle", "SetEnabled", "Add", "RunDiagnostics",
+                          "DebugVerb" }) do
     assertTrue(type(D[member]) == "function", "the degraded console cannot answer " .. member)
   end
   assertFalse(D:IsShown())
@@ -770,12 +774,19 @@ test("Degraded install: /pm debug on|off still flips the flag and acknowledges",
   end
 end)
 
-test("Degraded install: /pm debug dump still answers", function()
-  -- Diagnose reads the addon's own state and has nothing to do with whether a window exists, so it
-  -- is attached on both paths from one definition.
-  local ns = loadDegraded()
-  local lines = ns.DebugLog:Diagnose()
-  assertTrue(type(lines) == "table" and #lines > 0, "Diagnose returned nothing in a degraded install")
+test("Degraded install: both report forms answer with the library-absent line", function()
+  -- debug-logging-§14 / STD-14: with no library there is no report, and both forms say so in the
+  -- collection's line rather than going quiet or raising. Dispatched through the degraded arm's own
+  -- dispatcher, which is the one a player reaches on this install.
+  local ns, m = loadDegraded()
+  ns.Print("warm up the notice")
+  for _, form in ipairs({ "diagnostics", "debug diagnostics" }) do
+    local before = #m.__chat
+    ns.Slash:OnSlash(form)
+    assertTrue(#m.__chat > before, "/pm " .. form .. " answered nothing on a degraded install")
+    assertTrue(m.__chat[#m.__chat]:find("/pm diagnostics is unavailable", 1, true) ~= nil,
+      "/pm " .. form .. " did not print the library-absent line")
+  end
 end)
 
 test("Degraded install: the diagnostics report says the library is absent and writes nothing",
