@@ -141,7 +141,8 @@ The suites, one per subject:
 | `tests/test_media.lua` | Media on the canvas: background and border textures, `Registry.Reset`, `Util.Slugify`. |
 | `tests/test_mediasetup.lua` | The Media seam: `NS.Icon`, `NS.MediaFont`, LibSharedMedia registration. |
 | `tests/test_options_groups.lua` | The `options-ui-§16` gate over the Panels page's composed blocks. |
-| `tests/test_panel.lua` | The settings pages: registration, opening, the Panels page's band, strip and editor. |
+| `tests/test_panel.lua` | The settings pages: registration, opening, Defaults, the Panels page's repaint policy, panel scale. |
+| `tests/test_panels_page.lua` | The built Panels page: its tab strip, chrome band, editor tabs and color swatches. |
 | `tests/test_profiles.lua` | `Registry.CopyFrom`, profile switching, and the Profiles page. |
 | `tests/test_register.lua` | Every deviation id `docs/ARCHITECTURE.md` cites resolves to an audit bundle. |
 | `tests/test_registry.lua` | `Registry` create, set, rename, sanitize, recover and delete. |

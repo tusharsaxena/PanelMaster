@@ -362,7 +362,7 @@ and on a heading that is missing, misplaced or standing empty.
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-The largest authored file is `settings/PanelEditor.lua` at 1447 lines, fifty-three under the cap.
+The largest authored file is `settings/PanelEditor.lua` at 1464 lines, thirty-six under the cap.
 
 **The 1000–1500 band is not recorded here.** `layout-§1` and `automated-tests-§4` disposition it in
 the release watch list and only there: the *Files by `layout-§1` band* table in
@@ -372,7 +372,9 @@ moves on one line of one document. All five files in the band on 2026-09-24 carr
 disposition there: `settings/PanelEditor.lua` (1447), whose peel is issue
 [#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor out from under
 the Panels page's chrome band into a sibling under `settings/`; `tests/test_panel.lua` (1399), which
-mirrors that file and peels with it; `modules/Artwork.lua` (1188) with its mirror suite
+reached 1491 on 2026-09-26 and was peeled ahead of #47 by the automated-tests sweep: the built
+Panels page's cases — the tab strip, the chrome band and the editor tabs — moved whole into
+`tests/test_panels_page.lua`, leaving both suites under 1000; `modules/Artwork.lua` (1188) with its mirror suite
 `tests/test_artwork.lua` (1356), which split together along the catalog / geometry seam; and
 `tests/test_libka0s.lua` (1086), new to the band in the 2026-09-23 remediation, whose degraded-install
 cases are its own seam. The next file to reach 1000 arrives in that table with a blank

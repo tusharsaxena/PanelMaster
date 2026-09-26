@@ -690,7 +690,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 
-### test_panel.lua (65)
+### test_panel.lua (47)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -739,6 +739,9 @@ badge and any count quoted in the docs must agree with it.
 - Panel scale: is clamped to its own bounds, not the artwork's
 - Panel scale: reaches the frame, and does not change the stored size
 - Panel scale: a junk value falls back rather than reaching SetScale
+
+### test_panels_page.lua (18)
+
 - Panels page: only the active tab's controls are built
 - Panels page: the header block re-lays out when the canvas learns its width
 - Panels page: the band's block is shown even when AceGUI hands it back from the pool
@@ -1089,7 +1092,8 @@ badge and any count quoted in the docs must agree with it.
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 74 |
-| test_panel.lua | 65 |
+| test_panel.lua | 47 |
+| test_panels_page.lua | 18 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 20 |
