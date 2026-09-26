@@ -65,8 +65,9 @@ headlessly, and the stub reports 0×0.
 either reading is not a positive number. A zero reading is "cannot tell", not a tiny screen.
 Otherwise the recovery pass would drag every panel to the origin.
 
-**Who calls it.** `modules/Registry.lua:888` (`R:Recover`, which does nothing on `nil`) and
-`core/DebugLogSetup.lua:46` (the diagnostic header).
+**Who calls it.** `modules/Registry.lua:921` (`R:Recover`, which does nothing on `nil`) and
+`modules/Diagnostics.lua:114` and `:200` (the diagnostics report's screen section and its per-panel
+position line).
 
 ## `GetUIScale` — `core/Compat.lua:65`
 
@@ -74,7 +75,7 @@ Otherwise the recovery pass would drag every panel to the origin.
 
 **When the API is absent.** `1`, the identity scale, which is always safe to multiply by.
 
-**Who calls it.** `core/DebugLogSetup.lua:47` (the diagnostic header).
+**Who calls it.** `modules/Diagnostics.lua:115` (the diagnostics report's screen section).
 
 ## `InCombat` — `core/Compat.lua:86`
 
@@ -89,7 +90,8 @@ render does not ask this shim at all: `Canvas:RenderForCombat` takes the REGEN e
 screen: `true` on a client that cannot answer would hide every "Only out of combat" backdrop for the
 session with nothing said.
 
-**Who calls it.** `modules/Canvas.lua:786` (`Canvas:RenderAll` when no `inCombat` is passed). The
+**Who calls it.** `modules/Canvas.lua:786` (`Canvas:RenderAll` when no `inCombat` is passed) and
+`modules/Diagnostics.lua:234` (the diagnostics report builds each panel's spec with it). The
 unlock deferral in `modules/Unlock.lua` deliberately asks `InCombatLockdown` directly instead, because
 lockdown is the question an unlock has to ask.
 

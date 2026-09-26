@@ -68,8 +68,8 @@ the fingerprint and the toolchain that produced it, so a mismatch can be attribu
 guessed at. Nothing in the addon reads any of it, which is exactly why staleness is undetectable by
 either green-gate command — hence the `--check` mode and `docs/testing.md` ▸ *The artwork gate*.
 
-`media/screenshots/` holds the four project-page captures the README's `## Screenshots` section
-embeds. Like every non-runtime asset above they are committed but excluded wholesale by `.pkgmeta`,
+`media/screenshots/` holds the four project-page captures. The README's `## Screenshots` section
+embeds `01`, `03` and `04`, alongside the artwork poster; `02` is not currently shown there. Like every non-runtime asset above they are committed but excluded wholesale by `.pkgmeta`,
 and the README points at the **CurseForge CDN** copies rather than at these paths: CurseForge serves
 the project page from its own CDN, so a repo-relative path renders on GitHub and nowhere else. These
 are the sources those uploads were made from.

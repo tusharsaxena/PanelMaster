@@ -36,80 +36,50 @@ If you have used kgPanels, or the panels built into ElvUI, this will feel famili
 
 ## Usage
 
-`/pm new ChatBG` and you have a panel. It arrives mid-sized and dark, in the middle of the screen,
-with a class-colored strip along its top. That is all you get at first: no artwork, and no border
-either, because the strip already defines the edge.
+A fresh install draws nothing, because you have no panels yet. Once you make some, they stay
+locked: they ignore the mouse, and clicks go straight through to whatever is on top. `/pm unlock`
+makes them draggable and `/pm lock` locks them again. There is no separate test mode, since
+unlocking already outlines and names every panel you have.
 
-To place it, type `/pm unlock`. Every panel shows a gold outline and its own name and becomes
-draggable, so you pull it where it belongs and let go. Dragging snaps to a four-pixel grid, which
-keeps a row of panels level. When you want a panel somewhere the grid will not put it, make the grid
-finer or turn snapping off. If you are hunting for a small panel on a busy screen, thicken the unlock
-outline.
+Setting up a panel takes four steps.
 
-`/pm lock` puts it all back. The outline and the label go away, the panel stops taking the mouse
-entirely, and clicks, tooltips and keybinds pass straight through to whatever is on top of it. If
-you unlock mid-fight, the unlock is queued (a gray notice tells you so) and happens by itself the
-second you drop out of combat. A panel that has wandered past a screen edge comes back with
-`/pm recover`. When you are done with a panel, `/pm delete ChatBG` removes it along with its
-settings.
+1. Make it. Type `/pm new ChatBG`, or type a name into **Create new panel** at the top of the
+   Panels page and press Enter. The panel turns up in the middle of the screen as a dark block with
+   a class-colored strip along its top. The **Panel** picker beside that box chooses which panel the
+   page is editing.
+2. Move it into place. `/pm unlock` gives every panel a gold outline and its name, and you drag
+   each one where it belongs. Dragging snaps to a four-pixel grid, which keeps a row of panels
+   level. General → Editing is where you make the grid finer or turn snapping off. To move just one
+   panel, tick **Unlock** on its General tab instead. Type `/pm lock` when you're done.
+3. Style it. The Panels page shows one panel at a time, under six tabs. Position and size takes
+   exact numbers and the frame strata, while Background and border, Accent bar, and Opacity and
+   fade cover the look. Any of the colors can follow your class color. Small changes are quicker
+   from chat: `/pm panel ChatBG width 420`.
+4. Add artwork, if you want it. The Artwork tab puts a picture inside the panel: one of the bundled
+   pieces, a Sunn art pack you already have, or a texture of your own. **Fit to artwork** resizes
+   the panel to match the picture. [Panel artwork](#panel-artwork) below goes through every
+   setting.
 
-You change how a panel looks on the Panels page of the settings window. Pick a panel from the picker
-at the top and it opens underneath, one tab at a time. **General** comes first, with its name, the
-two switches, and the buttons that reset or delete it. After that come position and size, background
-and border, accent bar, artwork, and opacity and fade. **Copy settings from panel**, on that first
-tab, takes another panel's entire look without touching this one's position. It saves you from
-building your second and third panels as hand-made copies of the first. Everything on the page can
-be reached from the command line too, and for a small adjustment that is quicker than opening the
-page: `/pm panel ChatBG width 420`.
+Your second panel doesn't have to start from nothing. **Copy settings from panel**, on the General
+tab, gives it another panel's whole look and leaves its position alone. Every character shares one
+set of panels unless you give one its own profile on the Profiles page. The minimap button opens the
+settings on a left-click, and its right-click menu turns the addon on or off and locks or unlocks
+your panels.
 
-`/pm panels` lists what you have, with anything switched off shown in gray. **Show on mouseover
-only** fades a panel away until your cursor crosses it, and even then the panel never claims the
-click. Out of the box, every character shares one set of panels. If an alt should look different,
-give it a profile of its own and copy your existing layout in as a starting point.
-
-The **minimap button** carries the addon's logo. Left-click opens the settings page. Right-click
-opens a small menu with two ticks: **Enabled** switches the whole addon on or off, and **Locked**
-unlocks your panels for dragging and locks them again. They do exactly what `/pm enable` /
-`/pm disable` and `/pm lock` / `/pm unlock` do. Drag the button anywhere around the ring and it
-stays there. If you would rather not have it, untick **Minimap button** under General ▸ Master
-controls. It goes, and it stays gone on every character until you tick it back. If you run Titan
-Panel, ElvUI's data texts or Bazooka, the same button shows up there as a row, and clicking it does
-the same two things. Hover it and the tooltip shows the version, whether the addon is enabled,
-whether your panels are locked, and what each click does.
-
-If you would rather type than click, you can read every setting from chat. `/pm list` prints each
-one with its current value, `/pm get settings.gridSize` answers for one, and
-`/pm reset settings.gridSize` puts one back to its default. `/pm resetall` returns the whole profile
-to defaults, and asks before it does. `/pm version` prints the version. Quote it in any bug report.
-
-`/pm disable` turns the whole addon off without unloading it, and `/pm enable` brings it back. They
-are the same switch as the **Enable Ka0s Panel Master** tick at the top of the settings page. Off
-really is off, rather than hidden. Your panels keep their places but are not drawn, and the addon
-stops watching the game's events, stops its mouseover ticker and writes nothing. It costs what
-unticking it in Blizzard's own AddOns list would, without the `/reload`.
-
-You can still get back in. `/pm` still opens the settings page, and `help`, `version`, `config`,
-`debug`, `diagnostics` and the settings commands above still answer and still write. Reading and
-repairing your settings is the thing you are most likely to want while the addon is off. Only the
-verbs that make and edit panels refuse, and each one answers with a line naming `/pm enable`. The
-minimap button stays as well. Left-click still opens the settings page, the right-click menu's
-**Enabled** tick turns the addon back on, **Locked** is grayed out with a note to enable the addon
-first, and the tooltip says **Enabled: No**.
-
-Everything else is configuration, and it lives in three places: the button on your minimap, the
-addon's own page under Settings ▸ AddOns in game, and the `/pm` (or `/panelmaster`) command. A bare
-`/pm` opens that settings page, and `/pm help` prints the full command list.
+Everything else is on the addon's page under Settings → AddOns, which a bare `/pm` opens, and
+`/pm help` (or `/panelmaster help`) lists every command.
 
 ## How panels work
 
-Frame strata is what makes a panel a backdrop rather than an obstruction. New panels start in `LOW`,
-which sits above the game world and Blizzard's parchment art but underneath almost every interface
-frame, so you can click straight through to whatever is on top. You can pick any of the game's eight
-layers. `BACKGROUND` puts a panel under absolutely everything, while `DIALOG` and above will cover
-normal UI, which is occasionally what you want and usually not.
+WoW draws every frame in one of eight layers, called frame strata, and a frame in a higher layer
+always covers one in a lower layer. Strata is what makes a panel a backdrop rather than an
+obstruction. New panels start in `LOW`, which sits above the game world and Blizzard's parchment art
+but under almost every interface frame. You can move a panel to any of the eight. `BACKGROUND` puts
+it under absolutely everything, while `DIALOG` and above will cover normal UI, which is occasionally
+what you want and usually not.
 
-Whatever layer it is in, a panel never takes your mouse. That holds with **Show on mouseover only**
-turned on too, because the panel watches where your cursor is without claiming the click.
+A locked panel never takes your mouse, whatever layer it is in. That holds with **Show on mouseover
+only** turned on too, because the panel watches where your cursor is without claiming the click.
 
 Then there is the **accent bar**, a thin colored strip running the full length of an edge. It is the
 look BenikUI's panels are known for, and it is on out of the box. Tick whichever edges you want and
@@ -145,7 +115,7 @@ them, so art that is offset or scaled up cannot spill out over the rest of your 
 Every panel starts with no artwork at all (`artTexture` is `None`), so nothing you already have
 changes until you choose something.
 
-### What you can set per panel:
+### What you can set per panel
 
 | Setting | What it does |
 |---|---|
@@ -172,7 +142,7 @@ same license. If you reuse them, credit the source and keep them under CC BY-SA 
 
 ![Bundled artwork](https://media.forgecdn.net/attachments/1849/100/artwork-poster-jpg.jpg)
 
-### Sunn — Viewport Art packs
+### Sunn - Viewport Art packs
 
 If you have [Sunn - Viewport Art](https://www.curseforge.com/wow/addons/sunn-viewport-art) or any
 of its [official art packs](https://www.curseforge.com/members/sunn6/projects) installed, their
