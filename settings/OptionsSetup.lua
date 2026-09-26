@@ -95,6 +95,9 @@ if not lib then
     -- SelectTab, new at LibKa0s v1.36.0: reached only from a tab click on an already-rendered
     -- page. No page here adopts tab-scoped refresh, so the same inert answer applies.
     SelectTab = noop,
+    -- NavRail, new at LibKa0s v1.61.0 (OptionsNav minor 1): drawn only by a page render, and no
+    -- page here draws a rail (PanelMaster#55, will-not-do), so the same inert answer applies.
+    NavRail = noop,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
