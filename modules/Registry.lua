@@ -387,8 +387,8 @@ local function destroy(p, rec)
   end
 
   -- Drop any session state keyed on this id. Ids are never reused, so a stale entry would never be
-  -- read again — but it would accumulate for the session and show up in a debug dump as an unlocked
-  -- panel that does not exist.
+  -- read again — but it would accumulate for the session and show up in a `/pm diagnostics` report
+  -- as an unlocked panel that does not exist.
   NS.State.unlockedPanels[rec.id] = nil
 
   NS.Debug("Panel", "deleted '%s' (id %s)", rec.name, rec.id)
@@ -535,8 +535,8 @@ function R:DeleteAll()
   for i = n, 1, -1 do p.panels[i] = nil end
 
   -- Same sweep `destroy` does per panel, and for the same reason: an id that no longer exists would
-  -- linger in the session state for the rest of the session and show up in a debug dump as an
-  -- unlocked panel that is not there. Nothing survives an empty registry, so the whole sweep runs
+  -- linger in the session state for the rest of the session and show up in a `/pm diagnostics`
+  -- report as an unlocked panel that is not there. Nothing survives an empty registry, so the whole sweep runs
   -- wholesale rather than id by id.
   clearPanelSessionState()
   -- One trace for the whole purge (debug-logging-§8): `destroy` is never called on this path.

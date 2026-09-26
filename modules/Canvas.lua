@@ -720,7 +720,7 @@ end
 
 -- Same reasoning as the bars: a released frame must be inert, not merely hidden. It sits in the
 -- pool until some other panel claims its name, and anything that shows it before applySpec runs
--- again — Unlock's overlay, a debug dump, a stray Show() — would put the PREVIOUS panel's artwork
+-- again — Unlock's overlay, a stray Show() — would put the PREVIOUS panel's artwork
 -- on screen for the new one. Clearing the texture as well as hiding the frame also drops the file
 -- reference for a panel that may never come back.
 local function releaseArt(f)

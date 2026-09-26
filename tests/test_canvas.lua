@@ -165,8 +165,8 @@ test("Canvas: a delete returns its frame to the pool", function()
 end)
 
 test("Canvas: a released frame is inert, not merely hidden", function()
-  -- A pooled frame sits under its old name until some other panel claims it, and Unlock's overlay, a
-  -- debug dump or a stray Show() all reach it before applySpec runs again. So every visible part has
+  -- A pooled frame sits under its old name until some other panel claims it, and Unlock's overlay or
+  -- a stray Show() can reach it before applySpec runs again. So every visible part has
   -- to be torn down, not just the parent hidden: the accent bars are anchored OUTSIDE the panel's
   -- bounds and would leave four colored strips floating, and an uncleared art texture would put the
   -- previous panel's artwork on screen for the next one.
@@ -233,7 +233,7 @@ test("Canvas: a released frame stops claiming a panel id (F-024)", function()
   local f = Canvas:Render(rec.id)
   R:Delete(rec.id)
   -- A pooled frame that kept `panelID` still names a record that no longer exists, which is exactly
-  -- the kind of thing a `/pm debug dump` is read to rule out.
+  -- the kind of thing a `/pm diagnostics` report is read to rule out.
   assertEqual(f.panelID, nil, "a pooled frame still points at the panel it used to draw")
 end)
 
