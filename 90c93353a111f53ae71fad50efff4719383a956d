@@ -1,0 +1,1 @@
+clean: DR-PM-07 verified; AUD-01 steps 1-6 re-run by hand pass, Disabled 7c reddens under three scratch mutations (DebugVerb bypass, liveVerbs without diagnostics, empty COMMANDS row), gate re-run green 962/0, luacheck 0/0, lizard clean, max 1447 lines, CRLF kept
