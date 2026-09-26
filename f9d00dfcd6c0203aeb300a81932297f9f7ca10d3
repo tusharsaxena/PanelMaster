@@ -1,0 +1,1 @@
+clean: DR-PM-05 docs verified against modules/Diagnostics.lua, DebugLogDiagnostics (cap 1200, 40/list, 200 wrap, markers, DIAG_WRITTEN), Slash rows and degraded arm; smoke steps accurate; CRLF kept; gate re-run green (961/0, luacheck 0/0, lizard clean, max 1447)
