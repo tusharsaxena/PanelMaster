@@ -133,18 +133,26 @@ callback is still on the stack, and releasing the box would hand the widget they
 to AceGUI's pool. Everything beside it is refreshed **in place** — `SetList` and `SetValue` on the
 widget already there — which is the same scalar path every other control on the page takes.
 
-**Built once is also why the block re-lays itself out on `OnSizeChanged`.** `ctx.chrome` is zero-wide
-until the settings canvas has laid itself out, and the **first page a player opens is rendered before
-that happens** — the library documents this at its own `replaceOnResize`, which is how the tab strip
-heals when the width arrives. Every control here takes a **relative** width, so a layout run at that
-moment gives each of them a fraction of nothing: controls that exist, are shown, and occupy no
-pixels. The band keeps its reserved height, so the page draws an **empty strip of chrome above the
-tabs** with everything in it simply gone. The strip heals; this block, built once for the
-session, never got a second chance — a session that happened to open Panels first stayed that way
-until a `/reload`. The hook goes on the **header frame**, not on `ctx.chrome`, whose `OnSizeChanged`
-the library has already claimed for the strip (`SetScript` replaces, so hooking there would trade
-this bug for a strip that never re-wraps), and it answers only a **change** in width because
-`SetChromeHeight` fires the same script.
+**The block shows itself, because nothing else will.** AceGUI pools its widgets: `Release` hides the
+frame, and a later `Create` of the same type hands it back **hidden** — only a parent container's
+layout shows a child. This block is parented by hand to the header frame and is no AceGUI container's
+child, so it calls `block.frame:Show()` after `SetParent`. Without it, once any addon had released a
+`SimpleGroup` earlier in the session (any settings page with a row, any re-render), the band kept its
+height and its divider and lost the **Panel** picker and the **Create new panel** box inside it.
+
+**Built once is also why the block re-lays itself out on `OnSizeChanged`, and passes the width on.**
+AceGUI's `List` layout reads `content.width` before it asks the frame, and a `SimpleGroup` starts at
+300 (`OnAcquire` calls `SetWidth(300)`). Anchoring the block to both sides of the header stretches the
+frame and leaves `content.width` alone, so a bare `DoLayout` lays the row out at 300 pixels, and each
+half-width control at 150, whatever the band's real width. The hook therefore calls
+`block:SetWidth(width)` before `DoLayout`, and the build does the same when the header already has a
+width. `ctx.chrome` has no width until the settings canvas has laid itself out, and the first page a
+player opens is rendered before that happens, so the hook is how the block learns it. The hook goes on
+the **header frame**, not on `ctx.chrome`, whose `OnSizeChanged` the library has already claimed for
+the strip (`SetScript` replaces, so hooking there would leave a strip that never re-wraps), and it
+answers only a **change** in width because `SetChromeHeight` fires the same script. (This paragraph
+once blamed an empty band on a layout run at zero width. The layout never saw zero; the band was
+hidden.)
 
 | Page | Tabs | Rows per tab |
 |---|---|---|

@@ -793,15 +793,15 @@ end)
 -- `ctx.chrome` is zero-wide until the settings canvas lays itself out, and the
 -- FIRST page a player opens is rendered before that happens -- the library says
 -- so in its own words at `replaceOnResize`, which is how the tab strip heals
--- itself when the width arrives. Both controls in this band take
--- SetRelativeWidth(0.5), so a layout run at that moment gives each of them half
--- of nothing: two controls that exist, are shown, and occupy no pixels. The band
--- keeps its reserved height, so the page draws an empty strip of chrome above the
--- tabs and the create box and the panel picker are simply gone.
+-- itself when the width arrives. The band's block is built ONCE for the session
+-- (settings/Panel.lua's `built` flag), so the header frame's size hook is its only
+-- way to learn the width it has to lay its row out at; the case below this one
+-- pins that the width actually reaches the layout.
 --
--- The strip gets a second chance and this block does not: it is built ONCE for
--- the session (settings/Panel.lua's `built` flag), so a session that opened
--- Panels first stayed broken until a /reload.
+-- This case once claimed the hook fixed an empty band, on the theory that a layout
+-- at zero width gave both controls half of nothing. It did not: the List layout
+-- reads the 300 a SimpleGroup starts with, never zero. The empty band was a hidden
+-- pooled block, and the pool case below pins that.
 --
 -- red under: dropping the OnSizeChanged hook, or re-laying out on every size
 -- event (the height change SetChromeHeight causes fires the same script, and a
@@ -833,6 +833,98 @@ test("Panels page: the header block re-lays out when the canvas learns its width
   header.__scripts.OnSizeChanged(header, 640)
   assertEqual(block.layoutCount, settled,
     "the same width must be a no-op — SetChromeHeight fires this script too")
+
+  NS.Registry:DeleteAll()
+end)
+
+-- THE BAND'S BLOCK IS SHOWN BY THE BAND, BECAUSE NOTHING ELSE WILL SHOW IT.
+--
+-- Real AceGUI pools its widgets. Release hides the frame and parks the widget, and a later Create of
+-- the same type hands it back WITHOUT a Show: only a parent container's layout shows a child's frame
+-- (AceGUI-3.0.lua, the List layout). The band's block is parented by hand to the header frame and is
+-- no AceGUI container's child, so no layout ever shows it. Whenever any addon had released a
+-- SimpleGroup earlier in the session -- every settings page with a row, and every re-render --
+-- the band came back hidden: its height and divider stayed, and the Panel picker and the Create new
+-- panel box inside it were gone.
+--
+-- The kit's factory never reuses a widget, so the case hands the band a hidden one, which is exactly
+-- what the pool hands it. Inside the block, showing the row and its two controls is the List
+-- layout's job, as it is in the client; the case asserts that they are the block's descendants and
+-- that nothing hid them.
+--
+-- red under: dropping the Show after the SetParent.
+test("Panels page: the band's block is shown even when AceGUI hands it back from the pool", function()
+  NS.Registry:DeleteAll()
+  NS.Registry:New("Pooled")
+  local AceGUI = T.mocks.LibStub("AceGUI-3.0", true)
+  local create = AceGUI.Create
+  local first
+  AceGUI.Create = function(self, wtype)
+    local w = create(self, wtype)
+    if wtype == "SimpleGroup" and not first then
+      first = w
+      w.frame:Hide()
+    end
+    return w
+  end
+  local ok, ctx = pcall(freshPanelsCtx)
+  AceGUI.Create = create
+  assertTrue(ok, tostring(ctx))
+
+  local block = ctx.__pmHeaderBlock
+  assertTrue(block ~= nil, "the header block must be reachable")
+  assertTrue(block == first, "the band's block is no longer the first SimpleGroup the page creates")
+  assertTrue(block.frame:IsShown(),
+    "a pooled SimpleGroup comes back hidden, and the band's block is nobody's AceGUI child to show it")
+
+  local inBlock = {}
+  local function walk(w)
+    for _, child in ipairs(w.children or {}) do inBlock[child] = true; walk(child) end
+  end
+  walk(block)
+  local picker = ctx.__pmPicker
+  assertTrue(picker ~= nil and inBlock[picker] == true, "the Panel picker is not inside the band's block")
+  assertTrue(picker.frame:IsShown(), "the Panel picker is hidden")
+  local box
+  for w in pairs(inBlock) do
+    if w.type == "EditBox" and w.labelText == "Create new panel" then box = w end
+  end
+  assertTrue(box ~= nil, "the Create new panel box is not inside the band's block")
+  assertTrue(box.frame:IsShown(), "the Create new panel box is hidden")
+
+  NS.Registry:DeleteAll()
+end)
+
+-- THE ROW IS LAID OUT AT THE BAND'S WIDTH, NOT AT 300.
+--
+-- AceGUI's List layout reads `content.width` before it asks the frame for a width, and a
+-- SimpleGroup's OnAcquire sets that to 300 with SetWidth(300). Anchoring the block to both sides of
+-- the header frame stretches the frame and leaves `content.width` alone, so a DoLayout on its own
+-- lays the row out at 300 pixels whatever the band's real width is, and each half-width control gets
+-- 150. The width reaches the layout through the widget's own SetWidth, which is what writes it.
+--
+-- red under: dropping the SetWidth before the DoLayout in the OnSizeChanged hook.
+test("Panels page: a size change lays the band's row out at the band's own width", function()
+  NS.Registry:DeleteAll()
+  NS.Registry:New("Wide")
+  local ctx = freshPanelsCtx()
+
+  local header
+  for _, kid in ipairs(ctx.__chromeKids or {}) do
+    if kid.__scripts and kid.__scripts.OnSizeChanged then header = kid end
+  end
+  assertTrue(header ~= nil, "the page header frame carries no OnSizeChanged hook")
+
+  local block = ctx.__pmHeaderBlock
+  local widthAtLayout
+  local doLayout = block.DoLayout
+  block.DoLayout = function(self, ...)
+    widthAtLayout = self.width
+    return doLayout(self, ...)
+  end
+
+  header.__scripts.OnSizeChanged(header, 720)
+  assertEqual(widthAtLayout, 720, "the row was laid out at a width other than the band's")
 
   NS.Registry:DeleteAll()
 end)
