@@ -311,7 +311,7 @@ end)
 
 test("Schema: the Panels page's tab strip is the designed one, in strip order", function()
   -- The Panels page is BESPOKE -- a panel is a registry record, not a schema row -- so its strip is
-  -- hand-drawn from settings/PanelEditor.lua's own ordered list rather than partitioned out of this
+  -- hand-drawn from settings/PanelEditorTabs.lua's own ordered list rather than partitioned out of this
   -- file. It is pinned here anyway, because "which tabs does the settings panel have" is one
   -- question and answering half of it in a different suite is how the other half goes stale.
   --
@@ -451,7 +451,7 @@ test("Schema: no color row is ever disabled by its class-color companion", funct
   -- comment in settings/PanelEditor.lua that records why the picker is never grayed does not read
   -- as the defect it is warning about.
   for _, path in ipairs({ "settings/Schema.lua", "settings/PanelEditor.lua",
-                          "settings/Panel.lua" }) do
+                          "settings/PanelEditorTabs.lua", "settings/Panel.lua" }) do
     local f = assert(io.open(path, "r"))
     local body = f:read("*a")
     f:close()

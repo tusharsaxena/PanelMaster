@@ -173,6 +173,7 @@ test("NS.Debug: call sites do not restate the gate", function()
     "core/Database.lua", "core/PanelMaster.lua", "core/State.lua", "core/Util.lua",
     "modules/Registry.lua", "modules/Canvas.lua", "modules/Unlock.lua",
     "settings/Schema.lua", "settings/Slash.lua", "settings/Panel.lua", "settings/PanelEditor.lua",
+    "settings/PanelEditorTabs.lua",
   }
   for _, path in ipairs(files) do
     local f = assert(io.open(path, "r"), "missing source file " .. path)

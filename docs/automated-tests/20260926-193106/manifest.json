@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "addon": "PanelMaster",
+  "addonVersion": "1.1.1",
+  "run": "20260926-193106",
+  "startedAt": "2026-09-26T19:31:06+05:30",
+  "durationMs": 17528,
+  "label": null,
+  "release": null,
+  "git": { "sha": "5119ae11afc150de1fab9ad58135b97e108c5e8c", "branch": "feat/2026-09-26-automated-tests-sweep", "dirty": false },
+  "host": { "lua": "Lua 5.1.5  Copyright (C) 1994-2012 Lua.org, PUC-Rio", "luacheck": "Luacheck: 1.2.0", "lizard": "1.24.0", "timingSource": "date +%s%3N" },
+  "suites": {
+    "lint": { "status": "pass", "durationMs": 3969, "warnings": 0, "errors": 0, "files": 66, "gating": true, "gates": { "commit": true, "release": true } },
+    "tests": { "status": "pass", "durationMs": 8731, "passed": 964, "failed": 0, "skipped": 0, "total": 964, "gating": true, "gates": { "commit": true, "release": true } },
+    "perf": { "status": "skip", "durationMs": 2, "skipReason": "no tests/perf.lua — this addon ships no offline scenarios", "scenarios": 0, "gating": false, "gates": { "commit": false, "release": true } },
+    "complexity": { "status": "pass", "durationMs": 3234, "warnings": 0, "maxCcn": 15, "nloc": 16108, "functions": 1915, "avgCcn": 2.0, "avgNloc": 7.4, "avgToken": 58.0, "warnFunRatio": 0.00, "warnNlocRatio": 0.00, "bandFiles": 3, "overCapFiles": 0, "gating": false, "gates": { "commit": false, "release": true } }
+  },
+  "verdict": "green"
+}

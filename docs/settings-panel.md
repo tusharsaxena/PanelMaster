@@ -284,7 +284,7 @@ C.COLOR_CLASS_SOURCE.<field> }`, stamped as `classColorSource`); the two hand-dr
 the map is their only declaration. All five entries are
 `"player"` — a panel is chrome and tracks no unit — and the map is what an audit reads.
 
-Counts come from `settings/Schema.lua` and `settings/PanelEditor.lua`, and are pinned by the
+Counts come from `settings/Schema.lua` and `settings/PanelEditorTabs.lua`, and are pinned by the
 partition cases in `tests/test_schema.lua` — which are written out as the *designed* table rather
 than derived from the schema, because an expectation derived from the schema agrees with any
 arrangement of rows, including one where a row has drifted into the wrong tab.
@@ -413,7 +413,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:78`, called at `:1354` — because the page
+`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:653` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enabled** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
@@ -525,6 +525,12 @@ table with the *Create* and *Edit* sections: `O.Section` emits into the page's *
 editor's headings go into its own container so a rebuild can release the editor without taking the
 rest of the page with it. `SECTION_HEADING_H` arrived in their place, so the editor's heading is the
 library's number rather than a host copy of it (`options-ui-§8`).
+
+What each tab holds is one file further out, in `settings/PanelEditorTabs.lua`, peeled on
+2026-09-26 along the page / tab-content seam ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47)):
+the tab names, the editor's vertical rhythm and `buildPanelEditor`. `settings/PanelEditor.lua` keeps
+the page and the control kit the tabs draw with, and publishes that kit as `E.__controls`; the tabs
+file publishes `E.__editorTabs` back, and each binds the other's on first use.
 
 It has exactly **two** triggers, both on the bus, and no widget callback rebuilds the page itself:
 

@@ -87,7 +87,8 @@ test("Constants: no slider in the panel editor decides its own bounds", function
   -- ±2000, which silently rewrote any panel that lived outside those numbers the first time its
   -- slider was touched. A source scan is the only headless way to catch a relapse: AceGUI is stubbed
   -- in the suite, so the editor's builders never run and the bounds are never observable at runtime.
-  local f = assert(io.open("settings/PanelEditor.lua", "r"))
+  -- The sliders are on the editor's tabs, which settings/PanelEditorTabs.lua draws (#47).
+  local f = assert(io.open("settings/PanelEditorTabs.lua", "r"))
   local src = f:read("*a")
   f:close()
 

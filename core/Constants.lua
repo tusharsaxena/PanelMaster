@@ -20,7 +20,7 @@ C.STRATA = {
 C.STRATA_OPTIONS = {}
 for _, s in ipairs(C.STRATA) do
   -- `text` is what LibKa0s reads (both LibKa0s-Slash-1.0's parser and the Options widget makers
-  -- read an ordered enum array on { value =, text = }); `label` is what settings/PanelEditor.lua
+  -- read an ordered enum array on { value =, text = }); `label` is what settings/PanelEditorTabs.lua
   -- reads for the dropdowns it draws by hand. Both are written, rather than one being renamed, so
   -- neither reader has to know about the other.
   C.STRATA_OPTIONS[#C.STRATA_OPTIONS + 1] = { value = s, label = s, text = s }

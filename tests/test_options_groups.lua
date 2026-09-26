@@ -1,6 +1,6 @@
 -- tests/test_options_groups.lua — the `options-ui-§16` gate over the Panels page.
 --
--- WHAT IT PROVES. That `settings/PanelEditor.lua` types out none of `options-ui-§16`'s border, bar
+-- WHAT IT PROVES. That `settings/PanelEditorTabs.lua` types out none of `options-ui-§16`'s border, bar
 -- or font blocks; that the three blocks it draws are composed through LibKa0s-Options' record-backed
 -- arm (`spec.bind`, PanelMaster#48); and that `docs/ARCHITECTURE.md` ▸ `## Documented deviations`
 -- carries no `options-ui-§16` row. Below those three gates sits what the composed blocks ARE, control
@@ -33,7 +33,10 @@
 local T = _G.PM_TEST
 local test, fail = T.test, T.fail
 
-local EDITOR       = "settings/PanelEditor.lua"
+-- The tab bodies, where every block on the page is drawn. settings/PanelEditor.lua keeps the kit
+-- (`makeMediaDropdown` is DEFINED there, with no quoted field, so the scan below skips it) and the
+-- page's chrome, which draws no block (#47).
+local EDITOR       = "settings/PanelEditorTabs.lua"
 local ARCHITECTURE = "docs/ARCHITECTURE.md"
 local REGISTER     = "## Documented deviations"
 -- The rule id, with the section sign written as its two UTF-8 bytes so this file stays ASCII the way
