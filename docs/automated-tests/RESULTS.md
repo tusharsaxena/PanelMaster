@@ -32,6 +32,7 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 | Run | Commit | Tree | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20260927-032003`](20260927-032003/) | `8cda106` | clean | 1.2.0 | 0/0 | 68 | 964/0/964 | skip | 16138 | 1917 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260927-030403`](20260927-030403/) | `83e958f` | clean | 1.1.1 → 1.2.0 | 0/0 | 66 | 964/0/964 | skip | 16108 | 1915 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260926-193106`](20260926-193106/) | `5119ae1` | clean | 1.1.1 | 0/0 | 66 | 964/0/964 | skip | 16108 | 1915 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260926-160448`](20260926-160448/) | `1763c0c` | clean | 1.1.1 | 0/0 | 64 | 964/0/964 | skip | 16058 | 1914 | 7.4 | 2.0 | 15 | 0 | **green** |
@@ -52,10 +53,10 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 ## Test suite
 
 **964 cases** — 964 passed, 0 failed, 0 skipped. The generated inventory
-[`20260927-030403/test-cases.md`](20260927-030403/test-cases.md) is the authority on which cases existed at this run;
+[`20260927-032003/test-cases.md`](20260927-032003/test-cases.md) is the authority on which cases existed at this run;
 `docs/test-cases.md` is that same list at HEAD.
 
-The count has been **flat at 964 across the last 3 runs**. A suite that stopped growing while
+The count has been **flat at 964 across the last 4 runs**. A suite that stopped growing while
 the addon did is a coverage gap, and it is the one thing the table above cannot show.
 
 No case reported a `skip`, so passed and total agree and nothing in this row claims coverage
@@ -63,7 +64,7 @@ that was not exercised.
 
 ## Lint
 
-**0 warnings / 0 errors over 66 files** (`luacheck .`).
+**0 warnings / 0 errors over 68 files** (`luacheck .`).
 
 Read that figure with its scope attached: `.luacheckrc` excludes 5 path(s) from it — `libs/`, `docs/audits/`, `docs/reviews/`, `_dev/`, `tests/_kit/` —
 so nothing under them is in the count above. A `0/0` that never moves is partly a statement about
@@ -80,8 +81,8 @@ never asked.
 
 ## Complexity watch list
 
-Current as of [`20260927-030403`](20260927-030403/) — **this run's measurement, not its diff.** Max CCN **15** across 1915
-functions, **0** of them warned on; 3 file(s) in the 1000–1500 band and 0 over the 1500 cap
+Current as of [`20260927-032003`](20260927-032003/) — **this run's measurement, not its diff.** Max CCN **15** across 1917
+functions, **0** of them warned on; 1 file(s) in the 1000–1500 band and 0 over the 1500 cap
 (`layout-§1`).
 
 Every row below is generated from this run's own `lizard` output. **The `Disposition` column is
@@ -100,9 +101,7 @@ None.
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Split in this change (anti-pattern #53: Accepted at three release runs — 1.0.0 `20260807-160022`, 1.1.0 `20260910-234511` and 1.2.0 `20260927-030403`).** Peeled on 2026-09-27, ahead of the 1.2.0 tag, along the catalog / geometry seam: the catalog, its two constants and the lookups stay in `modules/Artwork.lua` (1188 → 693) and `BuildArtSpec`, `NativeSize` and the fill math move to `modules/ArtworkGeometry.lua` (518). No behavior change; the suite is unchanged at 964 cases. The row stays as the runner wrote it until the next run, which measures both files below the band. |
-| 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Split in this change (anti-pattern #53: Accepted at three release runs — 1.0.0, 1.1.0 and 1.2.0 `20260927-030403`), with `modules/Artwork.lua`.** Peeled on 2026-09-27, ahead of the 1.2.0 tag, along the same catalog / geometry seam: the single-texture `BuildArtSpec` cases (the five fills, resize, position, UV composition, the tint and degenerate input) move to `tests/test_artwork_geometry.lua` (670, 52 cases), and the catalog, upgrade-inertness, persistence, renderer and composite cases stay (1356 → 738, 46 cases). The case inventory is unchanged at 964, name for name. The row stays as the runner wrote it until the next run, which measures both suites below the band. |
-| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1131 | **Accepted, and moving.** The LibKa0s adoption suite covers the seams, the degraded install and the `L` trap. It entered the band at `20260924-104311` (971 → 1086, from PM-09 and PM-12) and grew **1086 → 1131** at `20260926-160448` from the diagnostics rollout (`0371307` DR-PM-01 +34, `497cad1` DR-PM-03 +11 net). Unlike the two mirror suites it has a seam of its own: its `Degraded …` cases already share `tests/degraded_env.lua` with `tests/test_surface_parity.lua` and can lift out whole into a sibling suite. The recorded re-check trigger is **1300, or the next major this addon adopts**. It has not fired: no new major was adopted, and the file is unchanged at 1131 at the 1.2.0 release run `20260927-030403`, 169 lines short of 1300. 1.2.0 is the first release run to carry this entry, so its shelf-life clock starts here. Peel along that seam when the trigger fires. |
+| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1131 | **Accepted, and moving.** The LibKa0s adoption suite covers the seams, the degraded install and the `L` trap. It entered the band at `20260924-104311` (971 → 1086, from PM-09 and PM-12) and grew **1086 → 1131** at `20260926-160448` from the diagnostics rollout (`0371307` DR-PM-01 +34, `497cad1` DR-PM-03 +11 net). It has a seam of its own: its `Degraded …` cases already share `tests/degraded_env.lua` with `tests/test_surface_parity.lua` and can lift out whole into a sibling suite. The recorded re-check trigger is **1300, or the next major this addon adopts**. It has not fired: no new major was adopted, and the file is unchanged at 1131 at `20260927-032003`, as at the 1.2.0 release run `20260927-030403`, 169 lines short of 1300. Since the Artwork splits it is the only file in the band. 1.2.0 was the first release run to carry this entry, so its shelf-life clock stands at one release run. Peel along that seam when the trigger fires. |
 
 `lizard` counts every `and`/`or` short-circuit as a decision, so in Lua a run of
 `t.k = rec.k or D.k` defaulting lines scores high with no visible branching at all: a large CCN
