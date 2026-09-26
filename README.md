@@ -306,3 +306,5 @@ The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg
 the sizes the client wants and redistributed under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
 
+The debug console uses [JetBrains Mono](https://www.jetbrains.com/lp/mono/), licensed under the SIL
+Open Font License 1.1. It ships inside the bundled LibKa0s payload, with its license text beside it.
