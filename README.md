@@ -85,7 +85,7 @@ are the same switch as the **Enable Ka0s Panel Master** tick at the top of the s
 means off, not hidden: your panels keep their places but are not drawn, and the addon stops
 watching the game's events, stops its mouseover ticker and writes nothing. It costs what unticking
 it in Blizzard's own AddOns list would, without the `/reload`. The way back in stays open. `/pm`
-still opens the settings page, and `help`, `version`, `config`, `debug` and the settings commands
+still opens the settings page, and `help`, `version`, `config`, `debug`, `diagnostics` and the settings commands
 above still answer and still write, because reading and repairing your settings is what you are
 most likely to want while the addon is off. Only the verbs that make and edit panels refuse, with
 one line naming `/pm enable`. The minimap button stays too: left-click still opens the settings
@@ -270,14 +270,22 @@ conversion guide, including how to pick good sources, is in
 | I renamed a panel and want to know its frame name | Renaming does not change it, so anything anchored to the panel still works. But the frame name still reflects the name the panel was *created* with, so it is no longer something you can work out. Hover the **Panel name** box in the settings window and it shows you. |
 | I cannot address a panel whose name has spaces | `/pm panel` and `/pm rename` read the name as the first word only. Use the Panels page in the settings window for those, or give the panel a one-word name. |
 | I dragged a panel and it jumped somewhere slightly different | Snap-to-grid is on. Turn it off (`/pm set settings.snapToGrid false`) or make the grid finer (`/pm set settings.gridSize 1`). |
-| Something is genuinely broken | Run `/pm debug on`, reproduce it, then `/pm debug` to open the log and **Copy** to grab the text. Attaching that to an issue makes it far easier to work out what happened. |
+| Something looks wrong and I want to report it | Follow [Reporting a bug](#reporting-a-bug) below. |
+
+## Reporting a bug
+
+1. Type `/pm debug on` and reproduce the bug.
+2. Type `/pm diagnostics`.
+3. If the debug window isn't open, open it with `/pm debug`. Press **Copy**, copy the entire output, and include it with your bug report.
+
+The report is added after the debug trace in the same window, so one copy carries both.
 
 ## Issues and feature requests
 
 Bugs and feature requests are tracked at
 [github.com/tusharsaxena/PanelMaster/issues](https://github.com/tusharsaxena/PanelMaster/issues).
 Please file them there rather than in comments; it is the single place the project's to-do list
-lives. A debug log (see above) helps a great deal for anything that looks like a bug.
+lives. If it looks like a bug, follow [Reporting a bug](#reporting-a-bug) above.
 
 ## Version History
 
