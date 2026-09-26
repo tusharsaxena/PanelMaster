@@ -108,7 +108,8 @@ engine and the **tab strip** are the library's.
 A new page is **tabbed** unless it is one of the two `options-ui-§13` exempts (the landing page and
 Profiles). A schema-driven page gets its strip from one `H.RenderTabbedSchema` call, which
 partitions the rows by `group` in declaration order; a bespoke page draws its own with `H.TabStrip`
-and dispatches on `ctx.activeTab`, the way `settings/PanelEditor.lua` does. A control that governs
+and dispatches on `ctx.activeTab`, the way the Panels page does (`settings/PanelEditor.lua` draws its
+strip, `settings/PanelEditorTabs.lua` dispatches). A control that governs
 the whole page rather than one tab never belongs in the scroll: the identity pair — make one, choose
 which one — goes in the page's single **one-row** `H.PageHeader` band, and the remaining page-wide
 acts go on a first tab named `General` (`options-ui-§14`, standard v2.40.0), which is legal
