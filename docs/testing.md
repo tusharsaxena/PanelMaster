@@ -478,6 +478,12 @@ exemption reddens the suite instead of passing quietly.
 Steps 3, 5, 6 and 10 carry `testing-§12` falsification comments naming the mutation that reddens
 each; all four have been run against that mutation.
 
+Step 7c is not about the stand-down. It pins the diagnostics report's route while disabled: both
+forms, `/pm diagnostics` and `/pm debug diagnostics`, reach `RunDiagnostics` exactly once and are
+never refused (`debug-logging-§14`, and the standard's AUDIT.md diagnostics check). The kit's
+`test_diagnostics_contract.lua` checks what the report writes; 7c checks that each form gets there.
+Dropping either form's call to `RunDiagnostics` turns it red.
+
 ## The case inventory
 
 [`test-cases.md`](test-cases.md) is the **generated**, authoritative enumeration of every case and

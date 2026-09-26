@@ -160,59 +160,6 @@ test("DebugLog.Toggle: alternates window visibility", function()
   assertEqual(D:IsShown(), before)
 end)
 
-test("DebugLog.Diagnose: reports the registry and the renderer together", function()
-  quiet()
-  NS.Registry:DeleteAll()
-  NS.Canvas:RenderAll()
-  NS.Registry:New("Inspected")
-  local lines = D:Diagnose()
-  local joined = table.concat(lines, "\n")
-  assertTrue(joined:find("registry: 1 panels", 1, true) ~= nil)
-  assertTrue(joined:find("Inspected", 1, true) ~= nil)
-  assertTrue(joined:find("frame=yes", 1, true) ~= nil,
-    "the panel has no frame, or Diagnose cannot see it")
-  assertTrue(joined:find("orphaned", 1, true) ~= nil)
-  NS.Registry:DeleteAll()
-end)
-
-test("DebugLog.Diagnose: counts active, pooled and orphaned frames", function()
-  quiet()
-  NS.Registry:DeleteAll()
-  NS.Canvas:RenderAll()
-  NS.Registry:New("Counted")
-  NS.Registry:New("Tallied")
-  -- The pool count is how you tell a leak from healthy reuse, and a frame with no record IS the
-  -- leak. The orphan half is asserted against a real orphan rather than against the zero every
-  -- healthy fixture already reads: a "0 orphaned" that never sees one passes just as happily
-  -- against code that never counts one.
-  local pooled = NS.Canvas.PooledCount()
-  local joined = table.concat(D:Diagnose(), "\n")
-  assertTrue(joined:find(("frames: 2 active, %d pooled, 0 orphaned"):format(pooled), 1, true) ~= nil,
-    "the frame-count line does not read as expected: " .. joined)
-
-  -- A record that went away without the renderer being told is exactly that leak, so it is made the
-  -- same way: the record is lifted straight out of the array Registry owns, leaving Canvas still
-  -- holding its frame. Going through R:Delete would release the frame too, and there would be
-  -- nothing left to count.
-  local records = NS.Registry:All()
-  local stolen = table.remove(records)
-  joined = table.concat(D:Diagnose(), "\n")
-  assertTrue(joined:find(("frames: 2 active, %d pooled, 1 orphaned"):format(pooled), 1, true) ~= nil,
-    "an orphaned frame is not counted: " .. joined)
-
-  -- Put it back, so the frame is released through the normal path and no orphan is left in the
-  -- counts the later cases assert on.
-  records[#records + 1] = stolen
-  NS.Registry:DeleteAll()
-end)
-
-test("DebugLog.Diagnose: works with logging off", function()
-  quiet()
-  -- It is a structured DUMP verb, not a log line: it must work whether or not capture is enabled
-  -- (debug-logging-§4), otherwise you cannot inspect a live problem without first perturbing it.
-  assertTrue(#D:Diagnose() > 0)
-end)
-
 -- ── One gate, at the sink (debug-logging-§4) ──
 
 test("NS.Debug: call sites do not restate the gate", function()

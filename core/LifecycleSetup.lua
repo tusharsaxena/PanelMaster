@@ -133,7 +133,7 @@ end
 function NS.StandUp()
   if NS.addon and NS.addon.RegisterEvent then
     -- Through Core's pcalled helper (events-frames-taint-§1): a name the client refuses is recorded
-    -- in NS.State.rejectedEvents, which /pm debug dump prints, and costs only itself -- the other
+    -- in NS.State.rejectedEvents, which /pm diagnostics prints, and costs only itself -- the other
     -- registrations, Canvas:Enable and the repaint below still happen.
     for _, reg in ipairs(STAND_UP_EVENTS) do
       if not NS.SafeRegisterEvent(NS.addon, reg[1], reg[2], NS.State.rejectedEvents) then

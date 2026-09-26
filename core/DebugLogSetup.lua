@@ -6,11 +6,11 @@ local addonName, NS = ...
 -- specifies down to the hex codes — the seventh hand-transcribed copy of it in the collection. Both
 -- formatters were already byte-identical to the library's, and the frame globals the descriptor
 -- generates from `name` are exactly the two this addon hardcoded, so the console a user sees is the
--- same window with the same buffer, the same 1500-line cap and the same title.
+-- same window with the same buffer and the same title; the line cap is the library's.
 --
 -- WHERE THIS FILE SITS: after core/CoreSetup.lua (NS.LIBKA0S_MISSING) and after core/Constants.lua
 -- (C.FONT_MONO). Nothing else pins it. Every other thing the descriptor touches — NS.State,
--- NS.InitSummary, NS.Panel, NS.Registry, NS.Canvas, NS.Unlock — is reached through a CLOSURE and
+-- NS.InitSummary, NS.Panel, NS.Diagnostics — is reached through a CLOSURE and
 -- therefore resolved at call time, which is what lets the console move out of modules/ and up into
 -- core/ without inverting a single dependency. Nothing anywhere captures NS.Debug, NS.DebugBuild or
 -- NS.DebugLog as a load-time upvalue, so there is no ordering hazard below this file either.
@@ -18,99 +18,6 @@ local addonName, NS = ...
 local C = NS.Constants
 
 local UNAVAILABLE = NS.LIBKA0S_MISSING .. ", so the debug console window is unavailable."
-
--- ── Diagnose: the structured dump verb (debug-logging-§4) ──────────────────────
---
--- No library equivalent, and there should not be one: it reports what THIS addon believes is on
--- screen right now. Attached to the instance on BOTH paths below, because it reads the addon's own
--- state and has nothing to do with whether a console window exists — `/pm debug dump` answers in a
--- degraded install too.
---
--- The registry's view and the renderer's view are printed together on purpose: a panel that is in
--- the registry but has no frame (or the reverse) is the exact shape of every rendering bug this
--- addon can have. Everything is resolved at CALL time, which is what lets this file sit in core/.
---
--- The four writers below — addHeader, addPanel, addFrames, addRejected — are file-local rather than nested
--- inside attachDiagnose: they capture nothing, so hoisting them means they are built once at load
--- rather than once per attachDiagnose call — and attachDiagnose runs on the library path OR the
--- degraded one. Each still resolves every module through NS at CALL time, which is the property
--- that lets this file sit in core/.
-
--- The two lines describing the addon's own switches and the screen they are drawn on.
-local function addHeader(add)
-  local settings = (NS.db and NS.db.profile and NS.db.profile.settings) or {}
-  add("master=%s unlocked=%s snap=%s/%s",
-    tostring(settings.enabled), tostring(NS.State.unlocked),
-    tostring(settings.snapToGrid), tostring(settings.gridSize))
-
-  local w, h = NS.Compat.GetScreenSize()
-  add("screen=%s x %s scale=%s", tostring(w), tostring(h), tostring(NS.Compat.GetUIScale()))
-end
-
--- One record, as two lines: its geometry, and its identity plus the media it draws with.
-local function addPanel(add, rec)
-  local f = NS.Canvas and NS.Canvas:FrameFor(rec.id)
-  add("  [%s] '%s' %sx%s @%s %s,%s %s a=%s frame=%s",
-    tostring(rec.id), tostring(rec.name),
-    tostring(rec.width), tostring(rec.height), tostring(rec.point),
-    tostring(rec.x), tostring(rec.y), tostring(rec.strata),
-    NS.Registry.FormatField(rec, "alpha"),
-    f and "yes" or "NO")
-  -- The global name is the addon's public anchor contract, and the media names are the two
-  -- values most likely to be the reason a panel "looks wrong" — both belong in a pasted log.
-  add("        %s  bg=%s border=%s/%s%s%s",
-    NS.Registry.FrameName(rec),
-    tostring(rec.bgTexture), tostring(rec.borderTexture), tostring(rec.borderSize),
-    (rec.bgClassColor or rec.borderClassColor) and " classcolor" or "",
-    NS.Unlock and NS.Unlock:IsPanelUnlocked(rec.id) and " UNLOCKED" or "")
-end
-
--- A frame with no record is a leak; the pool count is how you tell a leak from healthy reuse. Both
--- numbers come off one pass over the renderer's live frame map, which is read straight here — an
--- empty table when Canvas has not loaded, so the loop runs zero times rather than erroring.
-local function addFrames(add)
-  local orphans, count = 0, 0
-  for id in pairs((NS.Canvas and NS.Canvas.__active) or {}) do
-    count = count + 1
-    if not NS.Registry:Get(id) then orphans = orphans + 1 end
-  end
-  add("frames: %d active, %d pooled, %d orphaned", count,
-    (NS.Canvas and NS.Canvas.PooledCount and NS.Canvas.PooledCount()) or 0, orphans)
-end
-
--- The event names the client refused this session (NS.State.rejectedEvents, appended by
--- NS.SafeRegisterEvent). events-frames-taint-§1 requires the record be reachable by the player; this
--- line is how /pm debug dump reaches it, and it says 0 rather than going quiet when nothing was.
-local function addRejected(add)
-  local rejected = (NS.State and NS.State.rejectedEvents) or {}
-  if #rejected == 0 then
-    add("rejected events: 0")
-  else
-    add("rejected events: %d (%s)", #rejected, table.concat(rejected, ", "))
-  end
-end
-
-local function attachDiagnose(D)
-  function D:Diagnose()
-    local out = {}
-    local function add(fmt, ...)
-      out[#out + 1] = select("#", ...) > 0 and fmt:format(...) or fmt
-    end
-
-    addHeader(add)
-
-    local records = NS.Registry:All()
-    add("registry: %d panels", #records)
-    for _, rec in ipairs(records) do
-      addPanel(add, rec)
-    end
-
-    addFrames(add)
-    addRejected(add)
-
-    return out
-  end
-end
 
 local lib = LibStub and LibStub("LibKa0s-DebugLog-1.0", true)
 
@@ -191,9 +98,6 @@ if not lib then
   NS.DebugLog = D
   NS.Debug = function() end
   NS.DebugBuild = function() end
-  -- Diagnose is defined once, below, and attached on both paths: it reads the addon's own state and
-  -- has nothing to do with whether a window exists. `/pm debug dump` still answers.
-  attachDiagnose(D)
   return
 end
 
@@ -228,6 +132,13 @@ NS.DebugLog = lib:New({
 
   -- core/Database.lua defines NS.InitSummary and loads after this file.
   initSummary = function() return NS.InitSummary() end,
+
+  -- The diagnostics report (debug-logging-§14, DebugLog 14.1). `brandName` heads both markers,
+  -- `==== Ka0s Panel Master diagnostics begin ====`, where `title` alone would drop the Ka0s.
+  -- `diagnostics` hands the library this addon's sections, and is a closure because
+  -- modules/Diagnostics.lua loads after this file: the library calls it when the report runs.
+  brandName   = NS.BRAND,
+  diagnostics = function() return NS.Diagnostics and NS.Diagnostics.Sections() or {} end,
 
   -- Keeps the settings panel's "Debug console" checkbox in step with the window. The library fires
   -- this from the frame's own OnShow AND OnHide, which is strictly better than what the old console
@@ -286,5 +197,3 @@ function NS.DebugBuild(tag, fmt, build, ...)
   if not (NS.State and NS.State.debug) then return end
   return NS.Debug(tag, fmt, build(...))
 end
-
-attachDiagnose(NS.DebugLog)

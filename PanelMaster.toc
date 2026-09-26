@@ -106,6 +106,7 @@ modules\SunnArtPacks.lua
 modules\SunnArt.lua
 modules\Canvas.lua
 modules\Unlock.lua
+modules\Diagnostics.lua
 
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua

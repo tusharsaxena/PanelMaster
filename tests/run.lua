@@ -97,7 +97,7 @@ local SUITES = {
   "test_mediasetup", "test_envsetup",
   "test_registry", "test_canvas", "test_unlock", "test_media",
   "test_accent", "test_artwork",
-  "test_database", "test_debuglog",
+  "test_database", "test_debuglog", "test_diagnostics",
   "test_schema", "test_slash", "test_panel", "test_profiles",
   "test_launcher",
   -- The stand-down conformance suite slash-commands-§7 MUSTs. Listed here like any other suite,
@@ -123,8 +123,8 @@ local SUITES = {
   -- re-vendor and then quietly run nothing.
   { name = "test_eol", dir = "tests/_kit/" },
   -- The kit's diagnostics contract (revision 27, debug-logging-§14): the dispatcher half of the
-  -- rule, run against this addon's own dispatcher. Until Kit.diagnostics is set it registers one
-  -- declared skip naming the rule, which keeps a re-vendor green before the report exists.
+  -- rule, run against this addon's own dispatcher through `Kit.diagnostics` below. The domain
+  -- sections are this repo's own tests/test_diagnostics.lua.
   { name = "test_diagnostics_contract", dir = "tests/_kit/" },
 }
 
@@ -135,5 +135,21 @@ local SUITES = {
 -- suite the runner had declared correctly. A parser of one's own source is a second spelling
 -- of the list; this is the list.
 _G.PM_TEST.suites = SUITES
+
+-- The facts the kit's diagnostics contract runs against (debug-logging-§14). `dispatch` is the
+-- addon's REAL slash handler, the one AceConsole hands `/pm` and `/panelmaster` to, so the two forms
+-- are asserted exactly as a player types them. `setDisabled` goes through the single write seam the
+-- checkbox and `/pm disable` use, so the latch really stands the addon down rather than a flag being
+-- faked; `setDebug` writes the session flag directly, because the contract wants no chat line from
+-- it. `dump` is this addon's retired name: `/pm debug dump` was the report under another name
+-- before §14 made `diagnostics` the only one.
+Kit.diagnostics = {
+  brand       = NS.BRAND,
+  dispatch    = function(line) NS.Slash:OnSlash(line) end,
+  console     = function() return NS.DebugLog end,
+  setDebug    = function(on) NS.State.debug = on and true or false end,
+  setDisabled = function(off) NS.Schema:Set(NS.Schema.ENABLED_PATH, not off) end,
+  retired     = { "dump" },
+}
 
 Kit.run({ dir = "tests/", suites = SUITES })

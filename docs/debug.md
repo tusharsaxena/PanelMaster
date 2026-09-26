@@ -17,16 +17,112 @@ afterwards. `/pm debug` toggles the window; `/pm debug on|off` sets the flag thr
 `DebugLog:SetEnabled` seam, which also writes the console bracket and, on enable, the `[Init]`
 summary.
 
-`/pm debug dump` is the structured-dump verb (`debug-logging-§4`): it prints the registry's and the
-renderer's views of the world side by side, including orphaned frames. A panel in the registry with
-no frame — or the reverse — is the shape of every rendering bug this addon can have.
+The buffer is the library's (`lib.MAX_BUFFER`, 3000 lines at LibKa0s v1.60.0); nothing in this
+addon sets or repeats the number.
 
-The dump ends with `rejected events: <n> (<names>)`, or `rejected events: 0` when the list is empty
-(`events-frames-taint-§1`). Every game-event registration goes through `NS.SafeRegisterEvent`
-(`core/CoreSetup.lua`, LibKa0s-Core's pcalled helper, or a one-rung pcall stub when the library is
-absent), so a name the client refuses costs only itself and is appended once to the session-only
-`NS.State.rejectedEvents`. A stand-up that meets one also logs `[Events] rejected <name>` while
-logging is on.
+## `/pm diagnostics`: the report (`debug-logging-§14`)
+
+The report replaced `/pm debug dump`, which was the same idea without markers, a cap or a `pcall`
+per section. Run it **after** reproducing the problem, not before: it is appended below whatever the
+console already holds, so the trace you just produced and the state it left behind travel in one
+**Copy**. That is what the README's *Reporting a bug* steps do.
+
+**Two forms, no third.** `/pm diagnostics` and `/pm debug diagnostics` (either case, and through
+`/panelmaster` as well as `/pm`) are the same call. The first is its own `diagnostics` row in
+`settings/Slash.lua`; the second is the `debug` row, which hands its rest to the library's
+`NS.DebugLog:DebugVerb` before anything else. There is no `diag`, `dump` or `dx` alias:
+`/pm debug dump` and `/pm debug diag` are ordinary unknown words, and like any other they toggle the
+console.
+
+**What it does to the console.** It writes through the library's raw append, not the gated sink
+`NS.Debug`, so it lands in full with logging **off**, and it never changes the logging flag beyond
+printing it. It never clears the console, and it shows the console if it was hidden. Then it prints
+one chat line: *Diagnostic report written to the debug console: N lines. Use Copy to share it.*
+`debug` and `diagnostics` are both reserved verbs (`slash-commands-§2`), so both forms answer while
+the addon is **disabled**.
+
+**The shape.** The library writes the frame; `modules/Diagnostics.lua` writes the sections, handed
+over as `Dx.Sections()` in the `diagnostics` field of `core/DebugLogSetup.lua`'s descriptor. Every
+line of the report carries the `[Diag]` tag.
+
+| Part | Written by | What it holds |
+|---|---|---|
+| Begin marker | the library | `==== Ka0s Panel Master diagnostics begin ====` |
+| Identity header | the library | The `[Init]` summary line, the client version, build, date and interface, the locale, the debug flag, the two combat flags, and every LibKa0s file **running** in the client with its minor (running, because under LibStub another addon's newer copy may be the one loaded) |
+| `state` | this addon | The schema version stored and in code, the current profile, the stored `settings.enabled` against the stand-down latch, the Lifecycle holds, and test mode (unlock mode is this addon's test mode, `options-ui-§15`) |
+| `master` | this addon | The master switches (`enabled`, `visibility`, `alpha`, `scale`), global unlock with snap, grid, outline and labels, and the ids of the individually unlocked panels |
+| `unlock queue` | this addon | The unlock requests combat deferred: the global request and the queued panel ids, read through `NS.Unlock:PendingSnapshot()`, which returns a copy, so reading it can never flush or replay the queue |
+| `settings` | this addon | Every schema row that differs from its default, `settings.enabled` always, `state.locked` (session-only, so the walk skips it and it is printed by hand), then how many rows printed |
+| `screen` | this addon | Screen size and UI scale |
+| `panels` | this addon | `registry: N panels`, then each panel under its own `pcall` (below) |
+| `frames` | this addon | `frames: N active, M pooled, K orphaned`: a frame with no record is a leak, and the pool count tells a leak from healthy reuse |
+| `mouseover` | this addon | How many panels the mouseover fade tracks, and whether its ticker is running |
+| `artwork` | this addon | The artwork catalog's rows, how many came from Sunn packs, and how many Sunn themes are installed |
+| `events` | this addon | `rejected events (N):` and the names, or `-` when there are none (below) |
+| `truncated` line | the library | Only when a cap bit: `truncated: N line(s) omitted, per-list caps hit=yes/no` |
+| End marker | the library | `==== Ka0s Panel Master diagnostics end: N line(s) ====`, counting both markers |
+
+**One panel** prints these lines, in order:
+
+| Line | What it says |
+|---|---|
+| `[<id>] '<name>' enabled=… frame=… unlocked=…` | The record's identity and its frame name (`PanelMaster_Panel_<slug>`, stamped at create) |
+| `differs from template:` | Every field that differs from `C.PANEL_TEMPLATE`, keys sorted so two reports diff cleanly, or `-` for a panel still on the template |
+| `renderer: frame=… shown=… want=… live WxH record WxH match=…` | The renderer against the record. `frame=NO` means the record has no frame |
+| `alpha: live=… target=… floor=… mouseover=… tracked=… match=…` | The live alpha against the alpha the panel should hold, or its mouseover floor |
+| `position: record … live … offscreen=…` | The record's anchor, the frame's live anchor, and whether `/pm recover` would move it. `offscreen` is recover's own test (`R.IsOffScreen`), asked without recovering anything |
+| `media:` | Each of the four media fields with how it resolved: `ok`, `none`, `missing -> Solid` or `no LSM -> Solid` |
+| `art:` | `none`; a custom path **verbatim** and whether it resolved; or a catalog id, whether the catalog still has it, the path and the quad count |
+
+A number read off a frame is compared only when `out:readable` says it can be, so an unreadable one
+prints `match=unknown` rather than a false mismatch.
+
+**Reading it for a rendering bug.** Look at `frame=` on each panel and at the `frames:` line. A
+panel in the registry with no frame (`frame=NO`), or a frame with no panel (a non-zero orphan
+count), is the shape of every rendering bug this addon can have. `match=NO` narrows it to size or
+alpha, `offscreen=yes` says `/pm recover` would help, and a `missing -> Solid` names the texture
+that went away.
+
+**Stood down.** While the addon is disabled every section still runs. Each panel's renderer line
+reads `renderer: stood down` and its live anchor `no frame`, rather than describing released frames
+as if they were broken. Stored configuration prints as normal.
+
+**Caps.**
+
+- The whole report: at most `min(lib.DIAG_MAX_LINES, lib.MAX_BUFFER - 100)` lines, markers
+  included. That is **1200** at LibKa0s v1.60.0 (`min(1200, 3000 - 100)`), so a full report leaves at
+  least 1800 lines of trace above it in a full console. Two lines stay reserved for the `truncated`
+  line and the end marker, so a capped report still ends properly.
+- Each id list (unlocked panels, queued panels, rejected events): 40 entries, the library's default,
+  then `(+N more)`.
+- A long line (the holds, a template difference) wraps onto indented continuation lines at 200
+  characters rather than being cut.
+
+**What it deliberately never does.** It writes no setting, and it never calls `R:Recover`,
+`FitToArtwork`, `SetPoint` or `Show`, never replays the combat unlock queue, and never probes another
+addon's frames. Every question the addon could answer by acting is answered by the pure half of the
+code that acts: `R.IsOffScreen`, `Canvas.BuildSpec`, `Artwork.BuildArtSpec` and
+`Unlock:PendingSnapshot`. It calls no protected API, so it is safe in combat. Every value reaches a
+line through the library's `out:add`, which stringifies it through `SafeToString` before any format
+sees it, so a secret value prints as `<secret>` instead of raising. The library runs each section
+under its own `pcall`, and `panels` runs each panel under another, so one that raises costs exactly
+one line (`section <name> failed: <err>`) and the next one still prints.
+
+**Without LibKa0s** there is no report to write: both forms print `/pm diagnostics is unavailable:
+the LibKa0s library did not load.` and write nothing (`core/DebugLogSetup.lua`'s degraded arm).
+
+Nothing is redacted: the report goes to the maintainer privately with a bug report, so it prints what
+reproducing a bug needs, custom artwork paths included. Report lines are English diagnostic text and
+do not go through `NS.L`; the one chat line is the library's.
+
+### The rejected-events record
+
+The report's last section, `events`, prints `rejected events (<n>): <names>`, or
+`rejected events (0): -` when the list is empty (`events-frames-taint-§1`). Every game-event
+registration goes through `NS.SafeRegisterEvent` (`core/CoreSetup.lua`, LibKa0s-Core's pcalled
+helper, or a one-rung pcall stub when the library is absent), so a name the client refuses costs
+only itself and is appended once to the session-only `NS.State.rejectedEvents`. A stand-up that
+meets one also logs `[Events] rejected <name>` while logging is on.
 
 ## Bulk copy and reset — one `[Set]` line (`debug-logging-§10`)
 

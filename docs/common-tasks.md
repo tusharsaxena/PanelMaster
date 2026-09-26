@@ -130,9 +130,27 @@ locale file, so it reads whatever the active locale resolved. See
 
 ## Debug a rendering problem
 
-`/pm debug dump` prints the registry's and the renderer's views of the world side by side, including
-orphaned frames. A panel in the registry with no frame — or the reverse — is the shape of **every**
-rendering bug this addon can have, so start there. See [debug.md](debug.md).
+`/pm diagnostics` writes the report into the debug console, below any trace already there. Its
+`panels` section prints the registry's and the renderer's views of each panel side by side, and its
+`frames` line counts orphaned frames. A panel in the registry with no frame (`frame=NO`), or the
+reverse, is the shape of **every** rendering bug this addon can have, so start there. See
+[debug.md](debug.md).
+
+## Add a section to the diagnostics report
+
+1. Write a `local function <name>Section(out)` in `modules/Diagnostics.lua`. Write every line
+   through `out:add(TAG, fmt, ...)`, a list through `out:list` or `out:joined`, and never format a
+   value yourself: `out:add` stringifies it through `SafeToString`, which is what keeps a secret
+   value from raising.
+2. **Read-only.** Answer a question with the pure half of the code that acts (`R.IsOffScreen`,
+   `Canvas.BuildSpec`, `Unlock:PendingSnapshot`), never by calling a setter, `R:Recover`,
+   `SetPoint`, `Show` or anything that flushes a queue. Compare a number read off a frame only when
+   `out:readable` says it can be. A value that exists only while the addon is standing up must say
+   `stood down` while it is not.
+3. Add `{ "<name>", <name>Section }` to `SECTIONS` at the place the report should print it. The
+   library runs each entry under its own `pcall`.
+4. Add a case to `tests/test_diagnostics.lua`, and extend its section-order case.
+5. Add the row to the shape table in [debug.md](debug.md).
 
 ## Before committing
 

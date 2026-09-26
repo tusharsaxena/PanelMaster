@@ -720,7 +720,7 @@ end
 
 -- Same reasoning as the bars: a released frame must be inert, not merely hidden. It sits in the
 -- pool until some other panel claims its name, and anything that shows it before applySpec runs
--- again — Unlock's overlay, a debug dump, a stray Show() — would put the PREVIOUS panel's artwork
+-- again — Unlock's overlay, a stray Show() — would put the PREVIOUS panel's artwork
 -- on screen for the new one. Clearing the texture as well as hiding the frame also drops the file
 -- reference for a panel that may never come back.
 local function releaseArt(f)
@@ -750,7 +750,7 @@ local function release(f)
   if f.panelID then Canvas.SetMouseoverTracked(f.panelID, nil, false) end
   -- Cleared only after the untrack above, which reads it. A pooled frame that kept `panelID` would
   -- name a record it no longer draws — harmless (Canvas:Render reassigns it) but misleading in a
-  -- `/pm debug dump`.
+  -- `/pm diagnostics` report.
   f.panelID = nil
   clearBackdrop(f)
   releaseAccents(f)

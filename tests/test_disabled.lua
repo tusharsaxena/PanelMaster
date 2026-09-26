@@ -448,6 +448,39 @@ test("Disabled 7b: a reserved verb this addon never registered answers the SAME 
     cleanup()
   end)
 
+test("Disabled 7c: both diagnostics forms reach RunDiagnostics, each once, with no refusal",
+  function()
+    -- debug-logging-§14 and the AUD-01 audit step: a player runs the report BECAUSE something is
+    -- wrong, and "disabled" is one of the states they report from. Step 7 above only proves
+    -- `/pm diagnostics` is not refused; this pins that BOTH forms, `/pm diagnostics` and
+    -- `/pm debug diagnostics`, land in the one helper while the addon is stood down. The kit's
+    -- contract case (tests/_kit/test_diagnostics_contract.lua) checks what the report writes; this
+    -- checks the route.
+    --
+    -- red under: a `liveVerbs` that drops `diagnostics`, a host gate in front of the dispatcher, or
+    -- a `debug` handler that no longer hands `diagnostics` to DebugVerb before its other words.
+    seed()
+    S:Set(ENABLED, false)
+    local refusal = NS.PREFIX .. " " .. Sl:DisabledLine()
+    local savedRun = NS.DebugLog.RunDiagnostics
+    local calls = 0
+    local ok, err = pcall(function()
+      NS.DebugLog.RunDiagnostics = function() calls = calls + 1 return 0 end
+      for _, form in ipairs({ "diagnostics", "debug diagnostics" }) do
+        local before, at = calls, #mocks.__chat
+        NS.Slash:OnSlash(form)
+        assertEqual(calls - before, 1, "/pm " .. form .. " did not run the report once while disabled")
+        for _, line in ipairs(chatSince(at)) do
+          assertFalse(line == refusal, "/pm " .. form .. " was refused while disabled")
+        end
+      end
+    end)
+    NS.DebugLog.RunDiagnostics = savedRun
+    if NS.DebugLog.Hide then NS.DebugLog:Hide() end
+    cleanup()
+    if not ok then error(err, 0) end
+  end)
+
 -- ── 8. the launcher ────────────────────────────────────────────────────────────
 
 test("Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked",
@@ -641,6 +674,14 @@ test("Disabled: `/pm disable` and the checkbox are one write, and the latch is i
 
 local function wipe(t) for i = #t, 1, -1 do t[i] = nil end end
 
+--- The diagnostics report's text (debug-logging-§14), built as data and written nowhere. It is how
+--- events-frames-taint-§1's record reaches the player: `/pm diagnostics` prints it.
+local function reportText()
+  local out = {}
+  for i, line in ipairs(NS.DebugLog:BuildDiagnostics().lines) do out[i] = line[2] end
+  return table.concat(out, "\n")
+end
+
 local function registeredEvents()
   local out = {}
   for _, r in ipairs(mocks.__registrations()) do
@@ -668,7 +709,7 @@ local function driveRejection(label)
   mocks.__badEvents = savedBad
   local ev = registeredEvents()
   local list = table.concat(rejected, ",")
-  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
+  local dump = reportText()
   local hadCanvas = NS.Canvas.__ev ~= nil
 
   wipe(rejected)
@@ -680,8 +721,8 @@ local function driveRejection(label)
   assertTrue(ev.PLAYER_REGEN_ENABLED, label .. ": PLAYER_REGEN_ENABLED did not register")
   assertTrue(hadCanvas, label .. ": Canvas:Enable never ran after the refused registration")
   assertEqual(list, COMBAT_ENTRY, label .. ": the rejected list is not exactly the refused name, once")
-  assertTrue(dump:find("rejected events: 1 (" .. COMBAT_ENTRY .. ")", 1, true) ~= nil,
-    label .. ": /pm debug dump does not report the rejected name")
+  assertTrue(dump:find("rejected events (1): " .. COMBAT_ENTRY, 1, true) ~= nil,
+    label .. ": /pm diagnostics does not report the rejected name")
 end
 
 test("Events: a rejected event name is recorded and the rest still register", function()
@@ -699,10 +740,11 @@ test("Events: with no C_EventUtils the refused name is still caught and recorded
   assertTrue(ok, tostring(err))
 end)
 
-test("Events: the dump says 'rejected events: 0' when nothing was refused", function()
+test("Events: the report says 'rejected events (0)' when nothing was refused", function()
   wipe(NS.State.rejectedEvents)
-  local dump = table.concat(NS.DebugLog:Diagnose(), "\n")
-  assertTrue(dump:find("rejected events: 0", 1, true) ~= nil, "the dump has no rejected-events line")
+  local dump = reportText()
+  assertTrue(dump:find("rejected events (0): -", 1, true) ~= nil,
+    "the diagnostics report has no rejected-events line")
 end)
 
 test("Events: the degraded Core stub's SafeRegisterEvent pcalls and records once", function()

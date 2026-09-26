@@ -105,8 +105,8 @@ test("Registry.DeleteAll: drops the session state keyed on the panels it removed
   NS.State.unlockedPanels[b.id] = true
   R:DeleteAll()
   -- Ids are never reused, so a stale entry is never read again — but it accumulates for the session
-  -- and shows up in a debug dump as an unlocked panel that does not exist. R:Delete already sweeps;
-  -- DeleteAll must too, and for the same reason.
+  -- and shows up in a `/pm diagnostics` report as an unlocked panel that does not exist. R:Delete
+  -- already sweeps; DeleteAll must too, and for the same reason.
   assertEqual(NS.State.unlockedPanels[a.id], nil, "a deleted panel is still marked unlocked")
   assertEqual(NS.State.unlockedPanels[b.id], nil, "a deleted panel is still marked unlocked")
 end)

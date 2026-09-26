@@ -188,7 +188,7 @@ badge and any count quoted in the docs must agree with it.
 - Canvas: leaving and entering combat both reach the renderer
 - Canvas: an Only-in-combat panel appears at the combat-start event, not a repaint later
 
-### test_unlock.lua (22)
+### test_unlock.lua (23)
 
 - Unlock.SnapPosition: snapping off just rounds
 - Unlock.SnapPosition: snaps to the configured grid
@@ -212,6 +212,7 @@ badge and any count quoted in the docs must agree with it.
 - Unlock: the overlay follows the panel's level when the panel's level changes
 - Unlock: the outline thickness comes from the setting, and ships at the old literal
 - Unlock: a hand-edited outline thickness is clamped, not drawn
+- Unlock.PendingSnapshot: reports the combat queue as a copy, and reading it changes nothing
 
 ### test_media.lua (84)
 
@@ -496,7 +497,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (38)
+### test_debuglog.lua (35)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -515,9 +516,6 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog: the title-bar toggle drives the same seam
 - DebugLog: window visibility is independent of the logging flag
 - DebugLog.Toggle: alternates window visibility
-- DebugLog.Diagnose: reports the registry and the renderer together
-- DebugLog.Diagnose: counts active, pooled and orphaned frames
-- DebugLog.Diagnose: works with logging off
 - NS.Debug: call sites do not restate the gate
 - NS.Debug: the ungated call sites still log when logging is on
 - NS.Debug: deleting every panel at once is traced, with the count (debug-logging-§8)
@@ -536,6 +534,31 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: an act inside another logs once, the outermost, with the total
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
+
+### test_diagnostics.lua (22)
+
+- Diagnostics: the report carries the brand and this addon's sections, in order
+- Diagnostics: the identity section names the schema, the profile, the switch and the latch
+- Diagnostics: stood down, every section still runs and the renderer says it is stood down
+- Diagnostics: the master switches and the individually unlocked panels
+- Diagnostics: the combat unlock queue is reported and left exactly as it was
+- Diagnostics: settings print only where they differ, plus the two always-print rows
+- Diagnostics: each panel prints its id, name, frame name and what differs from the template
+- Diagnostics: a live frame that drifted from its record is flagged
+- Diagnostics: the alpha line compares the live alpha with the mouseover target
+- Diagnostics: an anchor beyond the screen edge is flagged off-screen, without moving it
+- Diagnostics: media names report how they resolved, and the fallback when they did not
+- Diagnostics: artwork prints a custom path verbatim and a vanished catalog id as such
+- Diagnostics: frames count active, pooled and orphaned
+- Diagnostics: the mouseover ticker reports what it tracks and whether it is running
+- Diagnostics: the artwork catalog and the Sunn packs are counted
+- Diagnostics: the rejected-events record reads 0 rather than going quiet
+- Diagnostics: a raising section costs exactly one line and the report goes on
+- Diagnostics: one panel that raises costs one line, and the next panel still prints
+- Diagnostics: an over-cap report ends in the truncated line, then the end marker
+- Diagnostics: a secret value reads as <secret> and raises nothing
+- Diagnostics: running the report writes no setting, moves no frame and repairs nothing
+- Diagnostics: /pm debug dump is an ordinary unknown word now, and toggles the window
 
 ### test_schema.lua (50)
 
@@ -800,7 +823,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (19)
+### test_disabled.lua (20)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
@@ -810,6 +833,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing
 - Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
 - Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
+- Disabled 7c: both diagnostics forms reach RunDiagnostics, each once, with no refusal
 - Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked
 - Disabled 9: re-enabling restores the registration set, from state as it is NOW
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
@@ -819,7 +843,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
 - Events: a rejected event name is recorded and the rest still register
 - Events: with no C_EventUtils the refused name is still caught and recorded
-- Events: the dump says 'rejected events: 0' when nothing was refused
+- Events: the report says 'rejected events (0)' when nothing was refused
 - Events: the degraded Core stub's SafeRegisterEvent pcalls and records once
 
 ### test_sunnart.lua (53)
@@ -914,7 +938,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: the notice is announced exactly ONCE, before the first line
 - Degraded install: the console explains itself once and every member still answers
 - Degraded install: /pm debug on|off still flips the flag and acknowledges
-- Degraded install: /pm debug dump still answers
+- Degraded install: both report forms answer with the library-absent line
 - Degraded install: the diagnostics report says the library is absent and writes nothing
 - Degraded install: the fallback printer renders the same bytes as the library's
 - Degraded install: /pm config answers on EVERY invocation, not once
@@ -1033,9 +1057,15 @@ badge and any count quoted in the docs must agree with it.
 - eol: every tracked file carries the terminator .gitattributes declares for it
 - eol: .gitattributes is line-endings-§5's canonical body for this repo kind
 
-### test_diagnostics_contract.lua (1)
+### test_diagnostics_contract.lua (7)
 
-- diagnostics contract: debug-logging-§14 (skipped: Kit.diagnostics is not set in the runner, so this repo's dispatcher is not wired to the shared contract yet. Every Ka0s addon owes debug-logging-§14's report; wire Kit.diagnostics once the report exists)
+- diagnostics contract: both forms run the report
+- diagnostics contract: the debug word is matched in any case
+- diagnostics contract: both markers carry the brand and the end counts the report
+- diagnostics contract: the report appends after what the console already holds
+- diagnostics contract: the report lands with logging off and leaves it off
+- diagnostics contract: both forms run while the addon is disabled
+- diagnostics contract: no other name runs the report
 
 ## Totals
 
@@ -1048,18 +1078,19 @@ badge and any count quoted in the docs must agree with it.
 | test_envsetup.lua | 4 |
 | test_registry.lua | 45 |
 | test_canvas.lua | 37 |
-| test_unlock.lua | 22 |
+| test_unlock.lua | 23 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 98 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 38 |
+| test_debuglog.lua | 35 |
+| test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 74 |
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 37 |
-| test_disabled.lua | 19 |
+| test_disabled.lua | 20 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 50 |
 | test_surface_parity.lua | 8 |
@@ -1072,5 +1103,5 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| test_diagnostics_contract.lua | 1 |
-| **Total** | **935** |
+| test_diagnostics_contract.lua | 7 |
+| **Total** | **962** |

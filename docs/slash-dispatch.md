@@ -10,7 +10,7 @@ opens the settings landing page; `/pm help` prints the index (`slash-commands-§
 library's dispatcher. The degraded stub in `settings/Slash.lua`, used when LibKa0s is missing, follows
 it too, and prints help only if the table has no `config` row.
 
-Schema-driven verbs: `config version get set list reset resetall debug enable disable help`.
+Schema-driven verbs: `config version get set list reset resetall debug diagnostics enable disable help`.
 
 `enable` and `disable` are **aliases, not a second switch** (`slash-commands-§2`). Both write
 `NS.Schema.ENABLED_PATH` — `settings.enabled`, the very path the *Enable Ka0s Panel Master*
@@ -21,7 +21,7 @@ and the same canonical `path = value` echo, read back from the store after the w
 **The whole reserved surface survives the disabled state**, and that is the ruling rather than a
 convenience. `Sl:Register` and `P:Register` run unconditionally from `OnInitialize`, so while the
 addon is off a bare `/pm` **opens the settings panel** and `help`, `config`, `version`, `enable`,
-`disable`, `debug`, `perf`, `get`, `set`, `list`, `reset` and `resetall` all answer normally —
+`disable`, `debug`, `perf`, `diagnostics`, `get`, `set`, `list`, `reset` and `resetall` all answer normally —
 reading and repairing settings included, which is precisely when a player most needs them.
 
 Standard v2.56.0 narrowed that to `enable` and `help`; v2.57.0 **reversed it**, on the case that
