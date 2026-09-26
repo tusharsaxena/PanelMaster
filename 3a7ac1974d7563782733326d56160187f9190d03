@@ -1,0 +1,1 @@
+clean: Show after SetParent and SetWidth before DoLayout; reverting either kills its own new case (pool/width), the other 9 scratch-copy failures are git-less-copy kit checks; gate 964/0, luacheck 0/0, lizard clean
