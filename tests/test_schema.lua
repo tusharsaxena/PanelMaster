@@ -451,7 +451,7 @@ test("Schema: no color row is ever disabled by its class-color companion", funct
   -- comment in settings/PanelEditor.lua that records why the picker is never grayed does not read
   -- as the defect it is warning about.
   for _, path in ipairs({ "settings/Schema.lua", "settings/PanelEditor.lua",
-                          "settings/Panel.lua" }) do
+                          "settings/PanelEditorTabs.lua", "settings/Panel.lua" }) do
     local f = assert(io.open(path, "r"))
     local body = f:read("*a")
     f:close()

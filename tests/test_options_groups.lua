@@ -33,7 +33,10 @@
 local T = _G.PM_TEST
 local test, fail = T.test, T.fail
 
-local EDITOR       = "settings/PanelEditor.lua"
+-- The tab bodies, where every block on the page is drawn. settings/PanelEditor.lua keeps the kit
+-- (`makeMediaDropdown` is DEFINED there, with no quoted field, so the scan below skips it) and the
+-- page's chrome, which draws no block (#47).
+local EDITOR       = "settings/PanelEditorTabs.lua"
 local ARCHITECTURE = "docs/ARCHITECTURE.md"
 local REGISTER     = "## Documented deviations"
 -- The rule id, with the section sign written as its two UTF-8 bytes so this file stays ASCII the way

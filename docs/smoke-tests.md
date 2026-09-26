@@ -3,8 +3,8 @@
 In-client checks for the things the headless harness genuinely cannot reach: how a panel actually
 looks, dragging with a real mouse, layering against other addons' frames, and the debug console's
 rendering. Run these before tagging a release, after any change to `modules/Canvas.lua`,
-`modules/Artwork.lua`, `modules/Unlock.lua`, `settings/Panel.lua` or `settings/PanelEditor.lua`,
-and whenever the `## Interface:` is bumped.
+`modules/Artwork.lua`, `modules/Unlock.lua`, `settings/Panel.lua`, `settings/PanelEditor.lua` or
+`settings/PanelEditorTabs.lua`, and whenever the `## Interface:` is bumped.
 
 The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
 
@@ -1180,7 +1180,7 @@ client those names carry umlauts and accents, and two seams treat those bytes as
   contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
   to.
 - **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-289`) and the Panels list's
-  sort (`settings/PanelEditor.lua:247`) both use `string.lower`, which folds ASCII and nothing else.
+  sort (`settings/PanelEditor.lua:195`) both use `string.lower`, which folds ASCII and nothing else.
   `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
 
 Every label the addon prints is hardcoded English and stays English here. That is the addon's scope,

@@ -356,22 +356,27 @@ above carrying a re-check trigger. This census records which one each breach sit
 suite on an over-cap file it does not name, on a row naming a file that is no longer over the cap,
 and on a heading that is missing, misplaced or standing empty.
 
-**Nothing is over the cap today.** Measured 2026-09-24 with
+**Nothing is over the cap today.** Measured 2026-09-26 with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-The largest authored file is `settings/PanelEditor.lua` at 1464 lines, thirty-six under the cap.
+The largest authored file is `tests/test_artwork.lua` at 1356 lines, and the largest shipped one
+`modules/Artwork.lua` at 1188. `settings/PanelEditor.lua`, which held both places at 1464, was
+peeled on 2026-09-26 by the automated-tests sweep ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47))
+into itself (746) and `settings/PanelEditorTabs.lua` (798).
 
 **The 1000–1500 band is not recorded here.** `layout-§1` and `automated-tests-§4` disposition it in
 the release watch list and only there: the *Files by `layout-§1` band* table in
 [`automated-tests/RESULTS.md`](automated-tests/RESULTS.md), whose rows the runner generates on every
 run and whose `Disposition` column is the one authored cell. A file moving between bands therefore
 moves on one line of one document. All five files in the band on 2026-09-24 carry a
-disposition there: `settings/PanelEditor.lua` (1447), whose peel is issue
-[#47](https://github.com/tusharsaxena/PanelMaster/issues/47) — the appearance editor out from under
-the Panels page's chrome band into a sibling under `settings/`; `tests/test_panel.lua` (1399), which
+disposition there: `settings/PanelEditor.lua` (1447), whose peel was issue
+[#47](https://github.com/tusharsaxena/PanelMaster/issues/47) and which reached 1464 before the
+automated-tests sweep peeled it: the editor's six tabs moved into
+`settings/PanelEditorTabs.lua`, leaving the page, its control kit, the strip and the chrome band
+behind, and both files under 1000; `tests/test_panel.lua` (1399), which
 reached 1491 on 2026-09-26 and was peeled ahead of #47 by the automated-tests sweep: the built
 Panels page's cases — the tab strip, the chrome band and the editor tabs — moved whole into
 `tests/test_panels_page.lua`, leaving both suites under 1000; `modules/Artwork.lua` (1188) with its mirror suite

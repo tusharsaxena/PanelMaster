@@ -114,6 +114,10 @@ settings\Schema.lua
 # VALUES at file load (settings/Slash.lua:601-605).
 settings\Slash.lua
 settings\PanelEditor.lua
+# The editor's six tabs, peeled out of PanelEditor.lua (layout-§1, PanelMaster#47). Either order
+# relative to PanelEditor.lua: each publishes its half on NS.PanelEditor and binds the other's on
+# first use. Both must precede Panel.lua, which drives them.
+settings\PanelEditorTabs.lua
 # The LibKa0s-Options seam. After Schema.lua (the descriptor reads it) and Slash.lua (the landing
 # page renders through Sl:LandingRows), and BEFORE Panel.lua, which captures the instance at file
 # scope. PanelEditor.lua binds its helpers lazily inside its own rebuild, so it pins nothing here.
