@@ -448,6 +448,39 @@ test("Disabled 7b: a reserved verb this addon never registered answers the SAME 
     cleanup()
   end)
 
+test("Disabled 7c: both diagnostics forms reach RunDiagnostics, each once, with no refusal",
+  function()
+    -- debug-logging-§14 and the AUD-01 audit step: a player runs the report BECAUSE something is
+    -- wrong, and "disabled" is one of the states they report from. Step 7 above only proves
+    -- `/pm diagnostics` is not refused; this pins that BOTH forms, `/pm diagnostics` and
+    -- `/pm debug diagnostics`, land in the one helper while the addon is stood down. The kit's
+    -- contract case (tests/_kit/test_diagnostics_contract.lua) checks what the report writes; this
+    -- checks the route.
+    --
+    -- red under: a `liveVerbs` that drops `diagnostics`, a host gate in front of the dispatcher, or
+    -- a `debug` handler that no longer hands `diagnostics` to DebugVerb before its other words.
+    seed()
+    S:Set(ENABLED, false)
+    local refusal = NS.PREFIX .. " " .. Sl:DisabledLine()
+    local savedRun = NS.DebugLog.RunDiagnostics
+    local calls = 0
+    local ok, err = pcall(function()
+      NS.DebugLog.RunDiagnostics = function() calls = calls + 1 return 0 end
+      for _, form in ipairs({ "diagnostics", "debug diagnostics" }) do
+        local before, at = calls, #mocks.__chat
+        NS.Slash:OnSlash(form)
+        assertEqual(calls - before, 1, "/pm " .. form .. " did not run the report once while disabled")
+        for _, line in ipairs(chatSince(at)) do
+          assertFalse(line == refusal, "/pm " .. form .. " was refused while disabled")
+        end
+      end
+    end)
+    NS.DebugLog.RunDiagnostics = savedRun
+    if NS.DebugLog.Hide then NS.DebugLog:Hide() end
+    cleanup()
+    if not ok then error(err, 0) end
+  end)
+
 -- ── 8. the launcher ────────────────────────────────────────────────────────────
 
 test("Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked",

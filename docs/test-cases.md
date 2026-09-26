@@ -823,7 +823,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (19)
+### test_disabled.lua (20)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
@@ -833,6 +833,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled 6: firing the events anyway writes nothing, prints nothing, shows nothing
 - Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
 - Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
+- Disabled 7c: both diagnostics forms reach RunDiagnostics, each once, with no refusal
 - Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked
 - Disabled 9: re-enabling restores the registration set, from state as it is NOW
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
@@ -1089,7 +1090,7 @@ badge and any count quoted in the docs must agree with it.
 | test_panel.lua | 63 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 37 |
-| test_disabled.lua | 19 |
+| test_disabled.lua | 20 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 50 |
 | test_surface_parity.lua | 8 |
@@ -1103,4 +1104,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 7 |
-| **Total** | **961** |
+| **Total** | **962** |
