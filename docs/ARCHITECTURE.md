@@ -362,13 +362,16 @@ and on a heading that is missing, misplaced or standing empty.
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-The largest authored file is `tests/test_artwork.lua` at 1356 lines, and the largest shipped one
+The largest authored file is `tests/test_libka0s.lua` at 1131 lines, and the largest shipped one
 `modules/Registry.lua` at 969. `settings/PanelEditor.lua`, which held both places at 1464, was
 peeled on 2026-09-26 by the automated-tests sweep ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47))
 into itself (746) and `settings/PanelEditorTabs.lua` (798). `modules/Artwork.lua`, the largest
 shipped file after it at 1188, was peeled on 2026-09-27 along the catalog / geometry seam into
 itself (693), which keeps the catalog and its lookups, and `modules/ArtworkGeometry.lua` (518),
-which takes `BuildArtSpec`, `NativeSize` and the fill math.
+which takes `BuildArtSpec`, `NativeSize` and the fill math. Its mirror suite `tests/test_artwork.lua`,
+at 1356 the largest authored file until then, was peeled the same day along the same seam into
+itself (738) and `tests/test_artwork_geometry.lua` (670), which takes the single-texture
+`BuildArtSpec` cases.
 
 **The 1000–1500 band is not recorded here.** `layout-§1` and `automated-tests-§4` disposition it in
 the release watch list and only there: the *Files by `layout-§1` band* table in
@@ -384,7 +387,8 @@ reached 1491 on 2026-09-26 and was peeled ahead of #47 by the automated-tests sw
 Panels page's cases — the tab strip, the chrome band and the editor tabs — moved whole into
 `tests/test_panels_page.lua`, leaving both suites under 1000; `modules/Artwork.lua` (1188), peeled
 on 2026-09-27 along the catalog / geometry seam into itself (693) and `modules/ArtworkGeometry.lua`
-(518), with its mirror suite `tests/test_artwork.lua` (1356), which splits along the same seam; and
+(518), with its mirror suite `tests/test_artwork.lua` (1356), peeled the same day along the same seam into
+itself (738) and `tests/test_artwork_geometry.lua` (670); and
 `tests/test_libka0s.lua` (1086), new to the band in the 2026-09-23 remediation, whose degraded-install
 cases are its own seam. The next file to reach 1000 arrives in that table with a blank
 `Disposition` cell, which is the file saying something crossed and nobody has ruled on it yet.

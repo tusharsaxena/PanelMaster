@@ -369,7 +369,7 @@ badge and any count quoted in the docs must agree with it.
 - Accent bar: Bar opacity multiplies the bar color's own alpha
 - Accent bar: Bar opacity is stored, clamped and reachable from the CLI
 
-### test_artwork.lua (98)
+### test_artwork.lua (46)
 
 - Artwork: every catalog id is unique
 - Artwork: no catalog row claims one of the two reserved ids
@@ -381,6 +381,45 @@ badge and any count quoted in the docs must agree with it.
 - Artwork.List: brackets the catalog with None first and Custom last
 - Artwork.List: a catalog label carries its category as a prefix
 - Artwork.List: orders the catalog by category, then by label
+- Artwork: a panel straight from the template renders no artwork at all
+- Artwork: a record that predates the feature entirely renders no artwork
+- Artwork: Canvas.BuildSpec fits the art to the CLAMPED panel size
+- Artwork: Sanitize leaves a fully-specified artwork record alone
+- Artwork: every art field is in the template, the type map and the dump order
+- Artwork: Registry.CopyFrom carries every art field across
+- Artwork: a copy deep-copies the art color rather than sharing it
+- Artwork: a profile round-trip keeps every art field intact
+- Artwork: R:Set stores an art field through the normal write seam
+- Canvas: a panel with artwork shows its art frame and applies the resolved path
+- Canvas: the art frame takes the level its layer names, for all three layers
+- Canvas: there is ONE art frame, whose level is reassigned per render
+- Canvas: the artwork ladder interleaves with the fill, the border and the accent
+- Canvas: the fill lives on its own child frame, so BELOW_BG is reachable
+- Canvas: the art frame clips its children, so offset art stays inside the panel
+- Canvas: the art texture takes the spec's size, anchor and texture coordinates
+- Canvas: tiled artwork asks SetTexture to wrap; nothing else does
+- Canvas: the artwork tint and blend mode reach the texture
+- Canvas: turning artwork off clears the texture as well as hiding the frame
+- Canvas: a released frame keeps no artwork for the next panel to inherit
+- Canvas: a reused frame draws the new panel's artwork, not the old panel's
+- Canvas: a panel with no artwork never shows its art frame
+- Artwork composite: a bar splits into one quad per section
+- Artwork composite: the sections tile the bar rect with no gap and no double-cover
+- Artwork composite: each section samples its whole file
+- Artwork composite: a FILL crop drops the sections it pushed off the panel
+- Artwork composite: a quarter turn stacks the sections instead of ranging them
+- Artwork composite: a horizontal flip reverses the section order
+- Artwork composite: a tiled bar repeats the whole bar, not each section
+- Artwork composite: a tiled bar is clamped rather than allowed to cost hundreds of textures
+- Artwork composite: the overlap crop moves the sampled window off the transparent band
+- Artwork composite: a tiled bar drops the overlap crop rather than applying it wrongly
+- Artwork: a single texture is a one-quad spec that matches the flat rect
+- Canvas: a composed bar draws one texture per section
+- Canvas: switching from a bar to a single piece clears the sections it no longer draws
+- Artwork composite: an anchored FIT offsets each section from the same edge
+
+### test_artwork_geometry.lua (52)
+
 - Artwork FIT: the whole image lands inside the panel at every aspect pairing
 - Artwork FIT: never crops — the texture coordinates stay the full image
 - Artwork FIT: scale multiplies the fitted size and nothing else
@@ -433,42 +472,6 @@ badge and any count quoted in the docs must agree with it.
 - Artwork.BuildArtSpec: a non-table record is nil, not a crash
 - Artwork.BuildArtSpec: an unknown fill or layer falls back to the template
 - Artwork.BuildArtSpec: the layer resolves to the frame level the renderer must use
-- Artwork: a panel straight from the template renders no artwork at all
-- Artwork: a record that predates the feature entirely renders no artwork
-- Artwork: Canvas.BuildSpec fits the art to the CLAMPED panel size
-- Artwork: Sanitize leaves a fully-specified artwork record alone
-- Artwork: every art field is in the template, the type map and the dump order
-- Artwork: Registry.CopyFrom carries every art field across
-- Artwork: a copy deep-copies the art color rather than sharing it
-- Artwork: a profile round-trip keeps every art field intact
-- Artwork: R:Set stores an art field through the normal write seam
-- Canvas: a panel with artwork shows its art frame and applies the resolved path
-- Canvas: the art frame takes the level its layer names, for all three layers
-- Canvas: there is ONE art frame, whose level is reassigned per render
-- Canvas: the artwork ladder interleaves with the fill, the border and the accent
-- Canvas: the fill lives on its own child frame, so BELOW_BG is reachable
-- Canvas: the art frame clips its children, so offset art stays inside the panel
-- Canvas: the art texture takes the spec's size, anchor and texture coordinates
-- Canvas: tiled artwork asks SetTexture to wrap; nothing else does
-- Canvas: the artwork tint and blend mode reach the texture
-- Canvas: turning artwork off clears the texture as well as hiding the frame
-- Canvas: a released frame keeps no artwork for the next panel to inherit
-- Canvas: a reused frame draws the new panel's artwork, not the old panel's
-- Canvas: a panel with no artwork never shows its art frame
-- Artwork composite: a bar splits into one quad per section
-- Artwork composite: the sections tile the bar rect with no gap and no double-cover
-- Artwork composite: each section samples its whole file
-- Artwork composite: a FILL crop drops the sections it pushed off the panel
-- Artwork composite: a quarter turn stacks the sections instead of ranging them
-- Artwork composite: a horizontal flip reverses the section order
-- Artwork composite: a tiled bar repeats the whole bar, not each section
-- Artwork composite: a tiled bar is clamped rather than allowed to cost hundreds of textures
-- Artwork composite: the overlap crop moves the sampled window off the transparent band
-- Artwork composite: a tiled bar drops the overlap crop rather than applying it wrongly
-- Artwork: a single texture is a one-quad spec that matches the flat rect
-- Canvas: a composed bar draws one texture per section
-- Canvas: switching from a bar to a single piece clears the sections it no longer draws
-- Artwork composite: an anchored FIT offsets each section from the same edge
 
 ### test_database.lua (24)
 
@@ -1086,7 +1089,8 @@ badge and any count quoted in the docs must agree with it.
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
-| test_artwork.lua | 98 |
+| test_artwork.lua | 46 |
+| test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
 | test_debuglog.lua | 35 |
 | test_diagnostics.lua | 22 |

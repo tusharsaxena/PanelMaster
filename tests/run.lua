@@ -96,7 +96,7 @@ local SUITES = {
   "test_util", "test_compat", "test_constants",
   "test_mediasetup", "test_envsetup",
   "test_registry", "test_canvas", "test_unlock", "test_media",
-  "test_accent", "test_artwork",
+  "test_accent", "test_artwork", "test_artwork_geometry",
   "test_database", "test_debuglog", "test_diagnostics",
   "test_schema", "test_slash", "test_panel", "test_panels_page", "test_profiles",
   "test_launcher",

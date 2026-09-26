@@ -127,7 +127,8 @@ The suites, one per subject:
 | Suite | Covers |
 |---|---|
 | `tests/test_accent.lua` | The accent bars: default look, per-edge geometry, their borders, and how `Canvas` builds them. |
-| `tests/test_artwork.lua` | The artwork catalog, `Artwork.BuildArtSpec` and composites, and the artwork child frame. |
+| `tests/test_artwork.lua` | The artwork catalog, upgrade inertness, art-field persistence, composites, and the artwork child frame. |
+| `tests/test_artwork_geometry.lua` | `Artwork.BuildArtSpec` for a single texture: the five fills, resize, position, UV composition, the tint and degenerate input. Peeled out of `tests/test_artwork.lua` along the catalog / geometry seam (`layout-§1`). |
 | `tests/test_canvas.lua` | `Canvas.BuildSpec`, `Canvas.Render`, the frame pool, the bus repaints and combat visibility. |
 | `tests/test_compat.lua` | The `core/Compat.lua` shims: screen size, UI scale, media registration and lookup, cursor test. |
 | `tests/test_constants.lua` | The enums, bounds and templates in `core/Constants.lua`. |
