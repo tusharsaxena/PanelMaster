@@ -570,11 +570,15 @@ worth doing in full after any change to the icon or the seam.
    drawn around them** — the band's own divider is the boundary. A band two or three rows deep is the
    pre-v2.40.0 shape and is the failure (`options-ui-§14`).
 5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
-   page. **Expect:** the band above the strip holds its one row, at full width. An empty band of
-   the right height with nothing in it is the zero-width layout race: the canvas has no width until
-   it lays itself out, and this block is built once for the session, so without its own resize hook
-   it stays empty until a `/reload`. Then drag the Settings window's edge to resize it and confirm
-   every control follows.
+   page. **Expect:** the band above the strip holds its one row, and the **Panel** picker and
+   **Create new panel** each take **half the band's width**, not a fixed narrow 150 pixels. Then
+   drag the Settings window's edge to resize it and confirm both controls follow the new width. Result: **PASS** (owner, 2026-09-26)
+5-x. **Open Panels AFTER another addon's settings page.** On a fresh login, open another addon's
+   settings first (for example **AuraMaster ▸ Containers**) and switch between a few of its tabs,
+   then open **Panel Master ▸ Panels**. **Expect:** the **Panel** picker and the **Create new panel**
+   box are **visible**, and each takes half the band. A band of the right height, divider and all,
+   with nothing in it is the failure: AceGUI handed the band a pooled, hidden `SimpleGroup` and
+   nothing showed it.
 5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
    it is **still there** at the same height, and the page reads "No panels yet…" underneath. The
    **Create new panel** box stays usable and the **Panel** picker is **grayed out rather than
@@ -663,7 +667,7 @@ worth doing in full after any change to the icon or the seam.
     still claims your panels are untouched; that wording predates `options-ui-§12` and is a known
     code-side staleness, not what the button does.)
 16. Close the options window, run `/pm new Offscreen`, reopen → **Expect:** the new panel is in the
-    dropdown (it was rebuilt on show, not missed).
+    dropdown (it was rebuilt on show, not missed). Result: **PASS** (owner, 2026-09-26)
 
 ## 10. Off-screen recovery
 
