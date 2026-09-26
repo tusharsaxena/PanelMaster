@@ -1206,6 +1206,12 @@ local function drawPageHeader(ctx)
       block.frame:ClearAllPoints()
       block.frame:SetPoint("TOPLEFT",     frame, "TOPLEFT",     0, 0)
       block.frame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+      -- SHOWN HERE, BECAUSE NOTHING ELSE SHOWS IT. AceGUI pools widgets: Release hides the frame,
+      -- and a later Create of the same type hands it back hidden -- only a parent container's
+      -- layout shows a child. This block is parented by hand and is no container's child, so once
+      -- any addon had released a SimpleGroup in the session, the band kept its height and divider
+      -- and lost the picker and the create box inside it.
+      block.frame:Show()
 
       local makeRow = editorRow(block)
 
@@ -1245,6 +1251,11 @@ local function drawPageHeader(ctx)
       makeRow:AddChild(newBox)
 
 
+      local builtWidth = frame.GetWidth and frame:GetWidth()
+      if type(builtWidth) == "number" and builtWidth > 0 then
+        block.__pmLaidOutAt = builtWidth
+        block:SetWidth(builtWidth)
+      end
       if block.DoLayout then block:DoLayout() end
       ctx.__pmPicker = picker
       -- The picker is the only band control left to park. The six acts moved to the `General`
@@ -1255,23 +1266,28 @@ local function drawPageHeader(ctx)
       -- below, and for a case to assert that it was.
       ctx.__pmHeaderBlock = block
 
-      -- THE LAYOUT ABOVE MAY HAVE RUN AGAINST NOTHING. `ctx.chrome` is zero-wide until the
-      -- settings canvas has laid itself out, and the FIRST page a player opens is rendered before
-      -- that happens — the library states exactly this at its own `replaceOnResize`, which is how
-      -- the tab strip heals when the width arrives. Every child here takes a RELATIVE width, so a
-      -- layout at that moment gives each of them a fraction of nothing: controls that exist, are
-      -- shown, and occupy no pixels. What the player sees is an empty band of the right height
-      -- above the strip, with everything in it simply absent.
+      -- THE ROW IS LAID OUT AT THE BAND'S WIDTH, WHICH ONLY SetWidth CAN TELL IT. AceGUI's List
+      -- layout reads `content.width` before it asks the frame, and a SimpleGroup's OnAcquire sets
+      -- that to 300. Anchoring the block to both sides of the header stretches the frame and
+      -- leaves `content.width` alone, so a bare DoLayout lays the row out at 300 pixels, and each
+      -- half-width control gets 150, whatever the band's real width is. SetWidth writes the width
+      -- the layout reads; the two anchors still decide the frame's size.
       --
-      -- THE STRIP GETS A SECOND CHANCE AND THIS BLOCK DOES NOT. It is built ONCE for the session
-      -- (settings/Panel.lua's `built` flag, which exists so a rebuild cannot pool the widget the
-      -- user is typing into), so a session that happened to open Panels first stayed like that
-      -- until a /reload.
+      -- The width arrives late on the first page a player opens, which is rendered before the
+      -- settings canvas has laid itself out, so the build above passes it on only when the header
+      -- already has one, and this hook passes on every later one. The block is built ONCE for the
+      -- session (settings/Panel.lua's `built` flag, which exists so a rebuild cannot pool the
+      -- widget the user is typing into), so this hook is its only way to learn a new width.
+      --
+      -- (An earlier version of this comment blamed a layout run at zero width for a band that
+      -- showed its height and divider with nothing inside. That was never the mechanism: the List
+      -- layout never saw zero, because of the 300 above. The band was hidden, and the Show above is
+      -- the fix.)
       --
       -- Hooked on the HEADER FRAME rather than on ctx.chrome, whose OnSizeChanged the library has
-      -- already claimed for the strip — SetScript replaces, so hooking there would trade this bug
-      -- for a strip that never re-wraps. The header frame is anchored to both of the chrome's
-      -- sides, so its width is the chrome's width.
+      -- already claimed for the strip -- SetScript replaces, so hooking there would trade this for
+      -- a strip that never re-wraps. The header frame is anchored to both of the chrome's sides, so
+      -- its width is the chrome's width.
       --
       -- Guarded on a CHANGE in width, like the library's: SetChromeHeight fires this same script,
       -- and a layout that answered every event would run on every height change for nothing.
@@ -1279,6 +1295,7 @@ local function drawPageHeader(ctx)
         if type(width) ~= "number" or width <= 0 then return end
         if block.__pmLaidOutAt == width then return end
         block.__pmLaidOutAt = width
+        block:SetWidth(width)
         if block.DoLayout then block:DoLayout() end
       end)
     end,

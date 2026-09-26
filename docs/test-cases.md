@@ -690,7 +690,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 
-### test_panel.lua (63)
+### test_panel.lua (65)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -741,6 +741,8 @@ badge and any count quoted in the docs must agree with it.
 - Panel scale: a junk value falls back rather than reaching SetScale
 - Panels page: only the active tab's controls are built
 - Panels page: the header block re-lays out when the canvas learns its width
+- Panels page: the band's block is shown even when AceGUI hands it back from the pool
+- Panels page: a size change lays the band's row out at the band's own width
 - Panels page: the create box is labeled for the act, not for its contents
 - Panels page: the two opacity sliders share a row, and the switch is below
 - Panels page: an unknown active tab heals to the first one rather than drawing nothing
@@ -1087,7 +1089,7 @@ badge and any count quoted in the docs must agree with it.
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 74 |
-| test_panel.lua | 63 |
+| test_panel.lua | 65 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 20 |
@@ -1104,4 +1106,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 7 |
-| **Total** | **962** |
+| **Total** | **964** |
