@@ -572,7 +572,7 @@ worth doing in full after any change to the icon or the seam.
 5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
    page. **Expect:** the band above the strip holds its one row, and the **Panel** picker and
    **Create new panel** each take **half the band's width**, not a fixed narrow 150 pixels. Then
-   drag the Settings window's edge to resize it and confirm both controls follow the new width.
+   drag the Settings window's edge to resize it and confirm both controls follow the new width. Result: **PASS** (owner, 2026-09-26)
 5-x. **Open Panels AFTER another addon's settings page.** On a fresh login, open another addon's
    settings first (for example **AuraMaster ▸ Containers**) and switch between a few of its tabs,
    then open **Panel Master ▸ Panels**. **Expect:** the **Panel** picker and the **Create new panel**
@@ -667,7 +667,7 @@ worth doing in full after any change to the icon or the seam.
     still claims your panels are untouched; that wording predates `options-ui-§12` and is a known
     code-side staleness, not what the button does.)
 16. Close the options window, run `/pm new Offscreen`, reopen → **Expect:** the new panel is in the
-    dropdown (it was rebuilt on show, not missed).
+    dropdown (it was rebuilt on show, not missed). Result: **PASS** (owner, 2026-09-26)
 
 ## 10. Off-screen recovery
 
