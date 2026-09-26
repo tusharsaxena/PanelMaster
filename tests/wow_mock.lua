@@ -383,7 +383,7 @@ return function()
   -- are the two the PANEL EDITOR needs and no other Ka0s addon builds that page.
   --
   -- Without SetTitle the editor's InlineGroup raised on its first line, every rebuild was swallowed
-  -- by the page's pcall, and the whole of settings/PanelEditor.lua below buildPanelEditor's first
+  -- by the page's pcall, and the whole of settings/PanelEditorTabs.lua below buildPanelEditor's first
   -- statement was unreachable in this suite -- which is why "the real rebuilder never runs
   -- headlessly" used to be written down as a fact about the page rather than about the mock.
   local aceGUI = M.__libs["AceGUI-3.0"]

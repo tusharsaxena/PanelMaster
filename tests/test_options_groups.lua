@@ -1,6 +1,6 @@
 -- tests/test_options_groups.lua — the `options-ui-§16` gate over the Panels page.
 --
--- WHAT IT PROVES. That `settings/PanelEditor.lua` types out none of `options-ui-§16`'s border, bar
+-- WHAT IT PROVES. That `settings/PanelEditorTabs.lua` types out none of `options-ui-§16`'s border, bar
 -- or font blocks; that the three blocks it draws are composed through LibKa0s-Options' record-backed
 -- arm (`spec.bind`, PanelMaster#48); and that `docs/ARCHITECTURE.md` ▸ `## Documented deviations`
 -- carries no `options-ui-§16` row. Below those three gates sits what the composed blocks ARE, control
