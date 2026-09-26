@@ -682,7 +682,7 @@ worth doing in full after any change to the icon or the seam.
 ## 11. Debug console
 
 1. `/pm debug` → **Expect:** the console opens: monospace, timestamped, a `Debug: OFF` toggle in red
-   at the left of the title bar, a scrollbar on the right, `0 / 1500 lines` bottom-right.
+   at the left of the title bar, a scrollbar on the right, `0 / 3000 lines` bottom-right.
 1b. **Look at the right end of the title bar.** **Expect:** three small square controls of the same
    size, evenly pitched — a copy mark, a clear mark and a close mark, gray, each turning white (the
    close one red) as the pointer crosses it. **No words, and no tooltips**: a label anchored under a
@@ -715,12 +715,37 @@ worth doing in full after any change to the icon or the seam.
    thumb follows. No Lua error either way.
 6. Click the **copy mark** → **Expect:** a selectable window with the same lines, no color codes, and
    a close mark of its own in its title bar — the same art, not a multiplication sign. Ctrl+C, Esc.
-7. Click the **clear mark** → **Expect:** an empty log and `0 / 1500 lines`.
+7. Click the **clear mark** → **Expect:** an empty log and `0 / 3000 lines`.
 8. Click the `Debug: ON` toggle → **Expect:** it flips to red `OFF` and prints the matching chat ack.
-9. `/pm debug dump` → **Expect:** a `[Dump]` block listing each panel with `frame=yes`, and
-   `0 orphaned`. Any `frame=NO` or a non-zero orphan count is a rendering bug.
+9. `/pm diagnostics` → **Expect:** a report appended below the log, from
+   `==== Ka0s Panel Master diagnostics begin ====` to `==== Ka0s Panel Master diagnostics end: N
+   line(s) ====`, every line tagged `[Diag]`, the sections in order (state, master, unlock queue,
+   settings, screen, panels, frames, mouseover, artwork, events), each panel with `frame=yes`, and
+   `0 orphaned`. Any `frame=NO` or a non-zero orphan count is a rendering bug. One chat line says
+   *Diagnostic report written to the debug console: N lines. Use Copy to share it.*
 10. `Esc` with the console focused → **Expect:** it closes (`UISpecialFrames`).
 11. `/reload` → **Expect:** logging is **off** again (session-only) and the console is closed.
+12. **The report keeps the trace** (S2). `/pm debug on`, drag a panel, then `/pm diagnostics`.
+    **Expect:** the `[Panel]` lines stay above the begin marker; nothing was cleared. Click the
+    **copy mark** and paste into a text editor → the trace, both markers with the brand, and no
+    `|c` color escapes (S4).
+13. **Ungated, flag untouched** (S5). `/pm debug off`, then `/pm diagnostics`. **Expect:** the report
+    lands in full; afterwards the title bar still reads `Debug: OFF` and dragging a panel writes
+    nothing.
+14. **While disabled, both forms** (S1). `/pm disable`, then `/pm diagnostics`, then
+    `/pm debug diagnostics`. **Expect:** each writes a full report; the `state` section reads
+    `enabled (stored)=false stood down=true` with its lifecycle hold, and each panel's renderer line
+    reads `renderer: stood down`. `/pm enable` afterwards.
+15. **In combat** (S3). Queue a `/pm unlock` in combat and run `/pm diagnostics` before combat ends.
+    **Expect:** no Lua error; the `unlock queue` section shows `global=true`; when combat ends the
+    unlock still happens (the report never flushed the queue). An unreadable number prints
+    `match=unknown` or `<secret>`.
+16. **No alias** (S8). `/pm debug dump`, then `/pm debug diag`. **Expect:** neither runs the report;
+    each toggles the console, as any unknown `debug` word does. `/pm diag` answers as an unknown
+    verb.
+17. **The cap** (S7). Turn logging on and fill the console past 3000 lines (unlock and drag panels
+    for a while, or run `/pm diagnostics` repeatedly). **Expect:** the counter reads `N / 3000 lines`
+    and pins at 3000; the copy mark opens its window without a noticeable hitch.
 
 ## 11b. Frame names and anchoring
 
@@ -739,8 +764,8 @@ The addon's public contract, and the one thing no unit test can prove works in a
 5. Rename **Chat BG** to **Chat Backdrop**. **Expect:** the frame name on the **Panel name**
    tooltip is **still `PanelMaster_Panel_Chat_BG`**, and the red square from step 3 **keeps
    following the panel**. The frame name is stamped at create and a rename does not touch it.
-6. Rename it back and forth a few more times, then `/pm debug dump`. **Expect:** the pooled-frame
-   count does not grow — renaming abandons no frames.
+6. Rename it back and forth a few more times, then `/pm diagnostics`. **Expect:** the pooled
+   count on the `frames:` line does not grow — renaming abandons no frames.
 7. Try creating a new panel called **Chat BG**, the name freed up in step 5. **Expect:** refused,
    naming **Chat Backdrop** as the panel still holding `PanelMaster_Panel_Chat_BG`.
 8. `/reload` and repeat step 2. **Expect:** the name is the same — it is persisted on the record,
@@ -788,7 +813,7 @@ rather than carried.
    still fire.
 3. Make two profiles whose panels carry **swapped names**: on profile A create `Alpha` then `Xray`
    (ids 1 and 2); on profile B create `Xray` then `Alpha`. Switch between them five times, then
-   `/pm debug dump`. **Expect:** the `frames: N active, M pooled, 0 orphaned` line shows **no**
+   `/pm diagnostics`. **Expect:** the `frames: N active, M pooled, 0 orphaned` line shows **no**
    orphans, and `/framestack` over each panel names the expected `PanelMaster_Panel_<slug>`. A
    rebuild releases every mismatched frame before any id acquires one; resolving it one id at a
    time used to create a second frame under a name still in use, on every switch.
@@ -846,7 +871,8 @@ addon still *works*.
     whose profile still names one of them renders **plain**, exactly as it does when any other
     addon's texture goes away (§5b step 10). Nothing raises, and nothing is overwritten: reinstate
     `libs/LibKa0s` and the names come straight back.
-10. `/pm debug dump` → still answers with the state dump.
+10. `/pm diagnostics`, then `/pm debug diagnostics` → each prints `/pm diagnostics is unavailable:
+    the LibKa0s library did not load.` and writes nothing. No Lua error.
 11. `/pm list` → `…, so the settings CLI (list/get/set/reset) is unavailable.`
 11b. `/pm help` → that same line once, then one plain `/pm <cmd>  <desc>` row per verb (no colors, no
     em dash): the degraded index is allowed to look degraded, never to vanish.
@@ -878,7 +904,7 @@ Walk **every** surface and confirm not one `SCREAMING_SNAKE_CASE` string is on s
 1. `/pm config` → the landing page, then **General**, **Panels** and **Profiles**. Every label,
    every tooltip, every section heading, the breadcrumb, and the **Defaults** button.
 2. `/pm debug` → the console. Title bar (`Panel Master — Debug`), the `Debug: OFF` toggle, `Copy`,
-   `Clear`, and the `N / 1500 lines` counter. Click **Copy** and read that window's title too
+   `Clear`, and the `N / 3000 lines` counter. Click **Copy** and read that window's title too
    (`Copy log — Ctrl+C, then Esc`).
 3. `/pm help`, `/pm list`, `/pm version` in chat.
 
