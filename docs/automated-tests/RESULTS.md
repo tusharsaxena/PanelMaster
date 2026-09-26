@@ -32,6 +32,7 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 | Run | Commit | Tree | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20260927-030403`](20260927-030403/) | `83e958f` | clean | 1.1.1 → 1.2.0 | 0/0 | 66 | 964/0/964 | skip | 16108 | 1915 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260926-193106`](20260926-193106/) | `5119ae1` | clean | 1.1.1 | 0/0 | 66 | 964/0/964 | skip | 16108 | 1915 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260926-160448`](20260926-160448/) | `1763c0c` | clean | 1.1.1 | 0/0 | 64 | 964/0/964 | skip | 16058 | 1914 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260924-104311`](20260924-104311/) | `bf1291d` | **dirty** | 1.1.1 | 0/0 | 61 | 921/0/921 | skip | 15134 | 1775 | 7.4 | 2.0 | 15 | 0 | **green** |
@@ -51,10 +52,11 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 ## Test suite
 
 **964 cases** — 964 passed, 0 failed, 0 skipped. The generated inventory
-[`20260926-193106/test-cases.md`](20260926-193106/test-cases.md) is the authority on which cases existed at this run;
+[`20260927-030403/test-cases.md`](20260927-030403/test-cases.md) is the authority on which cases existed at this run;
 `docs/test-cases.md` is that same list at HEAD.
 
-Unchanged from the previous run at 964 cases.
+The count has been **flat at 964 across the last 3 runs**. A suite that stopped growing while
+the addon did is a coverage gap, and it is the one thing the table above cannot show.
 
 No case reported a `skip`, so passed and total agree and nothing in this row claims coverage
 that was not exercised.
@@ -78,7 +80,7 @@ never asked.
 
 ## Complexity watch list
 
-Current as of [`20260926-193106`](20260926-193106/) — **this run's measurement, not its diff.** Max CCN **15** across 1915
+Current as of [`20260927-030403`](20260927-030403/) — **this run's measurement, not its diff.** Max CCN **15** across 1915
 functions, **0** of them warned on; 3 file(s) in the 1000–1500 band and 0 over the 1500 cap
 (`layout-§1`).
 
@@ -98,9 +100,9 @@ None.
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Accepted, and watch the direction.** The highest average CCN in the addon at 29 functions. Unchanged at 1188 since the 1.0.0 release run `20260807-160022`, against 1087 at the baseline, and untouched by the launcher cycle, the 2026-09-23 remediation, the diagnostics rollout and the 2026-09-26 automated-tests sweep (`20260926-193106`). A run of flat runs is not a reversal while nothing is offsetting its growth: it is still 312 lines off the cap, and with the sweep's two peels it is now the largest shipping file in the repository. Split along the catalog / geometry seam before the next feature lands in it. |
-| 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Accepted.** The largest suite here because it covers the largest, most branch-heavy module. Unchanged at 1356 since 2026-08-03 — every run in this record, `20260804-182223` through `20260926-193106` — and, with `settings/PanelEditor.lua` peeled to 746 by PM-ATS-02, the largest file in the repository again. Split only when `modules/Artwork.lua` is, along the same seams; a suite that mirrors a module has no seam of its own. |
-| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1131 | **Accepted, and moving.** The LibKa0s adoption suite: the seams, the degraded install and the `L` trap. Entered the band at `20260924-104311` (971 → 1086, PM-09 and PM-12) and grew **1086 → 1131** at `20260926-160448` from the diagnostics rollout (`0371307` DR-PM-01 +34, `497cad1` DR-PM-03 +11 net). Unlike the two mirror suites it has a seam of its own: its `Degraded …` cases, which already share `tests/degraded_env.lua` with `tests/test_surface_parity.lua`, lift out whole into a sibling suite. The recorded re-check trigger was **1300, or the next major this addon adopts**; no new major was adopted (the diagnostics verbs ride majors already in use), so it has not fired — unchanged at 1131 at `20260926-193106`, 169 lines remain to 1300. Peel along that seam when it does. |
+| 1000–1500 (on notice) | `modules/Artwork.lua` | 1188 | **Owed a fix or a tracked deviation ID (anti-pattern #53).** This is the third consecutive release run to carry it as *Accepted*: 1.0.0 (`20260807-160022`), 1.1.0 (`20260910-234511`) and 1.2.0 (`20260927-030403`), so the shelf life has run out and a fourth re-accept is not available. The file is unchanged at 1188, as it has been since the 1.0.0 release run, against 1087 at the baseline. It holds the highest average CCN in the addon across its 29 functions, and it is the largest shipping file in the repository, 312 lines off the cap. No issue tracks the split yet. The owner either files one for the catalog / geometry split, so this cell can read *Already tracked as `#<n>`*, or lands the split before the next release. |
+| 1000–1500 (on notice) | `tests/test_artwork.lua` | 1356 | **Owed a fix or a tracked deviation ID (anti-pattern #53), jointly with `modules/Artwork.lua`.** This is its third consecutive release run as *Accepted*: 1.0.0, 1.1.0 and 1.2.0. It has been unchanged at 1356 since 2026-08-03, through every run in this record up to `20260927-030403`, and it is the largest file in the repository. It mirrors `modules/Artwork.lua` and has no seam of its own, so it peels when that module does, along the same seams. The issue owed for the module should name this suite as well. |
+| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1131 | **Accepted, and moving.** The LibKa0s adoption suite covers the seams, the degraded install and the `L` trap. It entered the band at `20260924-104311` (971 → 1086, from PM-09 and PM-12) and grew **1086 → 1131** at `20260926-160448` from the diagnostics rollout (`0371307` DR-PM-01 +34, `497cad1` DR-PM-03 +11 net). Unlike the two mirror suites it has a seam of its own: its `Degraded …` cases already share `tests/degraded_env.lua` with `tests/test_surface_parity.lua` and can lift out whole into a sibling suite. The recorded re-check trigger is **1300, or the next major this addon adopts**. It has not fired: no new major was adopted, and the file is unchanged at 1131 at the 1.2.0 release run `20260927-030403`, 169 lines short of 1300. 1.2.0 is the first release run to carry this entry, so its shelf-life clock starts here. Peel along that seam when the trigger fires. |
 
 `lizard` counts every `and`/`or` short-circuit as a decision, so in Lua a run of
 `t.k = rec.k or D.k` defaulting lines scores high with no visible branching at all: a large CCN
