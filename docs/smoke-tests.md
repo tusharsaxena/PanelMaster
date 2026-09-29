@@ -872,9 +872,10 @@ fonts, its text input, or what a player of that language types. `tests/test_util
 ## Pending sign-off
 
 Every check below still needs a client run and a filled `Result:` line; sign one off there, then take
-it out of this table. Eight carried-over checks have a recorded pass (owner, 2026-09-26) and
+it out of this table. Nine carried-over checks have a recorded pass (owner, 2026-09-26) and
 unchanged expectations, so they are not listed: PANEL-11 and PANEL-25 (§ 9 step 5-w and § 9 step 16,
-passed in this doc), and DIAG-14 to DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12-15 and 17,
+passed in this doc), PANEL-12 (§ 9 step 5-x, passed in the 2026-09-26 navrail adoption's report),
+and DIAG-14 to DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12-15 and 17,
 § 14 step 10, passed as PM-S1 to PM-S5, PM-S7 and PM-X1 in the 2026-09-25 diagnostics plan's
 report). Every other check carried over is owed, and so is every check new in this rewrite or
 corrected in it against the code.
@@ -898,7 +899,7 @@ corrected in it against the code.
 | ACCENT-1 to ACCENT-14 | § 5b-4 steps 1-14 and 16 | No result recorded |
 | ART-1 to ART-11, ART-13 to ART-30 | § 5e, § 5e-2, § 5e-3, § 5e-4, § 5e-6 steps 1-4, § 18 | No result recorded |
 | ART-12 | § 5e-6 step 7 | No result recorded; corrected: `/pm panel set <name> …` read `set` as the panel name |
-| PANEL-1, PANEL-4 to PANEL-7, PANEL-9, PANEL-12 to PANEL-15, PANEL-18 to PANEL-24 | § 9 steps 2, 2d, 3, 4, 5-x, 5a, 5b, 5b-2, 6 to 11 and 13, § 16 steps 8, 10, 13 and 14 | No result recorded |
+| PANEL-1, PANEL-4 to PANEL-7, PANEL-9, PANEL-13 to PANEL-15, PANEL-18 to PANEL-24 | § 9 steps 2, 2d, 3, 4, 5a, 5b, 5b-2, 6 to 11 and 13, § 16 steps 8, 10, 13 and 14 | No result recorded |
 | PANEL-2 | § 9 step 2b, § 16 step 11 | No result recorded; corrected: Master controls has 7 rows, and **Grid size** shares its line with **Unlock outline thickness**, not **Snap to grid** |
 | PANEL-3 | § 9 step 2c | No result recorded; corrected: **Minimap button** sits alone on a fourth line above the button pair |
 | PANEL-8 | § 9 steps 2d and 15, § 17 step 5 | No result recorded; corrected: the Panels page's **Defaults** is the delete-all, not this popup |
