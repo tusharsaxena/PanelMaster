@@ -148,9 +148,10 @@ client and is run when one is available, not per release.
   **Artwork** set to **None**, and two more panels in different colors, `/pm unlock` → every panel
   shows its gold outline and name clearly **on top of** its fill. **Fail:** a dim or invisible
   outline, which means the overlay fell behind the fill. Result:
-- **FRAME-12. Level stride.** Two overlapping panels in the same strata, **Level** `0` and `1` → the
-  level-1 panel draws entirely in front, covering the other's accent bar and border, not just part of
-  them. Repeat with `0` and `3` → the same. **Fail:** interleaved layers. Result:
+- **FRAME-12. Level stride.** Two overlapping panels in the same strata, with one-word names:
+  `/pm panel <first> level 0` and `/pm panel <second> level 1` (the Panels page has no Level control)
+  → the level-1 panel draws entirely in front, covering the other's accent bar and border, not just
+  part of them. `/pm panel <second> level 3` → the same. **Fail:** interleaved layers. Result:
 - **FRAME-13. Master scale and alpha.** **General ▸ Master controls ▸ Master scale** to 1.5 → every
   panel grows together, border, accent bars and artwork included, and each panel's own **Panel
   scale** on the Panels page still reads what you set: the two multiply. **Master alpha** to 0.4 →
@@ -456,13 +457,16 @@ and at least one art pack; skip those without it.
   and gold style, not Blizzard's red stone button (a red one was created too early;
   `options-ui-§5`). Result:
 - **PANEL-2. The General tabs.** Click each tab → only that tab's controls show, the strip stays put,
-  and clicking the active tab does nothing. **Master controls** has 6 rows plus a **Reset position |
-  Reset all settings** button pair; **Editing** has 4 rows (**Grid size** pairs with **Snap to
-  grid**) plus a **Recover panels** button under the last row; **New panels** has 4. Result:
+  and clicking the active tab does nothing. **Master controls** has 7 rows plus a **Reset position |
+  Reset all settings** button pair; **Editing** has 4 rows, two per line (**Show names while
+  unlocked | Snap to grid**, then **Grid size | Unlock outline thickness**), plus a **Recover
+  panels** button under the last row; **New panels** has 4. Result:
 - **PANEL-3. Master controls in the canonical order.** Two per line: **Enable Ka0s Panel Master |
-  General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then the
-  button pair, with nothing else on the tab (`options-ui-§15`). It reads identically in every Ka0s
-  addon; compare against one. Result:
+  General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then
+  **Minimap button** alone on a fourth line (PanelMaster has no **Test mode** to pair beside it), then
+  the button pair, with nothing else on the tab (`options-ui-§15`). Compare against another Ka0s
+  addon → the same rows in the same order, except that an addon with a Test mode pairs it beside
+  **Minimap button**. Result:
 - **PANEL-4. General page chrome.** The row spacing, the header, the gold divider and the breadcrumb
   `Ka0s Panel Master ▸ General` match the other Ka0s addons' pages. Result:
 - **PANEL-5. The scrollbar.** On a page that fits, the scrollbar is **present but grayed out**, and
@@ -882,9 +886,10 @@ corrected in it against the code.
 | INSTALL-8 | § 21 (`M4-19`) | Not yet run since `NS.InitSummary` moved to `NS.Version()`; corrected: the `[Init]` line is written to the console only |
 | SLASH-1, SLASH-3 to SLASH-7 | § 1 step 2, § 2 step 1, § 9 step 1, § 16 steps 4 to 6 and 15 | No result recorded |
 | SLASH-2 | § 1 step 2, § 16 step 3 | No result recorded; its `profile` row is new |
-| FRAME-1 to FRAME-7, FRAME-10 to FRAME-29 | § 3, § 4, § 4b steps 1, 2 and 5, § 5e-5, § 5e-6 step 5, § 6 steps 1-2, § 7 steps 1-3, § 9 steps 2d, 5d, 5e, 12 and 14, § 10, § 11b, § 12c, § 17 steps 1-4 | No result recorded |
+| FRAME-1 to FRAME-7, FRAME-10, FRAME-11, FRAME-13 to FRAME-29 | § 3, § 4, § 4b steps 1, 2 and 5, § 5e-5 steps 1-2, § 5e-6 step 5, § 6 steps 1-2, § 7 steps 1-3, § 9 steps 2d, 5d, 5e, 12 and 14, § 10, § 11b, § 12c, § 17 steps 1-4 | No result recorded |
 | FRAME-8 | § 4b steps 3-4 | No result recorded; corrected: the CLI clamps an out-of-range outline rather than refusing it |
 | FRAME-9 | § 4b steps 6-9 | No result recorded; corrected: `/pm panel Wide reset` was never a command, so the reset is the General tab's **Reset** |
+| FRAME-12 | § 5e-5 step 3 | No result recorded; corrected: the Panels page has no Level control, so the levels are set with `/pm panel <name> level` |
 | LOOK-1, LOOK-3 to LOOK-5, LOOK-7 to LOOK-9, LOOK-11 to LOOK-28 | § 5 steps 1-5, § 5b steps 1-10, § 5b-2, § 5b-3, § 5b-4 step 15, § 5c, § 5d steps 1-8 | No result recorded |
 | LOOK-2 | § 5 step 1a (`M4-18`) | Not yet run since the byte-alpha fix |
 | LOOK-6 | § 5b step 0 | No result recorded; corrected: PanelMaster has no font dropdown, so `JetBrains Mono` is checked with `/dump` |
@@ -893,7 +898,9 @@ corrected in it against the code.
 | ACCENT-1 to ACCENT-14 | § 5b-4 steps 1-14 and 16 | No result recorded |
 | ART-1 to ART-11, ART-13 to ART-30 | § 5e, § 5e-2, § 5e-3, § 5e-4, § 5e-6 steps 1-4, § 18 | No result recorded |
 | ART-12 | § 5e-6 step 7 | No result recorded; corrected: `/pm panel set <name> …` read `set` as the panel name |
-| PANEL-1 to PANEL-7, PANEL-9, PANEL-12 to PANEL-15, PANEL-18 to PANEL-24 | § 9 steps 2, 2b, 2c, 2d, 3, 4, 5-x, 5a, 5b, 5b-2, 6 to 11 and 13, § 16 steps 8, 10, 11, 13 and 14 | No result recorded |
+| PANEL-1, PANEL-4 to PANEL-7, PANEL-9, PANEL-12 to PANEL-15, PANEL-18 to PANEL-24 | § 9 steps 2, 2d, 3, 4, 5-x, 5a, 5b, 5b-2, 6 to 11 and 13, § 16 steps 8, 10, 13 and 14 | No result recorded |
+| PANEL-2 | § 9 step 2b, § 16 step 11 | No result recorded; corrected: Master controls has 7 rows, and **Grid size** shares its line with **Unlock outline thickness**, not **Snap to grid** |
+| PANEL-3 | § 9 step 2c | No result recorded; corrected: **Minimap button** sits alone on a fourth line above the button pair |
 | PANEL-8 | § 9 steps 2d and 15, § 17 step 5 | No result recorded; corrected: the Panels page's **Defaults** is the delete-all, not this popup |
 | PANEL-10 | § 9 step 5, § 16 step 12 | No result recorded; corrected: the six panel acts are on the General tab, not in the band |
 | PANEL-16, PANEL-17 | § 9 steps 5c and 5c-2 (session 3) | Not yet run since the acts and the rename box moved to the General tab |
