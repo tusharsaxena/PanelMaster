@@ -868,10 +868,12 @@ fonts, its text input, or what a player of that language types. `tests/test_util
 ## Pending sign-off
 
 Every check below still needs a client run and a filled `Result:` line; sign one off there, then take
-it out of this table. The old numbered suite recorded a result on two steps only, both PASS on
-2026-09-26: § 9 step 5-w and § 9 step 16, now PANEL-11 and PANEL-25 with their expectations
-unchanged. Every other check carried over from it is owed, and so is every check new in this rewrite
-or corrected in it against the code.
+it out of this table. Eight carried-over checks have a recorded pass (owner, 2026-09-26) and
+unchanged expectations, so they are not listed: PANEL-11 and PANEL-25 (§ 9 step 5-w and § 9 step 16,
+passed in this doc), and DIAG-14 to DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12-15 and 17,
+§ 14 step 10, passed as PM-S1 to PM-S5, PM-S7 and PM-X1 in the 2026-09-25 diagnostics plan's
+report). Every other check carried over is owed, and so is every check new in this rewrite or
+corrected in it against the code.
 
 | New ID | Origin (old section and step) | Why it is owed |
 |---|---|---|
@@ -903,10 +905,11 @@ or corrected in it against the code.
 | STATE-3 | § 7 steps 6 and 9 | No result recorded; corrected: the disabled line prints under the help index's version header |
 | STATE-6 | § 7 step 11 | No result recorded; corrected: the switch goes through the Profiles page between two disabled profiles, since `/pm profile` answers in chat |
 | COMBAT-1 to COMBAT-6 | § 6 step 3, § 8 steps 1-9 (not 4b), § 9 step 2d, § 16 step 7 | No result recorded |
-| DIAG-1, DIAG-3 to DIAG-19 | § 11 steps 1, 1c and 2-17, § 16 steps 1 and 9 | No result recorded |
+| DIAG-1, DIAG-3 to DIAG-12 | § 11 steps 1, 1c, 2-8, 10 and 11, § 16 steps 1 and 9 | No result recorded |
+| DIAG-13, DIAG-18 | § 11 steps 9 and 16 | Partly run: the 2026-09-26 pass (PM-S2, PM-S8) did not check the section order, `frame=yes` and `0 orphaned`, or `/pm debug diag` |
 | DIAG-2 | § 11 step 1b, § 16 step 2 | No result recorded; corrected: the icon marks replaced the words *Copy* and *Clear* |
 | LAUNCH-1 to LAUNCH-12 | § 7b | No result recorded |
-| DEGRADED-1, DEGRADED-3, DEGRADED-6 to DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 10, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
+| DEGRADED-1, DEGRADED-3, DEGRADED-7, DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
 | DEGRADED-2, DEGRADED-9 | § 14 steps 5, 6 and 11d | No result recorded; corrected: `/pm unlock` and `/pm lock` print the library-absent line |
 | DEGRADED-4 | § 14 steps 8-9 | No result recorded; corrected: the degraded ack reads `debug logging is on`, not the library's green `ON` |
 | DEGRADED-5, DEGRADED-14 | § 14 steps 9b and 15 | No result recorded; corrected: with no settings panel and no font dropdown the media check is a `/dump` |
