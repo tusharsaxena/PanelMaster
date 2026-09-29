@@ -22,7 +22,8 @@
 --   2. Frames start SHOWN (the base starts them hidden) — 34 IsShown assertions sit on that, and a
 --      real frame is shown unless something hides it.
 --   3. AceDB-3.0 — this addon's suites drive __switchProfile / __db / __dbDefaultProfile, which
---      model AceDB's "swap db.profile wholesale, then fire" semantics.
+--      model AceDB's "swap db.profile wholesale, then fire" semantics, and the profile-store
+--      surface `/pm profile` reads (GetProfiles / SetProfile, __addProfile, __setProfileCalls).
 --   4. (retired) AceAddon-3.0 and 5. (retired) AceEvent-3.0 and the bus. Both used to be replaced
 --      here; since kit revision 17 they, AceTimer-3.0 and AceConsole-3.0 are the kit's with nothing
 --      layered over them (PanelMaster#50). The comment where they sat says what the kit gives.
@@ -457,10 +458,33 @@ return function()
       end
 
       -- Swap to a named profile the way AceDB does: a fresh defaults-shaped table, then the event.
+      -- AceDB's SetProfile creates a profile it has never seen, so the swap records the name.
       M.__switchProfile = function(name)
         M.__profileName = name
+        M.__profiles[name] = true
         db.profile = deepcopy(defaults and defaults.profile or {})
         db.__fire("OnProfileChanged", db, name)
+      end
+
+      -- The profile STORE surface LibKa0s-Slash-1.0's `profiles` field reads (Slash minor 17):
+      -- AceDB-3.0's GetProfiles(tbl) -> tbl, n and SetProfile(name). `__profiles` is the set of
+      -- names the SavedVariables file stores; `__addProfile` seeds one without switching to it, and
+      -- `__setProfileCalls` counts the SetProfile calls, so a test can say "nothing was created".
+      M.__profiles = { [M.__profileName] = true }
+      M.__addProfile = function(name) M.__profiles[name] = true end
+      M.__setProfileCalls = 0
+      db.GetProfiles = function(_, tbl)
+        tbl = tbl or {}
+        local n = 0
+        for name in pairs(M.__profiles) do
+          n = n + 1
+          tbl[n] = name
+        end
+        return tbl, n
+      end
+      db.SetProfile = function(_, name)
+        M.__setProfileCalls = M.__setProfileCalls + 1
+        M.__switchProfile(name)
       end
       M.__db = db
       return db

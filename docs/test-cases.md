@@ -616,7 +616,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (74)
+### test_slash.lua (82)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -692,6 +692,14 @@ badge and any count quoted in the docs must agree with it.
 - Disabled: the live verbs are never refused (slash-commands-§2)
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
+- COMMANDS: `profile` sits beside the settings verbs, described through NS.L
+- COMMANDS: the verb order is pinned, twenty-one verbs
+- Profile verb: bare `/pm profile` lists the profiles, current marked, then the hint
+- Profile verb: an existing name switches, and the profile handler runs
+- Profile verb: the current profile answers 'already', and switches nothing
+- Profile verb: an unknown name is refused with the list, and nothing is created
+- Profile verb: surrounding quotes are stripped, inner spaces and case kept
+- Profile verb: a switch in combat is refused, and the list still answers
 
 ### test_panel.lua (47)
 
@@ -831,7 +839,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (20)
+### test_disabled.lua (21)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
@@ -842,6 +850,7 @@ badge and any count quoted in the docs must agree with it.
 - Disabled 7: every reserved verb answers, and only FEATURE verbs are refused
 - Disabled 7b: a reserved verb this addon never registered answers the SAME in both states
 - Disabled 7c: both diagnostics forms reach RunDiagnostics, each once, with no refusal
+- Disabled 7d: `/pm profile` answers while disabled, and a switch can bring the addon up
 - Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked
 - Disabled 9: re-enabling restores the registration set, from state as it is NOW
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
@@ -910,7 +919,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (50)
+### test_libka0s.lua (51)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -953,6 +962,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: a bare /pm runs `config`, and falls back to help without one
 - Degraded install: /pm disable and /pm enable write through and flip the latch without raising
 - Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing
+- Degraded install: /pm profile prints the library-absent line and switches nothing
 - Degraded install: the help index still lists every verb
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
@@ -1095,14 +1105,14 @@ badge and any count quoted in the docs must agree with it.
 | test_debuglog.lua | 35 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 74 |
+| test_slash.lua | 82 |
 | test_panel.lua | 47 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 24 |
 | test_launcher.lua | 37 |
-| test_disabled.lua | 20 |
+| test_disabled.lua | 21 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 50 |
+| test_libka0s.lua | 51 |
 | test_surface_parity.lua | 8 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
@@ -1114,4 +1124,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 7 |
-| **Total** | **964** |
+| **Total** | **974** |

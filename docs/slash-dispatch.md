@@ -12,6 +12,20 @@ it too, and prints help only if the table has no `config` row.
 
 Schema-driven verbs: `config version get set list reset resetall debug diagnostics enable disable help`.
 
+**The `profile` verb** lists the profiles or switches to one. The row is this addon's, next to
+`resetall`; what it does is `LibKa0s-Slash-1.0`'s `CliProfile` (Slash minor 17), which reads AceDB's
+db through the descriptor's `profiles` field, asked at call time. Bare `/pm profile` prints a green
+`Profiles` header, one row per profile sorted without regard to case with the current one marked
+`(current)`, and the hint `/pm profile <name> switches profile`. `/pm profile <name>` takes the whole
+remainder as the name: one pair of surrounding quotes is stripped, case and inner spaces are kept,
+because AceDB profile names are case-sensitive. The current profile answers `Already on profile
+'<name>'.`; an existing one switches (`Switched to profile '<name>'.`) unless `InCombatLockdown()` is
+true (`Can't switch profiles in combat.`); an unknown name answers `No profile named '<name>'.`,
+names the one near match if exactly one differs only by case, prints the list and creates nothing.
+The switch is AceDB's `SetProfile`, so `core/Database.lua`'s `OnProfileChanged` handler runs exactly
+as it does for a Profiles-page switch: the enable latch, the panel rebuild, a refresh of an open
+General page, and the one `[Profile]` debug line. The library logs nothing itself.
+
 `enable` and `disable` are **aliases, not a second switch** (`slash-commands-§2`). Both write
 `NS.Schema.ENABLED_PATH` — `settings.enabled`, the very path the *Enable Ka0s Panel Master*
 checkbox writes — through the very seam it writes through, and hold no state of their own. They go
@@ -21,14 +35,17 @@ and the same canonical `path = value` echo, read back from the store after the w
 **The whole reserved surface survives the disabled state**, and that is the ruling rather than a
 convenience. `Sl:Register` and `P:Register` run unconditionally from `OnInitialize`, so while the
 addon is off a bare `/pm` **opens the settings panel** and `help`, `config`, `version`, `enable`,
-`disable`, `debug`, `perf`, `diagnostics`, `get`, `set`, `list`, `reset` and `resetall` all answer normally —
-reading and repairing settings included, which is precisely when a player most needs them.
+`disable`, `debug`, `perf`, `diagnostics`, `get`, `set`, `list`, `reset`, `resetall` and `profile` all
+answer normally — reading and repairing settings included, which is precisely when a player most
+needs them, and switching to a profile where the addon is on.
 
 Standard v2.56.0 narrowed that to `enable` and `help`; v2.57.0 **reversed it**, on the case that
 `/pm` on a disabled addon answered with a refusal instead of the one surface a player uses to switch
-it back on by hand. This addon carries the restored set and narrows nothing: the descriptor passes
-**no `liveVerbs`**, so the live set is `lib.LIVE_VERBS` — the standard's thirteen reserved verbs
-at Slash minor 16 — and `Sl.ALWAYS_LIVE` is a *read* of that array rather than a second source for it.
+it back on by hand. This addon carries the restored set and narrows nothing: the descriptor's
+`liveVerbs` is `lib.LIVE_VERBS` (the standard's thirteen reserved verbs at Slash minor 16, read and
+never re-typed) plus `profile`, the one host verb added. Slash minor 17 leaves `profile` off the
+library's list, so a host that wants it live widens its own. `Sl.ALWAYS_LIVE` is a *read* of that
+same array rather than a second source for it.
 
 **A disabled addon refuses its FEATURE verbs**, on one tagged line naming `/pm enable`, and does
 nothing else (`slash-commands-§2`; a SHOULD, taken here). Everything else — `new delete rename
@@ -61,7 +78,9 @@ With the rows present both handlers are exactly the `CliSet` they always were. T
 stub itself follows `LibKa0s-Slash-1.0`'s prescribed shape (Slash 15, "The degradation stub"): a
 minimal dispatcher, `Sl.DISABLED_LINE_FORMAT` as the one library string it carries (published on
 both arms, and pinned against the library by `tests/test_surface_parity.lua`), and a `/pm help` that
-prints the library-absent notice once and then a plain `/pm <cmd>  <desc>` row per verb.
+prints the library-absent notice once and then a plain `/pm <cmd>  <desc>` row per verb. It carries
+`CliProfile` and `ProfileSwitch` on route (b) (Slash 17): each prints `/pm profile is unavailable:
+the LibKa0s library did not load.` and switches nothing.
 Panel verbs: `new delete rename panels panel unlock lock recover`.
 
 There is no `test` verb. Unlocking is this addon's test mode (`options-ui-§15`): it shows every

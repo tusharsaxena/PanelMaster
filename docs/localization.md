@@ -9,17 +9,23 @@ renaming one later means moving every key and every call site in a single change
 `locales/PostLoad.lua` loads after every locale file and holds derived-key aliases — strings whose
 translation always matches another key's — so a translator never does the same work twice.
 
-**English-only remains the shipped scope, and `locales/enUS.lua` carries one key.** Almost every
+**English-only remains the shipped scope, and `locales/enUS.lua` carries two keys.** Almost every
 label, tooltip and message is hardcoded English — a scope decision rather than an oversight, and
 precisely what made the US-English sweep cheap, since there were no keys to move alongside the
 strings. A later pass can wrap those labels (`NS.L["Show names while unlocked"]`) without touching
 call sites, because the seam and its key-returning metatable are already here.
 
-The one key is the collection's **library-absent line**, `"%s is unavailable: the LibKa0s library
+The first key is the collection's **library-absent line**, `"%s is unavailable: the LibKa0s library
 did not load."`, which `slash-commands-§1` routes through the host's locale. `Sl:LibraryAbsentLine`
 (`settings/Slash.lua`) formats it with the verb as typed: `/pm lock` and `/pm unlock` print it
-whenever the composed Lock frame row is absent, and `/pm enable` and `/pm disable` print it if even
-their write-through is refused.
+whenever the composed Lock frame row is absent, `/pm enable` and `/pm disable` print it if even
+their write-through is refused, and `/pm profile` prints it on a library-absent load.
+
+The second key is the **`profile` verb's description**, `"List profiles, or switch to one: profile
+<name>"`, the one `NS.COMMANDS` description routed through the seam. The verb is this addon's row
+handed to `LibKa0s-Slash-1.0`'s `CliProfile`, so the description is host text (`localization-§2`);
+the lines the verb prints (`Switched to profile '%s'.` and the rest) are the library's `PROFILE_*`
+strings.
 
 **The one key that used to be here is gone, and its absence is the entry.** The **disabled-verb
 refusal** (`settings/Slash.lua`) was declared in `locales/enUS.lua` in this addon's own wording.

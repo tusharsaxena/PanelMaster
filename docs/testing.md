@@ -407,7 +407,10 @@ Do not "simplify" any of these — each exists because a lazier stub hides a who
   exactly as AceDB does. Without that, "the previous profile's panels stayed on screen" — the actual
   failure mode — would be untestable. The mock also reproduces AceDB's own `defaultProfile` rule
   (`true` → the shared `"Default"`) and records what the addon asked for, since which profile every
-  character lands on is a product decision a fixed-name stub would hide.
+  character lands on is a product decision a fixed-name stub would hide. It models the store surface
+  `/pm profile` reads too: `GetProfiles` answers the stored names (`mocks.__addProfile(name)` seeds
+  one), and `SetProfile` counts itself in `mocks.__setProfileCalls` before swapping, so a case can say
+  an unknown name created nothing.
 - **AceConfig / AceDBOptions / AceConfigDialog are present**, with `mocks.__profileOptions` recording
   what was registered. "We handed AceDB's own options table to the Profiles page" is that page's
   entire contract, and there is nothing else to assert about it headlessly.

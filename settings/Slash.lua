@@ -277,7 +277,7 @@ end
 -- of these is LITERALLY the `CliSet` it always was, byte for byte.
 
 --- The collection's library-absent line (slash-commands-§1, standard v2.65.0), verb as typed.
---- The one string this addon routes through NS.L (locales/enUS.lua says why).
+--- One of the two strings this addon routes through NS.L (locales/enUS.lua says why).
 function Sl:LibraryAbsentLine(verb)
   return NS.L["%s is unavailable: the LibKa0s library did not load."]:format(verb)
 end
@@ -383,6 +383,14 @@ NS.COMMANDS = {
   { "list",     "List all settings", function() NS.Slash:CliList() end },
   { "reset",    "Reset one setting", function(a) NS.Slash:CliReset(a) end },
   { "resetall", "Reset this profile to defaults", function() NS.Slash:ConfirmResetAll() end },
+  -- The profile verb (LibKa0s-Slash-1.0 minor 17). The library owns what it does: bare lists the
+  -- profiles with the current one marked, a name switches to an EXISTING profile only (quotes
+  -- stripped, case and inner spaces kept), and an unknown name is refused with the list rather than
+  -- created. The switch lands in AceDB's SetProfile, so core/Database.lua's OnProfileChanged handler
+  -- rebuilds the panels and writes the one `[Profile]` line, exactly as a Profiles-page switch does.
+  -- Live while disabled: `profile` is added to this addon's own liveVerbs below.
+  { "profile",  NS.L["List profiles, or switch to one: profile <name>"],
+    function(rest) NS.Slash:CliProfile(rest) end },
   -- Every sub-verb a handler below accepts is named in its own `desc`, because the generated help
   -- index (`Sl:PrintHelp`) and the LibKa0s-Slash descriptor that feeds the settings landing page
   -- read these strings and nothing else. The README's command prose is hand-written and does NOT
@@ -438,22 +446,28 @@ local lib = LibStub and LibStub("LibKa0s-Slash-1.0", true)
 -- (slash-commands-§3's unqualified MUST -- "the addon is disabled" is a true sentence and the wrong
 -- answer to a misspelling).
 --
--- `liveVerbs` IS DELIBERATELY NOT PASSED. Its default is `lib.LIVE_VERBS`, which at Slash minor 16
--- IS the standard's thirteen reserved verbs; passing a copy would be this addon carrying its own
--- spelling of a collection-wide list, and passing a SHORTER one is exactly the narrowing v2.57.0
--- reversed. `Sl.ALWAYS_LIVE` below is a READ of the library's array, never a second source for it.
+-- `liveVerbs` IS `lib.LIVE_VERBS` PLUS `profile`, AND NOTHING ELSE. `lib.LIVE_VERBS` is the
+-- standard's thirteen reserved verbs (Slash minor 16) and is read, never re-typed: carrying this
+-- addon's own spelling of a collection-wide list is how the two drift, and passing a SHORTER one is
+-- exactly the narrowing v2.57.0 reversed. `profile` is the one host verb added (Slash minor 17
+-- leaves it off the library's list and has each host widen its own): a player who switched the
+-- addon off on this profile must be able to switch to one where it is on. `Sl.ALWAYS_LIVE` below
+-- is a READ of the same array, so the gate and the suites cannot disagree about it.
 --
 -- This addon takes the SHOULD rather than declining it, because eight of its verbs create, delete,
 -- rename, list, edit, unlock, lock or recover the panels it is currently standing down from drawing,
 -- and a silent no-op on any of them leaves the player with no clue why nothing happened.
-local LIVE_VERBS = lib and lib.LIVE_VERBS or {
+local LIVE_VERBS = {}
+for _, verb in ipairs(lib and lib.LIVE_VERBS or {
   -- The fallback is reached only on the degraded arm, where there is no library to read it from.
   -- `perf` is listed although this addon registers no such verb: the set is the rule, not an
   -- inventory of today's table (docs/performance.md keeps the verb reserved). `diagnostics` joined
   -- the set at Slash minor 16 (debug-logging-§14) on the same terms.
   "help", "config", "version", "enable", "disable", "debug", "perf",
   "get", "set", "list", "reset", "resetall", "diagnostics",
-}
+}) do LIVE_VERBS[#LIVE_VERBS + 1] = verb end
+-- Appended to a COPY: the library's own array is shared by every addon that loaded this major.
+LIVE_VERBS[#LIVE_VERBS + 1] = "profile"
 
 --- The live set as a lookup, for the degraded arm's gate below and for the suites that assert the
 --- set has not drifted. Built from the array above rather than typed out, so there is one source.
@@ -506,6 +520,14 @@ if not lib then
   -- Not because it walks the schema -- it does not, here or on the live arm -- but because
   -- ConfirmResetAll ends in `db:ResetProfile()`, which is AceDB's and needs nothing of LibKa0s.
   function Sl:CliResetAll() Sl:ConfirmResetAll() end
+  -- The profile verb on route (b) (docs/api/Slash/version-17-docs.md, "The degradation stub"): with
+  -- no library there is no store adapter to trust, so both members print the library-absent line
+  -- for `/pm profile` and switch nothing. Both, because the live NS.Slash republishes both.
+  function Sl:CliProfile() print(Sl:LibraryAbsentLine("/pm profile")) end
+  function Sl:ProfileSwitch()
+    print(Sl:LibraryAbsentLine("/pm profile"))
+    return false
+  end
   -- THE REFUSAL LINE, reproduced here for the same reason FormatKV is: there is no library on this
   -- arm to route to. `Sl.DISABLED_LINE_FORMAT` is `lib.DISABLED_LINE_FORMAT` byte for byte -- brand
   -- name, an em dash with a single space either side, the command in the help index's gold and
@@ -588,6 +610,12 @@ local dispatcher = lib:New({
   -- THE DISABLED GATE (slash-commands-§2 / §7, Slash minor 13). See the block above the degraded
   -- branch for what this does and does not narrow. Asked at dispatch time, never cached.
   isEnabled = function() return not isDisabled() end,
+  -- The verbs that still answer while disabled: the standard's thirteen plus `profile` (see the
+  -- block above the degraded branch). The same array Sl.ALWAYS_LIVE reads.
+  liveVerbs = LIVE_VERBS,
+  -- The profile store the `profile` verb reads (Slash minor 17): AceDB's own db, asked at call time
+  -- because NS.db is built at ADDON_LOADED, after this file has run.
+  profiles  = function() return NS.db end,
   -- The brand name in plain text, and THE SAME string the LDB object takes as its `label`
   -- (launcher-§1) -- one constant, read by both (core/Namespace.lua). Never derived from the TOC
   -- `## Title`, which MAY carry color escapes. Missing it alongside `isEnabled` raises at `New`.
@@ -647,6 +675,8 @@ function Sl:CliReset(a)          return dispatcher:CliReset(a)      end
 -- reset (options-ui-§12). Every other verb here still delegates.
 function Sl:CliResetAll()        return Sl:ConfirmResetAll()        end
 function Sl:CliVersion()         return dispatcher:CliVersion()     end
+function Sl:CliProfile(a)        return dispatcher:CliProfile(a)    end
+function Sl:ProfileSwitch(name)  return dispatcher:ProfileSwitch(name) end
 function Sl:Text(key)            return dispatcher:Text(key)        end
 -- The one refusal line, built by the library from `lib.DISABLED_LINE_FORMAT`, `brandName` and
 -- `slash`. Republished because the LAUNCHER'S left click prints it too (launcher-§2, §7) and must

@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-964%2F964_passing-green)
+![Tests](https://img.shields.io/badge/Tests-974%2F974_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -62,7 +62,8 @@ Setting up a panel takes four steps.
 
 Your second panel doesn't have to start from nothing. **Copy settings from panel**, on the General
 tab, gives it another panel's whole look and leaves its position alone. Every character shares one
-set of panels unless you give one its own profile on the Profiles page. The minimap button opens the
+set of panels unless you give one its own profile on the Profiles page, and `/pm profile <name>`
+switches to one from chat (`/pm profile` on its own lists them). The minimap button opens the
 settings on a left-click, and its right-click menu turns the addon on or off and locks or unlocks
 your panels.
 
@@ -224,7 +225,7 @@ conversion guide, including how to pick good sources, is in
 | Does this move my frames around? | No. It never touches another addon's frames, or Blizzard's. It only draws its own rectangles behind them. If you want a frame moved, you still move it with whatever addon owns it. Panel Master just puts something nice behind it. |
 | Can I put a frame *inside* a panel? | No, and that is on purpose. A panel is scenery, and nothing is ever parented into it. |
 | Will a panel block my clicks? | Not when locked. A locked panel ignores the mouse completely, so clicks, tooltips and keybinds all pass straight through to whatever is on top of it. It only takes the mouse while you have the screen unlocked, which is the whole point of unlocking. |
-| Do my panels follow me to my alts? | Yes, by default. Every character starts on the same shared profile, so a layout you build once shows up everywhere. If you want one character to differ, give it its own profile on the **Profiles** page. |
+| Do my panels follow me to my alts? | Yes, by default. Every character starts on the same shared profile, so a layout you build once shows up everywhere. If you want one character to differ, give it its own profile on the **Profiles** page. Once it exists, `/pm profile <name>` switches to it from chat. |
 | How many panels can I have? | As many as you like. They are cheap: a panel is a handful of flat textures and it costs nothing while it sits there. |
 | There is so much artwork bundled with this addon. Will it affect my performance? | No. The bundled art costs disk space and nothing else. WoW does not load a texture because it is sitting in the addon folder. It loads one when something on screen asks for it, so the only art in memory is the art your panels are actually drawing. While you play, a hundred unused pieces cost the client the same as none at all. |
 | Do I need Sunn - Viewport Art installed? | Only if you want its themes in the artwork list. If you have its packs, Panel Master reads them straight off your disk, and Sunn itself does not even have to be enabled. Nothing is bundled or copied. |
