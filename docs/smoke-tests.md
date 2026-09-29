@@ -38,9 +38,11 @@ client and is run when one is available, not per release.
   needed.
 - `<name>` in a step means any panel you have made. Several themes need two or three panels; make
   them with `/pm new <name>`.
-- COMBAT and several other checks need a training dummy. PROFILE-1 needs a second character.
-- Optional, each only for the checks that name it: another Ka0s addon with a settings page (PANEL-12,
-  DEGRADED-13), KickCD, AbsorbTracker, ConsumableMaster and MultiMeters together (LOOK-10), a UI skin
+- COMBAT and several other checks need a training dummy. PROFILE-1 needs a second character, and
+  LOOK-23 a character of a different class.
+- Optional, each only for the checks that name it: another Ka0s addon with a settings page and a debug
+  console (DIAG-1, PANEL-3, PANEL-4, PANEL-12, DEGRADED-13), KickCD for its Icons page (PANEL-14),
+  KickCD, AbsorbTracker, ConsumableMaster and MultiMeters together (LOOK-10), a UI skin
   such as ElvUI (INSTALL-6), Titan Panel, ElvUI or Bazooka (LAUNCH-12), Sunn - Viewport Art and at
   least one of its packs (ART-13 to ART-30), and a deDE or frFR client (LOC).
 
@@ -584,7 +586,8 @@ them without it.
   default` (wrong case) → refused the same way, with `Did you mean 'Default'?` before the list.
   Result:
 - **PROFILE-15. Quotes and spaces.** Create a profile named `Raid Night` on the Profiles page, switch
-  away, then `/pm profile "Raid Night"` → it switches. `/pm profile 'Raid Night'` works too.
+  away, then `/pm profile "Raid Night"` → it switches. `/pm profile Default`, then
+  `/pm profile 'Raid Night'` → it switches too.
   `/pm profile raid night` → refused, with `Did you mean 'Raid Night'?`. Result:
 - **PROFILE-16. Profiles switch while disabled.** Make profile B with the addon enabled, then on
   profile A `/pm disable`. `/pm profile` → the list, not the disabled line. `/pm profile B` → the panels
@@ -727,10 +730,9 @@ the launcher seam.
 - **LAUNCH-2. Left-click.** Left-click the button → the settings open on the landing page, and the
   panels do **not** unlock (`launcher-§2`). Result:
 - **LAUNCH-3. Right-click Locked.** Right-click → a menu titled **Ka0s Panel Master** with exactly two
-  ticks, in order: **Enabled** (ticked) and **Locked** (ticked while locked); no *Test mode*, no *Show
-  window*, and no hide entry (hiding is LAUNCH-9's and LAUNCH-11's job). Click **Locked** → the menu
-  closes, the panels unlock exactly as `/pm unlock` does, and chat shows the same `state.locked =
-  false` line. Right-click → **Locked** is unticked; click it → they lock. **General ▸ Master
+  ticks, in order: **Enabled** (ticked) and **Locked** (ticked while locked); no *Test mode* and no
+  *Show window*. Click **Locked** → the menu closes, the panels unlock exactly as `/pm unlock` does,
+  and chat shows the same `state.locked = false` line. Right-click → **Locked** is unticked; click it → they lock. **General ▸ Master
   controls ▸ Lock frame** agrees. In combat, clicking **Locked** unlocks nothing until combat ends.
   Result:
 - **LAUNCH-4. Right-click Enabled.** Click **Enabled** → the addon disables exactly as `/pm disable`
@@ -781,7 +783,8 @@ asserts the wording; only the client can say the addon still works. Quit the cli
   repeats nothing. `/pm debug on` → still acknowledges `debug logging ON` in green. Result:
 - **DEGRADED-5. Ka0s media is gone, harmlessly.** The font and texture dropdowns lack `JetBrains
   Mono` and the seven `Ka0s …` bars; a panel whose profile names one renders **plain**, as in
-  LOOK-13. Nothing raises, and nothing is overwritten. Result:
+  LOOK-13. Nothing raises, and nothing is overwritten (DEGRADED-14 shows the names come back).
+  Result:
 - **DEGRADED-6. Diagnostics explain themselves.** `/pm diagnostics`, then `/pm debug diagnostics` →
   each prints `/pm diagnostics is unavailable: the LibKa0s library did not load.` and writes nothing.
   Result:
@@ -799,10 +802,12 @@ asserts the wording; only the client can say the addon still works. Quit the cli
 - **DEGRADED-12. The profile verb explains itself.** `/pm profile` and `/pm profile Default` → each
   prints `/pm profile is unavailable: the LibKa0s library did not load.` and nothing switches.
   Result:
-- **DEGRADED-13. One cause clause.** Across DEGRADED-4, 6, 7 and 11, the
-  cause clause is word for word the same, differing only after the comma, and matches another Ka0s
-  addon on the same install. Result:
-- **DEGRADED-14. Restore.** Rename the folder back, `/reload` → normal operation returns. Result:
+- **DEGRADED-13. One cause clause.** Across DEGRADED-3, 4, 7 and 11, the cause clause is word for
+  word the same, differing only after the comma, and matches another Ka0s addon on the same install.
+  Result:
+- **DEGRADED-14. Restore.** Rename the folder back, `/reload` → normal operation returns: the font and
+  texture dropdowns list `JetBrains Mono` and the seven `Ka0s …` bars again, and a panel whose profile
+  names one draws it again instead of plain. Result:
 
 ## Non-English client
 
