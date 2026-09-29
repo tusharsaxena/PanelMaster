@@ -46,7 +46,8 @@ client and is run when one is available, not per release.
   KickCD, AbsorbTracker, ConsumableMaster and MultiMeters together (LOOK-10), a UI skin
   such as ElvUI (INSTALL-6), another addon that registers an LSM texture, such as ElvUI, WeakAuras,
   Details or SharedMedia (LOOK-13), Titan Panel, ElvUI or Bazooka (LAUNCH-12), Sunn - Viewport Art and
-  at least one of its packs (ART-13 to ART-30), and a deDE or frFR client (LOC).
+  at least one of its packs (ART-14 to ART-30; ART-13 is the check with no Sunn folder installed),
+  and a deDE or frFR client (LOC).
 
 ## INSTALL
 
@@ -68,12 +69,13 @@ client and is run when one is available, not per release.
   `/pm config` → the **Defaults** button is skinned like the other AceGUI widgets, not left on stock
   red art. Result:
 - **INSTALL-7. Old test-mode samples are swept.** Only with SavedVariables from a build that still had
-  test mode, saved with it on: `/pm debug on`, `/reload` → a `[Preview] swept …` line, and
-  `/pm panels` lists no `Preview: *` panels. Result:
+  test mode, saved with it on: log in → `/pm panels` lists no `Preview: *` panels. The sweep runs at
+  load, before `/pm debug on` can be typed, and logging is session-only (DIAG-12), so there is no
+  `[Preview]` line to look for. Result:
 - **INSTALL-8. The `[Init]` line reports the packaged version.** In the **installed** copy under
   `Interface/AddOns/PanelMaster/` (never the repo), set `PanelMaster.toc`'s `## Version:` to
-  `1.2.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in chat and in the console, then
-  `/pm version`; afterwards restore the TOC and `/reload` → the `[Init]` line reads
+  `1.2.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in the console (it is not echoed
+  to chat), then `/pm version`; afterwards restore the TOC and `/reload` → the `[Init]` line reads
   `PanelMaster v1.2.0-smoke, schema v2, profile '<yours>', N panels` and `/pm version` reads
   `[PM] v1.2.0-smoke`. **Fail:** an `[Init]` line reading `v1.2.0` while `/pm version` reads
   `v1.2.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
@@ -166,7 +168,7 @@ client and is run when one is available, not per release.
   scale 2, `/pm panel <name> x 1500` on a TOPLEFT-anchored panel, `/pm recover` → "moved 1 panel back
   on screen" and it comes into view. Master scale back to 1. Result:
 - **FRAME-18. The frame name exists.** Create **Chat BG**, open **Panels**, and hover the **Panel
-  name** box → its tooltip reads `Frame name: PanelMaster_Panel_Chat_BG`. `/run
+  name** box → its tooltip includes `Frame name: PanelMaster_Panel_Chat_BG`. `/run
   print(PanelMaster_Panel_Chat_BG:GetWidth())` → the panel's width. This name is the addon's public
   contract. Result:
 - **FRAME-19. Anchoring to it.**
@@ -220,10 +222,13 @@ client and is run when one is available, not per release.
   the echo reads `1.00`. Result:
 - **LOOK-5. Strata.** `/pm panel <name> strata HIGH` → it covers UI it sat behind before.
   `strata BACKGROUND` → it drops behind again. Result:
-- **LOOK-6. Shared media is registered.** The font dropdowns list `JetBrains Mono`, and the **Bar
-  texture** dropdown lists `Ka0s Gradient`, `Ka0s Underline 1`, `2`, `4` and `Ka0s Overline 1`,
-  `2`, `4` → all present, and nothing you had chosen moved. **Fail:** the names are absent on a
-  complete install: `core/MediaSetup.lua` never reached `Media.RegisterLSM`. Result:
+- **LOOK-6. Shared media is registered.** With PanelMaster the only Ka0s addon enabled (the names
+  live in the shared LibSharedMedia, so any other Ka0s addon registers them too), the **Accent bar**
+  tab's **Bar texture** dropdown lists `Ka0s Gradient`, `Ka0s Underline 1`, `2`, `4` and `Ka0s
+  Overline 1`, `2`, `4`, and nothing you had chosen moved. PanelMaster has no font dropdown, so
+  `/dump LibStub("LibSharedMedia-3.0"):IsValid("font", "JetBrains Mono")` → `true`. **Fail:** a
+  name absent on a complete install: `core/MediaSetup.lua` never reached `Media.RegisterLSM`.
+  Result:
 - **LOOK-7. Background texture.** **Panels ▸ Background and border ▸ Background texture** → a list
   with a preview swatch per entry, `Solid` among them, plus textures other addons registered. Pick
   `Blizzard Parchment` → the panel fills with it at once, tinted by its background color. Reopen the
@@ -393,8 +398,8 @@ Run ART-1 first: a malformed `.tga` renders as nothing with no Lua error, which 
   `/pm panel <name> artFill SQUISH` → `error: expected one of: STATIC, STRETCH, FILL, FIT, TILE`, and
   nothing stored. Result:
 
-ART-13 to ART-30 need Sunn - Viewport Art (SunnArt) and at least one art pack, except ART-13. Skip
-them without it.
+ART-13 needs no Sunn folder installed at all. ART-14 to ART-30 need Sunn - Viewport Art (SunnArt)
+and at least one art pack; skip those without it.
 
 - **ART-13. No Sunn, no Sunn entries.** With **no** Sunn folder installed, **Panels ▸ Artwork** → no
   `Sunn ->` entries anywhere. Result:
@@ -610,10 +615,10 @@ them without it.
   you used last. Result:
 - **STATE-3. Live verbs answer while disabled.** `/pm disable`, then run `/pm help`, `/pm version`,
   `/pm list`, `/pm get settings.gridSize`, `/pm set settings.gridSize 8`, `/pm reset
-  settings.gridSize`, `/pm debug`, `/pm config`, `/pm profile` and a bare `/pm` → every one answers
-  normally, the `set` really writes, and `/pm config` and the bare `/pm` open the settings panel.
-  `/pm help` prints the whole index headed by the disabled line. `/pm enable` → the panels return.
-  Result:
+  settings.gridSize`, `/pm debug`, `/pm config` and a bare `/pm` → every one answers normally, the
+  `set` really writes, and `/pm config` and the bare `/pm` open the settings panel. `/pm help` prints
+  the whole index, with the disabled line straight under its version header. `/pm enable` → the
+  panels return. Result:
 - **STATE-4. Feature verbs are refused and inert.** While disabled, `/pm new Ghost` → exactly one line,
   `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`, and no panel: confirm with
   `/pm enable` then `/pm panels`. Disable again, `/pm unlock` → the same line, and the panels stay
@@ -621,11 +626,13 @@ them without it.
   color from the line every Ka0s addon prints (`slash-commands-§7`). Result:
 - **STATE-5. A typo is a typo while disabled.** While disabled, `/pm nwe Ghost` → `unknown command
   'nwe'` and the help index, not the disabled line (`slash-commands-§3`). Result:
-- **STATE-6. The stand-down is total.** With a **Show on mouseover only** panel, disable the addon,
-  then enter and leave combat, change zones, and switch profiles back and forth → nothing is drawn
-  and **nothing is printed**. `/pm enable` → exactly the panels and settings as they are **now**,
-  including anything changed while off. **Fail:** any chat line from a combat or zone change while
-  disabled, which means a registration survived the stand-down. Result:
+- **STATE-6. The stand-down is total.** First, on the Profiles page, make a profile `Idle`, run
+  `/pm disable` on it, and switch back to your own. With a **Show on mouseover only** panel,
+  `/pm disable`, then enter and leave combat, change zones, and on the **Profiles page** switch to
+  `Idle` and back (not with `/pm profile`, which answers in chat; PROFILE-15 owns that route) →
+  nothing is drawn and **nothing is printed**. `/pm enable` → exactly the panels and settings as
+  they are **now**, including anything changed while off. **Fail:** any chat line from a combat or
+  zone change while disabled, which means a registration survived the stand-down. Result:
 - **STATE-7. Unlock does not beat the stand-down.** With two panels, `/pm unlock`, then `/pm disable`
   → no outline, panel or label, and dragging the empty spot moves nothing. While disabled, untick
   **Master controls ▸ Lock frame** and tick a panel's **Unlock** on the Panels page → still nothing
@@ -753,9 +760,10 @@ the launcher seam.
   `/reload` → it stays gone. Tick it → it returns at the angle you dragged it to. Result:
 - **LAUNCH-10. The menu has no hide entry.** Right-click → no entry hides the button. Result:
 - **LAUNCH-11. The CLI path is `shown`.** With the button visible, `/pm get global.minimap.shown` →
-  `true`. `/pm set global.minimap.shown false` → the button goes at once. Bring it back, hide it with
-  the checkbox, `/pm get global.minimap.shown` → `false`; `/reload` → still hidden.
-  `/pm get global.minimap.hide` → *Setting not found* (the old path is not an alias). **Fail:** `get`
+  `global.minimap.shown = true`. `/pm set global.minimap.shown false` → the button goes at once.
+  Bring it back, hide it with the checkbox, `/pm get global.minimap.shown` →
+  `global.minimap.shown = false`; `/reload` → still hidden. `/pm get global.minimap.hide` →
+  `Setting not found: global.minimap.hide` (the old path is not an alias). **Fail:** `get`
   answers `true` while hidden, or the old path answers. Show the button again. Result:
 - **LAUNCH-12. Broker rows.** Only with Titan Panel, ElvUI or Bazooka → a row labeled **Ka0s Panel
   Master** in plain text (not `PanelMaster`, no `|cff…` escapes) wearing the same logo, whose left and
@@ -777,11 +785,15 @@ asserts the wording; only the client can say the addon still works. Quit the cli
   reduced built-in fallbacks.`, once per session; later lines do not repeat it. Result:
 - **DEGRADED-4. The console is unavailable, logging is not.** `/pm debug` → `[PM] …(expected in
   libs/LibKa0s), so the debug console window is unavailable.`, said once; a second `/pm debug`
-  repeats nothing. `/pm debug on` → still acknowledges `debug logging ON` in green. Result:
-- **DEGRADED-5. Ka0s media is gone, harmlessly.** The font and texture dropdowns lack `JetBrains
-  Mono` and the seven `Ka0s …` bars; a panel whose profile names one renders **plain**, as in
-  LOOK-13. Nothing raises, and nothing is overwritten (DEGRADED-14 shows the names come back).
+  repeats nothing. `/pm debug on` → still acknowledges, in plain words: `[PM] debug logging is on`.
   Result:
+- **DEGRADED-5. Ka0s media is gone, harmlessly.** Before the rename, set one panel's **Bar texture**
+  to a `Ka0s …` entry. Now, with PanelMaster the only Ka0s addon enabled (any other one registers
+  the same names into the shared LibSharedMedia), `/dump
+  LibStub("LibSharedMedia-3.0"):IsValid("statusbar", "Ka0s Gradient")` and `/dump
+  LibStub("LibSharedMedia-3.0"):IsValid("font", "JetBrains Mono")` → `false` each. That panel's
+  bars render **plain**, as in LOOK-13, and `/pm panel <name> accentTexture` still prints the stored
+  name. Nothing raises, and nothing is overwritten (DEGRADED-14 shows the names come back). Result:
 - **DEGRADED-6. Diagnostics explain themselves.** `/pm diagnostics`, then `/pm debug diagnostics` →
   each prints `/pm diagnostics is unavailable: the LibKa0s library did not load.` and writes nothing.
   Result:
@@ -802,9 +814,9 @@ asserts the wording; only the client can say the addon still works. Quit the cli
 - **DEGRADED-13. One cause clause.** Across DEGRADED-3, 4, 7 and 11, the cause clause is word for
   word the same, differing only after the closing parenthesis of `(expected in libs/LibKa0s)`, and
   matches another Ka0s addon on the same install. Result:
-- **DEGRADED-14. Restore.** Rename the folder back, `/reload` → normal operation returns: the font and
-  texture dropdowns list `JetBrains Mono` and the seven `Ka0s …` bars again, and a panel whose profile
-  names one draws it again instead of plain. Result:
+- **DEGRADED-14. Restore.** Rename the folder back, `/reload` → normal operation returns: the **Bar
+  texture** dropdown lists the seven `Ka0s …` bars again, both of DEGRADED-5's `/dump` lines answer
+  `true`, and DEGRADED-5's panel draws its `Ka0s …` bars again instead of plain. Result:
 
 ## Non-English client
 
@@ -820,7 +832,7 @@ panel names a player types, and two seams treat non-ASCII bytes as punctuation:
 - **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore, and
   Lua's `%w` is ASCII-only: `Übersicht` slugs to `bersicht`, and `Ärger` and `Örger` both slug to
   `rger`. That slug is the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25).
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-289`) and the Panels list's sort
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-290`) and the Panels list's sort
   (`settings/PanelEditor.lua:195`) use `string.lower`, which folds ASCII only.
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a
@@ -829,20 +841,23 @@ regression. Steps LOC-1 to LOC-4 can be provoked on an English client by typing 
 fonts, its text input, or what a player of that language types. `tests/test_util.lua` and
 `tests/test_registry.lua` feed ASCII names throughout.
 
-- **LOC-1. A panel named in the client's language.** `/pm new Übersicht` (or `Écran` on frFR), hover
-  the band's **Panel name** box for the frame name, then `/run print(PanelMaster_Panel_<the reported
-  slug>:GetWidth())` → the panel is created, the name renders correctly in the band, the Panels list
-  and `/pm panels`, and the reported frame name resolves. **Fail:** `?` or mojibake anywhere, or a
-  reported frame name that does not resolve. Write down the slug the tooltip reports: a player who
-  cannot work the frame name out from the panel name in their own alphabet has no contract. Result:
+- **LOC-1. A panel named in the client's language.** `/pm new Übersicht` (or `Écran` on frFR), pick it
+  on **Panels**, hover **Panel name** on its **General** tab for the frame name, then `/run
+  print(PanelMaster_Panel_<the reported slug>:GetWidth())` → the panel is created, the name renders
+  correctly in the band's **Panel** picker, the **Panel name** box and `/pm panels`, and the reported
+  frame name resolves. **Fail:** `?` or mojibake anywhere, or a reported frame name that does not
+  resolve. Write down the slug the tooltip reports: a player who cannot work the frame name out from
+  the panel name in their own alphabet has no contract. Result:
 - **LOC-2. Two names, one slug.** `/pm new Ärger`, then `/pm new Örger` → two panels with two distinct
   frame names if the contract holds. **Fail:** the second refused with a message naming
   `PanelMaster_Panel_rger`, a name that looks like neither. Record which happened; a refusal is a
   finding to file, not a step to re-run. Result:
 - **LOC-3. Name lookup folds only ASCII.** With `Übersicht` created, `/pm panel übersicht` (lower-case
-  `ü`) and another verb that takes a name → the panel resolves, as `/pm panel chat bg` resolves
-  `Chat BG`. **Fail:** "no panel called übersicht"; then try creating a second panel `übersicht`: if
-  accepted, the duplicate-name guard has the same hole. Result:
+  `ü`) and another verb that takes a name → the panel resolves, the way `/pm panel wide` resolves a
+  panel named `Wide`. **Fail:** `no panel called 'übersicht'`. Then `/pm new übersicht` and read which
+  refusal answers: `a panel named 'übersicht' already exists` means the name guard folded it, while
+  `'übersicht' would share the frame name … with 'Übersicht'` means only the frame-name check caught
+  it and the duplicate-name guard has the same hole. Record which. Result:
 - **LOC-4. Sort order.** With three or four panels starting with accented and plain letters, open
   **Panels** → sorted the way a reader of the language expects. **Fail:** accented names clumped at
   one end; cosmetic, but worth knowing. Result:
@@ -852,15 +867,49 @@ fonts, its text input, or what a player of that language types. `tests/test_util
 
 ## Pending sign-off
 
-Owner checks that were never run, carried over from the old numbered suite with their new IDs.
+Every check below still needs a client run and a filled `Result:` line; sign one off there, then take
+it out of this table. The old numbered suite recorded a result on two steps only, both PASS on
+2026-09-26: § 9 step 5-w and § 9 step 16, now PANEL-11 and PANEL-25 with their expectations
+unchanged. Every other check carried over from it is owed, and so is every check new in this rewrite
+or corrected in it against the code.
 
 | New ID | Origin (old section and step) | Why it is owed |
 |---|---|---|
-| INSTALL-8 | § 21, steps 1-5 (`M4-19`) | Never run since `NS.InitSummary` moved to `NS.Version()` |
-| LOOK-2 | § 5, step 1a (`M4-18`) | Never run since the byte-alpha fix |
-| LOOK-10 | § 20 (`M4-05`) | Never run since the LSM Border patch moved into LibKa0s |
-| LOOK-29 | § 5d, step 9 (`M4-22`) | Never run since the mouseover driver drops its `OnUpdate` |
-| PANEL-16 | § 9, step 5c (session 3) | Never run since the six acts moved to the General tab |
-| PANEL-17 | § 9, step 5c-2 (session 3) | Never run since the rename box moved |
-| PANEL-26 | § 19, steps 1-4 (`M4-01`) | Never run since the pooled `TabStrip` (LibKa0s v1.27.0) |
-| LOC-1 to LOC-5 | § 22, steps 1-5 (`M5-08`) | No deDE or frFR client has run them yet |
+| INSTALL-1 to INSTALL-6 | § 1 steps 1, 3 and 4, § 13, § 15 | No result recorded |
+| INSTALL-7 | § 2 step 2 | No result recorded; corrected: the sweep runs at load with logging off, so the `[Preview]` line the old step expected never prints |
+| INSTALL-8 | § 21 (`M4-19`) | Not yet run since `NS.InitSummary` moved to `NS.Version()`; corrected: the `[Init]` line is written to the console only |
+| SLASH-1, SLASH-3 to SLASH-7 | § 1 step 2, § 2 step 1, § 9 step 1, § 16 steps 4 to 6 and 15 | No result recorded |
+| SLASH-2 | § 1 step 2, § 16 step 3 | No result recorded; its `profile` row is new |
+| FRAME-1 to FRAME-7, FRAME-10 to FRAME-29 | § 3, § 4, § 4b steps 1, 2 and 5, § 5e-5, § 5e-6 step 5, § 6 steps 1-2, § 7 steps 1-3, § 9 steps 2d, 5d, 5e, 12 and 14, § 10, § 11b, § 12c, § 17 steps 1-4 | No result recorded |
+| FRAME-8 | § 4b steps 3-4 | No result recorded; corrected: the CLI clamps an out-of-range outline rather than refusing it |
+| FRAME-9 | § 4b steps 6-9 | No result recorded; corrected: `/pm panel Wide reset` was never a command, so the reset is the General tab's **Reset** |
+| LOOK-1, LOOK-3 to LOOK-5, LOOK-7 to LOOK-9, LOOK-11 to LOOK-28 | § 5 steps 1-5, § 5b steps 1-10, § 5b-2, § 5b-3, § 5b-4 step 15, § 5c, § 5d steps 1-8 | No result recorded |
+| LOOK-2 | § 5 step 1a (`M4-18`) | Not yet run since the byte-alpha fix |
+| LOOK-6 | § 5b step 0 | No result recorded; corrected: PanelMaster has no font dropdown, so `JetBrains Mono` is checked with `/dump` |
+| LOOK-10 | § 20 (`M4-05`) | Not yet run since the LSM Border patch moved into LibKa0s |
+| LOOK-29 | § 5d step 9 (`M4-22`) | Not yet run since the mouseover driver drops its `OnUpdate` |
+| ACCENT-1 to ACCENT-14 | § 5b-4 steps 1-14 and 16 | No result recorded |
+| ART-1 to ART-11, ART-13 to ART-30 | § 5e, § 5e-2, § 5e-3, § 5e-4, § 5e-6 steps 1-4, § 18 | No result recorded |
+| ART-12 | § 5e-6 step 7 | No result recorded; corrected: `/pm panel set <name> …` read `set` as the panel name |
+| PANEL-1 to PANEL-7, PANEL-9, PANEL-12 to PANEL-15, PANEL-18 to PANEL-24 | § 9 steps 2, 2b, 2c, 2d, 3, 4, 5-x, 5a, 5b, 5b-2, 6 to 11 and 13, § 16 steps 8, 10, 11, 13 and 14 | No result recorded |
+| PANEL-8 | § 9 steps 2d and 15, § 17 step 5 | No result recorded; corrected: the Panels page's **Defaults** is the delete-all, not this popup |
+| PANEL-10 | § 9 step 5, § 16 step 12 | No result recorded; corrected: the six panel acts are on the General tab, not in the band |
+| PANEL-16, PANEL-17 | § 9 steps 5c and 5c-2 (session 3) | Not yet run since the acts and the rename box moved to the General tab |
+| PANEL-26 | § 19 (`M4-01`) | Not yet run since the pooled `TabStrip` (LibKa0s v1.27.0) |
+| PROFILE-1 to PROFILE-10 | § 5e-6 step 6, § 12, § 12b, § 12b-2 steps 1 and 3 | No result recorded |
+| PROFILE-11 to PROFILE-14, PROFILE-16, PROFILE-17 | none | New with the `/pm profile` verb |
+| PROFILE-15 | § 7 step 12 | No result recorded; `/pm profile` is new in it |
+| STATE-1, STATE-2, STATE-4, STATE-5, STATE-7 | § 7 steps 4-5, 7, 8, 10 and 13 | No result recorded |
+| STATE-3 | § 7 steps 6 and 9 | No result recorded; corrected: the disabled line prints under the help index's version header |
+| STATE-6 | § 7 step 11 | No result recorded; corrected: the switch goes through the Profiles page between two disabled profiles, since `/pm profile` answers in chat |
+| COMBAT-1 to COMBAT-6 | § 6 step 3, § 8 steps 1-9 (not 4b), § 9 step 2d, § 16 step 7 | No result recorded |
+| DIAG-1, DIAG-3 to DIAG-19 | § 11 steps 1, 1c and 2-17, § 16 steps 1 and 9 | No result recorded |
+| DIAG-2 | § 11 step 1b, § 16 step 2 | No result recorded; corrected: the icon marks replaced the words *Copy* and *Clear* |
+| LAUNCH-1 to LAUNCH-12 | § 7b | No result recorded |
+| DEGRADED-1, DEGRADED-3, DEGRADED-6 to DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 10, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
+| DEGRADED-2, DEGRADED-9 | § 14 steps 5, 6 and 11d | No result recorded; corrected: `/pm unlock` and `/pm lock` print the library-absent line |
+| DEGRADED-4 | § 14 steps 8-9 | No result recorded; corrected: the degraded ack reads `debug logging is on`, not the library's green `ON` |
+| DEGRADED-5, DEGRADED-14 | § 14 steps 9b and 15 | No result recorded; corrected: with no settings panel and no font dropdown the media check is a `/dump` |
+| DEGRADED-12 | none | New with the `/pm profile` verb |
+| DEGRADED-13 | § 14 step 14 | No result recorded; corrected: it compares DEGRADED-3, 4, 7 and 11, the four lines that carry the cause clause |
+| LOC-1 to LOC-5 | § 22 steps 1-5 (`M5-08`) | No deDE or frFR client has run them yet; LOC-1 (where **Panel name** is) and LOC-3 (the lookup comparison and the refusal to read) are also corrected |
