@@ -1,0 +1,1 @@
+OK SP-PM-03 no defects inside the S4 review bar: coverage complete against master's 321 steps, expectations verified against code and libs/LibKa0s, Pending list matches the clarified policy (nine recorded passes excluded), references resolve, no duplicates; gate 975/0/0, luacheck 0/0
