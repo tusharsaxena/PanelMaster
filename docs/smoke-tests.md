@@ -23,9 +23,9 @@ client and is run when one is available, not per release.
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
 | PANEL-1 to 26 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip |
-| PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
+| PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
-| COMBAT-1 to 7 | Combat | Queued unlocks, the settings lockout, General visibility |
+| COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
 | DIAG-1 to 19 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
@@ -36,15 +36,17 @@ client and is run when one is available, not per release.
 - `/console scriptErrors 1`, then `/reload`, then `/pm resetall` and confirm. That is a **profile
   reset**: the settings and the panels on the current profile both go, so no separate panel wipe is
   needed.
-- `<name>` in a step means any panel you have made. Several themes need two or three panels; make
-  them with `/pm new <name>`.
+- `<name>` in a step means any panel you have made. `/pm panel <name> ...` reads only the first
+  word as the name, so use a one-word panel for those steps (FRAME-1's `Chat BG` cannot be addressed
+  there). Several themes need two or three panels; make them with `/pm new <name>`.
 - COMBAT and several other checks need a training dummy. PROFILE-1 needs a second character, and
   LOOK-23 a character of a different class.
 - Optional, each only for the checks that name it: another Ka0s addon with a settings page and a debug
   console (DIAG-1, PANEL-3, PANEL-4, PANEL-12, DEGRADED-13), KickCD for its Icons page (PANEL-14),
   KickCD, AbsorbTracker, ConsumableMaster and MultiMeters together (LOOK-10), a UI skin
-  such as ElvUI (INSTALL-6), Titan Panel, ElvUI or Bazooka (LAUNCH-12), Sunn - Viewport Art and at
-  least one of its packs (ART-13 to ART-30), and a deDE or frFR client (LOC).
+  such as ElvUI (INSTALL-6), another addon that registers an LSM texture, such as ElvUI, WeakAuras,
+  Details or SharedMedia (LOOK-13), Titan Panel, ElvUI or Bazooka (LAUNCH-12), Sunn - Viewport Art and
+  at least one of its packs (ART-13 to ART-30), and a deDE or frFR client (LOC).
 
 ## INSTALL
 
@@ -134,9 +136,9 @@ client and is run when one is available, not per release.
 - **FRAME-9. Default size of a new panel.** `/pm get settings.defaultWidth` and
   `settings.defaultHeight` → `240 px` and `120 px`; a new panel is that size. `/pm set
   settings.defaultWidth 500`, `/pm set settings.defaultHeight 60`, `/pm new Wide` → a 500x60 panel,
-  and **every existing panel is untouched**. Widen it, then `/pm panel Wide reset` → back at
-  **500x60**, not 240x120: a reset panel and a new one land on the same state. Reset both settings
-  afterwards. Result:
+  and **every existing panel is untouched**. Widen it, then press **Reset** on its **General** tab on
+  the Panels page → back at **500x60**, not 240x120: a reset panel and a new one land on the same
+  state. Reset both settings afterwards. Result:
 - **FRAME-10. One panel disabled.** `/pm panel <name> enabled false` → it vanishes but is still
   listed, dimmed, in `/pm panels`. `/pm unlock` → it is **shown anyway** with its outline and label,
   since you cannot move what you cannot see. `/pm lock` → it disappears again. Result:
@@ -388,7 +390,8 @@ Run ART-1 first: a malformed `.tga` renders as nothing with no Lua error, which 
 - **ART-11. Artwork persists.** Set artwork, a tint, a rotation, a flip and an offset, `/reload` →
   every one survives exactly. Result:
 - **ART-12. Artwork from the command line.** `/pm panel <name>` → the `art*` fields print.
-  `/pm panel set <name> artFill SQUISH` → refused with the five legal values, nothing stored. Result:
+  `/pm panel <name> artFill SQUISH` → `error: expected one of: STATIC, STRETCH, FILL, FIT, TILE`, and
+  nothing stored. Result:
 
 ART-13 to ART-30 need Sunn - Viewport Art (SunnArt) and at least one art pack, except ART-13. Skip
 them without it.
@@ -566,37 +569,34 @@ them without it.
 - **PROFILE-9. A per-panel unlock does not cross a switch.** Unlock one panel with its **Unlock**
   control, switch profile → none of the incoming profile's panels is unlocked (panel ids restart per
   profile). Result:
-- **PROFILE-10. A queued per-panel unlock is dropped.** In combat, tick a panel's **Unlock** (queued),
-  switch profile before combat ends → on leaving combat nothing unlocks. A queued **global**
-  `/pm unlock` is deliberately kept and still fires. Result:
-- **PROFILE-11. Swapped names leave no orphans.** On profile A create `Alpha` then `Xray`; on profile
+- **PROFILE-10. Swapped names leave no orphans.** On profile A create `Alpha` then `Xray`; on profile
   B create `Xray` then `Alpha`. Switch between them five times, `/pm diagnostics` → the `frames: N
   active, M pooled, 0 orphaned` line shows no orphans, and `/framestack` over each panel names the
   expected `PanelMaster_Panel_<slug>`. Result:
-- **PROFILE-12. `/pm profile` lists the profiles.** With two or three profiles, `/pm profile` → a
+- **PROFILE-11. `/pm profile` lists the profiles.** With two or three profiles, `/pm profile` → a
   green `Profiles` header, one row per profile indented two spaces and sorted without regard to case,
   the current one suffixed `(current)`, then `/pm profile <name> switches profile`. Every line is
   `[PM]`-tagged and none ends in a colon. Result:
-- **PROFILE-13. `/pm profile <name>` switches.** `/pm debug on`, then `/pm profile <another profile>`
+- **PROFILE-12. `/pm profile <name>` switches.** `/pm debug on`, then `/pm profile <another profile>`
   → `Switched to profile '<name>'.`, the panels change at once exactly as a Profiles-page switch does,
   and the console gets one `[Profile] switched to '<name>', N panels` line. `/pm profile <that same
   name>` again → `Already on profile '<name>'.` and nothing changes. Result:
-- **PROFILE-14. An unknown name is refused.** `/pm profile Nope` → `No profile named 'Nope'.` followed
+- **PROFILE-13. An unknown name is refused.** `/pm profile Nope` → `No profile named 'Nope'.` followed
   by the list, and no `Nope` appears in the Profiles page's **Existing Profiles**. `/pm profile
   default` (wrong case) → refused the same way, with `Did you mean 'Default'?` before the list.
   Result:
-- **PROFILE-15. Quotes and spaces.** Create a profile named `Raid Night` on the Profiles page, switch
-  away, then `/pm profile "Raid Night"` → it switches. `/pm profile Default`, then
-  `/pm profile 'Raid Night'` → it switches too.
-  `/pm profile raid night` → refused, with `Did you mean 'Raid Night'?`. Result:
-- **PROFILE-16. Profiles switch while disabled.** Make profile B with the addon enabled, then on
-  profile A `/pm disable`. `/pm profile` → the list, not the disabled line. `/pm profile B` → the panels
-  come up without touching a checkbox or a verb; `/pm profile A` → they go down again. Repeat the pair
-  from the Profiles page → the same. Result:
-- **PROFILE-17. No switch in combat.** Pull a training dummy, `/pm profile <another profile>` →
+- **PROFILE-14. Quotes and spaces.** Create a profile named `Raid Night` on the Profiles page, switch
+  away, then `/pm profile "Raid Night"` → it switches. `/pm profile Default`, then `/pm profile 'Raid
+  Night'` → it switches too. `/pm profile raid night` → refused, with `Did you mean 'Raid Night'?`.
+  Result:
+- **PROFILE-15. Profiles switch while disabled.** Make profile B with the addon enabled, then on
+  profile A `/pm disable`. `/pm profile` → the list, not the disabled line. `/pm profile B` → the
+  panels come up without touching a checkbox or a verb; `/pm profile A` → they go down again. Repeat
+  the pair from the Profiles page → the same. Result:
+- **PROFILE-16. No switch in combat.** Pull a training dummy, `/pm profile <another profile>` →
   `Can't switch profiles in combat.` and nothing changes. Bare `/pm profile` still lists. After
   combat the same command switches. Result:
-- **PROFILE-18. An open General page refreshes.** Give two profiles different **Master scale**
+- **PROFILE-17. An open General page refreshes.** Give two profiles different **Master scale**
   values. Open **General ▸ Master controls**, then `/pm profile <the other>` from chat with the window
   still open → the slider shows the new profile's value without reopening the page. Result:
 
@@ -641,18 +641,15 @@ them without it.
   unlocked". Result:
 - **COMBAT-3. Lock clears the queue.** In combat, `/pm unlock`, then `/pm lock`, then leave combat →
   the panels stay **locked**. Result:
-- **COMBAT-4. Per-panel Unlock in combat.** In combat, tick a panel's **Unlock** on the Panels page →
-  the same gray notice, and the checkbox **unticks itself**. Leave combat → that panel unlocks and the
-  box shows ticked. Result:
-- **COMBAT-5. No settings in combat.** `/pm config` in combat → `cannot open settings during combat
+- **COMBAT-4. No settings in combat.** `/pm config` in combat → `cannot open settings during combat
   — Blizzard's category-switch is protected`, word for word, in light gray, and no panel opens. Leave
   combat → the options panel does not open by itself; `/pm config` then opens it. Result:
-- **COMBAT-6. An open settings window locks.** Open `/pm config` out of combat, then pull with it open
+- **COMBAT-5. An open settings window locks.** Open `/pm config` out of combat, then pull with it open
   → every page, tab strip included, is covered by a gray *"Settings are locked during combat."*;
   controls, **Defaults** and tabs do nothing; switching category in the sidebar raises no Lua error
   and the window stays open; exactly **one** gray chat notice per combat. Leave combat → the cover
   lifts and the page shows current values. Result:
-- **COMBAT-7. General visibility.** **Master controls ▸ General visibility** → `Only in combat` →
+- **COMBAT-6. General visibility.** **Master controls ▸ General visibility** → `Only in combat` →
   panels hidden out of combat; pull → they appear on the first swing; leave → they hide. `Only out of
   combat` → the reverse, the instant combat starts and ends. `Never` → nothing draws at all. Back to
   `Always`. Result:
@@ -732,9 +729,9 @@ the launcher seam.
 - **LAUNCH-3. Right-click Locked.** Right-click → a menu titled **Ka0s Panel Master** with exactly two
   ticks, in order: **Enabled** (ticked) and **Locked** (ticked while locked); no *Test mode* and no
   *Show window*. Click **Locked** → the menu closes, the panels unlock exactly as `/pm unlock` does,
-  and chat shows the same `state.locked = false` line. Right-click → **Locked** is unticked; click it → they lock. **General ▸ Master
-  controls ▸ Lock frame** agrees. In combat, clicking **Locked** unlocks nothing until combat ends.
-  Result:
+  and chat shows the same `state.locked = false` line. Right-click → **Locked** is unticked; click it
+  → they lock. **General ▸ Master controls ▸ Lock frame** agrees. In combat, clicking **Locked**
+  unlocks nothing until combat ends. Result:
 - **LAUNCH-4. Right-click Enabled.** Click **Enabled** → the addon disables exactly as `/pm disable`
   does (panels go, `settings.enabled = false` in chat). Right-click → **Enabled** unticked and
   **Locked** grayed, reading `Locked (enable the addon first)`; clicking it does nothing and writes
@@ -803,8 +800,8 @@ asserts the wording; only the client can say the addon still works. Quit the cli
   prints `/pm profile is unavailable: the LibKa0s library did not load.` and nothing switches.
   Result:
 - **DEGRADED-13. One cause clause.** Across DEGRADED-3, 4, 7 and 11, the cause clause is word for
-  word the same, differing only after the comma, and matches another Ka0s addon on the same install.
-  Result:
+  word the same, differing only after the closing parenthesis of `(expected in libs/LibKa0s)`, and
+  matches another Ka0s addon on the same install. Result:
 - **DEGRADED-14. Restore.** Rename the folder back, `/reload` → normal operation returns: the font and
   texture dropdowns list `JetBrains Mono` and the seven `Ka0s …` bars again, and a panel whose profile
   names one draws it again instead of plain. Result:

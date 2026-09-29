@@ -772,7 +772,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 - Panels page: the per-panel Unlock tick tracks global, per-panel and deferred unlocks
 
-### test_profiles.lua (24)
+### test_profiles.lua (25)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -790,6 +790,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: an incoming profile is repaired per RECORD, not by re-running migrations
 - Database: switching profile sanitizes the incoming records
 - Database: a profile switch drops per-panel unlocks rather than reissuing them
+- Database: a profile switch drops a queued per-panel unlock but keeps a queued global one
 - Database: the profile reload goes through Registry, keeping one sender
 - Profiles: swapping frame names across ids creates no second named frame
 - Panel: the Profiles subcategory is registered
@@ -1108,7 +1109,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 82 |
 | test_panel.lua | 47 |
 | test_panels_page.lua | 18 |
-| test_profiles.lua | 24 |
+| test_profiles.lua | 25 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 21 |
 | test_sunnart.lua | 53 |
@@ -1124,4 +1125,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 7 |
-| **Total** | **974** |
+| **Total** | **975** |
