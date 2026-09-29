@@ -155,7 +155,7 @@ test("DebugLog seam: the console's title bar is three marks, at the icon pitch",
   -- 6 / 30 / 54 is the ICON pitch — three 18-wide controls at 6px padding, which is what the
   -- library draws once it has been told the addon FOLDER name and can resolve `clear` and `copy`
   -- out of LibKa0s-Media. The old numbers were 6 / 30 / 78, where Clear was a 42-wide text button
-  -- reading the word. So this case is the headless half of the smoke test: a -78 here means
+  -- reading the word. So this case is the headless half of smoke check DIAG-2: a -78 here means
   -- `addonName` stopped reaching the descriptor and the console went back to words and a
   -- multiplication sign, silently, because a texture path that resolves to nothing draws nothing
   -- and raises nothing.
