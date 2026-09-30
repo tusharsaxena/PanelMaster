@@ -666,6 +666,77 @@ test("NS.DebugOnce: one line per distinct key, and a key met while off still log
   quiet()
 end)
 
+test("NS.DebugOnce: each logging enable re-arms the seen-set", function()
+  -- Red without the re-arm in the descriptor's setEnabled: the support sequence (on, reproduce, off,
+  -- on, reproduce, copy) would carry no trace of an error that still recurs, because the first
+  -- session already spent its one line.
+  quiet()
+  D:SetEnabled(true)
+  for _ = 1, 3 do NS.DebugOnce("rearm site", "boom", "Test", "rearm %s", "boom") end
+  assertEqual(#tagged("Test"), 1, "not once within one logging session")
+  D:SetEnabled(false)
+  D:SetEnabled(true)
+  NS.DebugOnce("rearm site", "boom", "Test", "rearm %s", "boom")
+  assertEqual(#tagged("Test"), 2, "a re-enable did not re-arm the seen-set")
+  quiet()
+end)
+
+test("coverage: a page closure's failure is keyed on the closure, not only the message", function()
+  -- Red with a constant site in settings/Panel.lua's safeRun: two closures raising the same message
+  -- (both calling one broken widget method) would log only the first, hiding the second failure.
+  quiet()
+  local safeRun = NS.Panel.__ui.safeRun
+  local function boom() error("coverage: same boom", 0) end
+  NS.State.debug = true
+  for _ = 1, 3 do
+    safeRun(boom, "Closure A")
+    safeRun(boom, "Closure B")
+  end
+  local a, b = 0, 0
+  for _, msg in ipairs(tagged("Panel")) do
+    if msg == "Closure A failed: coverage: same boom" then a = a + 1 end
+    if msg == "Closure B failed: coverage: same boom" then b = b + 1 end
+  end
+  assertEqual(a, 1, "closure A: not exactly one line")
+  assertEqual(b, 1, "closure B: not exactly one line")
+  quiet()
+end)
+
+test("coverage: a /pm panel refusal made before any Registry verb logs its reason", function()
+  -- Red without the R.Refuse calls in Sl:CliPanel: a mistyped panel or field name is refused in the
+  -- slash, never reaches a Registry verb, and left the log saying nothing happened.
+  covFresh()
+  NS.Registry:New("Known")
+  NS.State.debug = true
+  NS.Slash:CliPanel("Nobody")
+  NS.Slash:CliPanel("Known bogusfield")
+  assertTrue(has("Panel", "panel refused: no panel called 'Nobody'"), "the unknown panel left no line")
+  assertTrue(has("Panel", "panel refused: unknown field 'bogusfield'"), "the unknown field left no line")
+  covFresh()
+end)
+
+test("coverage: a recover that cannot measure the screen says so", function()
+  -- Red without the refusal in R:Recover: the guard returned 0 silently, the slash then claimed
+  -- every panel was on screen, and the log held nothing at all.
+  covFresh()
+  NS.Registry:New("Lost", { x = 9000, y = 0 })
+  local real = NS.Compat.GetScreenSize
+  NS.Compat.GetScreenSize = function() return nil end
+  NS.State.debug = true
+  local ok, moved, reason = pcall(function() return NS.Registry:Recover() end)
+  local chat = T.mocks.__chat
+  local before = #chat
+  local ok2, err2 = pcall(function() NS.Slash:CliRecover() end)
+  NS.Compat.GetScreenSize = real
+  assertTrue(ok and ok2, tostring(moved) .. " / " .. tostring(err2))
+  assertEqual(moved, 0)
+  assertEqual(reason, "cannot measure the screen")
+  assertTrue(has("Panel", "recover refused: cannot measure the screen"), "the guard left no line")
+  local said = chat[before + 1] or ""
+  assertTrue(said:find("cannot measure the screen", 1, true) ~= nil, "the slash hid the reason: " .. said)
+  covFresh()
+end)
+
 -- The one steady-state repeating path: the shared 10Hz mouseover OnUpdate. Driven through the
 -- driver's real script, so a line added anywhere under the tick is counted.
 local function tick(n)

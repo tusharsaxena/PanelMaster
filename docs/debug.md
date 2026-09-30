@@ -207,7 +207,9 @@ before them. What they found reaches the log anyway, through the `[Init]` summar
 | `Events` | `core/LifecycleSetup.lua` | `rejected <name>`, an event name the client refused at a stand-up |
 | `Panel` | `modules/Registry.lua` | Every panel mutation: created, deleted, deleted all, renamed, fitted to artwork, a field written, moved |
 | `Panel` | `modules/Registry.lua` (`refuse`) | `<verb> refused: <reason>` for create, delete, reset, copy, rename, fit, set and move, and `set '<panel>'.<field> refused: <reason>` for a value the field's coercer rejected. The reason is the one the caller prints |
-| `Panel` | `settings/Panel.lua` (`safeRun`) | `<closure> failed: <error>`, a settings-page closure that raised, once per distinct error |
+| `Panel` | `modules/Registry.lua` (`R:Recover`, through `refuse`) | `recover refused: cannot measure the screen`, when the client reports no screen size and `/pm recover` moves nothing. The slash prints the same reason rather than "every panel is already on screen" |
+| `Panel` | `settings/Slash.lua` (`Sl:CliPanel`, through `R.Refuse`) | `panel refused: no panel called '<name>'` and `panel refused: unknown field '<field>'`, the two `/pm panel` refusals made before any Registry verb runs |
+| `Panel` | `settings/Panel.lua` (`safeRun`) | `<closure> failed: <error>`, a settings-page closure that raised, once per closure and distinct error per logging session |
 | `Canvas` | `modules/Canvas.lua` | `rendered N panels, M shown`, once per full rebuild. M is how many the show ladder left visible, so a hidden panel reads differently from a missing one |
 | `Canvas` | `modules/Canvas.lua` (`RenderForCombat`) | `combat entered` / `combat left: repainting for visibility '<mode>'`, only when the visibility setting depends on combat. Under `Always` or `Never` the renderer ignores the edge, so it writes nothing |
 | `Canvas` | `core/PanelMaster.lua` (`OnEnterWorld`) | `entered world: repainting`, on every loading screen, ahead of the rebuild it causes |
@@ -251,5 +253,9 @@ mechanism.
 distinct key** however often its site runs: an error a `pcall` swallows on the mouseover tick, a media
 name that falls back to Solid on every repaint, a settings-page closure that raises on every refresh.
 It reads the same flag first, and it marks a key as seen only once past that gate, so a key met while
-logging was off still logs the first time logging is on. The seen-set is session-only. `site` and
-`key` are separate arguments so that a site erroring on every pass builds no string to key on.
+logging was off still logs the first time logging is on. The seen-set is re-armed on every logging
+enable (the descriptor's `setEnabled` clears it), so the support sequence of turning logging on,
+reproducing and copying shows an error that still recurs, even if an earlier logging session already
+logged it. A console **Clear** does not re-arm it: `LibKa0s-DebugLog-1.0` gives the host no clear
+hook, so that is a library residual. Toggle logging off and on to re-arm by hand. `site` and `key`
+are separate arguments so that a site erroring on every pass builds no string to key on.

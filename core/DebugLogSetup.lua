@@ -102,6 +102,13 @@ if not lib then
   return
 end
 
+-- NS.DebugOnce's seen-set, declared ahead of the descriptor because its setEnabled closure clears
+-- it on every enable edge. site -> { [key] = true }.
+local onceSeen = {}
+local function rearmOnce()
+  for site in pairs(onceSeen) do onceSeen[site] = nil end
+end
+
 NS.DebugLog = lib:New({
   -- Seeds PanelMasterDebugWindow / PanelMasterDebugCopyWindow / PanelMasterDebugCopyScroll. The
   -- first two are byte-for-byte the globals modules/DebugLog.lua hardcoded, so anything anchored to
@@ -123,8 +130,14 @@ NS.DebugLog = lib:New({
   -- The enable flag stays the HOST's. Both are closures rather than direct references because
   -- core/State.lua is not guaranteed to have loaded when this file does, and because a library that
   -- kept its own copy would leave two truths about whether logging is on.
+  -- Each enable also re-arms NS.DebugOnce (below): a support read turns logging on, reproduces and
+  -- copies, and an error or fallback that still recurs must land again in that session's log rather
+  -- than stay suppressed by a line an earlier session already wrote.
   isEnabled  = function() return NS.State and NS.State.debug end,
-  setEnabled = function(on) if NS.State then NS.State.debug = on end end,
+  setEnabled = function(on)
+    if NS.State then NS.State.debug = on end
+    if on then rearmOnce() end
+  end,
 
   -- Through a closure, not `print = NS.Print`: core/PanelMaster.lua's AceConsole embed replaces
   -- NS.Print and its reclaim puts it back, and resolving at call time is immune to that whole
@@ -205,10 +218,12 @@ end
 -- `site` and `key` are two levels rather than one concatenated string so that a site erroring on
 -- every pass allocates nothing at the call. The seen-set is written only PAST the gate: a key met
 -- while logging was off has not been logged, so it must still log the first time logging is on
--- (the comparison sits behind the gate, debug-logging-§9). Session-only, like the flag.
-local onceSeen = {}
+-- (the comparison sits behind the gate, debug-logging-§9). The set is re-armed on every enable
+-- edge (the descriptor's setEnabled, above), so each logging session sees each distinct key once.
+-- A console Clear does NOT re-arm it: LibKa0s-DebugLog-1.0 exposes no clear hook to the host.
 function NS.DebugOnce(site, key, tag, fmt, ...)
   if not (NS.State and NS.State.debug) then return end
+  if site == nil then site = "?" end
   if key == nil then key = "?" end
   local seen = onceSeen[site]
   if not seen then seen = {}; onceSeen[site] = seen end

@@ -228,7 +228,11 @@ function Sl:CliPanel(arg)
 
   if not rec and key:lower() == "deleteall" then return doDeleteAll() end
 
-  if not rec then print(("no panel called '%s'"):format(key)); return end
+  -- Refused here, before any Registry verb runs, so the refusal is logged here too.
+  if not rec then
+    print(select(2, NS.Registry.Refuse("panel", nil, ("no panel called '%s'"):format(key))))
+    return
+  end
 
   local field, value = parseFieldValue(tail)
 
@@ -245,7 +249,8 @@ function Sl:CliPanel(arg)
   if field:lower() == "fitart" then return doFitArt(rec) end
 
   if not C.PANEL_FIELD_TYPE[field] then
-    print(("unknown field '%s'. Try: %s"):format(field, table.concat(C.PANEL_FIELD_ORDER, ", ")))
+    local _, reason = NS.Registry.Refuse("panel", nil, ("unknown field '%s'"):format(field))
+    print(("%s. Try: %s"):format(reason, table.concat(C.PANEL_FIELD_ORDER, ", ")))
     return
   end
   if value == nil then
@@ -260,8 +265,10 @@ function Sl:CliPanel(arg)
 end
 
 function Sl:CliRecover()
-  local moved = NS.Registry:Recover()
-  if moved == 0 then
+  local moved, reason = NS.Registry:Recover()
+  if reason then
+    print("error: " .. tostring(reason))
+  elseif moved == 0 then
     print("every panel is already on screen")
   else
     print(("moved %d %s back on screen"):format(moved, moved == 1 and "panel" or "panels"))

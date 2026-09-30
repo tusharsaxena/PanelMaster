@@ -500,7 +500,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (47)
+### test_debuglog.lua (51)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -546,6 +546,10 @@ badge and any count quoted in the docs must agree with it.
 - coverage: a refused panel verb logs the guard's reason
 - coverage: the [Init] summary names the optional dependencies
 - NS.DebugOnce: one line per distinct key, and a key met while off still logs once on
+- NS.DebugOnce: each logging enable re-arms the seen-set
+- coverage: a page closure's failure is keyed on the closure, not only the message
+- coverage: a /pm panel refusal made before any Registry verb logs its reason
+- coverage: a recover that cannot measure the screen says so
 - quiet steady state: 100 mouseover ticks with nothing changing write nothing
 - quiet steady state: an error the tick swallows is one line, not ten a second
 - quiet steady state: a missing texture is one line however often it repaints
@@ -1115,7 +1119,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 46 |
 | test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 47 |
+| test_debuglog.lua | 51 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 82 |
@@ -1137,4 +1141,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 7 |
-| **Total** | **987** |
+| **Total** | **991** |

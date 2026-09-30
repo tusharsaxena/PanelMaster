@@ -30,12 +30,16 @@ end
 
 -- A refused verb, logged once with the guard's own reason and handed straight back to the caller
 -- (debug-logging-§8's refusals, with the reason). The reason is the string the caller prints
--- anyway, so logging it builds nothing extra; the editor and the slash both reach these verbs, so
--- one line here covers "I pressed it and nothing happened" from either surface.
+-- anyway, so logging it builds nothing extra. The editor and the slash both reach these verbs, so
+-- one line here covers "I pressed it and nothing happened" for every refusal the Registry makes.
+-- A refusal the slash makes BEFORE it reaches a verb (`/pm panel` naming no panel, or an unknown
+-- field) is not the Registry's, so settings/Slash.lua calls this same helper as R.Refuse: one
+-- wording for every `[Panel] <verb> refused:` line, whichever file said no.
 local function refuse(verb, fail, reason)
   NS.Debug("Panel", "%s refused: %s", verb, reason)
   return fail, reason
 end
+R.Refuse = refuse
 
 -- The write seam's log arguments, built only once NS.DebugBuild is past the gate. A plain function
 -- taking (rec, field) rather than a closure over them: a closure would be created at the call site
@@ -931,7 +935,9 @@ end
 
 function R:Recover()
   local w, h = NS.Compat.GetScreenSize()
-  if not w then return 0 end   -- cannot measure the screen: do nothing rather than guess
+  -- Cannot measure the screen: do nothing rather than guess, and say so. Without the reason the
+  -- caller could not tell this from "nothing was off screen".
+  if not w then return refuse("recover", 0, "cannot measure the screen") end
 
   local settings = currentSettings()
   local moved, rows = 0, 0
