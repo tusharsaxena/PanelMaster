@@ -665,6 +665,14 @@ local dispatcher = lib:New({
   -- reset does not keep. Named once at the top of this file, so the acknowledgment the library
   -- prints and the one the headless fallback prints cannot drift.
   L = { RESET_ALL = Sl.RESET_ALL_TEXT },
+
+  -- The host's gated sink (Slash minor 18). Every refusal the DISPATCHER decides -- the disabled
+  -- gate, an unknown verb, get/set/reset usage, not-found, parse and write refusals, a reset with
+  -- no default, the profile verb's refusals -- writes one `[Cmd] refused <verb>: <guard>` line
+  -- after its chat line, so a support read of the log sees what chat said. The chat is unchanged.
+  -- This addon logs none of those itself; the panel verbs' own refusals stay `[Panel]` lines from
+  -- the Registry's `refuse` helper, because they are this addon's, not the dispatcher's.
+  debug = function(tag, message) NS.Debug(tag, message) end,
 })
 
 -- Republished under the method names this addon's own callers already use, as forwarders, so

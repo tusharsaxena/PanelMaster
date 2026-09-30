@@ -203,12 +203,23 @@ The flows say what the addon did; the diagnosis lines say why it did something e
 reacted to, the work it held and flushed, the guard that refused, the dependencies it found and the
 errors it swallowed. Every line is one gated `NS.Debug` call per event, with any string-building
 behind the gate. `tests/test_debuglog.lua` ▸ *Coverage* pins the diagnosis lines and the quiet
-steady state.
+steady state; `tests/test_library_debug.lua` pins the lines LibKa0s writes into this log and that
+none of them is written twice.
 
 Logging is off at login (`debug-logging-§5`), so the lines written while the addon loads (a
 migration, the preview sweep, the Sunn scan) render only in the rare session that turns logging on
 before them. What they found reaches the log anyway, through the `[Init]` summary and
-`/pm diagnostics`, which turns logging on for the rest of the session.
+`/pm diagnostics`, which turns logging on for the rest of the session. The two **state** lines
+OnEnable writes, the launcher's registration and the Sunn scan, go through the console's at-enable
+queue (`NS.DebugAtEnable`, over `D.DebugAtEnable`, LibKa0s v1.65.0): held while logging is off and
+written after the `[Init]` summary the first time it is turned on, once per session.
+
+**Which lines are the library's.** Since LibKa0s v1.65.0 every LibKa0s module this addon adopts
+logs its own refusals and edges through the gated sink the addon passes as the descriptor's `debug`
+(Slash, Lifecycle, Options and Launcher all take it). The tags the library writes are `Debug`,
+`Init`, `Diag`, `Cmd`, `Lifecycle`, `Cfg` and `Launcher`, plus the schema seam's per-write `Set`
+line; this addon writes none of those lines itself, so each refusal or edge is one line, not two.
+Every other tag below is this addon's own.
 
 | Tag | Emitted by | When |
 |---|---|---|
@@ -219,7 +230,8 @@ before them. What they found reaches the log anyway, through the `[Init]` summar
 | `Profile` | `core/Database.lua` | `switched to '<name>', N panels`, on a profile switch |
 | `Migrate` | `core/Database.lua` | A schema migration, only when one runs (at load) |
 | `Preview` | `core/Database.lua` | `swept N orphaned preview panel(s)`, at load, only when there were some |
-| `Lifecycle` | `core/LifecycleSetup.lua` | `stood down (<holds>)` and `stood up`, the addon's own enable edges |
+| `Lifecycle` | the library (Lifecycle), through `core/LifecycleSetup.lua`'s `debug` | `stood down: added <key> (holds: <set>)` and `stood up: released <key> (holds: none)`, one line per stand-down or stand-up edge, before the callback runs. A call that fires no edge writes nothing. `NS.StandDown` and `NS.StandUp` write no line of their own |
+| `Cmd` | the library (Slash), through `settings/Slash.lua`'s `debug` | `refused <verb>[ <arg>]: <guard>` after the chat line, for every refusal the dispatcher decides: `disabled` (a feature verb while the addon is off), `unknown verb`, `usage`, `not found`, `parse`, `write refused`, `no default`, and the profile verb's `unavailable`, `already current`, `in combat` and `unknown profile` |
 | `Events` | `core/LifecycleSetup.lua` | `rejected <name>`, an event name the client refused at a stand-up |
 | `Panel` | `modules/Registry.lua` | Every panel mutation: created, deleted, deleted all, renamed, fitted to artwork, a field written, moved |
 | `Panel` | `modules/Registry.lua` (`refuse`) | `<verb> refused: <reason>` for create, delete, reset, copy, rename, fit, set and move, and `set '<panel>'.<field> refused: <reason>` for a value the field's coercer rejected. The reason is the one the caller prints |
@@ -232,9 +244,9 @@ before them. What they found reaches the log anyway, through the `[Init]` summar
 | `Canvas` | `core/Compat.lua` | `MouseIsOver failed: <error>`, once per distinct error the mouseover tick's `pcall` swallows; `<type> texture '<name>' not found: drawn as Solid`, once per media type and name |
 | `Unlock` | `modules/Unlock.lua` | `panels unlocked` / `panels locked` (with `, N held unlock(s) dropped` when a lock discarded combat-held requests), and `'<panel>' unlocked` / `locked` per panel |
 | `Unlock` | `modules/Unlock.lua` | The combat hold: `unlock all held: in combat`, `'<panel>' unlock held: in combat`. The flush: `combat over: flushed held unlocks (all=yes/no, N panel(s), M gone)`, only when something was held. A drop: `dropped N held panel unlock(s): profile changed` |
-| `Artwork` | `modules/SunnArt.lua` | `Sunn adapter: N themes, M rows`, at OnEnable |
-| `Cfg` | the library (Options) | `register parked (in combat)`, `open refused (in combat)`, `opened` |
-| `Launcher` | the library (Launcher) | Its own registration notices |
+| `Artwork` | `modules/SunnArt.lua` | `Sunn adapter: N themes, M rows`, found at OnEnable and written through the at-enable queue, so it lands the first time logging is turned on |
+| `Cfg` | the library (Options), through `settings/OptionsSetup.lua`'s `debug` | `register parked (in combat)` and `register flushed (combat ended)`, `open refused (in combat)`, `opened`, and the combat lock's `<what> refused (in combat)` for a write, a Defaults, a button, a tab, a rail or banner click, an id-list change or a page shown under the lock, once per text per combat |
+| `Launcher` | the library (Launcher), through `core/LauncherSetup.lua`'s `debug` and `debugAtEnable` | Its state lines (`registered`, a broker library absent, no minimap table) through the at-enable queue; its events (`shown`, `hidden`, a menu refusal, a raise) as they happen |
 
 **Repeating paths.** The only steady-state repeating path is the shared 10Hz mouseover `OnUpdate`
 (`modules/Canvas.lua`). It writes nothing per tick, and the one error it can swallow is a single
@@ -243,12 +255,11 @@ one `[Set]` line per applied step, each with its new value, followed by the `[Ca
 caused; a combat edge or a loading screen writes its edge line and one rebuild. None of them logs
 when nothing happened.
 
-**Not logged here, on purpose.** A settings write the schema seam refuses (`/pm set` with a bad
-value), and a feature verb refused while the addon is disabled, are answered in chat by
-`LibKa0s-Schema-1.0` and `LibKa0s-Slash-1.0`. The host deliberately puts no wrapper in front of
-either seam (`settings/Slash.lua`), so a debug line for them is the library's to add. The disabled
-state itself is in the log as the `[Lifecycle] stood down (disabled)` line, and in the report's
-`state` section. The client state edges this addon does not react to (group roster, spec, addon
+**Not logged here, on purpose.** A `/pm set` the dispatcher refuses and a feature verb refused
+while the addon is disabled are the library's `[Cmd]` lines, so this addon adds none: the host puts
+no wrapper in front of either seam (`settings/Slash.lua`). The disabled state itself is in the log
+as the `[Lifecycle] stood down: added disabled (holds: disabled)` line, and in the report's `state`
+section. The client state edges this addon does not react to (group roster, spec, addon
 restriction) have no line: an edge the addon ignores needs none.
 
 ## `NS.DebugBuild` — the gated sink for expensive arguments
@@ -268,10 +279,11 @@ mechanism.
 `NS.DebugOnce(site, key, tag, fmt, ...)` is the third seam, for a line that must land **once per
 distinct key** however often its site runs: an error a `pcall` swallows on the mouseover tick, a media
 name that falls back to Solid on every repaint, a settings-page closure that raises on every refresh.
-It reads the same flag first, and it marks a key as seen only once past that gate, so a key met while
-logging was off still logs the first time logging is on. The seen-set is re-armed on every logging
-enable (the descriptor's `setEnabled` clears it), so the support sequence of turning logging on,
-reproducing and copying shows an error that still recurs, even if an earlier logging session already
-logged it. A console **Clear** does not re-arm it: `LibKa0s-DebugLog-1.0` gives the host no clear
-hook, so that is a library residual. Toggle logging off and on to re-arm by hand. `site` and `key`
-are separate arguments so that a site erroring on every pass builds no string to key on.
+It reads the same flag first, and the memory is the **console's** change gate (`D.DebugOnce`,
+LibKa0s v1.65.0), which remembers nothing while logging is off, so a key met then still logs the
+first time logging is on. The console re-arms it on every logging enable **and on Clear**, so the
+support sequence of turning logging on (or clearing), reproducing and copying shows an error that
+still recurs, even if an earlier session already logged it. This addon kept a seen-set of its own
+until then, which a Clear could not reach; it was deleted with the adoption. `site` and `key` are
+separate arguments so that a site erroring on every pass builds no string while logging is off:
+they are joined into the gate's one key only past the flag test.

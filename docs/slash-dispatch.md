@@ -24,7 +24,9 @@ true (`Can't switch profiles in combat.`); an unknown name answers `No profile n
 names the one near match if exactly one differs only by case, prints the list and creates nothing.
 The switch is AceDB's `SetProfile`, so `core/Database.lua`'s `OnProfileChanged` handler runs exactly
 as it does for a Profiles-page switch: the enable latch, the panel rebuild, a refresh of an open
-General page, and the one `[Profile]` debug line. The library logs nothing itself.
+General page, and the one `[Profile]` debug line. The library writes no line for a switch; each
+refusal it answers (`unavailable`, `already current`, `in combat`, `unknown profile`) is one library
+`[Cmd]` line through the descriptor's `debug` sink (LibKa0s v1.65.0, `docs/debug.md`).
 
 `enable` and `disable` are **aliases, not a second switch** (`slash-commands-§2`). Both write
 `NS.Schema.ENABLED_PATH` — `settings.enabled`, the very path the *Enable Ka0s Panel Master*
@@ -54,7 +56,9 @@ panels panel unlock lock recover` — refuses. **The gate is the library's**: th
 gates *after* the `COMMANDS` lookup, so only a verb this addon actually ships is refused and a
 **typo still falls through** to `unknown command` and the help index (`slash-commands-§3`). The
 degraded stub, which has no library to route to, keeps a host-side wrap of `NS.COMMANDS` and
-reproduces the format string byte for byte; `tests/test_libka0s.lua` compares the two.
+reproduces the format string byte for byte; `tests/test_libka0s.lua` compares the two. With
+logging on, the library also writes each such refusal to the debug log as one `[Cmd] refused <verb>:
+disabled` line, through the `debug` sink `settings/Slash.lua` passes; the host adds none.
 
 The refusal line is **the collection's, not this addon's** — `Ka0s Panel Master is disabled — enable
 it with /pm enable`, built by `lib.DISABLED_LINE_FORMAT` from `NS.BRAND`, which is the same string

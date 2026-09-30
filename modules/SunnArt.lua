@@ -467,10 +467,11 @@ function S.Inject()
   local rows = S.Rows(themes)
   for _, row in ipairs(rows) do catalog[#catalog + 1] = row end
 
-  -- Kept for the [Init] summary's dependency clause (core/Database.lua): this runs at OnEnable,
-  -- while the session-only debug flag is still off, so the line below rarely renders and the
-  -- summary is where a pasted log learns what was found.
+  -- Kept for the [Init] summary's dependency clause (core/Database.lua). This runs at OnEnable,
+  -- while the session-only debug flag is still off, so the line below is a STATE line through the
+  -- console's at-enable queue: held now, written after the [Init] summary the first time logging is
+  -- turned on (debug-logging-§8), and written at once when logging is already on.
   S.themeCount = #themes
-  NS.Debug("Artwork", "Sunn adapter: %d themes, %d rows", #themes, #rows)
+  NS.DebugAtEnable("Artwork", "Sunn adapter: %d themes, %d rows", #themes, #rows)
   return #rows
 end

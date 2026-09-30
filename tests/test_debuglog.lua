@@ -667,7 +667,8 @@ test("NS.DebugOnce: one line per distinct key, and a key met while off still log
 end)
 
 test("NS.DebugOnce: each logging enable re-arms the seen-set", function()
-  -- Red without the re-arm in the descriptor's setEnabled: the support sequence (on, reproduce, off,
+  -- Red without the console's re-arm on the enable edge (DebugLog minor 18, the gate NS.DebugOnce
+  -- keys into since the 2026-09-30 debug-gaps adoption): the support sequence (on, reproduce, off,
   -- on, reproduce, copy) would carry no trace of an error that still recurs, because the first
   -- session already spent its one line.
   quiet()

@@ -26,7 +26,7 @@ client and is run when one is available, not per release.
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
-| DIAG-1 to 27 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on |
+| DIAG-1 to 30 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on, the library's own refusal, edge and at-enable lines |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
@@ -767,6 +767,22 @@ and at least one art pack; skip those without it.
   the console's **Diagnostics** link, then with `/pm debug diagnostics` → the same each time.
   **Fail:** `Debug: OFF` after a report, the enable line below the report, or logging still on after
   the `/reload`. Result:
+- **DIAG-28. A slash refusal shows in the console.** `/pm debug on`, open the console, then type
+  `/pm notaverb` → chat says the command is unknown and prints the help index, and the console
+  gains exactly one `[Cmd] refused notaverb: unknown verb` line. `/pm disable`, `/pm new Refused` →
+  chat prints the one *is disabled — enable it with /pm enable* line, and the console gains exactly
+  one `[Cmd] refused new: disabled` line and no `[Panel]` line. `/pm enable` afterwards. **Fail:** no
+  `[Cmd]` line (the Slash descriptor lost its `debug`), or two lines for one refusal. Result:
+- **DIAG-29. A stand-down edge shows in the console.** `/pm debug on`, then `/pm disable` → the
+  console shows exactly one `[Lifecycle] stood down: added disabled (holds: disabled)` line. `/pm
+  disable` again → no second `[Lifecycle]` line. `/pm enable` → exactly one `[Lifecycle] stood up:
+  released disabled (holds: none)` line. **Fail:** no `[Lifecycle]` line, the old `stood down
+  (disabled)` wording, or two lines for one edge. Result:
+- **DIAG-30. The launcher's registration lands at enable.** `/reload` (logging off), then `/pm debug
+  on` → below the `[Debug] logging enabled` and `[Init]` lines the console shows `[Launcher]
+  registered` and `[Artwork] Sunn adapter: N themes, M rows`, once each. `/pm debug off`, `/pm debug
+  on` → neither is written a second time. **Fail:** neither line after the `[Init]` line (the lines
+  were gated off at OnEnable). Result:
 
 ## LAUNCH
 
@@ -960,6 +976,7 @@ corrected in it against the code.
 | DIAG-15 | § 11 step 13 | Passed on 2026-09-26, but corrected: a report now turns logging on for the session (`debug-logging-§14` at v2.71.0), so the title bar no longer stays `Debug: OFF` afterwards; the flag is DIAG-27 |
 | DIAG-20 to DIAG-25 | none | New with the resizable console and copy window (LibKa0s v1.64.0) |
 | DIAG-26, DIAG-27 | none | New with the console's Diagnostics link (DebugLog minor 16) and the report turning logging on (DebugLogDiagnostics minor 2), LibKa0s v1.64.0 |
+| DIAG-28 to DIAG-30 | none | New with the library's own debug lines (Slash minor 18, Lifecycle minor 3, the at-enable queue in DebugLogGates minor 1), LibKa0s v1.65.0 |
 | LAUNCH-1 to LAUNCH-12 | § 7b | No result recorded |
 | DEGRADED-1, DEGRADED-3, DEGRADED-7, DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
 | DEGRADED-2, DEGRADED-9 | § 14 steps 5, 6 and 11d | No result recorded; corrected: `/pm unlock` and `/pm lock` print the library-absent line |
