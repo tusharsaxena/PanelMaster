@@ -155,7 +155,7 @@ test("DebugLog seam: the console's title bar is three marks, at the icon pitch",
   -- 6 / 30 / 54 is the ICON pitch — three 18-wide controls at 6px padding, which is what the
   -- library draws once it has been told the addon FOLDER name and can resolve `clear` and `copy`
   -- out of LibKa0s-Media. The old numbers were 6 / 30 / 78, where Clear was a 42-wide text button
-  -- reading the word. So this case is the headless half of the smoke test: a -78 here means
+  -- reading the word. So this case is the headless half of smoke check DIAG-2: a -78 here means
   -- `addonName` stopped reaching the descriptor and the console went back to words and a
   -- multiplication sign, silently, because a texture path that resolves to nothing draws nothing
   -- and raises nothing.
@@ -942,6 +942,35 @@ test("Degraded install: /pm unlock and /pm lock print the library-absent line an
         assertEqual(ns.State.unlocked, was, name .. ": /pm " .. verb .. " changed the unlock state")
       end
     end
+  end)
+
+test("Degraded install: /pm profile prints the library-absent line and switches nothing",
+  function()
+    -- Slash minor 17's degradation stub carries CliProfile AND ProfileSwitch on route (b): with no
+    -- library there is no store adapter to trust, so each prints the library-absent line for
+    -- `/pm profile` and switches nothing. AceDB itself is still there, which is why "switches
+    -- nothing" is read back from the store rather than assumed. Only the whole-library arm: the
+    -- composer-less partial load still has the Slash major, so its verb works.
+    local ns, m = loadDegraded()
+    assertEqual(m.__setProfileCalls, 0, "the fake counts no SetProfile call to start")
+    m.__addProfile("Other")
+    local was = m.__profileName
+    ns.Print("warm up the notice")
+    local absent = ns.PREFIX .. " " ..
+      ns.L["%s is unavailable: the LibKa0s library did not load."]:format("/pm profile")
+    for _, input in ipairs({ "profile", "profile Other" }) do
+      local before = #m.__chat
+      local ok, err = pcall(ns.Slash.OnSlash, ns.Slash, input)
+      assertTrue(ok, "/pm " .. input .. " raised: " .. tostring(err))
+      assertEqual(#m.__chat, before + 1, "/pm " .. input .. " did not print one line")
+      assertEqual(m.__chat[#m.__chat], absent, "/pm " .. input)
+    end
+    local before = #m.__chat
+    assertEqual(ns.Slash:ProfileSwitch("Other"), false, "ProfileSwitch claimed a switch")
+    assertEqual(#m.__chat, before + 1, "ProfileSwitch did not print one line")
+    assertEqual(m.__chat[#m.__chat], absent, "ProfileSwitch")
+    assertEqual(m.__profileName, was, "the profile switched with no library")
+    assertEqual(m.__setProfileCalls, 0, "SetProfile ran with no library")
   end)
 
 test("Degraded install: the help index still lists every verb", function()

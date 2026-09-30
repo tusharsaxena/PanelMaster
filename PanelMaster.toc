@@ -114,7 +114,7 @@ modules\Diagnostics.lua
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
 # Slash AFTER Schema, load-bearing: its dispatcher descriptor takes NS.SchemaRuntime's members as
-# VALUES at file load (settings/Slash.lua:601-605).
+# VALUES at file load (settings/Slash.lua:630-634).
 settings\Slash.lua
 settings\PanelEditor.lua
 # The editor's six tabs, peeled out of PanelEditor.lua (layout-§1, PanelMaster#47). Either order

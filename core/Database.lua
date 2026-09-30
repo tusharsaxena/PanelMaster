@@ -97,6 +97,10 @@ function NS:RegisterProfileCallbacks()
     NS.RefreshEnabled()
     NS:SweepPreviewPanels()   -- a copied profile can carry someone else's preview orphans
     if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
+    -- An open General page re-reads its values in place (options-ui-§11). A switch from the
+    -- Profiles page never has it on screen, but `/pm profile` can land with it open. Scalar only,
+    -- and a hidden page is skipped: P:Refresh gates on IsShown itself.
+    if NS.Panel and NS.Panel.Refresh then NS.Panel:Refresh() end
   end
   local function current()
     return (NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?"

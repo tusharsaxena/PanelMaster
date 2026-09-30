@@ -884,8 +884,12 @@ test("Disabled: the gate is the VERB TABLE's, so the live set is the standard's 
   -- name the standard puts on the live list is here whether or not this addon registers the verb --
   -- `perf` does not exist in NS.COMMANDS today, and a `perf` arriving later must not have to
   -- remember to come back and add itself. `diagnostics` joined the set at Slash minor 16.
+  --
+  -- `profile` is the ONE host addition: the standard's thirteen plus this addon's own profile verb
+  -- (Slash minor 17 leaves it off lib.LIVE_VERBS and has each host widen its own liveVerbs), so a
+  -- player can still switch to a profile where the addon is enabled while it is off.
   for _, verb in ipairs({ "help", "config", "version", "enable", "disable", "debug", "perf",
-                          "get", "set", "list", "reset", "resetall", "diagnostics" }) do
+                          "get", "set", "list", "reset", "resetall", "diagnostics", "profile" }) do
     assertTrue(Sl.ALWAYS_LIVE[verb], "'" .. verb .. "' is a feature verb here, and the standard "
       .. "says it may never be refused")
   end
@@ -894,13 +898,13 @@ test("Disabled: the gate is the VERB TABLE's, so the live set is the standard's 
   for verb in pairs(Sl.ALWAYS_LIVE) do
     local named = false
     for _, ok in ipairs({ "help", "config", "version", "enable", "disable", "debug", "perf",
-                          "get", "set", "list", "reset", "resetall", "diagnostics" }) do
+                          "get", "set", "list", "reset", "resetall", "diagnostics", "profile" }) do
       if verb == ok then named = true end
     end
     if not named then extra = extra + 1 end
   end
-  assertEqual(extra, 0, "a verb has been exempted from the disabled gate that the standard does not "
-    .. "exempt")
+  assertEqual(extra, 0, "a verb has been exempted from the disabled gate beyond the standard's "
+    .. "thirteen and `profile`")
 end)
 
 test("Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)",
@@ -931,3 +935,149 @@ test("Disabled: the refusal is the COLLECTION'S line, built by the library (slas
     end)
     fresh()
   end)
+
+-- ── the `profile` verb (LibKa0s-Slash-1.0 minor 17) ─────────────────────────────
+--
+-- The library owns what the verb does: the list, the quote stripping, the refusals and the switch.
+-- This addon owns the ROW, the descriptor's `profiles` field and the decision that the verb answers
+-- while the addon is disabled. These cases pin the host's half and run the whole path end to end
+-- through the AceDB store surface tests/wow_mock.lua models (GetProfiles / SetProfile), so a
+-- descriptor that stopped passing `profiles` answers "Profiles are not available." and reddens them.
+
+--- Run `fn(current)` with the stored profiles being the current one plus `names`, and put the
+--- store, the current profile, the combat flag and the panel set back however it ends.
+local function withProfiles(names, fn)
+  local savedSet, was, savedCombat = mocks.__profiles, mocks.__profileName, mocks.__inCombat
+  mocks.__profiles = { [was] = true }
+  for _, name in ipairs(names) do mocks.__addProfile(name) end
+  local ok, err = pcall(fn, was)
+  mocks.__inCombat = savedCombat
+  if mocks.__profileName ~= was then mocks.__switchProfile(was) end
+  mocks.__profiles = savedSet
+  fresh()
+  if not ok then error(err, 0) end
+end
+
+--- The tagged line the library prints for one of its PROFILE_* strings.
+local function said(key, ...)
+  return NS.PREFIX .. " " .. Sl:Text(key):format(...)
+end
+
+test("COMMANDS: `profile` sits beside the settings verbs, described through NS.L", function()
+  local index, row
+  for i, cmd in ipairs(NS.COMMANDS) do
+    if cmd[1] == "profile" then index, row = i, cmd end
+  end
+  assertTrue(row ~= nil, "there is no `profile` verb")
+  assertEqual(NS.COMMANDS[index - 1][1], "resetall", "`profile` is not beside the settings verbs")
+  assertEqual(row[2], NS.L["List profiles, or switch to one: profile <name>"])
+
+  -- The row routes the WHOLE remainder, case and inner spaces kept, to the library's verb.
+  local saved, got = Sl.CliProfile, nil
+  Sl.CliProfile = function(_, rest) got = rest end
+  local ok, err = pcall(Sl.OnSlash, Sl, "profile My Alt")
+  Sl.CliProfile = saved
+  if not ok then error(err, 0) end
+  assertEqual(got, "My Alt")
+end)
+
+test("COMMANDS: the verb order is pinned, twenty-one verbs", function()
+  local want = { "config", "enable", "disable", "new", "delete", "rename", "panels", "panel",
+                 "unlock", "lock", "recover", "version", "get", "set", "list", "reset", "resetall",
+                 "profile", "debug", "diagnostics", "help" }
+  local have = {}
+  for i, cmd in ipairs(NS.COMMANDS) do have[i] = cmd[1] end
+  assertEqual(table.concat(have, " "), table.concat(want, " "))
+end)
+
+test("Profile verb: bare `/pm profile` lists the profiles, current marked, then the hint", function()
+  withProfiles({ "beta", "Alt" }, function(was)
+    local lines = capture(function() Sl:OnSlash("profile") end)
+    assertEqual(#lines, 5, "the list is a header, one row a profile and the hint")
+    assertTrue(lines[1]:find(Sl:Text("PROFILE_LIST_HEADER"), 1, true) ~= nil,
+      "the list has no header: " .. tostring(lines[1]))
+    -- Sorted without regard to case: Alt, beta, then the current `Default`.
+    assertEqual(lines[2], NS.PREFIX .. "   Alt")
+    assertEqual(lines[3], NS.PREFIX .. "   beta")
+    assertEqual(lines[4], NS.PREFIX .. "   " .. was .. " " .. Sl:Text("PROFILE_CURRENT_MARK"))
+    assertEqual(lines[5], said("PROFILE_HINT", "/pm"))
+    for _, line in ipairs(lines) do
+      assertFalse(line:match(":%s*$") ~= nil, "trailing colon: " .. line)
+    end
+  end)
+end)
+
+test("Profile verb: an existing name switches, and the profile handler runs", function()
+  withProfiles({ "Alt" }, function()
+    fresh()
+    R:New("Mine")
+    local setBefore = mocks.__setProfileCalls
+    local savedRefresh, refreshes = NS.Panel.Refresh, 0
+    NS.Panel.Refresh = function() refreshes = refreshes + 1 end
+    local ok, lines = pcall(capture, function() Sl:OnSlash("profile Alt") end)
+    NS.Panel.Refresh = savedRefresh
+    if not ok then error(lines, 0) end
+
+    assertEqual(mocks.__profileName, "Alt", "the switch did not land")
+    assertEqual(mocks.__setProfileCalls - setBefore, 1, "SetProfile was not called exactly once")
+    assertEqual(#lines, 1, "the switch is one line")
+    assertEqual(lines[1], said("PROFILE_SWITCHED", "Alt"))
+    -- core/Database.lua's OnProfileChanged handler: the incoming profile's panel set is the one on
+    -- screen, and an open General page re-reads its values (options-ui-§11).
+    assertEqual(R:Count(), 0, "the previous profile's panel is still in the registry")
+    assertTrue(refreshes >= 1, "the open settings page was not refreshed after the switch")
+  end)
+end)
+
+test("Profile verb: the current profile answers 'already', and switches nothing", function()
+  withProfiles({ "Alt" }, function(was)
+    local setBefore = mocks.__setProfileCalls
+    local lines = capture(function() Sl:OnSlash("profile " .. was) end)
+    assertEqual(#lines, 1)
+    assertEqual(lines[1], said("PROFILE_ALREADY", was))
+    assertEqual(mocks.__setProfileCalls, setBefore, "SetProfile ran for the current profile")
+  end)
+end)
+
+test("Profile verb: an unknown name is refused with the list, and nothing is created", function()
+  withProfiles({ "Alt" }, function(was)
+    local setBefore = mocks.__setProfileCalls
+    local lines = capture(function() Sl:OnSlash("profile Nope") end)
+    assertEqual(lines[1], said("PROFILE_UNKNOWN", "Nope"))
+    assertTrue(lines[2]:find(Sl:Text("PROFILE_LIST_HEADER"), 1, true) ~= nil,
+      "the refusal is not followed by the list")
+    assertEqual(mocks.__profiles["Nope"], nil, "the unknown name was created as a profile")
+    assertEqual(mocks.__setProfileCalls, setBefore, "SetProfile ran for an unknown name")
+    assertEqual(mocks.__profileName, was)
+
+    -- Profile names are case-sensitive: the wrong case is refused, with the one near match named.
+    lines = capture(function() Sl:OnSlash("profile alt") end)
+    assertEqual(lines[1], said("PROFILE_UNKNOWN", "alt"))
+    assertEqual(lines[2], said("PROFILE_DID_YOU_MEAN", "Alt"))
+    assertEqual(mocks.__profileName, was)
+  end)
+end)
+
+test("Profile verb: surrounding quotes are stripped, inner spaces and case kept", function()
+  withProfiles({ "My Alt" }, function(was)
+    local lines = capture(function() Sl:OnSlash('profile "My Alt"') end)
+    assertEqual(lines[1], said("PROFILE_SWITCHED", "My Alt"))
+    assertEqual(mocks.__profileName, "My Alt")
+
+    lines = capture(function() Sl:OnSlash("profile  '" .. was .. "' ") end)
+    assertEqual(lines[1], said("PROFILE_SWITCHED", was))
+    assertEqual(mocks.__profileName, was)
+  end)
+end)
+
+test("Profile verb: a switch in combat is refused, and the list still answers", function()
+  withProfiles({ "Alt" }, function(was)
+    mocks.__inCombat = true
+    local lines = capture(function() Sl:OnSlash("profile Alt") end)
+    assertEqual(#lines, 1)
+    assertEqual(lines[1], said("PROFILE_COMBAT"))
+    assertEqual(mocks.__profileName, was, "the profile switched in combat")
+    lines = capture(function() Sl:OnSlash("profile") end)
+    assertEqual(#lines, 4, "the list did not answer in combat")
+  end)
+end)

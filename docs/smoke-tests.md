@@ -1,1233 +1,926 @@
-# Smoke Tests — Ka0s Panel Master
-
-In-client checks for the things the headless harness genuinely cannot reach: how a panel actually
-looks, dragging with a real mouse, layering against other addons' frames, and the debug console's
-rendering. Run these before tagging a release, after any change to `modules/Canvas.lua`,
-`modules/Artwork.lua`, `modules/ArtworkGeometry.lua`, `modules/Unlock.lua`, `settings/Panel.lua`,
-`settings/PanelEditor.lua` or `settings/PanelEditorTabs.lua`, and whenever the `## Interface:` is bumped.
-
-The unit suites ([`testing.md`](testing.md)) cover the logic; this page covers the pixels.
-
-**§ 22 is the exception to "before tagging a release"**: it is the non-English-client pass, it
-needs a deDE or frFR client, and nothing else on this page looks at a panel name that is not
-ASCII.
-
-Start each run from a clean state: `/reload`, then `/pm resetall` (confirm it) — which is a **profile
-reset** and takes the panels with it, so `/pm panel deleteall` is no longer needed alongside it.
-
----
-
-## 1. Load and first contact
-
-1. Log in. **Expect:** no Lua error, and nothing at all on screen — a fresh install draws no panels.
-2. `/pm` → **Expect:** the settings window opens on the **Ka0s Panel Master** landing page, not a
-   sub-page, and nothing prints. `/pm help` → **Expect:** the help index, every line prefixed with a
-   cyan `[PM]`, one row per command, no trailing colons.
-3. `/pm version` → **Expect:** `[PM] v1.2.0`, matching the TOC.
-4. `/pm panels` → **Expect:** "No panels yet", suggesting `/pm new`.
-
-## 2. No separate test mode
-
-Unlocking is this addon's test mode (`options-ui-§15`): it shows every panel with its outline and
-name, so **Lock frame** is the switch.
-
-1. `/pm test` → **Expect:** nothing appears on screen; it is not a verb. `/pm config` → **General ▸
-   Master controls** has no **Test mode** row.
-2. Upgrade check, only if you have SavedVariables from a build that still had test mode, saved with
-   it on: `/pm debug on`, `/reload` → **Expect:** a `[Preview] swept …` line, and `/pm panels`
-   lists no `Preview: *` panels.
-
-## 3. Creating and placing a panel
-
-1. `/pm new Chat BG` → **Expect:** a confirmation naming the panel and suggesting `/pm unlock`.
-2. `/pm unlock` → **Expect:** the panel appears with a gold outline and its name in the middle.
-3. **Drag it** to sit behind your chat frame. **Expect:** it follows the mouse smoothly and stays
-   where you drop it.
-4. `/pm lock` → **Expect:** the outline and label vanish; the panel is now a plain block.
-5. **Click through it** — click something in the chat frame behind it. **Expect:** the click lands on
-   the chat frame. A locked panel must be completely mouse-transparent.
-6. `/reload` → **Expect:** the panel is exactly where you left it, and panels are **locked** again
-   (unlock is session-only).
-
-## 4. Snapping
-
-1. `/pm set settings.gridSize 32` and `/pm set settings.snapToGrid true`.
-2. `/pm unlock`, drag a panel slowly. **Expect:** on release it jumps to a 32-unit multiple.
-3. `/pm panel <name> x` → **Expect:** a value divisible by 32.
-4. `/pm set settings.snapToGrid false`, drag again → **Expect:** it lands wherever you dropped it.
-5. Reset with `/pm reset settings.gridSize`.
-
-## 4b. The three settings promoted out of the code
-
-All three are new rows in the tabbed-panel pass — `settings.unlockOutlineSize` on **Editing**, and
-`settings.defaultWidth` / `settings.defaultHeight` on **New panels** — and each ships at exactly the
-number it replaced, so the first half of every check is that **nothing moved**.
-
-1. On a fresh profile, `/pm get settings.unlockOutlineSize` → **Expect:** `2 px`. `/pm unlock` and
-   look at a panel's gold outline: it is the same hairline it has always been.
-2. `/pm set settings.unlockOutlineSize 8` **while unlocked** → **Expect:** every unlocked panel's
-   outline thickens immediately, with no `/reload` and no re-unlock.
-3. `/pm set settings.unlockOutlineSize 0` → **Expect:** refused (`Invalid value`), because an
-   outline nobody can see reads as unlock mode being broken. Same for `400`.
-4. Hand-edit `unlockOutlineSize = 0` into `PanelMaster.lua` in `WTF/.../SavedVariables`, reload, and
-   `/pm unlock` → **Expect:** the outline is drawn at **1**, not at 0. The value is clamped on the
-   way out as well as on the way in.
-5. `/pm reset settings.unlockOutlineSize` puts it back to `2 px`.
-6. `/pm get settings.defaultWidth` / `settings.defaultHeight` → **Expect:** `240 px` and `120 px`,
-   which is the size a new panel has always been. Make a panel and confirm it.
-7. `/pm set settings.defaultWidth 500`, `/pm set settings.defaultHeight 60`, then `/pm new Wide` →
-   **Expect:** a 500x60 panel. **Every existing panel is untouched** — check one you made earlier.
-8. `/pm panel Wide reset` → **Expect:** it comes back at **500x60**, not 240x120: "reset this panel"
-   and "make a new one" land on the same state, which is what the shared code path is for.
-9. Put both back with `/pm reset settings.defaultWidth` and `/pm reset settings.defaultHeight`.
-
-## 5. Appearance
-
-With a panel created and locked:
-
-1. `/pm panel <name> bgColor 1,0,0,0.5` → **Expect:** it turns translucent red immediately.
-1a. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-18`; the plan gives this item no numbered
-   session, so fold it into any convenient login). The same color in the byte form the parser also
-   accepts, with a fractional alpha: `/pm panel <name> bgColor 255,0,0,0.5` → **Expect:** the
-   *identical* translucent red as step 1, and the echo reads `1.00,0.00,0.00,0.50`. Then
-   `/pm panel <name> bgColor 255,0,0,1` → **Expect:** the same red, **fully opaque**, echoing
-   `1.00,0.00,0.00,1.00`. That last one is the fix: the byte scale chosen from R, G and B used to be
-   applied to alpha as well, so a 1 there meant 1/255 and the panel vanished off the screen with
-   nothing in chat or the error frame to say why. `/pm panel <name> bgColor 255,0,0,128` still
-   scales — half-transparent, echoing `0.50` — because a byte alpha above 1 is unambiguous.
-2. `/pm panel <name> borderSize 6` (it starts at 0) and `/pm panel <name> borderColor 0,1,0,1` → **Expect:** a thick
-   green border, with the four edges **meeting cleanly at the corners** — no darker overlap squares,
-   which is what a translucent border would reveal.
-3. `/pm panel <name> borderSize 0` → **Expect:** the border disappears entirely, leaving a plain fill.
-4. `/pm panel <name> alpha 0.2` → **Expect:** it fades. `/pm panel <name> alpha 9` → **Expect:** the
-   echo reads `1.00`, i.e. it clamped rather than accepting the value.
-5. `/pm panel <name> strata HIGH` → **Expect:** it now covers UI it previously sat behind.
-   `/pm panel <name> strata BACKGROUND` → **Expect:** it drops behind again.
-
-## 5b. Textures (LibSharedMedia)
-
-0. **New as of the LibKa0s-Media adoption, and expected:** the addon now registers the collection's
-   shared media with LibSharedMedia at load, so the **font** dropdowns gain `JetBrains Mono` and the
-   **Bar texture** dropdown gains seven `Ka0s …` entries (`Ka0s Gradient`, `Ka0s Underline 1`
-   / `2` / `4`, `Ka0s Overline 1` / `2` / `4`). Nothing you had already chosen moves — registration
-   only adds names — and the shipped default is still a texture LSM itself always ships.
-   **A regression looks like** those names being absent on a complete install, which means
-   `core/MediaSetup.lua` never reached `Media.RegisterLSM`.
-1. In **Panels ▸ Edit**, open the **Background texture** dropdown. **Expect:** a list with a preview
-   swatch per entry, `Solid` among them, plus anything other addons have registered (ElvUI,
-   WeakAuras, Details all contribute).
-2. Pick a decorative one — `Blizzard Parchment`, say. **Expect:** the panel fills with it
-   immediately, tinted by its background color.
-3. Reopen the dropdown. **Expect:** it still reads the texture you picked. (If it has reverted to the
-   old name while the panel visibly changed, the LSM widget's value push has regressed — see
-   `settings-panel.md` ▸ *Three widget workarounds*.)
-4. Open **Border style** and pick `Blizzard Tooltip`. **Expect:** a proper decorative edge, with
-   corners drawn correctly — not four flat bars.
-5. Check the closed **Border style** dropdown is flush with the controls beside it, with no ~42px
-   empty gap on its left. A gap means `lib.__PatchLSM30Border()` is not taking effect. **This step
-   checks it with PanelMaster alone, which is exactly the check that stayed green all the way
-   through the defect section 20 exists for** — run 20 too whenever this one matters.
-6. Raise **Border thickness (px)** to 8 and back to 1. **Expect:** the edge scales with it.
-7. Set **Border style** to `None`. **Expect:** the border disappears entirely while **Border thickness (px)**
-   stays where it was. Set it back and the border returns.
-8. Set **Background texture** to `None`. **Expect:** the fill disappears, the border stays.
-9. Reload. **Expect:** both texture choices survived.
-10. **The uninstall case:** pick a texture supplied by another addon, disable that addon, `/reload`.
-   **Expect:** the panel renders **plain** — not invisible, not an error — and re-enabling the addon
-   brings the texture straight back. The choice was never overwritten.
-
-## 5b-2. Color pickers (regression: they used to do nothing)
-
-AceGUI's ColorPicker only fires `OnValueConfirmed` when the **opacity slider** is touched, so binding
-that alone meant an ordinary color change never reached the addon — the swatch updated and the panel
-did not. Both pickers now bind `OnValueChanged` too. This is live-client-only: the headless suite
-stubs AceGUI out entirely, so **nothing below is covered by a unit test.**
-
-1. Click the **Background color** swatch. Pick a strong color (bright green). **Do not touch the
-   opacity slider.** Click **OK**.
-2. **Expect:** the panel is green. Both the swatch *and* the panel must change — a green swatch over
-   an unchanged panel is exactly the old bug.
-3. Watch the panel while dragging inside the color wheel, before clicking OK. **Expect:** it
-   updates live.
-4. Repeat both steps for **Border color** with a border thickness of 4 or more. **Expect:** the
-   border takes the color.
-5. Open a picker, change the color, and press **Cancel**. **Expect:** the panel returns to its
-   previous color.
-6. Change a color, `/reload`. **Expect:** the color persisted.
-7. Now change a color **and** drag the opacity slider. **Expect:** both apply, and the panel's
-   opacity is the picker's alpha multiplied by the **Panel opacity** slider (under **Opacity and
-   fade**).
-
-## 5b-3. Border offset
-
-1. With a visible border of 2–4px, drag **Border offset** positive. **Expect:** the border moves
-   *outward*, away from the panel's fill, leaving a gap between the two — a halo.
-2. Drag it negative. **Expect:** the border moves *inward*, overlapping the fill — an inset frame.
-3. Return it to 0. **Expect:** the border sits exactly on the panel's edge.
-4. With a non-zero offset, drag the panel. **Expect:** the border moves with it, keeping its offset.
-5. With a non-zero offset, change the **Frame strata**. **Expect:** the border stays with the panel —
-   it is a child frame, so it cannot end up on a different layer.
-6. `/reload`. **Expect:** the offset persisted.
-
-## 5b-4. Accent bar
-
-The BenikUI-style strip. Everything below is per panel, under **Accent bar** in the editor.
-
-1. On a fresh panel, confirm **Enable accent bar** is **ticked** and a bar is already drawn along the
-   **top** edge only — running the panel's full width, **5px thick, flush against the panel**, in
-   the **Blizzard** status-bar texture, in **your class color**, outlined by a **1px black**
-   hairline. That is the shipped look, with no configuration at all.
-1b. Confirm the panel's **own** border starts at size **0** — the accent bar defines the edge, and
-   both at once reads as busy.
-2. Untick **Enable accent bar**. **Expect:** the strip vanishes, leaving a plain block. Tick it
-   again and it returns exactly as before.
-2b. **Z-order.** Give the panel a border of 4 or more in a contrasting color. **Expect:** the accent
-   bar draws **over** the border where they meet, not under it. Change **Frame strata** and confirm
-   the stacking holds.
-3. Tick **Bottom**, **Left** and **Right** in turn. **Expect:** each edge gains a bar spanning that
-   edge in full. With all four on it reads as a detached outline.
-4. Untick every edge. **Expect:** no bars, and the enable switch stays **on** — unticking edges must
-   not silently re-tick Top.
-5. Resize the panel (drag the Width and Height sliders). **Expect:** every bar tracks the new size
-   and still spans its whole edge, with no gap at either end.
-6. Raise **Bar thickness**. **Expect:** top/bottom bars get taller, left/right bars get wider.
-7. Drag **Bar offset** positive. **Expect:** the bars move *away* from the panel on all sides at
-   once. Set it to 0 — they sit flush, and start to look like a thick border. Negative — they
-   overlap the panel.
-8. Untick **Use class color** next to **Bar color**. **Expect:** the bar turns the stored white. Pick
-   your own color and confirm it applies (see §5b-2 — same picker, same fix).
-9. Change **Bar texture** to a gradient status-bar texture. **Expect:** the bar renders with it,
-   tinted by the bar color. The list should be your **status-bar** textures, not backgrounds.
-9b. **The bar's own border**, under the tab's **Border** heading. Raise **Border thickness (px)** to
-    3. **Expect:** an outline appears around each bar. Change **Border style**, **Border color** and
-    its **Use class color** — all behave like the panel's border. Push **Border offset** positive and
-    negative. Drop the thickness back to 0 and confirm the outline goes completely.
-9c. **Bar opacity.** Under the **Bar** heading, drag **Bar opacity** to 0.3. **Expect:** the bars
-    themselves get more see-through while the panel's background and border do not — this is the
-    bar's own fill opacity, not the panel-wide one. Set it back to 1 and confirm the bar returns to
-    exactly the solidity the bar color's own alpha gives it.
-10. Set **Panel opacity** to 0.3. **Expect:** the bars fade *with* the panel — they are part of it,
-    not separate.
-11. Change **Frame strata**. **Expect:** the bars move with the panel; they can never be on a
-    different layer.
-12. With bars on, **click through** where a bar is drawn. **Expect:** the click lands on whatever is
-    behind. Accent bars must not take the mouse either.
-13. Turn on **Show on mouseover only** with a faded opacity of 0. **Expect:** the bars vanish and
-    reappear with the panel.
-14. Delete a panel that had bars. **Expect:** no colored strips left floating where it was — they
-    are anchored *outside* the panel's bounds, so this is a real failure mode.
-15. `/reload`. **Expect:** every accent setting persisted.
-16. From the command line: `/pm panel <name> accentEdges top,left`, then
-    `/pm panel <name> accentEdges none`, then a deliberate typo like `accentEdges middle`.
-    **Expect:** the first two apply, the third is refused with the valid list.
-
-## 5c. Class color
-
-1. Tick **Use class color** next to **Background color**. **Expect:** the panel takes your class
-   color. The picker beside it stays **enabled**, its label stays **Background color** with no
-   `(opacity)` suffix, and its tooltip ends with the collection's own sentence: *not read while Use
-   class color is on, except for its opacity, which always applies*.
-2. Check the panel's **opacity is unchanged** — class color replaces the hue, not the alpha. Drag
-   **Panel opacity** and confirm it still works.
-3. Tick **Use class color** next to **Border color** too, and confirm the two are independent: untick
-   the background one and the border stays class-colored.
-4. Untick both. **Expect:** the original colors come back exactly — they were never overwritten.
-4b. **The picker stays usable under class color.** With **Use class color** ticked, the picker is
-   still **enabled**. All five swatches (**Background color**, **Border color** twice, **Bar color**,
-   **Artwork color**) keep their plain label, with no `(opacity)` suffix, and their tooltip says the
-   opacity still applies. Open one and drag the opacity slider →
-   **Expect:** the class-colored border/fill gets more or less solid. This is the only control that
-   sets opacity, so it must not be grayed out.
-4d. **The composed blocks (#48).** On **Background and border**, and on **Accent bar** for both the
-   bar and its border, work every control in turn: pick a style or texture, drag the thickness, pick a
-   color, tick and untick **Use class color**, drag the offset (and **Bar opacity**, **Bar thickness**,
-   **Bar offset**). **Expect:** each applies to the panel at once. A newly picked style or texture
-   name shows in its dropdown straight away rather than the old one. **Border thickness (px)**
-   reaches **32**. **Bar opacity** reads as a 0–1 value, not a percentage. Hovering each control shows
-   the same tooltip it did when the blocks were typed out. The one player-visible label change: no
-   color swatch gains a gray `(opacity)` suffix when **Use class color** is ticked, on these blocks
-   or on **Background color** and **Artwork color**. `/reload`, and every value persisted.
-4c. **Definition check.** A 1px border reads as sharp or soft mostly by *contrast*, not by which
-   color mode produced it. Compare a picked bright color against your class color at the **same
-   opacity and size** — a darker class color will legitimately look softer. If they differ at
-   matched luminance, that is a real bug; raise it. Bumping **Border size** to 2 makes any color
-   crisp regardless of UI scale (the control is **Border thickness (px)** now).
-5. Log in on a character of a **different class**. **Expect:** that character's panels (if
-   class-colored) show the new class color.
-
-## 5d. Mouseover fade
-
-1. Tick **Show on mouseover only** and set **Faded opacity** to `0`.
-2. Move the cursor away. **Expect:** the panel disappears completely.
-3. Move the cursor over where it was. **Expect:** it appears at its normal opacity, promptly (within
-   about a tenth of a second) and without stutter.
-4. **The critical one:** with the cursor over the faded-in panel, **click something behind it**.
-   **Expect:** the click lands on the frame underneath. The mouseover fade must not have made the
-   panel mouse-interactive — that would break click-through, which is the one thing a backdrop
-   cannot do.
-5. Set **Faded opacity** to `0.3`. **Expect:** it rests dim rather than invisible.
-6. Set **Faded opacity** above **Opacity**. **Expect:** it is clamped — the panel must never fade
-   *out* when you mouse over it.
-7. Tick **Unlock** on that panel. **Expect:** it is held fully visible while unlocked, regardless of
-   the cursor, so it can be found and dragged. Untick and the fade resumes.
-8. Create half a dozen mouseover panels and watch your frame rate. **Expect:** no measurable change —
-   one shared 10Hz ticker drives all of them.
-9. ⚠ **Smoke, unnumbered — NOT YET RUN** (`M4-22`; the plan gives this item no numbered session, so
-   fold it into any convenient login). **The ticker comes back after it has been switched off.** Untick
-   **Show on mouseover only** on *every* panel that has it — the last one is the one that matters,
-   because that is when `SetMouseoverTracked` now takes the `OnUpdate` off the shared driver frame.
-   Then tick it again on one panel and hover it. **Expect:** the fade works exactly as in step 3,
-   promptly and without stutter. **Fail:** the panel sits at one opacity and never responds to the
-   cursor again for the rest of the session — which is what an `ensureMouseoverDriver` that early-returns
-   on a frame it already created would produce. No headless case can witness that: the suite calls
-   `Canvas.__updateMouseover` directly and never goes through the script slot, which is why the new case
-   asserts on the slot itself rather than on an alpha.
-
-## 5e. Artwork — does it load at all
-
-**Run this first.** A malformed `.tga` renders as *nothing* with no Lua error, which is
-indistinguishable from having picked **None** — so every check below it is meaningless until this
-one passes.
-
-1. Create a panel, size it around 300x300, and open its **Artwork** section.
-2. Set **Artwork** to `Class: Death Knight`. **Expect:** the emblem appears inside the panel.
-3. Step through every other catalog entry. **Expect:** each one draws. If any renders blank, that
-   file is bad — the headless suite only proves the file *exists*, never that the client can decode
-   it.
-4. Set **Artwork** back to **None**. **Expect:** the panel returns to a plain block.
-
-## 5e-2. Artwork — fill types under resize
-
-The one behavior the whole feature turns on, and the reason to resize rather than eyeball a static
-panel: three of the five fills only differ once the panel stops matching the art's aspect.
-
-1. With artwork on, drag the panel's **Width** slider from minimum to maximum at each fill:
-   - **Fit (contain)** → the whole emblem stays visible, never cropped, aspect never distorted.
-   - **Fill (crop)** → the art always covers the panel edge to edge, aspect never distorted, and the
-     overflow is cropped evenly on both sides.
-   - **Stretch** → the art distorts to match the panel. This one is *supposed* to look wrong.
-   - **Native size** → the emblem's size never changes as the panel resizes.
-   - **Tile** → more copies appear as the panel grows, and each copy stays the same size.
-2. Now do the same with **Height**.
-3. **The one that shipped broken:** set **Rotation** to `90` and repeat step 1 at **Fit**, **Fill**,
-   **Native size** and **Tile**. **Expect:** the art is turned a quarter-turn and its proportions are
-   otherwise unchanged. A squashed or stretched emblem here means the axis transpose regressed.
-
-## 5e-3. Artwork — layers and clipping
-
-1. Give the panel a solid opaque background and a thick border.
-2. **Draw layer → Behind background.** **Expect:** the artwork is hidden behind the fill. Drop the
-   background's alpha and it shows through.
-3. **→ Above background.** **Expect:** the art sits on the fill but *under* the border and the
-   accent bar.
-4. **→ Above border and accent.** **Expect:** the art now covers both.
-5. **Clipping:** set **Fill type** to `Native size`, **Scale** to `4`, and drag **X** and **Y**
-   around. **Expect:** the art is cut off exactly at the panel's edges and never spills outside them.
-   Confirm the **accent bar still hangs outside** the panel — it is deliberately unclipped, and
-   clipping it would be a regression.
-6. **Blend mode → Glow.** **Expect:** the art brightens whatever is behind it and never darkens
-   anything — strongest over a dark panel, barely visible over a pale one. Set it back to **Normal**
-   and the art paints over the panel obeying its own transparency. Only those two modes are offered:
-   the other three of WoW's five cannot be correct for art defined by its alpha channel.
-
-## 5e-4. Artwork — color, class color and Desaturate
-
-1. On any piece: change **Artwork color**. **Expect:** the art takes the color. Tick **Use class
-   color** → it
-   takes your class color. Drop **Opacity** → it fades independently of the panel's own background
-   alpha.
-2. **Expect:** the Artwork color and Use class color controls are present for **every** piece, and do not appear
-   and disappear as you page through the artwork dropdown. They used to be hidden for full-color
-   art, which shoved every row below them up and down.
-3. On a full-color piece with a strong tint set, tick **Desaturate**. **Expect:** the muddy
-   average turns into a clean, saturated version of the color you picked. Untick it and the mud
-   comes back. On a white-on-black piece Desaturate should make no visible difference — it is
-   already neutral.
-
-## 5e-5. Artwork — the two z-order regressions
-
-Both of these broke panels that have **no artwork at all**, so run them on a plain panel.
-
-1. On a panel with the default opaque-ish background and **Artwork = None**, `/pm unlock`.
-   **Expect:** the gold outline and the panel's name are clearly visible **on top of** the
-   background fill. If they are dim or invisible, the unlock overlay has fallen behind the fill
-   again.
-2. Make two more panels with different colors, then `/pm unlock` → **Expect:** every panel shows its
-   gold outline and name legibly.
-3. Create two overlapping panels, same strata. Set one to **Level** `0` and the other to `1`.
-   **Expect:** the level-1 panel draws entirely in front — its background covers the other panel's
-   accent bar and border, not just part of them. Repeat with levels `0` and `3`; the result must be
-   the same. Interleaved layers here mean the level stride regressed.
-
-## 5e-6. Artwork — custom paths and persistence
-
-1. Set **Artwork** to `Custom path…` and enter `Interface\Icons\INV_Misc_QuestionMark`.
-   **Expect:** the question-mark icon renders under the current fill.
-2. Enter deliberate nonsense. **Expect:** nothing draws, and **no Lua error**.
-3. Clear the box. **Expect:** nothing draws.
-4. Set up a panel with artwork, a tint, a rotation, a flip and an offset. `/reload`.
-   **Expect:** every one of those survives exactly.
-5. **Copy settings from another panel** onto a second panel. **Expect:** all the artwork settings
-   travel with it.
-6. Switch profiles and back. **Expect:** the artwork settings are intact.
-7. `/pm panel <name>` → **Expect:** the `art*` fields print. Try
-   `/pm panel set <name> artFill SQUISH` → **Expect:** a refusal listing the five legal values, not
-   a silent store.
-
-## 6. Layering (the actual point of the addon)
-
-1. Create a panel, place it behind your action bars, `strata BACKGROUND`, `/pm lock`.
-2. **Expect:** the action bars are fully visible and usable on top of it; the panel never intercepts
-   a click, a keybind or a tooltip.
-3. Enter combat. **Expect:** the panel is unchanged, and pressing an action button works normally.
-
-## 7. Enable / disable
-
-1. `/pm panel <name> enabled false` → **Expect:** it vanishes but still appears (dimmed) in
-   `/pm panels`.
-2. `/pm unlock` → **Expect:** the disabled panel is **shown anyway**, with its outline and label —
-   you cannot move what you cannot see.
-3. `/pm lock` → **Expect:** it disappears again.
-4. `/pm set settings.enabled false` → **Expect:** every panel vanishes. `true` → all return.
-5. `/pm disable` → **Expect:** the same thing, and the same `settings.enabled = false` echo as
-   step 4 printed — they are one switch, not two (`slash-commands-§2`).
-6. **While disabled**, run `/pm`, `/pm help` and `/pm version` → **Expect:** all three answer
-   normally, and the bare `/pm` opens the settings panel. Then `/pm enable` → **Expect:** the panels
-   return. This is the case that matters: if the dispatcher stood down with the features, `disable`
-   would be a one-way switch.
-7. `/pm config` → **General ▸ Master controls** → untick and re-tick **Enable Ka0s Panel Master**
-   → **Expect:** the checkbox and the two verbs always agree, whichever you used last.
-8. **While disabled**, run a FEATURE verb and then check the world, not the chat. `/pm new Ghost`
-   → **Expect:** exactly one line, `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`,
-   and **no new panel** — confirm with `/pm enable` then `/pm panels` (`slash-commands-§2`). Repeat
-   with `/pm unlock` → **Expect:** the same line, and the panels stay locked. **Fail:** the line
-   prints and the verb acts anyway, which is the failure a chat-only check walks straight past.
-   **Fail:** the wording differs from that line by a word or a color — it is the collection's, built
-   by the library, and every Ka0s addon prints it identically (`slash-commands-§7`).
-9. **While disabled**, run the verbs that must never be refused: `/pm list`, `/pm get
-   settings.gridSize`, `/pm set settings.gridSize 8`, `/pm reset settings.gridSize`, `/pm debug`,
-   `/pm config`, `/pm version` and a **bare `/pm`**. **Expect:** every one answers normally, the
-   `set` really writes, and the bare command **opens the settings panel** — that last one is the
-   case standard v2.57.0 was written on. A player has to be able to read and repair settings and
-   reach the panel while the addon is off, which is when they are most likely to need to.
-   `/pm help` prints the whole index headed by the disabled line, which is a note above an answer
-   rather than a refusal. Re-enable when done.
-10. **While disabled**, a typo: `/pm nwe Ghost` → **Expect:** `unknown command 'nwe'` and the help
-   index, **not** the disabled line. A misspelling is a misspelling in either state
-   (`slash-commands-§3`).
-11. **The stand-down is total, and this is the step that checks it rather than the drawing**
-   (`slash-commands-§7`). With a panel that has *Show on mouseover only* ticked, disable the addon
-   and then: enter and leave combat, switch zones, and switch profiles back and forth. **Expect:**
-   nothing is drawn, **nothing is printed**, and `/pm enable` afterwards brings back exactly the
-   panels and settings as they are **now** — including anything you changed while it was off.
-   **Fail:** any chat line at all from a combat transition or a zone change while disabled; that is
-   a registration that survived, and it is the failure this whole section exists to catch.
-12. **The profile route.** While disabled, switch to a profile where the addon is **enabled**
-   (Profiles page) → **Expect:** the panels come up without touching a checkbox or a verb. Switch
-   back → **Expect:** they go down again.
-13. **Unlock does not beat the stand-down** (`slash-commands-§7`). With two panels, `/pm unlock`,
-   then `/pm disable` → **Expect:** no outline, no panel, no label, and dragging the empty spot moves
-   nothing. **While disabled**, untick **Master controls ▸ Lock frame**, and tick a panel's
-   **Unlock** on the Panels page → **Expect:** still nothing drawn. `/pm enable` → **Expect:** the
-   outlines come back and the panels drag. **Fail:** any outline or draggable panel while disabled;
-   a drag there writes positions while the addon is off.
-
-## 7b. The launcher — the minimap button and the broker row
-
-The whole of `launcher`, and every step of it fails **silently** in the client, so this section is
-worth doing in full after any change to the icon or the seam.
-
-1. Log in. **Expect:** a round button on the minimap ring wearing **this addon's logo** — not a
-   Blizzard icon, and not a blank square. A blank square means the `.tga` is missing or is not
-   uncompressed 32-bit; nothing will be printed and no error raised.
-2. Open the AddOns list (Esc ▸ AddOns). **Expect:** the same logo beside **Ka0s Panel Master**. One
-   file, three places.
-3. **Left-click** the button → **Expect:** the settings page opens on its landing page, and the
-   panels do **not** unlock (`launcher-§2`, standard v2.67.0: left-click opens settings on every
-   addon).
-4. **Right-click** the button → **Expect:** a small menu titled **Ka0s Panel Master** with exactly
-   two ticks, in this order: **Enabled** (ticked) and **Locked** (ticked while the panels are
-   locked). No *Test mode* and no *Show window* entry. Click **Locked** → **Expect:** the menu closes,
-   the panels unlock exactly as `/pm unlock` does (outlines and name labels) and chat shows the same
-   `state.locked = false` line `/pm unlock` prints. Right-click again → **Locked** is now unticked;
-   click it → they lock. Open `/pm config` → **General ▸ Master controls** and check **Lock frame**
-   agrees. In combat, clicking **Locked** on locked panels unlocks nothing until combat ends, as
-   `/pm unlock` does.
-4b. Right-click → click **Enabled** → **Expect:** the addon disables exactly as `/pm disable` does
-   (panels go, `settings.enabled = false` in chat). Right-click again → **Enabled** is unticked and
-   **Locked** is **grayed** and reads `Locked (enable the addon first)`; clicking it does nothing and
-   writes nothing. **Left-click** in this state → **Expect:** the settings page opens, no chat line.
-   Right-click → click **Enabled** → the addon comes back as with `/pm enable`.
-4c. **Hover** the button → **Expect:** the library's status tooltip (`launcher-§1`):
-   `Ka0s Panel Master  v<the TOC version>`, `Enabled: Yes` (green), `Locked: Yes`,
-   `Left-click: Open settings`, `Right-click: Options menu`, and **no** `Test mode` line. Unlock,
-   hover again → `Locked: No` (red), hints unchanged. `/pm disable`, hover → the tooltip **still
-   shows**, with `Enabled: No` (red) and the same two hints. `/pm enable` when done.
-5. **Drag** the button a third of the way around the ring, then `/reload` → **Expect:** it is still
-   where you left it.
-6. Switch to a different profile on the **Profiles** page → **Expect:** the button does **not** move
-   or vanish. That is what storing it account-wide buys (`launcher-§3`).
-6b. **Hide** the button (untick **General ▸ Master controls ▸ Minimap button**), then run **both**
-   resets in turn, checking the button after each. **Reset all settings** (it asks first) →
-   **Expect:** still hidden, checkbox still unticked. Then the **Defaults** button in the General
-   page's own header → **Expect:** the same. Neither reset may un-hide it, and neither may re-hide a
-   shown one: a player's minimap-button choice is a per-installation display preference, in the same
-   class as the angle they dragged the button to, and no reset in the collection touches that
-   (`launcher-§3`, standard v2.54.0). **Failure:** the button comes back after either reset, or the
-   checkbox re-ticks itself. Tick it back on before moving on.
-7. Untick **General ▸ Master controls ▸ Minimap button** → **Expect:** the button goes at once, not
-   at the next reload. `/reload` → it stays gone. Tick it → it comes back, at the angle you dragged
-   it to.
-8. Right-click the button → **Expect:** the options menu has **no** hide entry; hiding the button
-   is the **Minimap button** row's job (steps 6b and 7) and `/pm set global.minimap.shown` (8b).
-8b. The CLI name reads **shown** (`launcher-§3`, standard v2.65.0). With the button visible,
-   `/pm get global.minimap.shown` → **Expect:** `true`. `/pm set global.minimap.shown false` →
-   **Expect:** the button goes at once. Bring it back, hide it with the **Minimap button** checkbox,
-   then `/pm get global.minimap.shown` → **Expect:** `false`. `/reload` → it stays hidden.
-   `/pm get global.minimap.hide` → **Expect:** *Setting not found* — the old path is not an alias.
-   **Failure:** `get` answers `true` while the button is hidden, or the old path still answers.
-   Tick the button back on before moving on.
-9. Only if you run Titan Panel, ElvUI or Bazooka: **Expect:** a row labeled **Ka0s Panel Master**
-   in its plugin list -- the brand name in plain text, not `PanelMaster` and not a string with color
-   escapes in it (`launcher-§1`) -- wearing the same logo, whose left and right clicks do the same
-   two things as steps 3 and 4. **Fail:** the row reads as the folder name, or is splattered with
-   `|cff...` escapes, either of which files this addon away from its ten siblings in the list.
-   The row has **no** enable/disable setting of this addon's — the display's own per-plugin toggle
-   is where that belongs.
-
-## 8. Combat gating
-
-1. Pull a training dummy.
-2. `/pm unlock` **in combat** → **Expect:** a gray "unlock queued" notice; panels stay locked.
-3. Leave combat → **Expect:** panels unlock by themselves and print "panels unlocked".
-4. Pull again, `/pm unlock`, then `/pm lock` while still in combat, then leave combat.
-   **Expect:** panels stay **locked** — the explicit lock cleared the queue.
-4b. Pull again and tick a panel's **Unlock** box in the settings editor. **Expect:** the same gray
-   notice, and the checkbox **unticks itself** rather than claiming a state the panel is not in.
-   Leave combat → that one panel unlocks.
-5. `/pm config` **in combat** → **Expect:** a gray "cannot open settings during combat" notice and
-   **no** panel opens.
-6. Leave combat → **Expect:** the options panel does **not** pop open by itself. Run `/pm config`
-   yourself and it opens.
-7. Open the settings with `/pm config` **out of combat**, then pull a training dummy with the window
-   still open. **Expect:** every page, the tab strip included, is covered with a gray *"Settings are
-   locked during combat."*; clicking a control, **Defaults** or a tab does nothing; switching
-   category in the sidebar raises no Lua error and the window stays open; exactly **one** gray chat
-   notice per combat, however many clicks. Leave combat → **Expect:** the cover lifts and the page is
-   live and shows current values.
-8. Set **General visibility** to **Only in combat**. **Expect:** panels hidden out of combat. Pull
-   a training dummy → **Expect:** they appear on the first swing, not at some later repaint. Leave
-   combat → **Expect:** they hide again.
-9. Set it to **Only out of combat** and repeat. **Expect:** the reverse — panels vanish on the pull
-   and come back when combat ends. Set it back to **Always** afterwards.
-
-## 9. Options panel
-
-1. `/pm config` → **Expect:** the landing page with the logo, the tagline and the slash-command list,
-   which matches `/pm help` exactly.
-2. Click **General** → **Expect:** a **tab strip** pinned at the top reading **Master controls |
-   Editing | New panels**, the first tab active (drawn as a disabled button, which is how a Ka0s
-   strip marks selection), a two-column grid of settings under it with **no** section headings — the
-   tab is the heading — and a **Defaults** button top-right in the standard dark/gold style, **not**
-   Blizzard's red stone button. (A red button means it was created too early; see `options-ui-§5`.)
-2b. **Click each tab.** **Expect:** only that tab's controls are on the page, the strip stays put,
-   and clicking the tab you are already on does nothing at all (the active tab is drawn disabled).
-   Master controls has 6 rows plus a **Reset position | Reset all settings** button pair under them,
-   Editing 4 plus a **Recover panels** button, New panels 4.
-2c. **Master controls, in the canonical order** (`options-ui-§15`): **Enable Ka0s Panel Master |
-   General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then the
-   button pair. Two per line, in that order, with nothing else on the tab and no **Test mode** row.
-   This tab reads identically in every Ka0s addon — compare it against one.
-2d. **The four new controls actually do something.**
-   - **General visibility** → `Only out of combat`, then pull a training dummy. **Expect:** every
-     panel disappears the instant you enter combat and comes back the instant you leave it. Try
-     `Only in combat` (the inverse), then `Never` (nothing draws at all), then back to `Always`.
-   - **Master scale** → 1.5. **Expect:** *every* panel grows, together, including its border, its
-     accent bars and its artwork — and each panel's own **Panel scale** slider on the Panels page
-     still reads what you set it to. The two multiply; they are not the same control.
-   - **Master alpha** → 0.4. **Expect:** every panel fades, on top of its own opacity.
-   - **Reset position** → **Expect:** every panel jumps back to the middle of the screen, a chat
-     line says how many moved, and **nothing else about any panel changes** — same size, same
-     colors, same artwork.
-   - **Hover Reset all settings** → **Expect:** the tooltip reads *"Reset the current profile to its
-     defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not
-     affected."* **A regression looks like** *"Restore every setting in this addon to its
-     default."*, which means the Options descriptor lost `resetProfile` or `profilesPage`.
-   - **Reset all settings** → **Expect:** the `options-ui-§12` confirmation popup, word for word,
-     and on **Yes** the profile is reset — settings *and* panels. This is the same act as the header
-     **Defaults** button and `/pm resetall`; deleting every panel without touching the settings is
-     still the separate, separately-confirmed **Defaults** button on the **Panels** page.
-3. Confirm the scrollbar is **present but grayed out** on a page that fits, and that the body does not
-   jump width when you tab between pages.
-4. Toggle **Lock frame** → **Expect:** it does exactly what the slash commands do, the *inverse* of
-   `/pm unlock`: unticking it unlocks. Ticked is the shipped state, and it is ticked again after
-   every `/reload`.
-5. Click **Panels** → **Expect:** a six-tab strip — **General | Position and size | Background and
-   border | Accent bar | Artwork | Opacity and fade** — with **General** active, and **above** it in
-   the page's chrome band a **single row**: the **Panel** picker on the left, **Create new panel** on
-   the right. The band is separated from the strip by a hairline rule. Neither band control is a tab
-   and neither is in the scroll: they stay put whichever tab is selected. There is **no second box
-   drawn around them** — the band's own divider is the boundary. A band two or three rows deep is the
-   pre-v2.40.0 shape and is the failure (`options-ui-§14`).
-5-w. **Open Panels FIRST, on a fresh login.** `/pm config` and click **Panels** before any other
-   page. **Expect:** the band above the strip holds its one row, and the **Panel** picker and
-   **Create new panel** each take **half the band's width**, not a fixed narrow 150 pixels. Then
-   drag the Settings window's edge to resize it and confirm both controls follow the new width. Result: **PASS** (owner, 2026-09-26)
-5-x. **Open Panels AFTER another addon's settings page.** On a fresh login, open another addon's
-   settings first (for example **AuraMaster ▸ Containers**) and switch between a few of its tabs,
-   then open **Panel Master ▸ Panels**. **Expect:** the **Panel** picker and the **Create new panel**
-   box are **visible**, and each takes half the band. A band of the right height, divider and all,
-   with nothing in it is the failure: AceGUI handed the band a pooled, hidden `SimpleGroup` and
-   nothing showed it.
-5a. **The empty state.** Delete every panel. **Expect:** the strip is **still there**, the band above
-   it is **still there** at the same height, and the page reads "No panels yet…" underneath. The
-   **Create new panel** box stays usable and the **Panel** picker is **grayed out rather than
-   gone** — a picker that vanished would take its label with it and leave a hole in the band. The
-   six acts on the **General** tab are **absent**, not disabled: there is no record for them to act
-   on, and the empty state is what the editor draws in their place. A band that shrinks, or that
-   loses its row, is the failure. The page must never lose its strip.
-5b. **Layout check.** The **Panel** picker carries its label, sits beside the create box, and there is
-   **no heading naming the selected panel** above the editor. On the **General** tab, the three rows
-   do not run into each other: the two checkboxes and the two buttons stay on their own lines rather
-   than riding up beside the labels above them, each control is **half width** rather than a quarter,
-   and the **Delete** button's right border is clear of the page's edge. Inside the editor there is
-   **no boxed border** around the controls — the tab strip's own content panel is the boundary — and no two
-   unrelated controls share a line. Three tabs carry **subsection headings**, drawn as the same
-   divider-flanked heading the landing page uses: **Background / Border** on *Background and border*,
-   **Bar / Edges / Border** on *Accent bar*, and **Image / Layout / Appearance** on *Artwork*. On
-   **Opacity and fade**, **Panel opacity** and **Faded opacity** share the first row — they are the same
-   question asked twice and are read against each other — with **Show on mouseover only** alone on the
-   next, where it governs the line above rather than looking like the companion to one slider. Compare against KickCD's Icons page for the house rhythm.
-5b-2. **Dropdown vs scrolling.** Open any dropdown on the Panels page (the panel selector, Anchor,
-   Frame strata, or either texture picker) and — without closing it — **scroll the page**, first with
-   the mouse wheel and then by dragging the scrollbar. **Expect:** the open list closes immediately
-   in both cases. It must never be left floating over, or outside, the settings window while the
-   control it belongs to scrolls away. Re-open it afterwards to confirm one click still opens it
-   (rather than the click being eaten as a toggle-shut).
-5c. **The `General` tab's acts** (`options-ui-§14`, standard v2.40.0).
-   **Smoke, session 3. NOT YET RUN.**
-   **Panel name** and **Copy settings from panel**, then **Enabled** and **Unlock**, then **Reset**
-   and **Delete** — three rows of two on the strip's **first** tab. All six act on the panel as a
-   whole rather than on one aspect of it, which is what earns them a tab of their own rather than a
-   place under a subject tab, and `General` being **first** is the condition §14 grants the move on:
-   the page opens there, so nothing is hidden. Confirm the page **lands on `General`** when you
-   click **Panels**, then walk the other five tabs and confirm none of the six follows you — they
-   are the first tab's, not the band's. Come back to `General` and, with a panel picked: tick and
-   untick **Enabled** (the panel goes and comes back), tick **Unlock** (only that panel grows a
-   handle), press **Reset**, and finally **Delete**. Each must act on the panel the **Panel** picker
-   is showing. Now change the picker to a different panel and confirm the six rebuild against it —
-   they are built per selection, so acting on a stale panel is the specific regression this step
-   exists to catch. The frame name is **not** a label of its own: it lives on the **Panel name**
-   box's tooltip, so nothing crowds that box's Okay button.
-5c-2. **The rename box is not overwritten while you type.**
-   **Smoke, session 3. NOT YET RUN.**
-   Select a panel, click into **Panel name**
-   and type a few characters **without** pressing Enter. Now, with the box still holding your
-   uncommitted text, run `/pm new Interloper` from the chat box. **Expect:** the new panel appears in
-   the **Panel** picker and *your text is still in the rename box*. The box is in the band now and
-   survives the rebuild, so it is dressed only when the selection changes or when the panel's name
-   changed elsewhere; a box that snapped back to the stored name is the guard missing. Then check the
-   other half: with nothing typed, run `/pm rename <selected panel> Renamed` (give it a one-word
-   name first — the CLI reads the old name as the first word only) → **Expect:** the box follows to
-   the new name.
-5d. **Rename.** Change **Panel name** and press Enter. **Expect:** the dropdown entry updates and
-   the **Frame name** on the tooltip does **not** — it is fixed at create, so anchors survive. Try
-   renaming to an existing panel's name → **Expect:** a cyan-tagged error and the box reverts to the
-   old name rather than showing a lie. Renaming to a name that merely *slugs* the same as another
-   panel's ("Chat-BG" while "Chat BG" exists) is now **allowed**, since no frame name is claimed.
-5e. **Reset.** Configure a panel heavily — resize it, move it, change both textures and both colors,
-   turn on mouseover — then press **Reset**. **Expect:** it returns to a brand-new panel's
-   appearance *and position* (center of the screen), every control in the editor re-reads the new
-   values, and the **name and Frame name are unchanged**. Confirm anything anchored to it is still
-   anchored. Other panels must be untouched.
-6. Type a name, then click **away** from the box without pressing Enter. **Expect:** *nothing is
-   created* — AceGUI's EditBox does not commit on focus loss, only on Enter or the Okay button.
-7. Type a name and press **Enter** (or click the **Okay** button that appears as you type).
-   **Expect:** the panel appears in the middle of the screen, the name box clears, and the editor
-   jumps to the panel you just made.
-7b. Try a name that already exists. **Expect:** a cyan-tagged error and the text is **left in the
-   box** so it can be corrected rather than retyped.
-8. Create two more, then use the **Panel** dropdown to switch between them. **Expect:** exactly one
-   editor is shown at a time, and the page does not grow as panels are added.
-9. Disable a panel and reopen the dropdown. **Expect:** it is listed as `<name> (disabled)`.
-10. Change a panel's width slider and color picker → **Expect:** the panel updates as you release.
-11. Tick **Unlock** on the selected panel → **Expect:** *only that panel* grows an outline and a
-    drag handle; the others stay inert. Drag it, then untick.
-    With the Panels page open on a panel, untick **Lock frame** on General → **Expect:** back on
-    Panels, **Unlock** shows ticked and grayed. Tick **Lock frame** again → unticked and enabled.
-    Tick **Unlock** in combat → it stays unticked (queued); leave combat → it shows ticked.
-12. Hover the **Panel name** box → **Expect:** its tooltip reads `Frame name: PanelMaster_Panel_<slug>`
-    for that panel.
-13. Click **Delete** → **Expect:** the panel goes from the screen and the dropdown, and the editor
-    falls back to another panel rather than going blank.
-14. Press **Defaults** on the Panels page → **Expect:** a confirmation dialog, and nothing deleted
-    until you accept.
-15. Press **Defaults** on the General page → **Expect:** the same confirmation `/pm resetall` raises,
-    and on accepting, the whole profile resets — settings **and** panels. (The button's tooltip
-    still claims your panels are untouched; that wording predates `options-ui-§12` and is a known
-    code-side staleness, not what the button does.)
-16. Close the options window, run `/pm new Offscreen`, reopen → **Expect:** the new panel is in the
-    dropdown (it was rebuilt on show, not missed). Result: **PASS** (owner, 2026-09-26)
-
-## 10. Off-screen recovery
-
-1. `/pm panel <name> x 9000` → **Expect:** the panel disappears off the right edge.
-2. `/pm recover` → **Expect:** "moved 1 panel back on screen" and the panel reappears.
-3. `/pm recover` again → **Expect:** "every panel is already on screen".
-4. Confirm recovery did **not** run by itself at login: park a panel half off-screen deliberately,
-   `/reload`, and expect it to still be where you put it.
-5. Recover bounds offsets in the panel's **scaled** units (own scale x Master scale). Set Master
-   scale to 0.5, drag a panel into the far right half of the screen, then `/pm recover` →
-   **Expect:** "every panel is already on screen"; the panel does not move.
-6. Set Master scale to 2 and `/pm panel <name> x 1500` on a TOPLEFT-anchored panel (off-screen
-   once scaled), then `/pm recover` → **Expect:** "moved 1 panel back on screen" and it comes
-   back into view. Put Master scale back to 1 afterwards.
-
-## 11. Debug console
-
-1. `/pm debug` → **Expect:** the console opens: monospace, timestamped, a `Debug: OFF` toggle in red
-   at the left of the title bar, a scrollbar on the right, `0 / 3000 lines` bottom-right.
-1b. **Look at the right end of the title bar.** **Expect:** three small square controls of the same
-   size, evenly pitched — a copy mark, a clear mark and a close mark, gray, each turning white (the
-   close one red) as the pointer crosses it. **No words, and no tooltips**: a label anchored under a
-   control on a window that is 700px of text lands on the first line of the log, which is the thing
-   the window exists to show.
-   **What a regression looks like:** the words *Clear* and *Copy* and a **multiplication sign** where
-   the close mark should be, with the strip visibly wider. That is the shape the library falls back
-   to when it cannot build a texture path, and it means the addon folder name stopped reaching
-   `core/DebugLogSetup.lua`'s descriptor — or that `libs/LibKa0s/media/icons/` did not survive a
-   re-vendor. Nothing raises either way: a texture that does not load draws nothing.
-1c. Look at the log text itself. **Expect:** fixed-width columns — the `<HH:MM:SS> | [Tag]` prefixes
-   line up down the window. **A regression looks like** proportional text with ragged columns, which
-   means `NS.MediaFont` answered nil and `C.FONT_MONO` fell back to the client's own face. That is
-   the correct behavior for a missing library and a bug on a complete install.
-2. `/pm debug on` → **Expect:** a cyan-tagged chat ack with **ON in green**; the console shows
-   `[Debug] logging enabled` followed by an `[Init]` line naming the addon, version, schema and
-   profile.
-3. Create, drag and recolor a panel → **Expect:** one `[Panel]` line per action, and the line counter
-   climbing.
-4. Change a setting → **Expect:** exactly **one** `[Set]` line (not one per reactor).
-4a. Bulk acts (`debug-logging-§10`). Widen a panel, then press its **Reset** in the editor →
-   **Expect:** one `[Set] reset '<name>': N rows` line and no `[Panel]` line; press it again →
-   `…: 0 rows`. Copy settings from another panel, press Master controls ▸ **Reset position**, and
-   **Recover panels** → one `[Set]` line each, with a count (`copy from '…' to '…': N rows`,
-   `reset positions: N rows`, `recover positions: N rows`). `/pm resetall`, confirmed →
-   exactly one `[Set] reset profile '<name>' to defaults (N rows)` and no `[Profile] switched` line.
-   **A regression looks like** a line per field, a second line for the same act, or a reset-all
-   that reads as a switch. `[Canvas]` repaint lines after the `[Set]` line are expected.
-5. **Drag the scrollbar** → **Expect:** the log scrolls. **Wheel-scroll the log** → **Expect:** the
-   thumb follows. No Lua error either way.
-6. Click the **copy mark** → **Expect:** a selectable window with the same lines, no color codes, and
-   a close mark of its own in its title bar — the same art, not a multiplication sign. Ctrl+C, Esc.
-7. Click the **clear mark** → **Expect:** an empty log and `0 / 3000 lines`.
-8. Click the `Debug: ON` toggle → **Expect:** it flips to red `OFF` and prints the matching chat ack.
-9. `/pm diagnostics` → **Expect:** a report appended below the log, from
-   `==== Ka0s Panel Master diagnostics begin ====` to `==== Ka0s Panel Master diagnostics end: N
-   line(s) ====`, every line tagged `[Diag]`, the sections in order (state, master, unlock queue,
-   settings, screen, panels, frames, mouseover, artwork, events), each panel with `frame=yes`, and
-   `0 orphaned`. Any `frame=NO` or a non-zero orphan count is a rendering bug. One chat line says
-   *Diagnostic report written to the debug console: N lines. Use Copy to share it.*
-10. `Esc` with the console focused → **Expect:** it closes (`UISpecialFrames`).
-11. `/reload` → **Expect:** logging is **off** again (session-only) and the console is closed.
-12. **The report keeps the trace** (S2). `/pm debug on`, drag a panel, then `/pm diagnostics`.
-    **Expect:** the `[Panel]` lines stay above the begin marker; nothing was cleared. Click the
-    **copy mark** and paste into a text editor → the trace, both markers with the brand, and no
-    `|c` color escapes (S4).
-13. **Ungated, flag untouched** (S5). `/pm debug off`, then `/pm diagnostics`. **Expect:** the report
-    lands in full; afterwards the title bar still reads `Debug: OFF` and dragging a panel writes
-    nothing.
-14. **While disabled, both forms** (S1). `/pm disable`, then `/pm diagnostics`, then
-    `/pm debug diagnostics`. **Expect:** each writes a full report; the `state` section reads
-    `enabled (stored)=false stood down=true` with its lifecycle hold, and each panel's renderer line
-    reads `renderer: stood down`. `/pm enable` afterwards.
-15. **In combat** (S3). Queue a `/pm unlock` in combat and run `/pm diagnostics` before combat ends.
-    **Expect:** no Lua error; the `unlock queue` section shows `global=true`; when combat ends the
-    unlock still happens (the report never flushed the queue). An unreadable number prints
-    `match=unknown` or `<secret>`.
-16. **No alias** (S8). `/pm debug dump`, then `/pm debug diag`. **Expect:** neither runs the report;
-    each toggles the console, as any unknown `debug` word does. `/pm diag` answers as an unknown
-    verb.
-17. **The cap** (S7). Turn logging on and fill the console past 3000 lines (unlock and drag panels
-    for a while, or run `/pm diagnostics` repeatedly). **Expect:** the counter reads `N / 3000 lines`
-    and pins at 3000; the copy mark opens its window without a noticeable hitch.
-
-## 11b. Frame names and anchoring
-
-The addon's public contract, and the one thing no unit test can prove works in a live client.
-
-1. Create a panel called **Chat BG**. Hovering the band's **Panel name** box should report
-   `Frame name: PanelMaster_Panel_Chat_BG`.
-2. In a macro or a `/run`, confirm the frame really exists under that name:
-   `/run print(PanelMaster_Panel_Chat_BG:GetWidth())` → **Expect:** the panel's width.
-3. Anchor something to it:
-   `/run local f=CreateFrame("Frame",nil,UIParent);f:SetSize(20,20);local t=f:CreateTexture();t:SetAllPoints();t:SetColorTexture(1,0,0);f:SetPoint("TOPLEFT","PanelMaster_Panel_Chat_BG","TOPLEFT",0,0)`
-   → **Expect:** a red square appears at the panel's top-left corner and **follows it** when you
-   unlock and drag the panel.
-4. Try creating a second panel called **Chat-BG**. **Expect:** refused, with a message naming the
-   frame name it would have collided on.
-5. Rename **Chat BG** to **Chat Backdrop**. **Expect:** the frame name on the **Panel name**
-   tooltip is **still `PanelMaster_Panel_Chat_BG`**, and the red square from step 3 **keeps
-   following the panel**. The frame name is stamped at create and a rename does not touch it.
-6. Rename it back and forth a few more times, then `/pm diagnostics`. **Expect:** the pooled
-   count on the `frames:` line does not grow — renaming abandons no frames.
-7. Try creating a new panel called **Chat BG**, the name freed up in step 5. **Expect:** refused,
-   naming **Chat Backdrop** as the panel still holding `PanelMaster_Panel_Chat_BG`.
-8. `/reload` and repeat step 2. **Expect:** the name is the same — it is persisted on the record,
-   not recomputed.
-
-## 12. Profiles
-
-1. Create a couple of panels on one character.
-2. Log in on an alt → **Expect:** the SAME panels — every character starts on the shared "Default"
-   profile. This is the check for the `true` third argument to `AceDB:New`.
-3. Back on the first character → **Expect:** the panels are exactly as you left them.
-
-### 12b. The Profiles page
-
-1. `/pm config` → **Profiles**. **Expect:** Ace's standard profile UI — Reset Profile, current
-   profile name, New / Existing Profiles, Copy From, Delete a Profile. No **Defaults** button in the
-   header (profile management has its own destructive controls).
-2. Type a new profile name and press Enter. **Expect:** the profile is created and switched to, and
-   **the screen clears of panels immediately** — you are now on an empty profile. This is the check
-   that matters: without the profile callbacks the old panels would just stay there.
-3. Create a panel on the new profile, then switch back via **Existing Profiles**. **Expect:** the
-   original character's panels return and the new profile's panel disappears, at once.
-4. Use **Copy From** to pull the other profile's panels in. **Expect:** they appear immediately.
-5. Press **Reset Profile**. **Expect:** every panel on this profile goes.
-6. Switch to a profile, `/reload`, and confirm you are still on it with the right panels.
-7. Open the **Panels** page, then switch profile from the Profiles page and come back. **Expect:**
-   the panel dropdown lists the new profile's panels, not the old ones — **and so does Copy settings
-   from panel**, and the editor below is showing one of them rather than a panel you never chose.
-   This check is older than the bug it now catches, and it went unrun: the page kept the widget tree
-   it had built for the previous profile, because the deferred repaint was marked on a flag nothing
-   read. Everything on this page is one rebuild, so if the dropdown is right the rest is too.
-
-### 12b-2. Session state does not cross a profile switch
-
-Panel ids are handed out **per profile** — a fresh profile starts at 1 — so anything the session
-remembers by id names a *different* panel after a switch. These are the checks that it is dropped
-rather than carried.
-
-1. Unlock a single panel with the per-panel control, switch profile, and look at the incoming
-   profile's panels. **Expect:** none of them is unlocked. No stray drag handle or gold outline on a
-   panel you never touched.
-2. Do the same while a per-panel unlock is **queued by combat** (unlock during a fight, then switch
-   profile before it drops). **Expect:** on leaving combat nothing unlocks. The queued request named
-   a panel that no longer exists; the *global* `/pm unlock` request is deliberately kept and does
-   still fire.
-3. Make two profiles whose panels carry **swapped names**: on profile A create `Alpha` then `Xray`
-   (ids 1 and 2); on profile B create `Xray` then `Alpha`. Switch between them five times, then
-   `/pm diagnostics`. **Expect:** the `frames: N active, M pooled, 0 orphaned` line shows **no**
-   orphans, and `/framestack` over each panel names the expected `PanelMaster_Panel_<slug>`. A
-   rebuild releases every mismatched frame before any id acquires one; resolving it one id at a
-   time used to create a second frame under a name still in use, on every switch.
-
-## 12c. Copy settings from another panel
-
-1. Make two panels. Style the first heavily — size, textures, both colors, border, accent bar.
-   Move the second somewhere clearly different.
-2. On the **second** panel, pick the first from **Copy settings from panel** — on the **General**
-   tab's first row, beside the rename box.
-3. **Expect:** the second takes on the first's entire appearance **and size**, and a cyan-tagged
-   confirmation names the source.
-4. **Expect: it does not move.** Position is deliberately not copied — otherwise the two would land
-   exactly on top of each other. Its name and **frame name** are unchanged too, so anything anchored
-   to it is still anchored.
-5. **Expect:** the dropdown snaps back to empty. It is an action, not a stored setting — a lingering
-   selection would imply an ongoing link between the two panels.
-6. Now change a color on the **first** panel. **Expect:** the second does not change — the copy was
-   a snapshot, not a link.
-7. On a lone panel (delete all others), **Expect:** the dropdown is disabled with a tooltip saying to
-   make another panel first.
-
-## 13. Standalone
-
-1. Disable every other addon except PanelMaster and its libraries. **Expect:** it loads and behaves
-   identically — no suite, no other addon, is a dependency.
-2. Re-enable a UI skin (ElvUI or similar) and reopen `/pm config` → **Expect:** the Defaults button is
-   skinned like the rest of the AceGUI widgets, not left on stock red art.
-
----
-
-## 14. LibKa0s — the degraded install
-
-The one thing no headless case can reach: what a player sees when `libs/LibKa0s` is genuinely not
-on disk. The suite loads the addon without it and asserts the wording; only the client can say the
-addon still *works*.
-
-1. Quit the client. Rename `Interface/AddOns/PanelMaster/libs/LibKa0s` to `libs/_LibKa0s`.
-2. Launch, log in.
-3. **Zero Lua errors.** Turn on `/console scriptErrors 1` first if it is off.
-4. Your panels are **still drawn**, exactly as before. The addon's own function has nothing to do
-   with a shared library, and an install missing `libs/` must still draw panels.
-5. `/pm panels` → a **complete** listing, every panel, every field.
-6. `/pm new SmokeTest`, `/pm unlock`, drag it, `/pm lock`, `/pm delete SmokeTest` — all work.
-7. The **first** line the addon prints carries the notice, once:
-   `[PM] The LibKa0s library is missing from this installation of Ka0s Panel Master (expected in
-   libs/LibKa0s); running on reduced built-in fallbacks.`
-   Every later line is untagged by it — the notice is once per session, not once per line.
-8. `/pm debug` → `[PM] …(expected in libs/LibKa0s), so the debug console window is unavailable.`
-   Said **once**; a second `/pm debug` repeats nothing.
-9. `/pm debug on` → still acknowledges `debug logging ON` in green, because logging is a session
-   flag this addon owns and only the *window* went away.
-9b. The **font and texture dropdowns lose their Ka0s entries** — `JetBrains Mono` and the seven
-    `Ka0s …` bars are inside the payload that is not there, so there is nothing to register. A panel
-    whose profile still names one of them renders **plain**, exactly as it does when any other
-    addon's texture goes away (§5b step 10). Nothing raises, and nothing is overwritten: reinstate
-    `libs/LibKa0s` and the names come straight back.
-10. `/pm diagnostics`, then `/pm debug diagnostics` → each prints `/pm diagnostics is unavailable:
-    the LibKa0s library did not load.` and writes nothing. No Lua error.
-11. `/pm list` → `…, so the settings CLI (list/get/set/reset) is unavailable.`
-11b. `/pm help` → that same line once, then one plain `/pm <cmd>  <desc>` row per verb (no colors, no
-    em dash): the degraded index is allowed to look degraded, never to vanish.
-11c. `/pm disable`, then `/pm enable` → the panels go and come back, and each prints the
-    `settings.enabled = false` / `= true` echo. No Lua error: the path is written through the Schema
-    seam's `writeThrough` list with no composed row behind it.
-11d. `/pm unlock` → `/pm unlock is unavailable: the LibKa0s library did not load.` and nothing moves;
-    `/pm lock` the same with its own verb.
-12. `/pm resetall` → **still works**, popup and all: it is the one schema verb with no library
-    dependency, and since `options-ui-§12` its body is `db:ResetProfile()`, which needs the db
-    rather than the library.
-13. `/pm config` → `…, so the settings panel is unavailable.` Run it **three times**: it must answer
-    every time. Unlike step 8's console notice, which rides other output, this line *is* the verb's
-    whole answer, and a second invocation that printed nothing would read as a broken command.
-13b. A bare `/pm` → the same answer as step 13, because a bare command runs `config`.
-14. **The cause clause is word-for-word the same in every one of those four**, differing only after
-    the comma. Compare against any other adopted Ka0s addon on the same install; a user with a
-    broken install must not get a different sentence depending on which addon they open.
-15. **Rename the folder back**, `/reload`, and confirm normal operation returns.
-
-## 15. LibKa0s — the `L` trap
-
-Three of the ten majors take a locale override, and a descriptor handed this addon's `NS.L` would
-render every user-visible string as its own key. The source guard and the rendered assertions in
-`tests/test_libka0s.lua` are both blind to what the client actually draws.
-
-Walk **every** surface and confirm not one `SCREAMING_SNAKE_CASE` string is on screen:
-
-1. `/pm config` → the landing page, then **General**, **Panels** and **Profiles**. Every label,
-   every tooltip, every section heading, the breadcrumb, and the **Defaults** button.
-2. `/pm debug` → the console. Title bar (`Panel Master — Debug`), the `Debug: OFF` toggle, `Copy`,
-   `Clear`, and the `N / 3000 lines` counter. Click **Copy** and read that window's title too
-   (`Copy log — Ctrl+C, then Esc`).
-3. `/pm help`, `/pm list`, `/pm version` in chat.
-
-Anything reading `DEBUG_ON`, `COPY_TITLE`, `LINES`, `LIST_HEADER`, `DEFAULTS_LABEL` or similar is
-the trap, and it fails for every key at once rather than one at a time.
-
-## 16. LibKa0s — the rendered changes, and the parity check
-
-Everything below **changed deliberately** in the adoption. Confirm each looks right; anything else
-that looks different is the finding.
-
-**Changed on purpose:**
-
-1. **The debug console wears the Ka0s window edge.** `/pm debug`. A flat 1px black outer border with
-   a 1px light-gray highlight just inside it, a **gold** title, a gray divider under the title bar.
-   It used to be a plain dark background with no edge at all. Side by side with another adopted Ka0s
-   addon's console, the two must read as one suite.
-2. **Its close control is the library's ×**, 18×18, gray, turning **red** on hover — not the old
-   flat `X` that turned gold. `Copy` and `Clear` sit to its left with a 6px gap, unmoved.
-3. **`/pm help` rows are indented two spaces** under the header, and the header now carries an em
-   dash: `v1.2.0 — slash commands (/panelmaster is an alias for /pm)`.
-4. **The settings landing page's command list** lost its double spacing: `/pm config — Open
-   settings`, one space either side of the dash, the dash gold-to-white rather than white-wrapped.
-   It should now look **identical** to `/pm help`'s rows minus their indent — compare them directly.
-5. **`/pm set settings.gridSize 99999` clamps** to `64 px` and echoes the clamped value, where it
-   used to refuse with `error: invalid value`.
-6. **A bad value gives two lines**: `Invalid value for settings.snapToGrid`, then the reason
-   indented beneath it.
-7. **The combat refusal is a lighter gray.** Pull a mob, `/pm config` → the refusal is still
-   `cannot open settings during combat — Blizzard's category-switch is protected`, word for word,
-   just lighter.
-8. **The Defaults button now has a tooltip** on General and on Panels. Hover both.
-9. **Esc-closing the debug console now updates the settings checkbox.** Open `/pm config` →
-   General, tick **Debug console**, press **Esc** to close the console, return to General: the
-   checkbox is **unticked**. It used to stay ticked — the console synced only through its own
-   Hide, which Esc bypasses.
-
-**Parity — "nothing moved". Anything that looks different here is a defect:**
-
-10. Open `/pm config` → **General**. The two-column grid, the row spacing, the header, the gold
-    divider and the breadcrumb `Ka0s Panel Master ▸ General` are all **unchanged**. The three
-    sections are the three **tabs** now (`Master controls`, `Editing`, `New panels`) rather than
-    headings down one scrolling page — that change is the tabbed-panel pass, not a defect.
-11. **Recover panels** is a button **under** the Editing tab's last row now, rather than to the
-    right of **Grid size** — which pairs with **Snap to grid** instead. It does the same thing.
-12. The **Panels** page's band holds the create box, the selector and the six panel-wide acts; the
-    editor below them is one tab at a time.
-13. The scrollbar is **always visible** on every page and grays out when the page fits, so the body
-    width does not jump as you tab between pages.
-14. Open the **Default frame strata** dropdown, then **scroll the page**: the list closes. Do it
-    again with the scrollbar **drag** rather than the wheel. This is the one behavior the library's
-    widget makers know nothing about, and it is re-attached by hand.
-15. `/pm list` — the green header, the azure `[group]` headings in schema order (which is tab order
-    now: `Master controls`, `Editing`, `New panels`), four-space indented rows, `4 px` on grid size. Only the gold/white escapes changed case, which is invisible.
-
-## 17. LibKa0s — the destructive path still has its guard
-
-The one destructive verb this addon has is not a schema reset, so no convergence touched it — but
-it reaches its confirmation from **two** entry points and a check that only clicks the button
-proves nothing about the verb.
-
-1. `/pm new GuardA`, `/pm new GuardB`.
-2. `/pm panel deleteall` → the **confirm popup** appears. Choose **No**. Both panels survive.
-3. `/pm config` → **Panels** → **Defaults** → the **same** popup appears. Choose **No**. Both
-   panels survive.
-4. Now choose **Yes** from either. Both panels are gone, and chat says `deleted 2 panels.`
-5. `/pm resetall` → the **confirm popup** appears first, carrying the collection's one wording
-   (`options-ui-§12`), verbatim: *"Reset this profile to the addon's defaults? Everything you have
-   configured or added in it is discarded — your other profiles are not affected."* Choose **No**:
-   nothing changes. Choose **Yes**: every setting is back to shipped **and the panels are gone**, and
-   chat says `this profile reset to defaults` — not the library's own `All settings reset to
-   defaults`, and no longer the old *"your panels are untouched"*, which a profile reset does not
-   keep. **Config → Panels → Defaults** shows the same popup and does the same thing.
-
-## 18. Sunn — Viewport Art packs, and the composite renderer
-
-The one claim the headless suite cannot make: that a real pack's textures actually **resolve** in
-the client. Every path this addon builds is asserted against SunnArt's own construction, never
-against a load — so a wrong folder, a missing pack or a `.blp`-only theme looks identical to
-correct code until someone logs in.
-
-**Skip this whole section if you do not have Sunn - Viewport Art installed.** Everything below needs
-at least SunnArt and one art pack; the rest of the addon must behave identically without them, which
-is step 1.
-
-1. With **no Sunn folder installed at all**, `/pm config` → **Panels** → **Artwork**. **Expect:** no
-   `Sunn ->` entries anywhere in the dropdown. The feature is silent on a machine that does not have
-   it. (Installed-but-disabled is a different case — step 16.)
-2. Enable SunnArt and at least one pack, `/reload`, and reopen the dropdown. **Expect:** entries
-   grouped under `Sunn -> Art Pack 2` (or `Sunn -> Built in`), **one per theme**, each under the
-   theme's own plain name. There must be no `(left)` / `(middle)` / `(right)` entries at all — the
-   sections are not offered separately.
-3. Pick one and set **Fill** to **Stretch** and the panel to something wide — say 800 × 140.
-   **Expect:** the art draws, with all sections **edge to edge**, in order, as one continuous bar.
-   This is also the step that proves the path resolves; if it draws nothing, nothing else in this
-   section will either, and the fault is the path rather than the renderer. The failure this replaces is the left section stretched across the whole
-   panel, so a bar that looks like one repeated piece means the composite path did not run.
-5. Look hard at the **seams**. **Expect:** no bright line, no dark gap and no doubled pixel where
-   two sections meet. A seam means the slicing and the texture coordinates disagree.
-6. Press **Fit to artwork**. **Expect:** the panel becomes the bar's exact size — 1536 × 256 for a
-   typical three-section theme — and chat reports both numbers. Now drag the panel smaller: it must
-   **not** snap back on its own. Press the button again and it returns to the artwork's size.
-7. Set **Rotation** to **90°** and press **Fit to artwork** again. **Expect:** 256 × 1536 — the axes
-   swap, because the art is presented turned. Set **Scale** to `0.5`, press again: every number
-   halves. Both are part of how big the art actually is on screen, so both are part of the fit.
-8. Set **Fill** to **Fill (crop)** and make the panel much taller relative to its width. **Expect:**
-   the bar covers the panel and the outer sections are cropped away entirely — on a three-section
-   bar in a panel of a third its aspect, only the middle section remains. It should **disappear**,
-   not thin down to a hairline.
-9. Set **Rotation** to **90°**. **Expect:** the sections stack **vertically**, section 1 at the top,
-   and the whole bar still covers the panel.
-10. Back to 0°, and tick **Flip horizontally**. **Expect:** the section order reverses — the piece
-    that was on the left is now on the right — and each section is itself mirrored.
-11. Set **Fill** to **Tile** and shrink **Scale**. **Expect:** the whole **bar** repeats across the
-    panel, not each section repeating in its own slot. Keep shrinking: past the cap the repeats stop
-    getting smaller and simply stay larger. **The panel must never show a bare strip.**
-12. Set a **Color** and tick **Desaturate**. **Expect:** every section takes the tint equally. One
-    section tinted differently from its neighbors means the tint is being applied per texture from
-    the wrong source.
-13. Switch the panel from the bar back to a **single bundled piece**. **Expect:** exactly one image,
-    with no leftover section still drawn beside or behind it.
-14. Pick a theme whose art has a transparent strip along its top (most do). **Expect:** after **Fit
-    to artwork**, the art sits **flush** in the panel with no empty band above it. Then set **Fill** to
-    **Tile**: the gaps reappear between repeats, which is expected and is the one case the strip is
-    not trimmed.
-15. Disable the pack addon but not SunnArt, `/reload`. **Expect:** the panel that used it draws **no
-    artwork** and raises no error, and its size is unchanged — uninstalling a pack must not reshape a
-    layout.
-16. **The case the manifest exists for.** Disable **Sunn - Viewport Art** itself in the AddOn list,
-    leaving the pack folders installed, and `/reload`. The packs are hard-dependent on it, so
-    nothing registers and no Sunn global exists at all. **Expect:** the official packs' themes are
-    *still* listed under `Sunn ->`, and still draw. This is the whole point of
-    `modules/SunnArtPacks.lua`; if the dropdown is empty here, the folder roster or the manifest is
-    not being read.
-17. Still with SunnArt disabled, pick **Sunn -> Art Pack 6: Fractal** (or Pack 9's **Wrath**) and
-    press **Fit to artwork**. **Expect:** a panel 1536 × 512 — square sections, not 2:1 ones —
-    those themes are authored at 512×512 and are the reason the manifest measures rather than
-    assumes. Compare against any Pack 2 theme, which should still fit to 2:1.
-18. Re-enable SunnArt, `/reload`, and check a theme you have renamed in **SunnArt's own** options.
-    **Expect:** your name, not the manifest's — live registration always wins.
-19. **Only what is installed is listed.** Count the `Sunn ->` groups in the dropdown against the
-    `SunnArt*` folders you actually have in `Interface/AddOns`. **Expect:** they match exactly. Then
-    delete (or rename) one pack folder, `/reload`, and reopen the dropdown. **Expect:** that pack's
-    group is gone and the rest are untouched. If SunnArt still remembers the deleted pack in its own
-    options, that is precisely the case this checks — a remembered theme with no files behind it
-    must not be offered.
-
-## 19. LibKa0s — the tab strip survives being pooled and re-dressed
-
-**Smoke, session 3. NOT YET RUN.** New with `M4-01`'s LibKa0s v1.27.0 re-vendor. `TabStrip`
-(`libs/LibKa0s/OptionsWidgets.lua`) no longer builds a button and a content panel per click: it
-acquires both from per-`ctx` `LibKa0s-Pool-1.0` pools and re-dresses them, re-setting `OnClick` on
-every dress. Its only headless proof counts `CreateFrame` calls on a second selection pass, and the
-case that would pin band geometry as invariant under selection cannot be written yet — the shared
-mock answers `GetHeight` with 0 for every frame, and that flips at kit 16, not here. **So a stale
-label, a mis-anchored button or a band that changes height on a re-dressed tab is invisible to every
-automated check in this repo.**
-
-This addon's strip is drawn straight onto the chrome band with `H.TabStrip`
-(`settings/PanelEditor.lua`) rather than through `H.RenderTabbedSchema`, because a panel is a
-registry record and not a set of schema rows to partition. So it exercises the pooled path more
-directly than a schema-driven strip does, and `ctx.activeTab` is the one piece of selection state
-that survives a render.
-
-1. `/pm` → **Panels**. Cycle every tab of the strip three times, ending back on the first.
-2. Watch three things on each pass: the **label** is that tab's own, the **selected** tab is the one
-   you pressed, and the strip's **band height** does not move as you go through it.
-3. **Expect:** every tab named and selected correctly on all three passes, and no band that grows or
-   shrinks. A name carried over from the previously-dressed tab, a highlight on the wrong button, a
-   body drawn under the wrong tab, or a strip whose height moves between passes is the pool handing
-   back a frame it did not finish dressing.
-4. Then reopen the page from scratch (`Esc`, `/pm` again) and repeat step 1 once. The pools are
-   per-`ctx`, so a second build is the case where a released frame comes back dressed for a
-   different tab.
-
-`LibKa0s-Perf-1.0` minor 8 arrived in the same payload and respells five player-facing strings, but
-`Perf` is not wired in this addon, so none of them has a surface here.
-
----
-
-## 20. The Border dropdown when five Ka0s addons share one registry
-
-**Smoke, session 5. NOT YET RUN.** Run after this addon's `core/LSMPatch.lua` was deleted and
-`settings/OptionsSetup.lua`'s live wiring took over the fixup (`M4-05`), and again after **each** of
-the three remaining deletions — ConsumableMaster, MultiMeters, then AbsorbTracker last, because
-AbsorbTracker's copy is the one that diverges (a callable `NS.ApplyLSMBorderPatch()` rather than a
-`PLAYER_LOGIN` frame). Five deletions, five commits, five bisect points if this goes wrong.
-
-**The thing under test is not PanelMaster.** AceGUI's widget registry is process-global: one slot
-named `LSM30_Border` shared by every addon in the client, Ka0s or not, and the highest version
-registered for the name wins for the rest of the session. Five Ka0s addons each carried a private
-copy of the same wrapper, each registering one version above whatever it found, so the wrapper a
-Border dropdown actually got belonged to whichever addon the client loaded last. Nothing headless in
-any of the five repos could see it — each suite loads one copy, registers once and passes — and
-section 5b step 5 above, which checks the alignment with PanelMaster alone, passed throughout.
-
-KickCD lost its private copy first (`M4-04`); PanelMaster is the second of the five. So this run is
-also the evidence that one library-level registration dresses the dropdown in **two** addons that no
-longer carry their own, with three that still do loaded alongside them.
-
-1. Enable KickCD, PanelMaster, AbsorbTracker, ConsumableMaster and MultiMeters together, and log in.
-2. Open each addon's Border dropdown in turn. PanelMaster's is `/pm` → **Panels** → select a panel →
-   **Border style**.
-3. Change the load order — disable and re-enable addons, or rename folders so a different one is
-   reached last — `/reload`, and walk the five dropdowns again.
-
-**Expect:** in all five, the closed control's left edge is **flush** with the sliders and checkboxes
-stacked with it, with **no ~42px gap**, and opening it still draws the per-row hover previews.
-Nothing differs between the two passes. **Any dropdown that looks different from the other four, or
-that changes when the load order changes, is the finding** — the whole point of moving the
-registration into LibKa0s is that the answer no longer depends on who loaded last. No Lua error at
-any point.
-
----
-
-## 21. The `[Init]` line reports the PACKAGED version
-
-**Smoke, session 3. NOT YET RUN.** Opportunistic — fold it into whatever login is convenient; it is
-a one-line look and is not a reason to schedule client time. New with `M4-19`, which pointed
-`NS.InitSummary` (`core/Database.lua`) at `NS.Version()` instead of `core/Namespace.lua`'s fallback
-constant, the seam `core/EnvSetup.lua` already said that line used.
-
-**Why it is here at all, given the harness now covers it.** `tests/test_database.lua` proves the
-summary carries whatever the TOC answers, and against a mock that answers on demand. What the mock
-cannot witness is TIMING: the `[Init]` line rides `DebugLog:SetEnabled`, and in a real client the
-manifest read has to have resolved by the moment that descriptor runs. If it has not, `NS.Version()`
-falls back and the line silently reports the constant again — which looks correct on a shipped build
-where the two strings agree, and is exactly the failure this change exists to remove.
-
-**Setup.** In the INSTALLED copy under `Interface/AddOns/PanelMaster/` — never in the repo — edit
-`PanelMaster.toc` so `## Version:` reads `1.2.0-smoke`. That is the whole point: while the TOC and
-`core/Namespace.lua`'s constant read the same `1.2.0`, no in-client observation can tell which one
-was printed.
-
-1. Log in.
-2. `/pm debug on`.
-3. Read the `[Init]` line — in chat and in the console (§ 11 step 2).
-4. `/pm version`.
-5. Restore the installed TOC's `## Version` and `/reload`.
-
-**Expect:** step 3 reads `PanelMaster v1.2.0-smoke, schema v2, profile '<yours>', N panels` — the
-**TOC's** string — and step 4 reads `[PM] v1.2.0-smoke`. The two surfaces agree.
-
-**Fail:** an `[Init]` line reading `v1.2.0` while `/pm version` reads `v1.2.0-smoke`. That is one
-string with two sources of truth, and the `[Init]` line is the one a user pastes into a bug report.
-
----
-
-## 22. Non-English client (session 6, `M5-08`)
-
-**Session 6 of the 2026-09-07 remediation plan. NOT YET RUN — no WoW client was available when
-`M5-08` landed. Nothing in this section has been performed and no step in it is recorded as
-passed.** Run on a client set to **deDE or frFR**, the two the collection's other locale steps use
-(`ConsumableMaster/docs/smoke-tests.md` § 3c, `KickCD/docs/smoke-tests.md` § 9b).
-
-**This addon reads almost nothing the client translates, and that is why it needs this section
-rather than why it does not.** The enumeration came back nearly empty: no chat or tooltip `_G`
-constant, no tooltip line parsed in place of an API return, no `subType` where a `classID` exists
-(`grep -rn '_G\[' core modules settings` reaches only `core/EnvSetup.lua`'s metadata ladder).
-Recheck that grep rather than trusting this sentence — it is a claim, and a claim is what an absent
-step is being replaced with.
-
-The exposure runs the **other way**: through the panel names a player types. On a German or French
-client those names carry umlauts and accents, and two seams treat those bytes as punctuation:
-
-- **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore.
-  Lua's `%w` is ASCII-only, so `Ü` is not a letter to it. `Übersicht` slugs to `bersicht`, and
-  **`Ärger` and `Örger` both slug to `rger`**. That slug is not cosmetic: it is the addon's public
-  contract, `PanelMaster_Panel_<slug>`, which § 11b exists to protect and which other addons anchor
-  to.
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-289`) and the Panels list's
-  sort (`settings/PanelEditor.lua:195`) both use `string.lower`, which folds ASCII and nothing else.
-  `Ü` and `ü` are two different letters to the duplicate-name check and to the CLI's name lookup.
-
-Every label the addon prints is hardcoded English and stays English here. That is the addon's scope,
-not a regression.
-
-1. **A panel named in the client's own language.** `/pm new Übersicht` (or `Écran`, on frFR). Open
-   the settings page and hover the band's **Panel name** box to read the reported frame name, then
-   `/run print(PanelMaster_Panel_<the reported slug>:GetWidth())`.
-   **Expect:** the panel is created, the name renders correctly everywhere it is shown — the band,
-   the Panels list, `/pm panels` — and the reported frame name resolves to a real frame.
-   **Fail:** a name that renders as `?` or mojibake anywhere (the text never survived the round
-   trip), or a reported frame name that does not resolve (the slug shown and the slug stamped
-   disagree). **Write down the slug the tooltip reports.** `Übersicht` losing its first letter to
-   `PanelMaster_Panel_bersicht` is not itself a crash, and it is the answer this step exists to get:
-   the contract § 11b documents is "another addon can work the frame name out from the panel name",
-   and a player who cannot do that arithmetic in their own alphabet has no contract.
-2. **Two names, one slug.** `/pm new Ärger`, then `/pm new Örger`.
-   **Expect, if the contract holds:** two panels, two distinct frame names.
-   **Fail:** the second refused, with a message naming a frame name (`PanelMaster_Panel_rger`)
-   that looks like neither name the player typed. That is the slug-uniqueness check doing its job
-   over a slug that threw the distinguishing letter away, and on an English client the pair that
-   provokes it does not exist. Record which happened; a refusal here is a finding to file, not a
-   step to re-run.
-3. **The name lookup folds only half the alphabet.** With `Übersicht` created, run
-   `/pm panel übersicht` (lower-case `ü`) and any other verb that takes a name.
-   **Expect:** the panel resolves, the same way `/pm panel chat bg` resolves `Chat BG` on English —
-   `FindByName`'s own comment says requiring the user to reproduce their own casing is friction
-   with no upside.
-   **Fail:** "no panel called übersicht", while the ASCII half of the same name matches fine. Then
-   try creating a **second** panel named `übersicht`: if it is accepted, the duplicate-name guard
-   has the same hole and there are now two panels the CLI cannot tell apart.
-4. **Sort order in the Panels list.** With three or four panels whose names start with accented and
-   unaccented letters, open the Panels page.
-   **Expect:** names sorted the way a reader of that language would expect.
-   **Fail:** every accented name clumped at one end regardless of its letter. Cosmetic, and worth
-   knowing before someone calls it a rendering bug.
-5. **The round trip.** `/reload`, then check all of the above again, then switch profiles and back
-   (§ 12).
-   **Expect:** names, frame names and anchors identical.
-   **Fail:** any name that changed shape across the reload, which means it was re-slugified or
-   re-encoded on the way out of SavedVariables rather than stored as typed.
-
-**Sign-off without a non-English client.** Steps 1 to 4 can be *provoked* on an English client by
-typing the same characters into `/pm new` — the client's language does not decide what `string.lower`
-folds, and a US keyboard can still produce `Ä`. That is worth doing and is not the same test: it
-tells you nothing about how the client renders those glyphs in its own fonts, about the name
-surviving its own text input, or about what a player of that language would actually type. The
-headless suite proves none of it: `tests/test_util.lua` and `tests/test_registry.lua` feed ASCII
-names in throughout. Until the pass runs, the honest state of this section is unrun, and it is
-recorded that way rather than as coverage.
+# Smoke tests — Ka0s Panel Master
+
+In-client checks for what the headless suite ([`testing.md`](testing.md)) cannot reach: how a panel
+actually looks, dragging with a real mouse, layering against other addons' frames, the settings
+window, the debug console, combat, a second character and a missing library. The unit suites cover
+the logic; this page covers the pixels. Run it before tagging a release, after any change to
+`modules/Canvas.lua`, `modules/Artwork.lua`, `modules/ArtworkGeometry.lua`, `modules/Unlock.lua`,
+`settings/Panel.lua`, `settings/PanelEditor.lua` or `settings/PanelEditorTabs.lua`, and whenever the
+`## Interface:` is bumped. Start from the state in **Before you start**, turn debug logging on where a
+step says so, and record each check on its `Result:` line (date, PASS or FAIL, who, and what you saw
+when it failed). Check IDs are `<THEME>-<n>`; an ID is never reused or renumbered, and a new check
+takes the next free number in its theme. The **Non-English client** section needs a deDE or frFR
+client and is run when one is available, not per release.
+
+## Index
+
+| IDs | Theme | What it covers |
+|---|---|---|
+| INSTALL-1 to 8 | Install and load | First login, version, standalone, raw string keys, the old test-mode sweep, the `[Init]` version |
+| SLASH-1 to 7 | Slash commands | Bare `/pm`, help and the landing list, unknown verbs, `set` clamps and refusals, `/pm list` |
+| FRAME-1 to 29 | Panels | Create, drag, lock, click-through, snapping, default sizes, master scale, recovery, frame names, rename, copy, reset, delete |
+| LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
+| ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
+| ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
+| PANEL-1 to 26 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip |
+| PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
+| STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
+| COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
+| DIAG-1 to 19 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report |
+| LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
+| DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
+| LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
+
+## Before you start
+
+- `/console scriptErrors 1`, then `/reload`, then `/pm resetall` and confirm. That is a **profile
+  reset**: the settings and the panels on the current profile both go, so no separate panel wipe is
+  needed.
+- `<name>` in a step means any panel you have made. `/pm panel <name> ...` reads only the first
+  word as the name, so use a one-word panel for those steps (FRAME-1's `Chat BG` cannot be addressed
+  there). Several themes need two or three panels; make them with `/pm new <name>`.
+- COMBAT and several other checks need a training dummy. PROFILE-1 needs a second character, and
+  LOOK-23 a character of a different class.
+- Optional, each only for the checks that name it: another Ka0s addon with a settings page and a debug
+  console (DIAG-1, PANEL-3, PANEL-4, PANEL-12, DEGRADED-13), KickCD for its Icons page (PANEL-14),
+  KickCD, AbsorbTracker, ConsumableMaster and MultiMeters together (LOOK-10), a UI skin
+  such as ElvUI (INSTALL-6), another addon that registers an LSM texture, such as ElvUI, WeakAuras,
+  Details or SharedMedia (LOOK-13), Titan Panel, ElvUI or Bazooka (LAUNCH-12), Sunn - Viewport Art and
+  at least one of its packs (ART-14 to ART-30; ART-13 is the check with no Sunn folder installed),
+  and a deDE or frFR client (LOC).
+
+## INSTALL
+
+- **INSTALL-1. First login.** On a fresh install, log in → no Lua error, and nothing at all on screen:
+  a fresh install draws no panels. Result:
+- **INSTALL-2. Version.** `/pm version` → `[PM] v1.2.0`, matching the TOC's `## Version`. Result:
+- **INSTALL-3. Empty panel list.** `/pm panels` on a fresh profile → "No panels yet", suggesting
+  `/pm new`. Result:
+- **INSTALL-4. No raw string keys on any surface.** Walk `/pm config` (landing page, **General**,
+  **Panels**, **Profiles**: every label, tooltip, heading, the breadcrumb and the **Defaults**
+  button), the `/pm debug` console (title `Panel Master — Debug`, the `Debug: OFF` toggle, the
+  `N / 3000 lines` counter, and the copy window's title `Copy log — Ctrl+C, then Esc`), and `/pm help`,
+  `/pm list`, `/pm version` in chat → not one `SCREAMING_SNAKE_CASE` string anywhere. **Fail:**
+  anything reading `DEBUG_ON`, `COPY_TITLE`, `LINES`, `LIST_HEADER`, `DEFAULTS_LABEL` or similar,
+  which means a library descriptor was handed `NS.L` and every key renders as itself at once. Result:
+- **INSTALL-5. Standalone.** Disable every addon except PanelMaster and its libraries, `/reload` → it
+  loads and behaves identically; no other addon is a dependency. Result:
+- **INSTALL-6. Skinned Defaults button.** With a UI skin (ElvUI or similar) enabled, open
+  `/pm config` → the **Defaults** button is skinned like the other AceGUI widgets, not left on stock
+  red art. Result:
+- **INSTALL-7. Old test-mode samples are swept.** Only with SavedVariables from a build that still had
+  test mode, saved with it on: log in → `/pm panels` lists no `Preview: *` panels. The sweep runs at
+  load, before `/pm debug on` can be typed, and logging is session-only (DIAG-12), so there is no
+  `[Preview]` line to look for. Result:
+- **INSTALL-8. The `[Init]` line reports the packaged version.** In the **installed** copy under
+  `Interface/AddOns/PanelMaster/` (never the repo), set `PanelMaster.toc`'s `## Version:` to
+  `1.2.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in the console (it is not echoed
+  to chat), then `/pm version`; afterwards restore the TOC and `/reload` → the `[Init]` line reads
+  `PanelMaster v1.2.0-smoke, schema v2, profile '<yours>', N panels` and `/pm version` reads
+  `[PM] v1.2.0-smoke`. **Fail:** an `[Init]` line reading `v1.2.0` while `/pm version` reads
+  `v1.2.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
+  one a user pastes into a bug report. `tests/test_database.lua` proves the line's content against a
+  mock; only the client can witness the timing. Result:
+
+## SLASH
+
+- **SLASH-1. Bare `/pm`.** `/pm` → the settings window opens on the **Ka0s Panel Master** landing
+  page, not a sub-page, and nothing prints. Result:
+- **SLASH-2. Help index.** `/pm help` → a header `v1.2.0 — slash commands (/panelmaster is an alias
+  for /pm)`, then one row per command indented two spaces, every line prefixed with a cyan `[PM]`,
+  no trailing colons, and a `profile` row reading *List profiles, or switch to one: profile
+  <name>*. Result:
+- **SLASH-3. Landing list matches help.** `/pm config` → the landing page shows the logo, the tagline
+  and the command list. Each row reads like `/pm config — Open settings`, one space either side of a
+  gold-to-white dash, and the list is **identical** to `/pm help`'s rows minus their indent. Compare
+  them directly. Result:
+- **SLASH-4. `test` is not a verb.** `/pm test` → an unknown-command answer and nothing on screen.
+  `/pm config` → **General ▸ Master controls** has no **Test mode** row. Unlocking is this addon's
+  test mode (`options-ui-§15`). Result:
+- **SLASH-5. Out-of-range numbers clamp.** `/pm set settings.gridSize 99999` → it clamps to `64 px`
+  and the echo reports the clamped value. `/pm reset settings.gridSize` afterwards. Result:
+- **SLASH-6. A bad value explains itself.** `/pm set settings.snapToGrid banana` → two lines:
+  `Invalid value for settings.snapToGrid`, then the reason indented beneath it. Nothing is
+  written. Result:
+- **SLASH-7. `/pm list`.** `/pm list` → a green header, azure `[group]` headings in tab order
+  (`Master controls`, `Editing`, `New panels`), four-space-indented rows, and grid size reading
+  `4 px`. Result:
+
+## FRAME
+
+- **FRAME-1. Create.** `/pm new Chat BG` → a confirmation naming the panel and suggesting
+  `/pm unlock`. Result:
+- **FRAME-2. Unlock and drag.** `/pm unlock` → the panel appears with a gold outline and its name in
+  the middle. Drag it behind your chat frame → it follows the mouse smoothly and stays where you drop
+  it. Result:
+- **FRAME-3. Lock and click-through.** `/pm lock` → the outline and label vanish, leaving a plain
+  block. Click something in the chat frame behind it → the click lands on the chat frame; a locked
+  panel is completely mouse-transparent. Result:
+- **FRAME-4. Behind the action bars.** Place a panel behind your action bars, `/pm panel <name> strata
+  BACKGROUND`, `/pm lock` → the bars are fully visible and usable on top of it; the panel never takes
+  a click, a keybind or a tooltip. Result:
+- **FRAME-5. Position persists, unlock does not.** After FRAME-2, `/reload` → the panel is exactly
+  where you left it and panels are **locked** again (unlock is session-only). Result:
+- **FRAME-6. Snapping.** `/pm set settings.gridSize 32`, `/pm set settings.snapToGrid true`,
+  `/pm unlock`, drag a panel slowly → on release it jumps to a 32-unit multiple, and
+  `/pm panel <name> x` prints a value divisible by 32. `/pm set settings.snapToGrid false`, drag
+  again → it lands wherever you dropped it. `/pm reset settings.gridSize` and
+  `/pm reset settings.snapToGrid` afterwards. Result:
+- **FRAME-7. Unlock outline thickness.** On a fresh profile `/pm get settings.unlockOutlineSize` →
+  `2 px`, and `/pm unlock` draws the usual hairline. `/pm set settings.unlockOutlineSize 8` **while
+  unlocked** → every unlocked outline thickens at once, with no `/reload` and no re-unlock.
+  `/pm reset settings.unlockOutlineSize` → back to `2 px`. Result:
+- **FRAME-8. The outline is never invisible.** `/pm set settings.unlockOutlineSize 0` → clamps to
+  `1 px` (and `400` to `12 px`); an outline of 0 is never stored. Then hand-edit
+  `unlockOutlineSize = 0` into `PanelMaster.lua` under `WTF/.../SavedVariables`, log in and
+  `/pm unlock` → the outline is drawn at **1**, not 0: the value is clamped on the way out as well.
+  Reset it afterwards. Result:
+- **FRAME-9. Default size of a new panel.** `/pm get settings.defaultWidth` and
+  `settings.defaultHeight` → `240 px` and `120 px`; a new panel is that size. `/pm set
+  settings.defaultWidth 500`, `/pm set settings.defaultHeight 60`, `/pm new Wide` → a 500x60 panel,
+  and **every existing panel is untouched**. Widen it, then press **Reset** on its **General** tab on
+  the Panels page → back at **500x60**, not 240x120: a reset panel and a new one land on the same
+  state. Reset both settings afterwards. Result:
+- **FRAME-10. One panel disabled.** `/pm panel <name> enabled false` → it vanishes but is still
+  listed, dimmed, in `/pm panels`. `/pm unlock` → it is **shown anyway** with its outline and label,
+  since you cannot move what you cannot see. `/pm lock` → it disappears again. Result:
+- **FRAME-11. The unlock overlay draws on top.** On a panel with the default background and
+  **Artwork** set to **None**, and two more panels in different colors, `/pm unlock` → every panel
+  shows its gold outline and name clearly **on top of** its fill. **Fail:** a dim or invisible
+  outline, which means the overlay fell behind the fill. Result:
+- **FRAME-12. Level stride.** Two overlapping panels in the same strata, with one-word names:
+  `/pm panel <first> level 0` and `/pm panel <second> level 1` (the Panels page has no Level control)
+  → the level-1 panel draws entirely in front, covering the other's accent bar and border, not just
+  part of them. `/pm panel <second> level 3` → the same. **Fail:** interleaved layers. Result:
+- **FRAME-13. Master scale and alpha.** **General ▸ Master controls ▸ Master scale** to 1.5 → every
+  panel grows together, border, accent bars and artwork included, and each panel's own **Panel
+  scale** on the Panels page still reads what you set: the two multiply. **Master alpha** to 0.4 →
+  every panel fades on top of its own opacity. Put both back to 1. Result:
+- **FRAME-14. Reset position.** **Master controls ▸ Reset position** → every panel jumps to the middle
+  of the screen, a chat line says how many moved, and nothing else about any panel changes (size,
+  colors, artwork). Result:
+- **FRAME-15. Off-screen recovery.** `/pm panel <name> x 9000` → the panel disappears off the right
+  edge. `/pm recover` → "moved 1 panel back on screen" and it reappears. `/pm recover` again →
+  "every panel is already on screen". Result:
+- **FRAME-16. Recovery never runs by itself.** Park a panel half off-screen, `/reload` → it is still
+  where you put it. Result:
+- **FRAME-17. Recovery measures in scaled units.** Master scale 0.5, drag a panel into the far right
+  half of the screen, `/pm recover` → "every panel is already on screen" and it does not move. Master
+  scale 2, `/pm panel <name> x 1500` on a TOPLEFT-anchored panel, `/pm recover` → "moved 1 panel back
+  on screen" and it comes into view. Master scale back to 1. Result:
+- **FRAME-18. The frame name exists.** Create **Chat BG**, open **Panels**, and hover the **Panel
+  name** box → its tooltip includes `Frame name: PanelMaster_Panel_Chat_BG`. `/run
+  print(PanelMaster_Panel_Chat_BG:GetWidth())` → the panel's width. This name is the addon's public
+  contract. Result:
+- **FRAME-19. Anchoring to it.**
+  `/run local f=CreateFrame("Frame",nil,UIParent);f:SetSize(20,20);local t=f:CreateTexture();t:SetAllPoints();t:SetColorTexture(1,0,0);f:SetPoint("TOPLEFT","PanelMaster_Panel_Chat_BG","TOPLEFT",0,0)`
+  → a red square at the panel's top-left corner that **follows it** when you unlock and drag the
+  panel. Result:
+- **FRAME-20. A colliding slug is refused.** `/pm new Chat-BG` → refused, with a message naming the
+  frame name it would have collided on. Result:
+- **FRAME-21. Rename keeps the frame name.** On **Panels**, change **Panel name** from **Chat BG** to
+  **Chat Backdrop** and press Enter → the picker entry updates, the tooltip still reads
+  `PanelMaster_Panel_Chat_BG`, and FRAME-19's red square keeps following the panel. Result:
+- **FRAME-22. Rename to a taken name.** Rename a panel to another panel's exact name → a cyan-tagged
+  error, and the box reverts to the old name. Renaming to a name that only **slugs** like another
+  (`Chat-BG` while `Chat BG` exists) is allowed, since no frame name is claimed. Result:
+- **FRAME-23. Renames abandon no frames.** Rename a panel back and forth several times, then
+  `/pm diagnostics` → the pooled count on the `frames:` line has not grown. Result:
+- **FRAME-24. A freed name stays claimed.** After FRAME-21, `/pm new Chat BG` → refused, naming
+  **Chat Backdrop** as the panel still holding `PanelMaster_Panel_Chat_BG`. Result:
+- **FRAME-25. The frame name is stored.** `/reload` and repeat FRAME-18's `/run` → the same name
+  answers; it is persisted on the record, not recomputed. Result:
+- **FRAME-26. Copy settings from another panel.** Make two panels; style the first heavily (size,
+  textures, both colors, border, accent bar, artwork) and move the second somewhere else. On the
+  second, pick the first in **Copy settings from panel** (the **General** tab's first row) → the
+  second takes the first's whole appearance, artwork **and size**, and a cyan-tagged line names the
+  source. It does **not** move, its name and frame name are unchanged, and the dropdown snaps back to
+  empty. Change a color on the first → the second does not follow (a snapshot, not a link). Result:
+- **FRAME-27. Copy with a lone panel.** Delete all but one panel → **Copy settings from panel** is
+  disabled, with a tooltip saying to make another panel first. Result:
+- **FRAME-28. Reset one panel.** Resize, move, retexture, recolor and set a panel to mouseover, then
+  press **Reset** on its **General** tab → it returns to a new panel's look **and position** (the
+  middle of the screen), every editor control re-reads, the name and frame name are unchanged, anything
+  anchored to it stays anchored, and other panels are untouched. Result:
+- **FRAME-29. Delete-all asks first, from both entry points.** `/pm new GuardA`, `/pm new GuardB`.
+  `/pm panel deleteall` → a confirm popup; **No** → both survive. **Panels ▸ Defaults** → the same
+  popup; **No** → both survive. **Yes** from either → both gone, and chat says `deleted 2 panels.`
+  Result:
+
+## LOOK
+
+- **LOOK-1. Background color.** `/pm panel <name> bgColor 1,0,0,0.5` → translucent red at once.
+  Result:
+- **LOOK-2. Byte colors with a fractional alpha.** `/pm panel <name> bgColor 255,0,0,0.5` → the
+  identical translucent red as LOOK-1, echoing `1.00,0.00,0.00,0.50`. `/pm panel <name> bgColor
+  255,0,0,1` → the same red, **fully opaque**, echoing `1.00,0.00,0.00,1.00`. `/pm panel <name>
+  bgColor 255,0,0,128` → half-transparent, echoing `0.50`. **Fail:** the alpha-1 form leaves the panel
+  invisible, the old bug where the byte scale chosen from R, G and B was applied to alpha too. Result:
+- **LOOK-3. Border.** `/pm panel <name> borderSize 6`, `/pm panel <name> borderColor 0,1,0,1` → a
+  thick green border whose four edges meet cleanly at the corners, with no darker overlap squares.
+  `/pm panel <name> borderSize 0` → the border disappears, leaving a plain fill. Result:
+- **LOOK-4. Opacity clamps.** `/pm panel <name> alpha 0.2` → it fades. `/pm panel <name> alpha 9` →
+  the echo reads `1.00`. Result:
+- **LOOK-5. Strata.** `/pm panel <name> strata HIGH` → it covers UI it sat behind before.
+  `strata BACKGROUND` → it drops behind again. Result:
+- **LOOK-6. Shared media is registered.** With PanelMaster the only Ka0s addon enabled (the names
+  live in the shared LibSharedMedia, so any other Ka0s addon registers them too), the **Accent bar**
+  tab's **Bar texture** dropdown lists `Ka0s Gradient`, `Ka0s Underline 1`, `2`, `4` and `Ka0s
+  Overline 1`, `2`, `4`, and nothing you had chosen moved. PanelMaster has no font dropdown, so
+  `/dump LibStub("LibSharedMedia-3.0"):IsValid("font", "JetBrains Mono")` → `true`. **Fail:** a
+  name absent on a complete install: `core/MediaSetup.lua` never reached `Media.RegisterLSM`.
+  Result:
+- **LOOK-7. Background texture.** **Panels ▸ Background and border ▸ Background texture** → a list
+  with a preview swatch per entry, `Solid` among them, plus textures other addons registered. Pick
+  `Blizzard Parchment` → the panel fills with it at once, tinted by its background color. Reopen the
+  dropdown → it still reads your pick. **Fail:** it reverted while the panel changed (the LSM
+  widget's value push; `settings-panel.md` ▸ *Three widget workarounds*). Result:
+- **LOOK-8. Border style.** **Border style** → `Blizzard Tooltip` → a decorative edge with correct
+  corners, not four flat bars. **Border thickness (px)** to 8 and back to 1 → the edge scales.
+  **Border style** → `None` → the border disappears while the thickness stays; set it back and the
+  border returns. Result:
+- **LOOK-9. The Border dropdown sits flush.** With PanelMaster alone, the closed **Border style**
+  dropdown is flush with the controls stacked with it, with no ~42px gap on its left. **Fail:** a
+  gap, meaning `lib.__PatchLSM30Border()` is not taking effect. This passing alone proves nothing
+  about LOOK-10. Result:
+- **LOOK-10. The Border dropdown with five Ka0s addons loaded.** Enable KickCD, PanelMaster,
+  AbsorbTracker, ConsumableMaster and MultiMeters, log in, and open each addon's Border dropdown
+  (here: **Panels** → a panel → **Border style**). Change the load order (disable and re-enable
+  addons, or rename folders), `/reload`, and walk all five again → in every one the closed control is
+  flush with no ~42px gap, and opening it still draws the per-row previews; nothing differs between
+  passes, and no Lua error. **Fail:** any dropdown that differs from the other four, or changes with
+  load order: AceGUI's `LSM30_Border` slot is process-global, and one library-level registration is
+  what makes the answer independent of who loaded last. Result:
+- **LOOK-11. No background texture.** **Background texture** → `None` → the fill disappears and the
+  border stays. Result:
+- **LOOK-12. Appearance persists.** Set textures, both colors, a border offset and accent settings on
+  a panel, `/reload` → every choice survived. Result:
+- **LOOK-13. A texture whose addon is gone.** Pick a texture another addon supplies, disable that
+  addon, `/reload` → the panel renders **plain** (not invisible, no error). Re-enable the addon →
+  the texture comes straight back; the choice was never overwritten. Result:
+- **LOOK-14. Color pickers apply without the opacity slider.** Click the **Background color** swatch,
+  pick bright green **without touching the opacity slider**, and click **OK** → the swatch **and** the
+  panel are green. Drag inside the color wheel before OK → the panel updates live. Repeat for
+  **Border color** with a thickness of 4 or more → the border takes the color. **Fail:** a green
+  swatch over an unchanged panel (the picker bound only `OnValueConfirmed`). The headless suite
+  stubs AceGUI, so no unit test covers this. Result:
+- **LOOK-15. Picker Cancel.** Open a picker, change the color, press **Cancel** → the panel returns to
+  its previous color. Result:
+- **LOOK-16. Picker opacity multiplies.** Change a color and drag the picker's opacity slider → both
+  apply, and the panel's opacity is the picker alpha times **Panel opacity** (on **Opacity and
+  fade**). Result:
+- **LOOK-17. Border offset.** With a 2 to 4px border, drag **Border offset** positive → the border
+  moves outward, leaving a gap (a halo); negative → inward over the fill (an inset); 0 → exactly on
+  the edge. With a non-zero offset, drag the panel and change **Frame strata** → the border keeps its
+  offset and stays with the panel. Result:
+- **LOOK-18. Class color on the background.** Tick **Use class color** next to **Background color** →
+  the panel takes your class color, its opacity is unchanged, and **Panel opacity** still works. The
+  picker stays **enabled**, its label stays **Background color** with no `(opacity)` suffix, and its
+  tooltip ends with *not read while Use class color is on, except for its opacity, which always
+  applies*. Result:
+- **LOOK-19. Class color is per control and reversible.** Also tick it next to **Border color**, then
+  untick the background one → the border stays class-colored. Untick both → the original colors
+  return exactly; they were never overwritten. Result:
+- **LOOK-20. The picker still sets opacity under class color.** With **Use class color** ticked, all
+  five swatches (**Background color**, **Border color** twice, **Bar color**, **Artwork color**) stay
+  enabled with their plain label and a tooltip saying the opacity still applies. Open one and drag
+  its opacity slider → the class-colored fill or border gets more or less solid. Result:
+- **LOOK-21. The composed blocks.** On **Background and border**, and on **Accent bar** for the bar
+  and its border, work every control: pick a style or texture, drag the thickness, pick a color,
+  tick and untick **Use class color**, drag the offset (and **Bar opacity**, **Bar thickness**,
+  **Bar offset**) → each applies at once, a new style or texture name shows in its dropdown straight
+  away, **Border thickness (px)** reaches **32**, **Bar opacity** reads as 0 to 1 (not a
+  percentage), and each control keeps its tooltip. `/reload` → every value persisted. Result:
+- **LOOK-22. Border definition.** Compare a 1px border in a picked bright color against your class
+  color at the same opacity and size → any softness tracks contrast (a darker class color can look
+  softer). **Fail:** a visible difference at matched luminance. At **Border thickness (px)** 2 any
+  color is crisp regardless of UI scale. Result:
+- **LOOK-23. Another class.** Log in on a character of a different class → its class-colored panels
+  show that class's color. Result:
+- **LOOK-24. Mouseover fade.** On **Opacity and fade**, tick **Show on mouseover only** with **Faded
+  opacity** `0`. Move the cursor away → the panel disappears. Move over where it was → it appears at
+  its normal opacity within about a tenth of a second, without stutter. Result:
+- **LOOK-25. Faded in, still click-through.** With the cursor over the faded-in panel, click
+  something behind it → the click lands on the frame underneath. Result:
+- **LOOK-26. Faded opacity bounds.** **Faded opacity** `0.3` → it rests dim, not invisible. Set it
+  above **Panel opacity** → clamped; the panel never fades *out* on mouseover. Result:
+- **LOOK-27. Unlocked panels ignore the fade.** Tick **Unlock** on that panel → it stays fully
+  visible regardless of the cursor; untick and the fade resumes. Result:
+- **LOOK-28. Many faders are cheap.** Make half a dozen mouseover panels → no measurable frame-rate
+  change (one shared 10Hz ticker drives them all). Result:
+- **LOOK-29. The fade ticker comes back.** Untick **Show on mouseover only** on **every** panel that
+  has it (the last one takes the `OnUpdate` off the shared driver), then tick it on one panel and
+  hover → the fade works as in LOOK-24. **Fail:** the panel stays at one opacity for the rest of the
+  session. Headless cases call `Canvas.__updateMouseover` directly and never go through the script
+  slot, so only the client sees this. Result:
+
+## ACCENT
+
+All per panel, on the **Accent bar** tab of the Panels page.
+
+- **ACCENT-1. The shipped look.** On a new panel → **Enable accent bar** is ticked and a bar runs the
+  full width of the **top** edge only: 5px thick, flush against the panel, the **Blizzard** status-bar
+  texture, your class color, a 1px black outline. The panel's own border starts at **0**. Result:
+- **ACCENT-2. The enable switch.** Untick **Enable accent bar** → the strip vanishes; tick it → it
+  returns exactly as before. Result:
+- **ACCENT-3. Drawn over the border.** Give the panel a contrasting border of 4 or more → the bar
+  draws **over** the border where they meet, and still does after a **Frame strata** change.
+  Result:
+- **ACCENT-4. Edges.** Tick **Bottom**, **Left** and **Right** in turn → each edge gains a bar
+  spanning it in full; all four read as a detached outline. Untick every edge → no bars, and the
+  enable switch stays **on** (Top is not re-ticked). Result:
+- **ACCENT-5. Bars track a resize.** Drag the Width and Height sliders → every bar still spans its
+  whole edge with no gap at either end. Result:
+- **ACCENT-6. Thickness and offset.** Raise **Bar thickness** → top and bottom bars get taller, left
+  and right wider. **Bar offset** positive → the bars move away from the panel on all sides; 0 →
+  flush; negative → they overlap the panel. Result:
+- **ACCENT-7. Bar color.** Untick **Use class color** next to **Bar color** → the stored white; pick a
+  color → it applies (the same picker as LOOK-14). Result:
+- **ACCENT-8. Bar texture.** **Bar texture** → a gradient status-bar texture → it renders tinted by
+  the bar color. The list holds **status-bar** textures, not backgrounds. Result:
+- **ACCENT-9. The bar's own border.** Under the tab's **Border** heading, **Border thickness (px)**
+  to 3 → an outline around each bar. **Border style**, **Border color** and its **Use class color**
+  behave like the panel's; **Border offset** works both ways; thickness 0 → the outline goes
+  completely. Result:
+- **ACCENT-10. Bar opacity.** **Bar opacity** to 0.3 → the bars get see-through while the panel's
+  background and border do not. Back to 1 → exactly the solidity the bar color's own alpha gives.
+  Result:
+- **ACCENT-11. Bars belong to the panel.** **Panel opacity** 0.3 → the bars fade with the panel.
+  **Frame strata** change → they move with it. **Show on mouseover only** with **Faded opacity** 0
+  → they vanish and reappear with it. Result:
+- **ACCENT-12. Bars are click-through.** Click where a bar is drawn → the click lands on whatever is
+  behind. Result:
+- **ACCENT-13. Deleting leaves nothing behind.** Delete a panel that had bars → no colored strips
+  float where it was (they are anchored outside the panel's bounds). Result:
+- **ACCENT-14. Edges from the command line.** `/pm panel <name> accentEdges top,left`, then
+  `accentEdges none`, then `accentEdges middle` → the first two apply; the third is refused with
+  the valid list. Result:
+
+## ART
+
+Run ART-1 first: a malformed `.tga` renders as nothing with no Lua error, which looks the same as
+**None**, so every other ART check is meaningless until it passes.
+
+- **ART-1. The catalog loads.** Size a panel around 300x300, open **Artwork**, pick `Class: Death
+  Knight` → the emblem appears. Step through every catalog entry → each one draws (the headless
+  suite proves a file exists, never that the client decodes it). **None** → a plain block again.
+  Result:
+- **ART-2. Fill types under resize.** With art on, drag **Width** from minimum to maximum, then
+  **Height**, at each fill → **Fit (contain)**: the whole emblem visible, never cropped or distorted.
+  **Fill (crop)**: edge to edge, never distorted, overflow cropped evenly. **Stretch**: distorts to
+  match (it is meant to). **Native size**: the emblem's size never changes. **Tile**: more copies as
+  the panel grows, each the same size. Result:
+- **ART-3. Rotation keeps proportions.** **Rotation** `90`, repeat ART-2's width drag at **Fit**,
+  **Fill**, **Native size** and **Tile** → turned a quarter-turn, otherwise unchanged. **Fail:** a
+  squashed or stretched emblem (the axis transpose regressed). Result:
+- **ART-4. Draw layers.** On a panel with a solid opaque background and a thick border: **Draw layer
+  → Behind background** → hidden behind the fill (shows through when you lower the background's
+  alpha). **Above background** → on the fill, under the border and accent bar. **Above border and
+  accent** → covers both. Result:
+- **ART-5. Clipping.** **Fill type** `Native size`, **Scale** `4`, drag **X** and **Y** → the art is
+  cut off exactly at the panel's edges. The **accent bar still hangs outside** the panel; it is
+  deliberately unclipped. Result:
+- **ART-6. Blend mode.** **Glow** → the art brightens what is behind it and never darkens anything
+  (strongest over a dark panel). **Normal** → it paints over obeying its own transparency. Only these
+  two are offered. Result:
+- **ART-7. Artwork color.** Change **Artwork color** → the art takes it. **Use class color** → your
+  class color. Lower **Opacity** → the art fades independently of the background. Result:
+- **ART-8. The color controls stay put.** Page through the artwork dropdown → **Artwork color** and
+  **Use class color** are present for **every** piece, and no row below them jumps. Result:
+- **ART-9. Desaturate.** On a full-color piece with a strong tint, tick **Desaturate** → the muddy
+  average becomes a clean version of your color; untick → the mud returns. On a white-on-black piece
+  it makes no visible difference. Result:
+- **ART-10. Custom path.** **Artwork** → `Custom path…`, enter
+  `Interface\Icons\INV_Misc_QuestionMark` → the question-mark icon renders under the current fill.
+  Enter nonsense → nothing draws and **no Lua error**. Clear the box → nothing draws. Result:
+- **ART-11. Artwork persists.** Set artwork, a tint, a rotation, a flip and an offset, `/reload` →
+  every one survives exactly. Result:
+- **ART-12. Artwork from the command line.** `/pm panel <name>` → the `art*` fields print.
+  `/pm panel <name> artFill SQUISH` → `error: expected one of: STATIC, STRETCH, FILL, FIT, TILE`, and
+  nothing stored. Result:
+
+ART-13 needs no Sunn folder installed at all. ART-14 to ART-30 need Sunn - Viewport Art (SunnArt)
+and at least one art pack; skip those without it.
+
+- **ART-13. No Sunn, no Sunn entries.** With **no** Sunn folder installed, **Panels ▸ Artwork** → no
+  `Sunn ->` entries anywhere. Result:
+- **ART-14. One entry per theme.** Enable SunnArt and a pack, `/reload` → entries grouped under
+  `Sunn -> Art Pack 2` (or `Sunn -> Built in`), one per theme under its plain name, and no `(left)`,
+  `(middle)` or `(right)` entries. Result:
+- **ART-15. The composite draws.** Pick a theme, **Fill** → **Stretch**, panel about 800 x 140 →
+  every section draws edge to edge, in order, as one continuous bar. **Fail:** nothing drawn (the
+  path does not resolve) or one section stretched across the panel (the composite path did not
+  run). Result:
+- **ART-16. Seams.** Look where sections meet → no bright line, dark gap or doubled pixel. Result:
+- **ART-17. Fit to artwork.** Press **Fit to artwork** → the panel becomes the bar's exact size
+  (1536 x 256 for a typical three-section theme) and chat reports both numbers. Drag the panel smaller
+  → it does **not** snap back; press the button again → it returns to the art's size. Result:
+- **ART-18. Fit follows rotation and scale.** **Rotation** 90°, **Fit to artwork** → 256 x 1536.
+  **Scale** `0.5`, press again → every number halves. Result:
+- **ART-19. Crop drops whole sections.** **Fill** → **Fill (crop)**, panel much taller than wide →
+  the bar covers the panel and the outer sections are cropped away entirely (at a third of the aspect,
+  only the middle remains), never thinned to a hairline. Result:
+- **ART-20. Rotated sections stack.** **Rotation** 90° → sections stack vertically, section 1 on top,
+  and the bar still covers the panel. Result:
+- **ART-21. Flip.** Back to 0°, **Flip horizontally** → the section order reverses and each section is
+  mirrored. Result:
+- **ART-22. Tile repeats the bar.** **Fill** → **Tile**, shrink **Scale** → the whole bar repeats,
+  not each section in its own slot; past the cap the repeats stop shrinking. The panel never shows a
+  bare strip. Result:
+- **ART-23. Tint is even.** Set a **Color** and tick **Desaturate** → every section takes the tint
+  equally. Result:
+- **ART-24. Back to a single piece.** Switch the panel to a bundled piece → exactly one image, no
+  leftover section. Result:
+- **ART-25. The transparent strip is trimmed.** A theme with a transparent strip along its top, **Fit
+  to artwork** → the art sits flush with no empty band above it. **Tile** → the gaps reappear between
+  repeats, which is expected. Result:
+- **ART-26. A pack goes away.** Disable the pack addon but not SunnArt, `/reload` → that panel draws no
+  artwork, raises no error, and keeps its size. Result:
+- **ART-27. SunnArt disabled, packs installed.** Disable **Sunn - Viewport Art** itself, leave the pack
+  folders, `/reload` → the official packs' themes are still listed under `Sunn ->` and still draw
+  (`modules/SunnArtPacks.lua`'s manifest). **Fail:** an empty dropdown: the folder roster or the
+  manifest is not being read. Result:
+- **ART-28. Measured, not assumed.** Still with SunnArt disabled, pick **Sunn -> Art Pack 6: Fractal**
+  (or Pack 9's **Wrath**), **Fit to artwork** → 1536 x 512 (square sections). A Pack 2 theme still
+  fits to 2:1. Result:
+- **ART-29. Live names win.** Re-enable SunnArt, `/reload`, and look at a theme you renamed in
+  SunnArt's own options → your name, not the manifest's. Result:
+- **ART-30. Only installed packs are listed.** Count the `Sunn ->` groups against the `SunnArt*`
+  folders in `Interface/AddOns` → they match. Delete or rename one pack folder, `/reload` → that
+  group is gone and the rest are untouched, even if SunnArt still remembers the pack. Result:
+
+## PANEL
+
+- **PANEL-1. The General page.** `/pm config` → **General** → a tab strip pinned at the top reading
+  **Master controls | Editing | New panels**, the first tab active (drawn as a disabled button), a
+  two-column grid with no section headings under it, and a **Defaults** button top-right in the dark
+  and gold style, not Blizzard's red stone button (a red one was created too early;
+  `options-ui-§5`). Result:
+- **PANEL-2. The General tabs.** Click each tab → only that tab's controls show, the strip stays put,
+  and clicking the active tab does nothing. **Master controls** has 7 rows plus a **Reset position |
+  Reset all settings** button pair; **Editing** has 4 rows, two per line (**Show names while
+  unlocked | Snap to grid**, then **Grid size | Unlock outline thickness**), plus a **Recover
+  panels** button under the last row; **New panels** has 4. Result:
+- **PANEL-3. Master controls in the canonical order.** Two per line: **Enable Ka0s Panel Master |
+  General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then
+  **Minimap button** alone on a fourth line (PanelMaster has no **Test mode** to pair beside it), then
+  the button pair, with nothing else on the tab (`options-ui-§15`). Compare against another Ka0s
+  addon → the same rows in the same order, except that an addon with a Test mode pairs it beside
+  **Minimap button**. Result:
+- **PANEL-4. General page chrome.** The row spacing, the header, the gold divider and the breadcrumb
+  `Ka0s Panel Master ▸ General` match the other Ka0s addons' pages. Result:
+- **PANEL-5. The scrollbar.** On a page that fits, the scrollbar is **present but grayed out**, and
+  the body does not change width as you move between pages and tabs. Result:
+- **PANEL-6. Lock frame.** Untick **Lock frame** → the panels unlock exactly as `/pm unlock` does;
+  tick it → they lock. It ships ticked and is ticked again after every `/reload`. Result:
+- **PANEL-7. The Reset all settings tooltip.** Hover **Reset all settings** → *"Reset the current
+  profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are
+  not affected."* **Fail:** *"Restore every setting in this addon to its default."* (the Options
+  descriptor lost `resetProfile` or `profilesPage`). Result:
+- **PANEL-8. Reset all is a profile reset, from all three entry points.** **Reset all settings**, the
+  General page's **Defaults** button, and `/pm resetall` each raise the same popup, word for word:
+  *"Reset this profile to the addon's defaults? Everything you have configured or added in it is
+  discarded — your other profiles are not affected."* **No** → nothing changes. **Yes** → every setting
+  is back to shipped **and the panels are gone**, and chat says `this profile reset to defaults` (not
+  `All settings reset to defaults`, and not *"your panels are untouched"*). Result:
+- **PANEL-9. Defaults button tooltips.** Hover **Defaults** on **General** → *Reset this profile to
+  the addon's defaults. Your panels go with it.* On **Panels** → *Delete every panel. This cannot be
+  undone.* Result:
+- **PANEL-10. The Panels page band.** Click **Panels** → a six-tab strip (**General | Position and
+  size | Background and border | Accent bar | Artwork | Opacity and fade**) with **General** active,
+  and above it, in the page's chrome band, a **single row**: the **Panel** picker on the left and
+  **Create new panel** on the right, separated from the strip by a hairline rule. Neither is a tab or
+  in the scroll area, they stay put on every tab, and no second box is drawn around them. **Fail:** a
+  band two or three rows deep (`options-ui-§14`). Result:
+- **PANEL-11. Panels opened first.** On a fresh login, `/pm config` and click **Panels** before any
+  other page → the band holds its one row, and the picker and the create box each take **half the
+  band's width**, not a fixed 150 pixels. Resize the Settings window → both follow. Result:
+- **PANEL-12. Panels opened after another addon.** On a fresh login, open another addon's settings
+  first (for example **AuraMaster ▸ Containers**) and switch a few of its tabs, then open **Panel
+  Master ▸ Panels** → the picker and the create box are **visible**, each half the band. **Fail:** a
+  band of the right height with nothing in it (a pooled, hidden `SimpleGroup` nobody showed).
+  Result:
+- **PANEL-13. The empty state.** Delete every panel → the strip and the band stay, at the same height;
+  the page reads "No panels yet…"; the create box stays usable; the picker is **grayed out, not gone**;
+  and the six acts on the **General** tab are absent. **Fail:** a band that shrinks or loses its row,
+  or a page without its strip. Result:
+- **PANEL-14. Editor layout.** The picker carries its label and sits beside the create box, with no
+  heading naming the selected panel. On **General**, the three rows keep to their own lines, each
+  control is half width, and **Delete**'s right border clears the page edge. No boxed border around
+  the editor, and no two unrelated controls share a line. Subsection headings (the landing page's
+  divider-flanked style): **Background / Border** on *Background and border*, **Bar / Edges /
+  Border** on *Accent bar*, **Image / Layout / Appearance** on *Artwork*. On **Opacity and fade**,
+  **Panel opacity** and **Faded opacity** share the first row and **Show on mouseover only** sits
+  alone on the next. Compare against KickCD's Icons page. Result:
+- **PANEL-15. An open dropdown closes when the page scrolls.** Open any dropdown (the panel picker,
+  Anchor, Frame strata, a texture picker, or **General**'s **Default frame strata**) and, without
+  closing it, scroll the page with the mouse wheel, then with the scrollbar drag → the list closes
+  both times and never floats over or outside the window. Reopen it → one click opens it. Result:
+- **PANEL-16. The General tab's acts.** **Panels** opens on **General**, whose three rows of two are
+  **Panel name** and **Copy settings from panel**, **Enabled** and **Unlock**, **Reset** and
+  **Delete**. Walk the other five tabs → none of the six follows you. Back on **General**, with a
+  panel picked: tick and untick **Enabled** (the panel goes and returns), tick **Unlock** (only that
+  panel grows a handle), press **Reset**, then **Delete** → each acts on the panel the picker shows.
+  Pick another panel → the six rebuild against it. **Fail:** an act landing on the previously picked
+  panel. The frame name is only on the **Panel name** tooltip, not a label of its own. Result:
+- **PANEL-17. The rename box keeps what you type.** Pick a panel, type into **Panel name** without
+  pressing Enter, then run `/pm new Interloper` from chat → the new panel appears in the picker and
+  your text is still in the box. With nothing typed, `/pm rename <selected panel> Renamed` (a one-word
+  old name; the CLI reads the first word) → the box follows to the new name. Result:
+- **PANEL-18. The create box.** Type a name and click away without Enter → **nothing is created**.
+  Type a name and press **Enter** (or the **Okay** button) → the panel appears in the middle of the
+  screen, the box clears, and the editor jumps to it. Result:
+- **PANEL-19. Creating a duplicate name.** Type an existing name and press Enter → a cyan-tagged error
+  and the text stays in the box for correction. Result:
+- **PANEL-20. One editor at a time.** With three panels, switch with the **Panel** picker → exactly
+  one editor shows, and the page does not grow as panels are added. Result:
+- **PANEL-21. Disabled panels in the picker.** Disable a panel, reopen the picker → it reads
+  `<name> (disabled)`. Result:
+- **PANEL-22. Controls apply on release.** Drag a panel's width slider and pick a color → the panel
+  updates as you release. Result:
+- **PANEL-23. Per-panel Unlock.** Tick **Unlock** on the selected panel → only that panel grows an
+  outline and drag handle; drag it, untick. With a panel open on **Panels**, untick **General ▸ Lock
+  frame** → back on **Panels**, **Unlock** shows ticked and grayed; tick **Lock frame** → unticked and
+  enabled again. Result:
+- **PANEL-24. Delete in the editor.** Click **Delete** → the panel leaves the screen and the picker,
+  and the editor falls back to another panel rather than going blank. Result:
+- **PANEL-25. The picker rebuilds on show.** Close the options window, `/pm new Offscreen`, reopen
+  **Panels** → the new panel is in the picker. Result:
+- **PANEL-26. The tab strip survives pooling.** `/pm` → **Panels**, and cycle every tab three times,
+  ending on the first. On each pass the label is that tab's own, the selected tab is the one you
+  pressed, and the band height does not move. Then `Esc`, `/pm` again, and cycle once more →
+  everything still named and selected correctly. **Fail:** a label carried over from another tab, a
+  highlight on the wrong button, a body under the wrong tab, or a band that changes height: the
+  per-`ctx` pool handed back a frame it did not finish dressing. The headless mock answers
+  `GetHeight` with 0, so no automated check sees this. Result:
+
+## PROFILE
+
+- **PROFILE-1. Every character starts on the shared Default.** Create a couple of panels, log in on an
+  alt → the **same** panels (the `true` third argument to `AceDB:New`). Back on the first character →
+  the panels are exactly as you left them. Result:
+- **PROFILE-2. The Profiles page.** `/pm config` → **Profiles** → Ace's standard profile UI (Reset
+  Profile, the current profile, New and Existing Profiles, Copy From, Delete a Profile), and **no
+  Defaults** button in the header. Result:
+- **PROFILE-3. A new profile clears the screen.** Type a new profile name and press Enter → it is
+  created and switched to, and the screen clears of panels **at once**. **Fail:** the old panels stay
+  (the profile callbacks did not run). Result:
+- **PROFILE-4. Switching back.** Make a panel on the new profile, then switch back via **Existing
+  Profiles** → the original panels return and the new profile's panel disappears, at once, with every
+  setting and artwork choice intact. Result:
+- **PROFILE-5. Copy From.** **Copy From** the other profile → its panels appear immediately. Result:
+- **PROFILE-6. Reset Profile.** Press **Reset Profile** → every panel on this profile goes. Result:
+- **PROFILE-7. The profile persists.** Switch to a profile, `/reload` → still on it, with its panels.
+  Result:
+- **PROFILE-8. The Panels page follows a switch.** Open **Panels**, switch profile on the Profiles
+  page, come back → the picker **and** **Copy settings from panel** list the new profile's panels, and
+  the editor shows one of them, not a panel you never chose. Result:
+- **PROFILE-9. A per-panel unlock does not cross a switch.** Unlock one panel with its **Unlock**
+  control, switch profile → none of the incoming profile's panels is unlocked (panel ids restart per
+  profile). Result:
+- **PROFILE-10. Swapped names leave no orphans.** On profile A create `Alpha` then `Xray`; on profile
+  B create `Xray` then `Alpha`. Switch between them five times, `/pm diagnostics` → the `frames: N
+  active, M pooled, 0 orphaned` line shows no orphans, and `/framestack` over each panel names the
+  expected `PanelMaster_Panel_<slug>`. Result:
+- **PROFILE-11. `/pm profile` lists the profiles.** With two or three profiles, `/pm profile` → a
+  green `Profiles` header, one row per profile indented two spaces and sorted without regard to case,
+  the current one suffixed `(current)`, then `/pm profile <name> switches profile`. Every line is
+  `[PM]`-tagged and none ends in a colon. Result:
+- **PROFILE-12. `/pm profile <name>` switches.** `/pm debug on`, then `/pm profile <another profile>`
+  → `Switched to profile '<name>'.`, the panels change at once exactly as a Profiles-page switch does,
+  and the console gets one `[Profile] switched to '<name>', N panels` line. `/pm profile <that same
+  name>` again → `Already on profile '<name>'.` and nothing changes. Result:
+- **PROFILE-13. An unknown name is refused.** `/pm profile Nope` → `No profile named 'Nope'.` followed
+  by the list, and no `Nope` appears in the Profiles page's **Existing Profiles**. `/pm profile
+  default` (wrong case) → refused the same way, with `Did you mean 'Default'?` before the list.
+  Result:
+- **PROFILE-14. Quotes and spaces.** Create a profile named `Raid Night` on the Profiles page, switch
+  away, then `/pm profile "Raid Night"` → it switches. `/pm profile Default`, then `/pm profile 'Raid
+  Night'` → it switches too. `/pm profile raid night` → refused, with `Did you mean 'Raid Night'?`.
+  Result:
+- **PROFILE-15. Profiles switch while disabled.** Make profile B with the addon enabled, then on
+  profile A `/pm disable`. `/pm profile` → the list, not the disabled line. `/pm profile B` → the
+  panels come up without touching a checkbox or a verb; `/pm profile A` → they go down again. Repeat
+  the pair from the Profiles page → the same. Result:
+- **PROFILE-16. No switch in combat.** Pull a training dummy, `/pm profile <another profile>` →
+  `Can't switch profiles in combat.` and nothing changes. Bare `/pm profile` still lists. After
+  combat the same command switches. Result:
+- **PROFILE-17. An open General page refreshes.** Give two profiles different **Master scale**
+  values. Open **General ▸ Master controls**, then `/pm profile <the other>` from chat with the window
+  still open → the slider shows the new profile's value without reopening the page. Result:
+
+## STATE
+
+- **STATE-1. One master switch.** `/pm set settings.enabled false` → every panel vanishes; `true` →
+  they return. `/pm disable` → the same, with the same `settings.enabled = false` echo; `/pm enable`
+  → back (`slash-commands-§2`). Result:
+- **STATE-2. Checkbox and verbs agree.** Untick and re-tick **General ▸ Master controls ▸ Enable Ka0s
+  Panel Master**, mixing in `/pm disable` and `/pm enable` → the checkbox always agrees with whichever
+  you used last. Result:
+- **STATE-3. Live verbs answer while disabled.** `/pm disable`, then run `/pm help`, `/pm version`,
+  `/pm list`, `/pm get settings.gridSize`, `/pm set settings.gridSize 8`, `/pm reset
+  settings.gridSize`, `/pm debug`, `/pm config` and a bare `/pm` → every one answers normally, the
+  `set` really writes, and `/pm config` and the bare `/pm` open the settings panel. `/pm help` prints
+  the whole index, with the disabled line straight under its version header. `/pm enable` → the
+  panels return. Result:
+- **STATE-4. Feature verbs are refused and inert.** While disabled, `/pm new Ghost` → exactly one line,
+  `[PM] Ka0s Panel Master is disabled — enable it with /pm enable`, and no panel: confirm with
+  `/pm enable` then `/pm panels`. Disable again, `/pm unlock` → the same line, and the panels stay
+  locked. **Fail:** the line prints and the verb acts anyway, or the wording differs by a word or a
+  color from the line every Ka0s addon prints (`slash-commands-§7`). Result:
+- **STATE-5. A typo is a typo while disabled.** While disabled, `/pm nwe Ghost` → `unknown command
+  'nwe'` and the help index, not the disabled line (`slash-commands-§3`). Result:
+- **STATE-6. The stand-down is total.** First, on the Profiles page, make a profile `Idle`, run
+  `/pm disable` on it, and switch back to your own. With a **Show on mouseover only** panel,
+  `/pm disable`, then enter and leave combat, change zones, and on the **Profiles page** switch to
+  `Idle` and back (not with `/pm profile`, which answers in chat; PROFILE-15 owns that route) →
+  nothing is drawn and **nothing is printed**. `/pm enable` → exactly the panels and settings as
+  they are **now**, including anything changed while off. **Fail:** any chat line from a combat or
+  zone change while disabled, which means a registration survived the stand-down. Result:
+- **STATE-7. Unlock does not beat the stand-down.** With two panels, `/pm unlock`, then `/pm disable`
+  → no outline, panel or label, and dragging the empty spot moves nothing. While disabled, untick
+  **Master controls ▸ Lock frame** and tick a panel's **Unlock** on the Panels page → still nothing
+  drawn. `/pm enable` → the outlines return and the panels drag. **Fail:** any outline or draggable
+  panel while disabled. Result:
+
+## COMBAT
+
+- **COMBAT-1. Panels are inert in combat.** With FRAME-4's panel behind the action bars, pull a
+  training dummy → the panel is unchanged and action buttons work normally. Result:
+- **COMBAT-2. Unlock waits for combat to end.** `/pm unlock` in combat → a gray "unlock queued"
+  notice, and the panels stay locked. Leave combat → they unlock by themselves and print "panels
+  unlocked". Result:
+- **COMBAT-3. Lock clears the queue.** In combat, `/pm unlock`, then `/pm lock`, then leave combat →
+  the panels stay **locked**. Result:
+- **COMBAT-4. No settings in combat.** `/pm config` in combat → `cannot open settings during combat
+  — Blizzard's category-switch is protected`, word for word, in light gray, and no panel opens. Leave
+  combat → the options panel does not open by itself; `/pm config` then opens it. Result:
+- **COMBAT-5. An open settings window locks.** Open `/pm config` out of combat, then pull with it open
+  → every page, tab strip included, is covered by a gray *"Settings are locked during combat."*;
+  controls, **Defaults** and tabs do nothing; switching category in the sidebar raises no Lua error
+  and the window stays open; exactly **one** gray chat notice per combat. Leave combat → the cover
+  lifts and the page shows current values. Result:
+- **COMBAT-6. General visibility.** **Master controls ▸ General visibility** → `Only in combat` →
+  panels hidden out of combat; pull → they appear on the first swing; leave → they hide. `Only out of
+  combat` → the reverse, the instant combat starts and ends. `Never` → nothing draws at all. Back to
+  `Always`. Result:
+
+## DIAG
+
+- **DIAG-1. The console window.** `/pm debug` → the console opens: monospace, timestamped, a red
+  `Debug: OFF` toggle at the left of the title bar, a scrollbar on the right, `0 / 3000 lines`
+  bottom-right. It wears the Ka0s window edge (a 1px black outer border with a 1px light-gray
+  highlight inside it), a **gold** title and a gray divider under the title bar, and reads as one
+  suite beside another Ka0s addon's console. Result:
+- **DIAG-2. Title-bar controls.** At the right end of the title bar → three small square controls of
+  one size, evenly spaced: a copy mark, a clear mark and a close mark, gray, each turning white (the
+  close mark red) under the pointer. No words and no tooltips. **Fail:** the words *Copy* and *Clear*
+  and a multiplication sign instead of the close mark, with a wider strip: the addon folder name
+  stopped reaching `core/DebugLogSetup.lua`'s descriptor, or `libs/LibKa0s/media/icons/` did not
+  survive a re-vendor. Result:
+- **DIAG-3. Monospace columns.** The `<HH:MM:SS> | [Tag]` prefixes line up down the window.
+  **Fail:** proportional text with ragged columns on a complete install (`NS.MediaFont` answered
+  nil). Result:
+- **DIAG-4. Logging on.** `/pm debug on` → a cyan-tagged chat ack with **ON** in green; the console
+  shows `[Debug] logging enabled`, then an `[Init]` line naming the addon, version, schema and
+  profile. Result:
+- **DIAG-5. One line per act.** Create, drag and recolor a panel → one `[Panel]` line per action, and
+  the counter climbs. Change one setting → exactly **one** `[Set]` line. Result:
+- **DIAG-6. Bulk acts log once.** Widen a panel and press its **Reset** → one `[Set] reset '<name>': N
+  rows` line and no `[Panel]` line; again → `…: 0 rows`. Copy settings from another panel, press
+  **Reset position**, and **Recover panels** → one `[Set]` line each, with a count (`copy from '…' to
+  '…': N rows`, `reset positions: N rows`, `recover positions: N rows`). `/pm resetall`, confirmed →
+  exactly one `[Set] reset profile '<name>' to defaults (N rows)` and no `[Profile] switched` line.
+  `[Canvas]` repaint lines after a `[Set]` line are expected (`debug-logging-§10`). Result:
+- **DIAG-7. Scrolling.** Drag the scrollbar → the log scrolls. Wheel-scroll the log → the thumb
+  follows. No Lua error. Result:
+- **DIAG-8. Copy.** Click the copy mark → a selectable window with the same lines, no color codes,
+  and its own close mark in the same art. Ctrl+C, Esc. Result:
+- **DIAG-9. Clear.** Click the clear mark → an empty log and `0 / 3000 lines`. Result:
+- **DIAG-10. The toggle button.** Click `Debug: ON` → it flips to red `OFF` and prints the matching
+  chat ack. Result:
+- **DIAG-11. Esc closes it, and the checkbox follows.** Tick **General ▸ Master controls ▸ Debug
+  console**, focus the console, press **Esc** → it closes (`UISpecialFrames`), and back on General the
+  checkbox is **unticked**. Result:
+- **DIAG-12. Logging is session-only.** `/reload` → logging is off and the console closed. Result:
+- **DIAG-13. The diagnostics report.** `/pm diagnostics` → a report appended below the log, from
+  `==== Ka0s Panel Master diagnostics begin ====` to `==== Ka0s Panel Master diagnostics end: N
+  line(s) ====`, every line tagged `[Diag]`, sections in order (state, master, unlock queue,
+  settings, screen, panels, frames, mouseover, artwork, events), each panel with `frame=yes`, and
+  `0 orphaned`; one chat line says *Diagnostic report written to the debug console: N lines. Use Copy
+  to share it.* **Fail:** any `frame=NO` or a non-zero orphan count. Result:
+- **DIAG-14. The report keeps the trace.** `/pm debug on`, drag a panel, `/pm diagnostics` → the
+  `[Panel]` lines stay above the begin marker. Copy and paste into an editor → the trace, both
+  branded markers, and no `|c` escapes. Result:
+- **DIAG-15. The report ignores the logging flag.** `/pm debug off`, `/pm diagnostics` → the full
+  report lands; the title bar still reads `Debug: OFF`, and dragging a panel logs nothing. Result:
+- **DIAG-16. The report while disabled.** `/pm disable`, then `/pm diagnostics` and `/pm debug
+  diagnostics` → each writes a full report; `state` reads `enabled (stored)=false stood down=true`
+  with its lifecycle hold, and each panel's renderer line reads `renderer: stood down`. `/pm enable`
+  afterwards. Result:
+- **DIAG-17. The report in combat.** Queue `/pm unlock` in combat and run `/pm diagnostics` before
+  combat ends → no Lua error, the `unlock queue` section shows `global=true`, and the unlock still
+  happens when combat ends. An unreadable number prints `match=unknown` or `<secret>`. Result:
+- **DIAG-18. No aliases.** `/pm debug dump`, then `/pm debug diag` → neither runs the report; each
+  toggles the console, as any unknown `debug` word does. `/pm diag` → an unknown verb. Result:
+- **DIAG-19. The line cap.** With logging on, fill past 3000 lines (drag panels, or repeat
+  `/pm diagnostics`) → the counter pins at `3000 / 3000 lines`, and the copy mark opens its window
+  without a noticeable hitch. Result:
+
+## LAUNCH
+
+Every step here fails silently in the client, so run the theme in full after any change to the icon or
+the launcher seam.
+
+- **LAUNCH-1. The logo.** Log in → a round minimap button wearing **this addon's logo** (not a
+  Blizzard icon, not a blank square), and the same logo beside **Ka0s Panel Master** in Esc ▸ AddOns.
+  **Fail:** a blank square: the `.tga` is missing or not uncompressed 32-bit. Result:
+- **LAUNCH-2. Left-click.** Left-click the button → the settings open on the landing page, and the
+  panels do **not** unlock (`launcher-§2`). Result:
+- **LAUNCH-3. Right-click Locked.** Right-click → a menu titled **Ka0s Panel Master** with exactly two
+  ticks, in order: **Enabled** (ticked) and **Locked** (ticked while locked); no *Test mode* and no
+  *Show window*. Click **Locked** → the menu closes, the panels unlock exactly as `/pm unlock` does,
+  and chat shows the same `state.locked = false` line. Right-click → **Locked** is unticked; click it
+  → they lock. **General ▸ Master controls ▸ Lock frame** agrees. In combat, clicking **Locked**
+  unlocks nothing until combat ends. Result:
+- **LAUNCH-4. Right-click Enabled.** Click **Enabled** → the addon disables exactly as `/pm disable`
+  does (panels go, `settings.enabled = false` in chat). Right-click → **Enabled** unticked and
+  **Locked** grayed, reading `Locked (enable the addon first)`; clicking it does nothing and writes
+  nothing. Left-click now → the settings open, no chat line. Click **Enabled** → back as with
+  `/pm enable`. Result:
+- **LAUNCH-5. The tooltip.** Hover → `Ka0s Panel Master  v<the TOC version>`, `Enabled: Yes` (green),
+  `Locked: Yes`, `Left-click: Open settings`, `Right-click: Options menu`, and no `Test mode` line
+  (`launcher-§1`). Unlock and hover → `Locked: No` (red). `/pm disable` and hover → still shown, with
+  `Enabled: No` (red) and the same hints. `/pm enable` afterwards. Result:
+- **LAUNCH-6. Its place persists.** Drag the button a third of the way around the ring, `/reload` →
+  it is still there. Result:
+- **LAUNCH-7. It survives a profile switch.** Switch profile on the Profiles page → the button does
+  not move or vanish (it is stored account-wide, `launcher-§3`). Result:
+- **LAUNCH-8. No reset touches it.** Hide the button (untick **Master controls ▸ Minimap button**),
+  then **Reset all settings** (confirm) → still hidden, checkbox still unticked. Then the General
+  page's **Defaults** → the same. Neither reset may show a hidden button or hide a shown one
+  (`launcher-§3`). **Fail:** the button returns or the checkbox re-ticks. Tick it back on. Result:
+- **LAUNCH-9. The Minimap button checkbox.** Untick **Minimap button** → the button goes at once;
+  `/reload` → it stays gone. Tick it → it returns at the angle you dragged it to. Result:
+- **LAUNCH-10. The menu has no hide entry.** Right-click → no entry hides the button. Result:
+- **LAUNCH-11. The CLI path is `shown`.** With the button visible, `/pm get global.minimap.shown` →
+  `global.minimap.shown = true`. `/pm set global.minimap.shown false` → the button goes at once.
+  Bring it back, hide it with the checkbox, `/pm get global.minimap.shown` →
+  `global.minimap.shown = false`; `/reload` → still hidden. `/pm get global.minimap.hide` →
+  `Setting not found: global.minimap.hide` (the old path is not an alias). **Fail:** `get`
+  answers `true` while hidden, or the old path answers. Show the button again. Result:
+- **LAUNCH-12. Broker rows.** Only with Titan Panel, ElvUI or Bazooka → a row labeled **Ka0s Panel
+  Master** in plain text (not `PanelMaster`, no `|cff…` escapes) wearing the same logo, whose left and
+  right clicks do what LAUNCH-2 and LAUNCH-3 do, with no enable setting of this addon's for the row.
+  Result:
+
+## DEGRADED
+
+What a player sees when `libs/LibKa0s` is genuinely missing. The suite loads the addon without it and
+asserts the wording; only the client can say the addon still works. Quit the client, rename
+`Interface/AddOns/PanelMaster/libs/LibKa0s` to `libs/_LibKa0s`, and log in for DEGRADED-1 to 13.
+
+- **DEGRADED-1. It loads and draws.** Log in with `scriptErrors` on → zero Lua errors, and your panels
+  are drawn exactly as before. Result:
+- **DEGRADED-2. Panel verbs work.** `/pm panels` → a complete listing, every panel and field.
+  `/pm new SmokeTest`, then `/pm delete SmokeTest` → both work. Result:
+- **DEGRADED-3. The notice, once.** The first line the addon prints carries `[PM] The LibKa0s library
+  is missing from this installation of Ka0s Panel Master (expected in libs/LibKa0s); running on
+  reduced built-in fallbacks.`, once per session; later lines do not repeat it. Result:
+- **DEGRADED-4. The console is unavailable, logging is not.** `/pm debug` → `[PM] …(expected in
+  libs/LibKa0s), so the debug console window is unavailable.`, said once; a second `/pm debug`
+  repeats nothing. `/pm debug on` → still acknowledges, in plain words: `[PM] debug logging is on`.
+  Result:
+- **DEGRADED-5. Ka0s media is gone, harmlessly.** Before the rename, set one panel's **Bar texture**
+  to a `Ka0s …` entry. Now, with PanelMaster the only Ka0s addon enabled (any other one registers
+  the same names into the shared LibSharedMedia), `/dump
+  LibStub("LibSharedMedia-3.0"):IsValid("statusbar", "Ka0s Gradient")` and `/dump
+  LibStub("LibSharedMedia-3.0"):IsValid("font", "JetBrains Mono")` → `false` each. That panel's
+  bars render **plain**, as in LOOK-13, and `/pm panel <name> accentTexture` still prints the stored
+  name. Nothing raises, and nothing is overwritten (DEGRADED-14 shows the names come back). Result:
+- **DEGRADED-6. Diagnostics explain themselves.** `/pm diagnostics`, then `/pm debug diagnostics` →
+  each prints `/pm diagnostics is unavailable: the LibKa0s library did not load.` and writes nothing.
+  Result:
+- **DEGRADED-7. The settings CLI and help.** `/pm list` → `…, so the settings CLI (list/get/set/reset)
+  is unavailable.` `/pm help` → that line once, then one plain `/pm <cmd>  <desc>` row per verb (no
+  colors, no em dash). Result:
+- **DEGRADED-8. Disable and enable still work.** `/pm disable`, then `/pm enable` → the panels go and
+  return, each printing its `settings.enabled = false` or `= true` echo, with no Lua error. Result:
+- **DEGRADED-9. Unlock and lock explain themselves.** `/pm unlock` → `/pm unlock is unavailable: the
+  LibKa0s library did not load.` and nothing moves; `/pm lock` → the same with its own verb. Result:
+- **DEGRADED-10. Reset all still works.** `/pm resetall` → the popup, and **Yes** resets the profile:
+  it needs AceDB, not the library. Result:
+- **DEGRADED-11. Config answers every time.** `/pm config` three times → `…, so the settings panel is
+  unavailable.` each time. A bare `/pm` → the same answer. Result:
+- **DEGRADED-12. The profile verb explains itself.** `/pm profile` and `/pm profile Default` → each
+  prints `/pm profile is unavailable: the LibKa0s library did not load.` and nothing switches.
+  Result:
+- **DEGRADED-13. One cause clause.** Across DEGRADED-3, 4, 7 and 11, the cause clause is word for
+  word the same, differing only after the closing parenthesis of `(expected in libs/LibKa0s)`, and
+  matches another Ka0s addon on the same install. Result:
+- **DEGRADED-14. Restore.** Rename the folder back, `/reload` → normal operation returns: the **Bar
+  texture** dropdown lists the seven `Ka0s …` bars again, both of DEGRADED-5's `/dump` lines answer
+  `true`, and DEGRADED-5's panel draws its `Ka0s …` bars again instead of plain. Result:
+
+## Non-English client
+
+Run on a client set to **deDE or frFR**, the two the collection's other locale checks use
+(`ConsumableMaster/docs/smoke-tests.md` LOC-1, `KickCD/docs/smoke-tests.md` LOC-1).
+
+This addon reads almost nothing the client translates: no chat or tooltip `_G` constant, no tooltip
+line parsed in place of an API return, no `subType` where a `classID` exists
+(`grep -rn '_G\[' core modules settings` returned no lines when this section was last revised).
+Recheck that grep rather than trusting this sentence. The exposure runs the other way, through the
+panel names a player types, and two seams treat non-ASCII bytes as punctuation:
+
+- **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore, and
+  Lua's `%w` is ASCII-only: `Übersicht` slugs to `bersicht`, and `Ärger` and `Örger` both slug to
+  `rger`. That slug is the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25).
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-290`) and the Panels list's sort
+  (`settings/PanelEditor.lua:195`) use `string.lower`, which folds ASCII only.
+
+Every label the addon prints is hardcoded English and stays English here; that is scope, not a
+regression. Steps LOC-1 to LOC-4 can be provoked on an English client by typing the same letters into
+`/pm new`, which is worth doing but is not the same test: it says nothing about the client's own
+fonts, its text input, or what a player of that language types. `tests/test_util.lua` and
+`tests/test_registry.lua` feed ASCII names throughout.
+
+- **LOC-1. A panel named in the client's language.** `/pm new Übersicht` (or `Écran` on frFR), pick it
+  on **Panels**, hover **Panel name** on its **General** tab for the frame name, then `/run
+  print(PanelMaster_Panel_<the reported slug>:GetWidth())` → the panel is created, the name renders
+  correctly in the band's **Panel** picker, the **Panel name** box and `/pm panels`, and the reported
+  frame name resolves. **Fail:** `?` or mojibake anywhere, or a reported frame name that does not
+  resolve. Write down the slug the tooltip reports: a player who cannot work the frame name out from
+  the panel name in their own alphabet has no contract. Result:
+- **LOC-2. Two names, one slug.** `/pm new Ärger`, then `/pm new Örger` → two panels with two distinct
+  frame names if the contract holds. **Fail:** the second refused with a message naming
+  `PanelMaster_Panel_rger`, a name that looks like neither. Record which happened; a refusal is a
+  finding to file, not a step to re-run. Result:
+- **LOC-3. Name lookup folds only ASCII.** With `Übersicht` created, `/pm panel übersicht` (lower-case
+  `ü`) and another verb that takes a name → the panel resolves, the way `/pm panel wide` resolves a
+  panel named `Wide`. **Fail:** `no panel called 'übersicht'`. Then `/pm new übersicht` and read which
+  refusal answers: `a panel named 'übersicht' already exists` means the name guard folded it, while
+  `'übersicht' would share the frame name … with 'Übersicht'` means only the frame-name check caught
+  it and the duplicate-name guard has the same hole. Record which. Result:
+- **LOC-4. Sort order.** With three or four panels starting with accented and plain letters, open
+  **Panels** → sorted the way a reader of the language expects. **Fail:** accented names clumped at
+  one end; cosmetic, but worth knowing. Result:
+- **LOC-5. The round trip.** `/reload`, check LOC-1 to LOC-4 again, then switch profiles and back
+  (PROFILE-4) → names, frame names and anchors identical. **Fail:** a name that changed shape, meaning
+  it was re-slugified or re-encoded on its way out of SavedVariables. Result:
+
+## Pending sign-off
+
+Every check below still needs a client run and a filled `Result:` line; sign one off there, then take
+it out of this table. Nine carried-over checks have a recorded pass (owner, 2026-09-26) and
+unchanged expectations, so they are not listed: PANEL-11 and PANEL-25 (§ 9 step 5-w and § 9 step 16,
+passed in this doc), PANEL-12 (§ 9 step 5-x, passed in the 2026-09-26 navrail adoption's report),
+and DIAG-14 to DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12-15 and 17,
+§ 14 step 10, passed as PM-S1 to PM-S5, PM-S7 and PM-X1 in the 2026-09-25 diagnostics plan's
+report). Every other check carried over is owed, and so is every check new in this rewrite or
+corrected in it against the code.
+
+| New ID | Origin (old section and step) | Why it is owed |
+|---|---|---|
+| INSTALL-1 to INSTALL-6 | § 1 steps 1, 3 and 4, § 13, § 15 | No result recorded |
+| INSTALL-7 | § 2 step 2 | No result recorded; corrected: the sweep runs at load with logging off, so the `[Preview]` line the old step expected never prints |
+| INSTALL-8 | § 21 (`M4-19`) | Not yet run since `NS.InitSummary` moved to `NS.Version()`; corrected: the `[Init]` line is written to the console only |
+| SLASH-1, SLASH-3 to SLASH-7 | § 1 step 2, § 2 step 1, § 9 step 1, § 16 steps 4 to 6 and 15 | No result recorded |
+| SLASH-2 | § 1 step 2, § 16 step 3 | No result recorded; its `profile` row is new |
+| FRAME-1 to FRAME-7, FRAME-10, FRAME-11, FRAME-13 to FRAME-29 | § 3, § 4, § 4b steps 1, 2 and 5, § 5e-5 steps 1-2, § 5e-6 step 5, § 6 steps 1-2, § 7 steps 1-3, § 9 steps 2d, 5d, 5e, 12 and 14, § 10, § 11b, § 12c, § 17 steps 1-4 | No result recorded |
+| FRAME-8 | § 4b steps 3-4 | No result recorded; corrected: the CLI clamps an out-of-range outline rather than refusing it |
+| FRAME-9 | § 4b steps 6-9 | No result recorded; corrected: `/pm panel Wide reset` was never a command, so the reset is the General tab's **Reset** |
+| FRAME-12 | § 5e-5 step 3 | No result recorded; corrected: the Panels page has no Level control, so the levels are set with `/pm panel <name> level` |
+| LOOK-1, LOOK-3 to LOOK-5, LOOK-7 to LOOK-9, LOOK-11 to LOOK-28 | § 5 steps 1-5, § 5b steps 1-10, § 5b-2, § 5b-3, § 5b-4 step 15, § 5c, § 5d steps 1-8 | No result recorded |
+| LOOK-2 | § 5 step 1a (`M4-18`) | Not yet run since the byte-alpha fix |
+| LOOK-6 | § 5b step 0 | No result recorded; corrected: PanelMaster has no font dropdown, so `JetBrains Mono` is checked with `/dump` |
+| LOOK-10 | § 20 (`M4-05`) | Not yet run since the LSM Border patch moved into LibKa0s |
+| LOOK-29 | § 5d step 9 (`M4-22`) | Not yet run since the mouseover driver drops its `OnUpdate` |
+| ACCENT-1 to ACCENT-14 | § 5b-4 steps 1-14 and 16 | No result recorded |
+| ART-1 to ART-11, ART-13 to ART-30 | § 5e, § 5e-2, § 5e-3, § 5e-4, § 5e-6 steps 1-4, § 18 | No result recorded |
+| ART-12 | § 5e-6 step 7 | No result recorded; corrected: `/pm panel set <name> …` read `set` as the panel name |
+| PANEL-1, PANEL-4 to PANEL-7, PANEL-9, PANEL-13 to PANEL-15, PANEL-18 to PANEL-24 | § 9 steps 2, 2d, 3, 4, 5a, 5b, 5b-2, 6 to 11 and 13, § 16 steps 8, 10, 13 and 14 | No result recorded |
+| PANEL-2 | § 9 step 2b, § 16 step 11 | No result recorded; corrected: Master controls has 7 rows, and **Grid size** shares its line with **Unlock outline thickness**, not **Snap to grid** |
+| PANEL-3 | § 9 step 2c | No result recorded; corrected: **Minimap button** sits alone on a fourth line above the button pair |
+| PANEL-8 | § 9 steps 2d and 15, § 17 step 5 | No result recorded; corrected: the Panels page's **Defaults** is the delete-all, not this popup |
+| PANEL-10 | § 9 step 5, § 16 step 12 | No result recorded; corrected: the six panel acts are on the General tab, not in the band |
+| PANEL-16, PANEL-17 | § 9 steps 5c and 5c-2 (session 3) | Not yet run since the acts and the rename box moved to the General tab |
+| PANEL-26 | § 19 (`M4-01`) | Not yet run since the pooled `TabStrip` (LibKa0s v1.27.0) |
+| PROFILE-1 to PROFILE-10 | § 5e-6 step 6, § 12, § 12b, § 12b-2 steps 1 and 3 | No result recorded |
+| PROFILE-11 to PROFILE-14, PROFILE-16, PROFILE-17 | none | New with the `/pm profile` verb |
+| PROFILE-15 | § 7 step 12 | No result recorded; `/pm profile` is new in it |
+| STATE-1, STATE-2, STATE-4, STATE-5, STATE-7 | § 7 steps 4-5, 7, 8, 10 and 13 | No result recorded |
+| STATE-3 | § 7 steps 6 and 9 | No result recorded; corrected: the disabled line prints under the help index's version header |
+| STATE-6 | § 7 step 11 | No result recorded; corrected: the switch goes through the Profiles page between two disabled profiles, since `/pm profile` answers in chat |
+| COMBAT-1 to COMBAT-6 | § 6 step 3, § 8 steps 1-9 (not 4b), § 9 step 2d, § 16 step 7 | No result recorded |
+| DIAG-1, DIAG-3 to DIAG-12 | § 11 steps 1, 1c, 2-8, 10 and 11, § 16 steps 1 and 9 | No result recorded |
+| DIAG-13, DIAG-18 | § 11 steps 9 and 16 | Partly run: the 2026-09-26 pass (PM-S2, PM-S8) did not check the section order, `frame=yes` and `0 orphaned`, or `/pm debug diag` |
+| DIAG-2 | § 11 step 1b, § 16 step 2 | No result recorded; corrected: the icon marks replaced the words *Copy* and *Clear* |
+| LAUNCH-1 to LAUNCH-12 | § 7b | No result recorded |
+| DEGRADED-1, DEGRADED-3, DEGRADED-7, DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
+| DEGRADED-2, DEGRADED-9 | § 14 steps 5, 6 and 11d | No result recorded; corrected: `/pm unlock` and `/pm lock` print the library-absent line |
+| DEGRADED-4 | § 14 steps 8-9 | No result recorded; corrected: the degraded ack reads `debug logging is on`, not the library's green `ON` |
+| DEGRADED-5, DEGRADED-14 | § 14 steps 9b and 15 | No result recorded; corrected: with no settings panel and no font dropdown the media check is a `/dump` |
+| DEGRADED-12 | none | New with the `/pm profile` verb |
+| DEGRADED-13 | § 14 step 14 | No result recorded; corrected: it compares DEGRADED-3, 4, 7 and 11, the four lines that carry the cause clause |
+| LOC-1 to LOC-5 | § 22 steps 1-5 (`M5-08`) | No deDE or frFR client has run them yet; LOC-1 (where **Panel name** is) and LOC-3 (the lookup comparison and the refusal to read) are also corrected |

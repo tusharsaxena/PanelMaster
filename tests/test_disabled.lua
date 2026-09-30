@@ -481,6 +481,42 @@ test("Disabled 7c: both diagnostics forms reach RunDiagnostics, each once, with 
     if not ok then error(err, 0) end
   end)
 
+test("Disabled 7d: `/pm profile` answers while disabled, and a switch can bring the addon up",
+  function()
+    -- `profile` is not a reserved verb (Slash minor 17 leaves it off lib.LIVE_VERBS), so it is live
+    -- here only because settings/Slash.lua widens its own liveVerbs. That is the point of it: a
+    -- player who switched the addon off on this profile can list the others and switch to one where
+    -- it is on without opening the settings panel. Step 7 above only proves the bare verb is not
+    -- refused; this pins the switch itself and the latch it re-evaluates.
+    --
+    -- red under: a liveVerbs that drops `profile`, or a descriptor that stops passing `profiles`.
+    seed()
+    assertTrue(Sl.ALWAYS_LIVE["profile"], "`profile` is not on the live list")
+    S:Set(ENABLED, false)
+    assertTrue(NS.Lifecycle:IsDown(), "the addon is not down")
+
+    local savedSet, was = mocks.__profiles, mocks.__profileName
+    mocks.__profiles = { [was] = true }
+    mocks.__addProfile("Stand Up")
+    local refusal = NS.PREFIX .. " " .. Sl:DisabledLine()
+    local ok, err = pcall(function()
+      local at = #mocks.__chat
+      NS.Slash:OnSlash("profile")
+      local lines = chatSince(at)
+      assertFalse(#lines == 1 and lines[1] == refusal, "/pm profile was refused while disabled")
+      assertEqual(#lines, 4, "/pm profile did not list the two profiles while disabled")
+
+      NS.Slash:OnSlash("profile Stand Up")
+      assertEqual(mocks.__profileName, "Stand Up", "/pm profile did not switch while disabled")
+      assertFalse(NS.Lifecycle:IsDown(),
+        "switching to a profile where the addon is enabled left it stood down")
+    end)
+    mocks.__switchProfile(was)
+    mocks.__profiles = savedSet
+    cleanup()
+    if not ok then error(err, 0) end
+  end)
+
 -- ── 8. the launcher ────────────────────────────────────────────────────────────
 
 test("Disabled 8: left-click opens the panel and writes nothing; the menu grays Locked",

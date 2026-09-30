@@ -321,7 +321,10 @@ are `OptionalDeps`, so their absence means no Profiles page rather than a broken
 Switching profile swaps `db.profile` wholesale, so `core/Database.lua` registers AceDB's
 `OnProfileChanged` / `OnProfileCopied` / `OnProfileReset` callbacks and delegates to
 `Registry:ReloadProfile` — in the registry rather than the database so `PanelsChanged` keeps exactly
-one sender. Without it the previous profile's panels would simply stay on screen. Each event is
+one sender. Without it the previous profile's panels would simply stay on screen. The same handler
+then calls `NS.Panel:Refresh()`, so an open General page re-reads its values in place
+(`options-ui-§11`); only a `/pm profile` switch from chat can reach that page open, and `P:Refresh`
+skips a hidden one ([profiles.md](profiles.md)). Each event is
 logged once, by its own handler: `[Set] reset profile '<name>' to defaults (N rows)`,
 `[Set] copied profile '<src>' → '<dst>'`, or the `[Profile] switched to …` trace
 (`debug-logging-§10`; `docs/debug.md` has the table).

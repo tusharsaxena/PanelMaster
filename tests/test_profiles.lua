@@ -215,6 +215,34 @@ test("Database: a profile switch drops per-panel unlocks rather than reissuing t
   T.mocks.__switchProfile("Mock - Realm")
 end)
 
+test("Database: a profile switch drops a queued per-panel unlock but keeps a queued global one", function()
+  -- The combat queue holds panel ids too, so it has the same id-reuse hazard: replayed after the
+  -- switch, a per-panel unlock queued in the old profile would unlock whichever incoming panel now
+  -- owns that id. The global unlock names no panel, so it survives and fires on leaving combat.
+  fresh()
+  local old = R:New("Queued")
+  T.mocks.__inCombat = true
+  NS.Unlock:SetPanelUnlocked(old.id, true)
+  NS.Unlock:SetUnlocked(true)
+  assertTrue(NS.Unlock.__hasPending(old.id))
+
+  T.mocks.__switchProfile("Other - Realm")
+  local mine = R:New("Innocent")
+  NS.Registry:ReloadProfile()
+
+  assertFalse(NS.Unlock.__hasPending(old.id), "the queued per-panel unlock survived the switch")
+  assertTrue(NS.Unlock.__hasPending(), "the queued global unlock was dropped with it")
+
+  T.mocks.__inCombat = false
+  NS.Unlock:ResumePending()
+  assertEqual(NS.State.unlockedPanels[mine.id], nil,
+    "an incoming panel was unlocked by a request made in the profile the user left")
+  assertTrue(NS.State.unlocked, "the queued global unlock did not fire on leaving combat")
+
+  fresh()
+  T.mocks.__switchProfile("Mock - Realm")
+end)
+
 test("Database: the profile reload goes through Registry, keeping one sender", function()
   -- architecture-§4: `PanelsChanged` must have exactly one sender. The reload lives in Registry
   -- rather than Database precisely so that stays true.
