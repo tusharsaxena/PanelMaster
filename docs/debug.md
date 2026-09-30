@@ -7,11 +7,17 @@ inside the LibKa0s payload rather than in this addon's own `media/` — with tim
 `<HH:MM:SS> | [Tag] <content>` lines, a right-edge scrollbar and an `N / MAX lines` counter
 (`debug-logging-§11`), a clear and a copy control, and `UISpecialFrames` for ESC.
 
-The three title-bar controls are **marks, not words**. `core/DebugLogSetup.lua` passes `addonName`
-in the descriptor, which is what lets the library build a texture path into the shared icon set and
-draw the collection's own close, clear and copy art; without it the library falls back to a
-multiplication sign and the words "Clear" and "Copy". They carry no tooltips, deliberately: a label
-anchored under a control on a window that is 700px of text covers the first line of the log.
+The three title-bar controls on the right are **marks, not words**. `core/DebugLogSetup.lua` passes
+`addonName` in the descriptor, which is what lets the library build a texture path into the shared
+icon set and draw the collection's own close, clear and copy art; without it the library falls back
+to a multiplication sign and the words "Clear" and "Copy". They carry no tooltips, deliberately: a
+label anchored under a control on a window that is 700px of text covers the first line of the log.
+
+On the left, beside the `Debug: ON` / `OFF` toggle and a small gap after it, the library draws an
+orange **Diagnostics** link (DebugLog minor 16, LibKa0s v1.64.0): plain text like the toggle, no
+frame art, brighter under the pointer. A click runs the report exactly as `/pm diagnostics` does
+(below). It is drawn because the vendored `DebugLogDiagnostics.lua` gives the console its
+`RunDiagnostics`; this addon adds nothing for it.
 
 Logging state is **session-only** (`NS.State.debug`, never in SavedVariables) and **independent of
 the window**: capture runs with the console closed, so a bug can be reproduced first and the log read
@@ -36,10 +42,20 @@ console already holds, so the trace you just produced and the state it left behi
 `/pm debug dump` and `/pm debug diag` are ordinary unknown words, and like any other they toggle the
 console.
 
+**It turns debug logging on for the session.** Running the report (either form, or the console's
+**Diagnostics** link) first turns logging on, when it is off, through the flag's one seam
+(`DebugLog:SetEnabled(true)`, `debug-logging-§14` at v2.71.0, DebugLogDiagnostics minor 2), so the
+`[Debug] logging enabled` line and the `[Init]` summary land above the report and the next
+reproduction is traced without a separate `/pm debug on`. It never turns logging off, and with
+logging already on it adds no second enable line. The flag is session-only, so a `/reload` turns it
+off again; `/pm debug off` does too. This addon keeps the library's default: the descriptor in
+`core/DebugLogSetup.lua` does not set `diagnosticsEnablesLogging = false`. The sections only read;
+the run is the one thing that touches the flag.
+
 **What it does to the console.** It writes through the library's raw append, not the gated sink
-`NS.Debug`, so it lands in full with logging **off**, and it never changes the logging flag beyond
-printing it. It never clears the console, and it shows the console if it was hidden. Then it prints
-one chat line: *Diagnostic report written to the debug console: N lines. Use Copy to share it.*
+`NS.Debug`, so it lands in full whatever the flag said. It never clears the console, and it shows
+the console if it was hidden. Then it prints one chat line: *Diagnostic report written to the debug
+console: N lines. Use Copy to share it.*
 `debug` and `diagnostics` are both reserved verbs (`slash-commands-§2`), so both forms answer while
 the addon is **disabled**.
 
@@ -192,13 +208,13 @@ steady state.
 Logging is off at login (`debug-logging-§5`), so the lines written while the addon loads (a
 migration, the preview sweep, the Sunn scan) render only in the rare session that turns logging on
 before them. What they found reaches the log anyway, through the `[Init]` summary and
-`/pm diagnostics`.
+`/pm diagnostics`, which turns logging on for the rest of the session.
 
 | Tag | Emitted by | When |
 |---|---|---|
-| `Debug` | the library (`SetEnabled`) | `logging enabled` / `logging disabled`, at each flip of the flag |
+| `Debug` | the library (`SetEnabled`) | `logging enabled` / `logging disabled`, at each flip of the flag, including the enable a `/pm diagnostics` run makes when logging was off |
 | `Init` | the library, with `NS.InitSummary` (`core/Database.lua`) | Once per enable: addon and version, schema, profile, panel count, then the optional dependencies: `LSM yes/no, LibDBIcon yes/no, Sunn themes N` |
-| `Diag` | the library and `modules/Diagnostics.lua` | Every line of a `/pm diagnostics` report, written whatever the flag says |
+| `Diag` | the library and `modules/Diagnostics.lua` | Every line of a `/pm diagnostics` report, written in full through the ungated append |
 | `Set` | the library's schema seam; `settings/Schema.lua` `S.BulkLine`; `core/Database.lua` | `[Set] <path> = <value>` once per settings write; one line per bulk copy or reset; one per profile reset or copy (see *Bulk copy and reset*) |
 | `Profile` | `core/Database.lua` | `switched to '<name>', N panels`, on a profile switch |
 | `Migrate` | `core/Database.lua` | A schema migration, only when one runs (at load) |

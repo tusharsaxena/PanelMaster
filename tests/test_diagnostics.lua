@@ -383,6 +383,10 @@ test("Diagnostics: running the report writes no setting, moves no frame and repa
     watch(U, "ResumePending", "U:ResumePending")
     watch(U, "SetUnlocked", "U:SetUnlocked")
     watch(S, "Set", "S:Set")
+    -- The RUN turns the session's logging flag on (debug-logging-§14 at v2.71.0, DebugLogDiagnostics
+    -- 2): that is the flag's own seam, not a section writing, and the kit's contract holds it. Put
+    -- back afterwards so the cases below start from the flag they had.
+    local debugBefore = NS.State.debug
     guarded(function()
       D:RunDiagnostics()
       assertEqual(table.concat(calls, ", "), "", "the report called a writer")
@@ -393,6 +397,7 @@ test("Diagnostics: running the report writes no setting, moves no frame and repa
         local w = wrapped[i]
         w[1][w[2]] = w[3]
       end
+      NS.State.debug = debugBefore
       D:Hide()
     end)
   end)

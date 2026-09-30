@@ -26,7 +26,7 @@ client and is run when one is available, not per release.
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
-| DIAG-1 to 25 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window |
+| DIAG-1 to 27 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
@@ -712,8 +712,9 @@ and at least one art pack; skip those without it.
 - **DIAG-14. The report keeps the trace.** `/pm debug on`, drag a panel, `/pm diagnostics` → the
   `[Panel]` lines stay above the begin marker. Copy and paste into an editor → the trace, both
   branded markers, and no `|c` escapes. Result:
-- **DIAG-15. The report ignores the logging flag.** `/pm debug off`, `/pm diagnostics` → the full
-  report lands; the title bar still reads `Debug: OFF`, and dragging a panel logs nothing. Result:
+- **DIAG-15. The report lands with logging off.** `/pm debug off`, `/pm diagnostics` → the full
+  report lands, begin marker to end marker, none of it held back by the flag. What the run does to
+  the flag is DIAG-27. Result:
 - **DIAG-16. The report while disabled.** `/pm disable`, then `/pm diagnostics` and `/pm debug
   diagnostics` → each writes a full report; `state` reads `enabled (stored)=false stood down=true`
   with its lifecycle hold, and each panel's renderer line reads `renderer: stood down`. `/pm enable`
@@ -732,8 +733,9 @@ and at least one art pack; skip those without it.
   and the scroll position are kept. Wheel-scroll and drag the scrollbar → both still work at the new
   size. Result:
 - **DIAG-21. The console's minimum holds.** Drag the grip as far in as it goes → it stops while the
-  `Debug:` toggle, the gold title and the three title-bar controls still fit without
-  overlapping, and a few log lines still show between the title bar and the status bar. Result:
+  `Debug:` toggle, the orange **Diagnostics** link, the gold title and the three title-bar controls
+  still fit without overlapping, and a few log lines still show between the title bar and the status
+  bar. Result:
 - **DIAG-22. The console keeps its size for the session.** Resize the console, close it with its
   close mark, `/pm debug` → it reopens at the size you left. Close it with **Esc** and reopen → the
   same. `/reload`, `/pm debug` → it opens at the default 700 × 344 again. **Fail:** the resized size
@@ -750,6 +752,21 @@ and at least one art pack; skip those without it.
 - **DIAG-25. The copy window keeps its size for the session.** Resize the copy window, close it,
   click the copy mark again → it reopens at the size you left, and resizing it did not change the
   console's size. `/reload`, open the console and the copy window → both at their defaults. Result:
+- **DIAG-26. The Diagnostics link.** `/pm debug` → just right of the `Debug: OFF` toggle, after a
+  small gap, the word **Diagnostics** in **orange**: plain text like the toggle, with no button frame,
+  border or background, turning brighter under the pointer. Click the toggle so it reads `Debug: ON`
+  → the link moves with the longer word and keeps the same gap. Click **Diagnostics** → a report is
+  written into the console exactly as `/pm diagnostics` writes it (DIAG-13), with the same chat line.
+  **Fail:** a framed or gold button, the link overlapping the toggle, or a click that writes nothing.
+  Result:
+- **DIAG-27. Diagnostics turns logging on for the session.** `/reload` (logging off, DIAG-12),
+  `/pm diagnostics` → above the begin marker the console shows `[Debug] logging enabled` and the
+  `[Init]` line, and the title bar reads `Debug: ON`; drag a panel → a `[Panel]` line lands.
+  `/pm diagnostics` again → a second report, and no second `logging enabled` line. `/reload`,
+  `/pm debug` → `Debug: OFF`, and dragging a panel logs nothing. Repeat from a fresh `/reload` with
+  the console's **Diagnostics** link, then with `/pm debug diagnostics` → the same each time.
+  **Fail:** `Debug: OFF` after a report, the enable line below the report, or logging still on after
+  the `/reload`. Result:
 
 ## LAUNCH
 
@@ -896,10 +913,10 @@ fonts, its text input, or what a player of that language types. `tests/test_util
 ## Pending sign-off
 
 Every check below still needs a client run and a filled `Result:` line; sign one off there, then take
-it out of this table. Nine carried-over checks have a recorded pass (owner, 2026-09-26) and
+it out of this table. Eight carried-over checks have a recorded pass (owner, 2026-09-26) and
 unchanged expectations, so they are not listed: PANEL-11 and PANEL-25 (§ 9 step 5-w and § 9 step 16,
 passed in this doc), PANEL-12 (§ 9 step 5-x, passed in the 2026-09-26 navrail adoption's report),
-and DIAG-14 to DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12-15 and 17,
+and DIAG-14, DIAG-16, DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12, 14, 15 and 17,
 § 14 step 10, passed as PM-S1 to PM-S5, PM-S7 and PM-X1 in the 2026-09-25 diagnostics plan's
 report). Every other check carried over is owed, and so is every check new in this rewrite or
 corrected in it against the code.
@@ -940,7 +957,9 @@ corrected in it against the code.
 | DIAG-1, DIAG-3 to DIAG-12 | § 11 steps 1, 1c, 2-8, 10 and 11, § 16 steps 1 and 9 | No result recorded |
 | DIAG-13, DIAG-18 | § 11 steps 9 and 16 | Partly run: the 2026-09-26 pass (PM-S2, PM-S8) did not check the section order, `frame=yes` and `0 orphaned`, or `/pm debug diag` |
 | DIAG-2 | § 11 step 1b, § 16 step 2 | No result recorded; corrected: the icon marks replaced the words *Copy* and *Clear* |
+| DIAG-15 | § 11 step 13 | Passed on 2026-09-26, but corrected: a report now turns logging on for the session (`debug-logging-§14` at v2.71.0), so the title bar no longer stays `Debug: OFF` afterwards; the flag is DIAG-27 |
 | DIAG-20 to DIAG-25 | none | New with the resizable console and copy window (LibKa0s v1.64.0) |
+| DIAG-26, DIAG-27 | none | New with the console's Diagnostics link (DebugLog minor 16) and the report turning logging on (DebugLogDiagnostics minor 2), LibKa0s v1.64.0 |
 | LAUNCH-1 to LAUNCH-12 | § 7b | No result recorded |
 | DEGRADED-1, DEGRADED-3, DEGRADED-7, DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
 | DEGRADED-2, DEGRADED-9 | § 14 steps 5, 6 and 11d | No result recorded; corrected: `/pm unlock` and `/pm lock` print the library-absent line |
