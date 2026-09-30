@@ -24,7 +24,7 @@ local lib = LibStub and LibStub("LibKa0s-DebugLog-1.0", true)
 if not lib then
   -- Degrade, never error. `/pm debug` is registered unconditionally and settings/Schema.lua's
   -- console row calls IsShown on every panel refresh, so every member the addon actually calls has
-  -- to answer. The list is `grep -n "NS.DebugLog" -r` plus NS.Debug and NS.DebugBuild.
+  -- to answer. The list is `grep -n "NS.DebugLog" -r` plus NS.Debug, NS.DebugBuild and NS.DebugOnce.
   --
   -- SetEnabled still really flips the flag and still acknowledges: logging is a session flag the
   -- addon owns, and it is only the WINDOW that has gone away. Everything that would have drawn
@@ -98,6 +98,7 @@ if not lib then
   NS.DebugLog = D
   NS.Debug = function() end
   NS.DebugBuild = function() end
+  NS.DebugOnce = function() end
   return
 end
 
@@ -196,4 +197,22 @@ NS.Debug = NS.DebugLog.Debug
 function NS.DebugBuild(tag, fmt, build, ...)
   if not (NS.State and NS.State.debug) then return end
   return NS.Debug(tag, fmt, build(...))
+end
+
+-- NS.Debug for a line that must land ONCE per distinct key, however often its site runs: an error a
+-- pcall swallows on a repeating path (the 10Hz mouseover tick), or a media name that no longer
+-- resolves and falls back to Solid on every repaint (debug-logging-§8's "once per distinct error").
+-- `site` and `key` are two levels rather than one concatenated string so that a site erroring on
+-- every pass allocates nothing at the call. The seen-set is written only PAST the gate: a key met
+-- while logging was off has not been logged, so it must still log the first time logging is on
+-- (the comparison sits behind the gate, debug-logging-§9). Session-only, like the flag.
+local onceSeen = {}
+function NS.DebugOnce(site, key, tag, fmt, ...)
+  if not (NS.State and NS.State.debug) then return end
+  if key == nil then key = "?" end
+  local seen = onceSeen[site]
+  if not seen then seen = {}; onceSeen[site] = seen end
+  if seen[key] then return end
+  seen[key] = true
+  return NS.Debug(tag, fmt, ...)
 end

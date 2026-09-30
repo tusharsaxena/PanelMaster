@@ -178,7 +178,60 @@ only the **outermost** act emits: an act run inside another adds to its total. I
 pair is defensive: no control in this addon reaches a library walk today.
 
 Reactor lines are not `[Set]` lines and stay: a reset that repaints the canvas still logs
-`[Canvas] rendered N panels` after its one `[Set]` line.
+`[Canvas] rendered N panels, M shown` after its one `[Set]` line.
+
+## Coverage — what the log carries, by tag (`debug-logging-§8`, `§9`)
+
+The test the log has to pass is "could a support read of a pasted log reconstruct what happened".
+The flows say what the addon did; the diagnosis lines say why it did something else: the edges it
+reacted to, the work it held and flushed, the guard that refused, the dependencies it found and the
+errors it swallowed. Every line is one gated `NS.Debug` call per event, with any string-building
+behind the gate. `tests/test_debuglog.lua` ▸ *Coverage* pins the diagnosis lines and the quiet
+steady state.
+
+Logging is off at login (`debug-logging-§5`), so the lines written while the addon loads (a
+migration, the preview sweep, the Sunn scan) render only in the rare session that turns logging on
+before them. What they found reaches the log anyway, through the `[Init]` summary and
+`/pm diagnostics`.
+
+| Tag | Emitted by | When |
+|---|---|---|
+| `Debug` | the library (`SetEnabled`) | `logging enabled` / `logging disabled`, at each flip of the flag |
+| `Init` | the library, with `NS.InitSummary` (`core/Database.lua`) | Once per enable: addon and version, schema, profile, panel count, then the optional dependencies: `LSM yes/no, LibDBIcon yes/no, Sunn themes N` |
+| `Diag` | the library and `modules/Diagnostics.lua` | Every line of a `/pm diagnostics` report, written whatever the flag says |
+| `Set` | the library's schema seam; `settings/Schema.lua` `S.BulkLine`; `core/Database.lua` | `[Set] <path> = <value>` once per settings write; one line per bulk copy or reset; one per profile reset or copy (see *Bulk copy and reset*) |
+| `Profile` | `core/Database.lua` | `switched to '<name>', N panels`, on a profile switch |
+| `Migrate` | `core/Database.lua` | A schema migration, only when one runs (at load) |
+| `Preview` | `core/Database.lua` | `swept N orphaned preview panel(s)`, at load, only when there were some |
+| `Lifecycle` | `core/LifecycleSetup.lua` | `stood down (<holds>)` and `stood up`, the addon's own enable edges |
+| `Events` | `core/LifecycleSetup.lua` | `rejected <name>`, an event name the client refused at a stand-up |
+| `Panel` | `modules/Registry.lua` | Every panel mutation: created, deleted, deleted all, renamed, fitted to artwork, a field written, moved |
+| `Panel` | `modules/Registry.lua` (`refuse`) | `<verb> refused: <reason>` for create, delete, reset, copy, rename, fit, set and move, and `set '<panel>'.<field> refused: <reason>` for a value the field's coercer rejected. The reason is the one the caller prints |
+| `Panel` | `settings/Panel.lua` (`safeRun`) | `<closure> failed: <error>`, a settings-page closure that raised, once per distinct error |
+| `Canvas` | `modules/Canvas.lua` | `rendered N panels, M shown`, once per full rebuild. M is how many the show ladder left visible, so a hidden panel reads differently from a missing one |
+| `Canvas` | `modules/Canvas.lua` (`RenderForCombat`) | `combat entered` / `combat left: repainting for visibility '<mode>'`, only when the visibility setting depends on combat. Under `Always` or `Never` the renderer ignores the edge, so it writes nothing |
+| `Canvas` | `core/PanelMaster.lua` (`OnEnterWorld`) | `entered world: repainting`, on every loading screen, ahead of the rebuild it causes |
+| `Canvas` | `core/Compat.lua` | `MouseIsOver failed: <error>`, once per distinct error the mouseover tick's `pcall` swallows; `<type> texture '<name>' not found: drawn as Solid`, once per media type and name |
+| `Unlock` | `modules/Unlock.lua` | `panels unlocked` / `panels locked` (with `, N held unlock(s) dropped` when a lock discarded combat-held requests), and `'<panel>' unlocked` / `locked` per panel |
+| `Unlock` | `modules/Unlock.lua` | The combat hold: `unlock all held: in combat`, `'<panel>' unlock held: in combat`. The flush: `combat over: flushed held unlocks (all=yes/no, N panel(s), M gone)`, only when something was held. A drop: `dropped N held panel unlock(s): profile changed` |
+| `Artwork` | `modules/SunnArt.lua` | `Sunn adapter: N themes, M rows`, at OnEnable |
+| `Cfg` | the library (Options) | `register parked (in combat)`, `open refused (in combat)`, `opened` |
+| `Launcher` | the library (Launcher) | Its own registration notices |
+
+**Repeating paths.** The only steady-state repeating path is the shared 10Hz mouseover `OnUpdate`
+(`modules/Canvas.lua`). It writes nothing per tick, and the one error it can swallow is a single
+line (`NS.DebugOnce`). The other repeats are driven by the player or by edges: a slider drag writes
+one `[Set]` line per applied step, each with its new value, followed by the `[Canvas]` rebuild it
+caused; a combat edge or a loading screen writes its edge line and one rebuild. None of them logs
+when nothing happened.
+
+**Not logged here, on purpose.** A settings write the schema seam refuses (`/pm set` with a bad
+value), and a feature verb refused while the addon is disabled, are answered in chat by
+`LibKa0s-Schema-1.0` and `LibKa0s-Slash-1.0`. The host deliberately puts no wrapper in front of
+either seam (`settings/Slash.lua`), so a debug line for them is the library's to add. The disabled
+state itself is in the log as the `[Lifecycle] stood down (disabled)` line, and in the report's
+`state` section. The client state edges this addon does not react to (group roster, spec, addon
+restriction) have no line: an edge the addon ignores needs none.
 
 ## `NS.DebugBuild` — the gated sink for expensive arguments
 
@@ -193,3 +246,10 @@ site — before the gate — which is precisely the cost being avoided. Writing
 mechanism.
 
 `NS.Debug` carries the addon's **only** debug gate (`debug-logging-§4`). There is no second flag.
+
+`NS.DebugOnce(site, key, tag, fmt, ...)` is the third seam, for a line that must land **once per
+distinct key** however often its site runs: an error a `pcall` swallows on the mouseover tick, a media
+name that falls back to Solid on every repaint, a settings-page closure that raises on every refresh.
+It reads the same flag first, and it marks a key as seen only once past that gate, so a key met while
+logging was off still logs the first time logging is on. The seen-set is session-only. `site` and
+`key` are separate arguments so that a site erroring on every pass builds no string to key on.

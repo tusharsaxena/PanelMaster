@@ -222,10 +222,12 @@ end
 
 -- Run one page closure, and let a broken one break only itself. A refresher or rebuilder that
 -- raised used to abort every closure queued behind it, leaving half the page showing stale values.
+-- Logged once per distinct error (debug-logging-§8): a broken refresher raises on every refresh of
+-- an open page, so a plain line here would repeat on every setting write.
 local function safeRun(fn, tag)
   local ok, err = pcall(fn)
   if not ok then
-    NS.Debug("Panel", "%s failed: %s", tostring(tag), tostring(err))
+    NS.DebugOnce("page closure", err, "Panel", "%s failed: %s", tostring(tag), tostring(err))
   end
 end
 

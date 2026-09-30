@@ -83,7 +83,7 @@ end
 -- stores, so an inactive profile was already migrated at init. What a profile that arrives LATER
 -- needs — one imported or copied in from a file this runner never saw — is the per-RECORD repair,
 -- and that is R.Sanitize's: NS.Registry:ReloadProfile sanitizes every record it finds, which
--- includes the same frame-name backfill the v1 → v2 body performs (modules/Registry.lua:205-207).
+-- includes the same frame-name backfill the v1 → v2 body performs (modules/Registry.lua:214-216).
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
@@ -193,7 +193,8 @@ end
 
 -- Pure [Init] session summary for the SetEnabled seam (debug-logging-§5/§8): addon name + version,
 -- schema version, active profile, and panel count — e.g.
--- "PanelMaster v1.2.0, schema v2, profile 'Mock - Realm', 3 panels".
+-- "PanelMaster v1.2.0, schema v2, profile 'Mock - Realm', 3 panels, LSM yes, LibDBIcon yes,
+-- Sunn themes 0" (the last three from NS.DependencySummary below).
 -- Guarded so it can't error before the DB is ready. All values are plain constants, counts or the
 -- addon's own manifest strings, so a raw tostring is secret-safe here.
 --
@@ -209,6 +210,20 @@ function NS.InitSummary()
   local schema = (g and g.schemaVersion) or 0
   local profile = (NS.db and NS.db.GetCurrentProfile and NS.db:GetCurrentProfile()) or "?"
   local panels = (NS.db and NS.db.profile and NS.db.profile.panels and #NS.db.profile.panels) or 0
-  return ("%s v%s, schema v%s, profile '%s', %s panels"):format(
-    tostring(NS.name), tostring(NS.Version()), tostring(schema), tostring(profile), tostring(panels))
+  return ("%s v%s, schema v%s, profile '%s', %s panels, %s"):format(
+    tostring(NS.name), tostring(NS.Version()), tostring(schema), tostring(profile), tostring(panels),
+    NS.DependencySummary())
+end
+
+--- The optional dependencies, found or missing, as the [Init] summary's last clause
+--- (debug-logging-§8's dependencies, once at enable). Once at LOGGING enable rather than addon
+--- enable, because the flag is session-only and off at login: a line written from OnEnable would
+--- never render. LibSharedMedia decides whether a stored texture name can resolve at all; LibDBIcon
+--- whether there is a minimap button; the Sunn count is what SunnArt.Inject found at OnEnable.
+local function has(lib) return (LibStub and LibStub(lib, true)) and "yes" or "no" end
+
+function NS.DependencySummary()
+  local sunn = NS.SunnArt and NS.SunnArt.themeCount
+  return ("LSM %s, LibDBIcon %s, Sunn themes %s"):format(
+    has("LibSharedMedia-3.0"), has("LibDBIcon-1.0"), tostring(sunn or 0))
 end

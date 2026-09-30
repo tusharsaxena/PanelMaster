@@ -860,7 +860,7 @@ panel names a player types, and two seams treat non-ASCII bytes as punctuation:
 - **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore, and
   Lua's `%w` is ASCII-only: `Übersicht` slugs to `bersicht`, and `Ärger` and `Örger` both slug to
   `rger`. That slug is the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25).
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:282-290`) and the Panels list's sort
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:291-299`) and the Panels list's sort
   (`settings/PanelEditor.lua:195`) use `string.lower`, which folds ASCII only.
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a

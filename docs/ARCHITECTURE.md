@@ -284,7 +284,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 |---|---|---|
 | `slash-dispatch.md` | Present | 21 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
-| `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) and `NS.DebugBuild` are the addon's own, beyond the library console |
+| `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) `NS.DebugBuild`, `NS.DebugOnce` and the tag-by-tag Coverage map are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. The one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and it is no longer this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15) owns it for the whole collection, called from `settings/OptionsSetup.lua` |
 | `compat-layer.md` | Present | 8 shims in `core/Compat.lua` (threshold is 3) |

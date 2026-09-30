@@ -138,7 +138,13 @@ function Compat.FetchMedia(mediaType, name)
   local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
   if not (LSM and LSM.Fetch) then return NS.Constants.SOLID_TEXTURE end
   local path = name and LSM:Fetch(mediaType, name, true)
-  return path or NS.Constants.SOLID_TEXTURE
+  if path then return path end
+  -- The fallback is silent on screen by design, so the log is where "why is my panel plain" is
+  -- answered: once per media type and name, not once per repaint (debug-logging-§8, §9).
+  if NS.DebugOnce then
+    NS.DebugOnce(mediaType, name, "Canvas", "%s texture '%s' not found: drawn as Solid", mediaType, name)
+  end
+  return NS.Constants.SOLID_TEXTURE
 end
 
 -- The names registered for a media type, for the settings dropdowns. Queried at click time rather
@@ -176,7 +182,11 @@ end
 function Compat.MouseIsOver(frame)
   if type(MouseIsOver) ~= "function" or not frame then return false end
   local ok, result = pcall(MouseIsOver, frame)
-  return ok and result and true or false
+  if ok then return result and true or false end
+  -- This runs from the 10Hz mouseover tick, so an error it swallows would repeat ten times a second:
+  -- one line per distinct message (debug-logging-§8's errors caught), and the fade reads "not over".
+  if NS.DebugOnce then NS.DebugOnce("MouseIsOver", result, "Canvas", "MouseIsOver failed: %s", result) end
+  return false
 end
 
 -- NOTE: there is deliberately no backdrop-support shim here. Asking whether BackdropTemplateMixin

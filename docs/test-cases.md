@@ -500,7 +500,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (35)
+### test_debuglog.lua (47)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -537,6 +537,18 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: an act inside another logs once, the outermost, with the total
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
+- coverage: a combat-held unlock logs its hold and its flush
+- coverage: a hold that ends in a lock or a profile change says where it went
+- coverage: a combat exit with nothing held writes nothing
+- coverage: the combat edge is logged only when the renderer acts on it
+- coverage: a loading screen names itself ahead of the repaint it causes
+- coverage: the render summary carries how many panels the ladder left shown
+- coverage: a refused panel verb logs the guard's reason
+- coverage: the [Init] summary names the optional dependencies
+- NS.DebugOnce: one line per distinct key, and a key met while off still logs once on
+- quiet steady state: 100 mouseover ticks with nothing changing write nothing
+- quiet steady state: an error the tick swallows is one line, not ten a second
+- quiet steady state: a missing texture is one line however often it repaints
 
 ### test_diagnostics.lua (22)
 
@@ -1103,7 +1115,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 46 |
 | test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 35 |
+| test_debuglog.lua | 47 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 82 |
@@ -1125,4 +1137,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 7 |
-| **Total** | **975** |
+| **Total** | **987** |
