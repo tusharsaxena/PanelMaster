@@ -95,6 +95,14 @@ if not lib then
     return false
   end
 
+  -- The console's change gates and at-enable queue (DebugLog minor 18, DebugLogGates minor 1). With
+  -- no console there is nothing to write to, so each answers false, "not written", as the live ones
+  -- do with logging off; they are plain functions on the live instance, so the same here.
+  D.DebugOnce = function() return false end
+  D.DebugChanged = function() return false end
+  D.DebugForget = function() end
+  D.DebugAtEnable = function() return false end
+
   NS.DebugLog = D
   NS.Debug = function() end
   NS.DebugBuild = function() end
