@@ -154,24 +154,24 @@ files["modules/Registry.lua"] = {
   ignore = { "212/self" },
 }
 
--- The unlock overlay, probed from three files rather than one -- core/PanelMaster.lua:93
--- (ResumePending, the deferred combat replay), modules/Canvas.lua:756 and :802 (StripOverlay and
--- Decorate, on every frame release and every render) and modules/Registry.lua:517 (ForgetPending).
+-- The unlock overlay, probed from three files rather than one -- core/PanelMaster.lua:128
+-- (ResumePending, the deferred combat replay), modules/Canvas.lua:758 and :837-839 (StripOverlay and
+-- Decorate, on every frame release and every render) and modules/Registry.lua:530 (ForgetPending).
 -- Overlay state is a file-scope table here, which is why no body reads the receiver.
 files["modules/Unlock.lua"] = {
   ignore = { "212/self" },
 }
 
 -- The settings page. `Register` and `Refresh` are both probed rather than called outright --
--- core/PanelMaster.lua:37 and :52 for the first, core/DebugLogSetup.lua:197 for the second -- so
+-- core/PanelMaster.lua:43 and :68 for the first, core/DebugLogSetup.lua:163 for the second -- so
 -- that a missing options library costs the page and nothing else.
 files["settings/Panel.lua"] = {
   ignore = { "212/self" },
 }
 
--- The Panels page's four published verbs. Three are called from settings/Panel.lua (:438 WireBus,
--- :462 BuildPage, :464 Rebuild) with the page context as the argument, and ForgetSelection is
--- probed from modules/Registry.lua:520 so a delete can clear the editor's selection without
+-- The Panels page's four published verbs. Three are called from settings/Panel.lua (:448 WireBus,
+-- :472 BuildPage, :474 Rebuild) with the page context as the argument, and ForgetSelection is
+-- probed from modules/Registry.lua:533 so a delete can clear the editor's selection without
 -- depending on the editor having loaded. The selection itself is this file's upvalue.
 files["settings/PanelEditor.lua"] = {
   ignore = { "212/self" },
@@ -192,7 +192,7 @@ files["settings/Schema.lua"] = {
 -- LibKa0s-Slash dispatcher's verbs beside host-owned ones rather than being the dispatcher. Twenty
 -- seven methods across the two arms, every one reached by colon: `NS.Slash:Register()` behind the
 -- probe at core/PanelMaster.lua:34, `NS.Slash:ConfirmResetAll()` behind the one at
--- settings/Panel.lua:333, and the verbs themselves through the COMMANDS table.
+-- settings/Panel.lua:343, and the verbs themselves through the COMMANDS table.
 files["settings/Slash.lua"] = {
   ignore = { "212/self" },
 }

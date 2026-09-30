@@ -1,15 +1,23 @@
 # Debug
 
-`debug-logging`: a 700×344 `DIALOG`-strata window in JetBrains Mono at 10pt — the face now arrives
+`debug-logging`: a `DIALOG`-strata window, 700×344 by default and resizable from a bottom-right grip
+(LibKa0s v1.64.0; the size is kept on the window for the session only and never saved, so a
+`/reload` restores the default), in JetBrains Mono at 10pt — the face now arrives
 inside the LibKa0s payload rather than in this addon's own `media/` — with timestamped color-coded
 `<HH:MM:SS> | [Tag] <content>` lines, a right-edge scrollbar and an `N / MAX lines` counter
 (`debug-logging-§11`), a clear and a copy control, and `UISpecialFrames` for ESC.
 
-The three title-bar controls are **marks, not words**. `core/DebugLogSetup.lua` passes `addonName`
-in the descriptor, which is what lets the library build a texture path into the shared icon set and
-draw the collection's own close, clear and copy art; without it the library falls back to a
-multiplication sign and the words "Clear" and "Copy". They carry no tooltips, deliberately: a label
-anchored under a control on a window that is 700px of text covers the first line of the log.
+The three title-bar controls on the right are **marks, not words**. `core/DebugLogSetup.lua` passes
+`addonName` in the descriptor, which is what lets the library build a texture path into the shared
+icon set and draw the collection's own close, clear and copy art; without it the library falls back
+to a multiplication sign and the words "Clear" and "Copy". They carry no tooltips, deliberately: a
+label anchored under a control on a window that is 700px of text covers the first line of the log.
+
+On the left, beside the `Debug: ON` / `OFF` toggle and a small gap after it, the library draws an
+orange **Diagnostics** link (DebugLog minor 16, LibKa0s v1.64.0): plain text like the toggle, no
+frame art, brighter under the pointer. A click runs the report exactly as `/pm diagnostics` does
+(below). It is drawn because the vendored `DebugLogDiagnostics.lua` gives the console its
+`RunDiagnostics`; this addon adds nothing for it.
 
 Logging state is **session-only** (`NS.State.debug`, never in SavedVariables) and **independent of
 the window**: capture runs with the console closed, so a bug can be reproduced first and the log read
@@ -34,10 +42,20 @@ console already holds, so the trace you just produced and the state it left behi
 `/pm debug dump` and `/pm debug diag` are ordinary unknown words, and like any other they toggle the
 console.
 
+**It turns debug logging on for the session.** Running the report (either form, or the console's
+**Diagnostics** link) first turns logging on, when it is off, through the flag's one seam
+(`DebugLog:SetEnabled(true)`, `debug-logging-§14` at v2.71.0, DebugLogDiagnostics minor 2), so the
+`[Debug] logging enabled` line and the `[Init]` summary land above the report and the next
+reproduction is traced without a separate `/pm debug on`. It never turns logging off, and with
+logging already on it adds no second enable line. The flag is session-only, so a `/reload` turns it
+off again; `/pm debug off` does too. This addon keeps the library's default: the descriptor in
+`core/DebugLogSetup.lua` does not set `diagnosticsEnablesLogging = false`. The sections only read;
+the run is the one thing that touches the flag.
+
 **What it does to the console.** It writes through the library's raw append, not the gated sink
-`NS.Debug`, so it lands in full with logging **off**, and it never changes the logging flag beyond
-printing it. It never clears the console, and it shows the console if it was hidden. Then it prints
-one chat line: *Diagnostic report written to the debug console: N lines. Use Copy to share it.*
+`NS.Debug`, so it lands in full whatever the flag said. It never clears the console, and it shows
+the console if it was hidden. Then it prints one chat line: *Diagnostic report written to the debug
+console: N lines. Use Copy to share it.*
 `debug` and `diagnostics` are both reserved verbs (`slash-commands-§2`), so both forms answer while
 the addon is **disabled**.
 
@@ -176,7 +194,62 @@ only the **outermost** act emits: an act run inside another adds to its total. I
 pair is defensive: no control in this addon reaches a library walk today.
 
 Reactor lines are not `[Set]` lines and stay: a reset that repaints the canvas still logs
-`[Canvas] rendered N panels` after its one `[Set]` line.
+`[Canvas] rendered N panels, M shown` after its one `[Set]` line.
+
+## Coverage — what the log carries, by tag (`debug-logging-§8`, `§9`)
+
+The test the log has to pass is "could a support read of a pasted log reconstruct what happened".
+The flows say what the addon did; the diagnosis lines say why it did something else: the edges it
+reacted to, the work it held and flushed, the guard that refused, the dependencies it found and the
+errors it swallowed. Every line is one gated `NS.Debug` call per event, with any string-building
+behind the gate. `tests/test_debuglog.lua` ▸ *Coverage* pins the diagnosis lines and the quiet
+steady state.
+
+Logging is off at login (`debug-logging-§5`), so the lines written while the addon loads (a
+migration, the preview sweep, the Sunn scan) render only in the rare session that turns logging on
+before them. What they found reaches the log anyway, through the `[Init]` summary and
+`/pm diagnostics`, which turns logging on for the rest of the session.
+
+| Tag | Emitted by | When |
+|---|---|---|
+| `Debug` | the library (`SetEnabled`) | `logging enabled` / `logging disabled`, at each flip of the flag, including the enable a `/pm diagnostics` run makes when logging was off |
+| `Init` | the library, with `NS.InitSummary` (`core/Database.lua`) | Once per enable: addon and version, schema, profile, panel count, then the optional dependencies: `LSM yes/no, LibDBIcon yes/no, Sunn themes N` |
+| `Diag` | the library and `modules/Diagnostics.lua` | Every line of a `/pm diagnostics` report, written in full through the ungated append |
+| `Set` | the library's schema seam; `settings/Schema.lua` `S.BulkLine`; `core/Database.lua` | `[Set] <path> = <value>` once per settings write; one line per bulk copy or reset; one per profile reset or copy (see *Bulk copy and reset*) |
+| `Profile` | `core/Database.lua` | `switched to '<name>', N panels`, on a profile switch |
+| `Migrate` | `core/Database.lua` | A schema migration, only when one runs (at load) |
+| `Preview` | `core/Database.lua` | `swept N orphaned preview panel(s)`, at load, only when there were some |
+| `Lifecycle` | `core/LifecycleSetup.lua` | `stood down (<holds>)` and `stood up`, the addon's own enable edges |
+| `Events` | `core/LifecycleSetup.lua` | `rejected <name>`, an event name the client refused at a stand-up |
+| `Panel` | `modules/Registry.lua` | Every panel mutation: created, deleted, deleted all, renamed, fitted to artwork, a field written, moved |
+| `Panel` | `modules/Registry.lua` (`refuse`) | `<verb> refused: <reason>` for create, delete, reset, copy, rename, fit, set and move, and `set '<panel>'.<field> refused: <reason>` for a value the field's coercer rejected. The reason is the one the caller prints |
+| `Panel` | `modules/Registry.lua` (`R:Recover`, through `refuse`) | `recover refused: cannot measure the screen`, when the client reports no screen size and `/pm recover` moves nothing. The slash prints the same reason rather than "every panel is already on screen" |
+| `Panel` | `settings/Slash.lua` (`Sl:CliPanel`, through `R.Refuse`) | `panel refused: no panel called '<name>'` and `panel refused: unknown field '<field>'`, the two `/pm panel` refusals made before any Registry verb runs |
+| `Panel` | `settings/Panel.lua` (`safeRun`) | `<closure> failed: <error>`, a settings-page closure that raised, once per closure and distinct error per logging session |
+| `Canvas` | `modules/Canvas.lua` | `rendered N panels, M shown`, once per full rebuild. M is how many the show ladder left visible, so a hidden panel reads differently from a missing one |
+| `Canvas` | `modules/Canvas.lua` (`RenderForCombat`) | `combat entered` / `combat left: repainting for visibility '<mode>'`, only when the visibility setting depends on combat. Under `Always` or `Never` the renderer ignores the edge, so it writes nothing |
+| `Canvas` | `core/PanelMaster.lua` (`OnEnterWorld`) | `entered world: repainting`, on every loading screen, ahead of the rebuild it causes |
+| `Canvas` | `core/Compat.lua` | `MouseIsOver failed: <error>`, once per distinct error the mouseover tick's `pcall` swallows; `<type> texture '<name>' not found: drawn as Solid`, once per media type and name |
+| `Unlock` | `modules/Unlock.lua` | `panels unlocked` / `panels locked` (with `, N held unlock(s) dropped` when a lock discarded combat-held requests), and `'<panel>' unlocked` / `locked` per panel |
+| `Unlock` | `modules/Unlock.lua` | The combat hold: `unlock all held: in combat`, `'<panel>' unlock held: in combat`. The flush: `combat over: flushed held unlocks (all=yes/no, N panel(s), M gone)`, only when something was held. A drop: `dropped N held panel unlock(s): profile changed` |
+| `Artwork` | `modules/SunnArt.lua` | `Sunn adapter: N themes, M rows`, at OnEnable |
+| `Cfg` | the library (Options) | `register parked (in combat)`, `open refused (in combat)`, `opened` |
+| `Launcher` | the library (Launcher) | Its own registration notices |
+
+**Repeating paths.** The only steady-state repeating path is the shared 10Hz mouseover `OnUpdate`
+(`modules/Canvas.lua`). It writes nothing per tick, and the one error it can swallow is a single
+line (`NS.DebugOnce`). The other repeats are driven by the player or by edges: a slider drag writes
+one `[Set]` line per applied step, each with its new value, followed by the `[Canvas]` rebuild it
+caused; a combat edge or a loading screen writes its edge line and one rebuild. None of them logs
+when nothing happened.
+
+**Not logged here, on purpose.** A settings write the schema seam refuses (`/pm set` with a bad
+value), and a feature verb refused while the addon is disabled, are answered in chat by
+`LibKa0s-Schema-1.0` and `LibKa0s-Slash-1.0`. The host deliberately puts no wrapper in front of
+either seam (`settings/Slash.lua`), so a debug line for them is the library's to add. The disabled
+state itself is in the log as the `[Lifecycle] stood down (disabled)` line, and in the report's
+`state` section. The client state edges this addon does not react to (group roster, spec, addon
+restriction) have no line: an edge the addon ignores needs none.
 
 ## `NS.DebugBuild` — the gated sink for expensive arguments
 
@@ -191,3 +264,14 @@ site — before the gate — which is precisely the cost being avoided. Writing
 mechanism.
 
 `NS.Debug` carries the addon's **only** debug gate (`debug-logging-§4`). There is no second flag.
+
+`NS.DebugOnce(site, key, tag, fmt, ...)` is the third seam, for a line that must land **once per
+distinct key** however often its site runs: an error a `pcall` swallows on the mouseover tick, a media
+name that falls back to Solid on every repaint, a settings-page closure that raises on every refresh.
+It reads the same flag first, and it marks a key as seen only once past that gate, so a key met while
+logging was off still logs the first time logging is on. The seen-set is re-armed on every logging
+enable (the descriptor's `setEnabled` clears it), so the support sequence of turning logging on,
+reproducing and copying shows an error that still recurs, even if an earlier logging session already
+logged it. A console **Clear** does not re-arm it: `LibKa0s-DebugLog-1.0` gives the host no clear
+hook, so that is a library residual. Toggle logging off and on to re-arm by hand. `site` and `key`
+are separate arguments so that a site erroring on every pass builds no string to key on.

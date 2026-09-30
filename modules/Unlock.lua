@@ -21,9 +21,13 @@ local pendingPanels = {}
 -- The per-panel lock line's arguments, built only once NS.DebugBuild is past the gate. A plain
 -- function taking (id, on) rather than a closure over them: a closure would be created on every
 -- per-panel lock change whether or not logging is on, which is the scan this defers.
-local function describeLock(id, on)
+local function panelName(id)
   local rec = NS.Registry:Get(id)
-  return rec and rec.name or id, on and "unlocked" or "locked"
+  return rec and rec.name or id
+end
+
+local function describeLock(id, on)
+  return panelName(id), on and "unlocked" or "locked"
 end
 
 -- ── Snap ────────────────────────────────────────────────────────────────────────
@@ -132,6 +136,8 @@ function U:SetPanelUnlocked(id, on)
   if on and InCombatLockdown and InCombatLockdown() then
     pendingPanels[id] = true
     print("|cff808080unlock queued \226\128\148 that panel unlocks when you leave combat|r")
+    -- The hold half of debug-logging-§8's deferred work; ResumePending logs the flush.
+    NS.DebugBuild("Unlock", "'%s' unlock held: in combat", panelName, id)
     return nil
   end
   NS.State.unlockedPanels[id] = on or nil
@@ -233,24 +239,39 @@ end
 --
 -- It asks InCombatLockdown, NOT NS.Compat.InCombat (the combat flag): an unlock is a lockdown
 -- question, not a display one.
+-- The lock half of SetUnlocked: every per-panel unlock and every held request goes. Returns how
+-- many HELD requests were dropped (the global one counts as one), which the lock line reports.
+local function dropAllUnlocks()
+  local dropped = pendingUnlock and 1 or 0
+  pendingUnlock = false
+  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
+  for id in pairs(pendingPanels) do
+    pendingPanels[id] = nil
+    dropped = dropped + 1
+  end
+  return dropped
+end
+
 function U:SetUnlocked(on)
   on = not not on
   if on and InCombatLockdown and InCombatLockdown() then
     pendingUnlock = true
     print("|cff808080unlock queued \226\128\148 panels unlock when you leave combat|r")
+    NS.Debug("Unlock", "unlock all held: in combat")
     return nil
   end
   NS.State.unlocked = on
-  if not on then
-    pendingUnlock = false
-    -- A global lock is an unambiguous "put everything away", so it clears the per-panel unlocks too.
-    -- Leaving one panel unlocked after the user pressed lock would be a draggable frame they thought
-    -- they had dismissed.
-    for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
-    for id in pairs(pendingPanels) do pendingPanels[id] = nil end
-  end
+  -- A global lock is an unambiguous "put everything away", so it clears the per-panel unlocks too.
+  -- Leaving one panel unlocked after the user pressed lock would be a draggable frame they thought
+  -- they had dismissed.
+  local dropped = on and 0 or dropAllUnlocks()
   if NS.Canvas then NS.Canvas:RenderAll() end
-  NS.Debug("Unlock", "panels %s", on and "unlocked" or "locked")
+  if dropped > 0 then
+    -- A hold that ends in a lock is never flushed, so its line has to say where it went.
+    NS.Debug("Unlock", "panels locked, %d held unlock(s) dropped", dropped)
+  else
+    NS.Debug("Unlock", "panels %s", on and "unlocked" or "locked")
+  end
   if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end
   return on
 end
@@ -269,12 +290,19 @@ end
 -- A named entry point rather than the registry reaching into this file's local: `pendingPanels` is
 -- private to the unlock module and stays that way.
 function U:ForgetPending()
-  for id in pairs(pendingPanels) do pendingPanels[id] = nil end
+  local n = 0
+  for id in pairs(pendingPanels) do
+    pendingPanels[id] = nil
+    n = n + 1
+  end
+  -- A held unlock discarded rather than flushed: without this line the hold would read as lost.
+  if n > 0 then NS.Debug("Unlock", "dropped %d held panel unlock(s): profile changed", n) end
 end
 
 -- Replay every combat-deferred unlock. Called from PLAYER_REGEN_ENABLED (core/PanelMaster.lua).
 function U:ResumePending()
   local resumed = false
+  local all, flushed, gone = pendingUnlock, 0, 0
 
   if pendingUnlock then
     pendingUnlock = false
@@ -294,7 +322,16 @@ function U:ResumePending()
     if NS.Registry:Get(id) then
       U:SetPanelUnlocked(id, true)
       resumed = true
+      flushed = flushed + 1
+    else
+      gone = gone + 1
     end
+  end
+  -- The flush half of debug-logging-§8's deferred work, once per combat exit and only when
+  -- something was held, so a fight with nothing queued writes nothing.
+  if all or flushed + gone > 0 then
+    NS.Debug("Unlock", "combat over: flushed held unlocks (all=%s, %d panel(s), %d gone)",
+      all and "yes" or "no", flushed, gone)
   end
 
   if NS.PanelEditor and NS.PanelEditor.RefreshUnlock then NS.PanelEditor:RefreshUnlock() end

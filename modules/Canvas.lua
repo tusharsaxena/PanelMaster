@@ -869,12 +869,24 @@ local function fillWant(records)
   for _, rec in ipairs(records) do want[rec.id] = NS.Registry.FrameName(rec) end
 end
 
+-- The render summary's second figure, built only once NS.DebugBuild is past the gate: how many of
+-- the rendered panels the show ladder left visible. A plain function reference, never a closure
+-- (see NS.DebugBuild). "rendered 4 panels, 0 shown" is the line that answers "my panels vanished"
+-- -- visibility, the master switch or the stand-down rung hid them -- without a diagnostics run.
+local function renderCounts()
+  local shown = 0
+  for _, f in pairs(active) do
+    if f.__spec and f.__spec.shown then shown = shown + 1 end
+  end
+  return NS.Registry:Count(), shown
+end
+
 function Canvas:RenderAll(inCombat)
   local records = NS.Registry:All()
   fillWant(records)
   releaseMismatched()
   for _, rec in ipairs(records) do Canvas:Render(rec.id, inCombat) end
-  NS.Debug("Canvas", "rendered %s panels", NS.Registry:Count())
+  NS.DebugBuild("Canvas", "rendered %s panels, %s shown", renderCounts)
 end
 
 -- Repaint on a combat transition, and ONLY when the general-visibility setting is one of the two
@@ -889,6 +901,9 @@ end
 function Canvas:RenderForCombat(inCombat)
   local mode = currentSettings().visibility
   if mode ~= "inCombat" and mode ~= "outOfCombat" then return false end
+  -- The combat edge, logged only when the renderer acts on it (debug-logging-§8: an edge the addon
+  -- does not react to needs no line), so "Always" stays silent across a whole dungeon of pulls.
+  NS.Debug("Canvas", "combat %s: repainting for visibility '%s'", inCombat and "entered" or "left", mode)
   Canvas:RenderAll(inCombat)
   return true
 end

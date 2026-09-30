@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-975%2F975_passing-green)
+![Tests](https://img.shields.io/badge/Tests-992%2F992_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -41,21 +41,21 @@ locked: they ignore the mouse, and clicks go straight through to whatever is on 
 makes them draggable and `/pm lock` locks them again. There is no separate test mode, since
 unlocking already outlines and names every panel you have.
 
-Setting up a panel takes four steps.
+Setting up a panel takes four steps, in this order.
 
-1. Make it. Type `/pm new ChatBG`, or type a name into **Create new panel** at the top of the
+- Make it. Type `/pm new ChatBG`, or type a name into **Create new panel** at the top of the
    Panels page and press Enter. The panel turns up in the middle of the screen as a dark block with
    a class-colored strip along its top. The **Panel** picker beside that box chooses which panel the
    page is editing.
-2. Move it into place. `/pm unlock` gives every panel a gold outline and its name, and you drag
+- Move it into place. `/pm unlock` gives every panel a gold outline and its name, and you drag
    each one where it belongs. Dragging snaps to a four-pixel grid, which keeps a row of panels
    level. General → Editing is where you make the grid finer or turn snapping off. To move just one
    panel, tick **Unlock** on its General tab instead. Type `/pm lock` when you're done.
-3. Style it. The Panels page shows one panel at a time, under six tabs. Position and size takes
+- Style it. The Panels page shows one panel at a time, under six tabs. Position and size takes
    exact numbers and the frame strata, while Background and border, Accent bar, and Opacity and
    fade cover the look. Any of the colors can follow your class color. Small changes are quicker
    from chat: `/pm panel ChatBG width 420`.
-4. Add artwork, if you want it. The Artwork tab puts a picture inside the panel: one of the bundled
+- Add artwork, if you want it. The Artwork tab puts a picture inside the panel: one of the bundled
    pieces, a Sunn art pack you already have, or a texture of your own. **Fit to artwork** resizes
    the panel to match the picture. [Panel artwork](#panel-artwork) below goes through every
    setting.
@@ -250,9 +250,9 @@ conversion guide, including how to pick good sources, is in
 
 ## Reporting a bug
 
-1. Type `/pm debug on` and reproduce the bug.
-2. Type `/pm diagnostics`.
-3. If the debug window isn't open, open it with `/pm debug`. Press **Copy**, copy the entire output, and include it with your bug report.
+- Type `/pm debug on` and reproduce the bug.
+- Type `/pm diagnostics`.
+- If the debug window isn't open, open it with `/pm debug`. Press **Copy**, copy the entire output, and include it with your bug report.
 
 The report is added after the debug trace in the same window, so one copy carries both.
 

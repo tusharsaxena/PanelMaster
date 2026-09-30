@@ -110,6 +110,9 @@ end
 -- Registered by NS.StandUp and unregistered by NS.StandDown, so a disabled addon does not watch for
 -- it at all (slash-commands-§7).
 function addon:OnEnterWorld()
+  -- The loading-screen edge (debug-logging-§8): the renderer's own "rendered" line follows it, so a
+  -- pasted log says WHY a repaint ran, not only that it did.
+  NS.Debug("Canvas", "entered world: repainting")
   if NS.Canvas and NS.Canvas.RenderAll then NS.Canvas:RenderAll() end
 end
 

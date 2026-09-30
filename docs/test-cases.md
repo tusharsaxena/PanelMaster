@@ -500,7 +500,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (35)
+### test_debuglog.lua (51)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -537,6 +537,22 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: an act inside another logs once, the outermost, with the total
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
 - bulk log: bulkEnd adds nothing when the act was a whole-profile reset
+- coverage: a combat-held unlock logs its hold and its flush
+- coverage: a hold that ends in a lock or a profile change says where it went
+- coverage: a combat exit with nothing held writes nothing
+- coverage: the combat edge is logged only when the renderer acts on it
+- coverage: a loading screen names itself ahead of the repaint it causes
+- coverage: the render summary carries how many panels the ladder left shown
+- coverage: a refused panel verb logs the guard's reason
+- coverage: the [Init] summary names the optional dependencies
+- NS.DebugOnce: one line per distinct key, and a key met while off still logs once on
+- NS.DebugOnce: each logging enable re-arms the seen-set
+- coverage: a page closure's failure is keyed on the closure, not only the message
+- coverage: a /pm panel refusal made before any Registry verb logs its reason
+- coverage: a recover that cannot measure the screen says so
+- quiet steady state: 100 mouseover ticks with nothing changing write nothing
+- quiet steady state: an error the tick swallows is one line, not ten a second
+- quiet steady state: a missing texture is one line however often it repaints
 
 ### test_diagnostics.lua (22)
 
@@ -1076,13 +1092,15 @@ badge and any count quoted in the docs must agree with it.
 - eol: every tracked file carries the terminator .gitattributes declares for it
 - eol: .gitattributes is line-endings-§5's canonical body for this repo kind
 
-### test_diagnostics_contract.lua (7)
+### test_diagnostics_contract.lua (9)
 
 - diagnostics contract: both forms run the report
 - diagnostics contract: the debug word is matched in any case
 - diagnostics contract: both markers carry the brand and the end counts the report
 - diagnostics contract: the report appends after what the console already holds
-- diagnostics contract: the report lands with logging off and leaves it off
+- diagnostics contract: the report lands with logging off and turns it on for the session
+- diagnostics contract: an addon that opts out lands the report and leaves logging off (skipped: this addon keeps the default (Kit.diagnostics.enablesLogging is not false), so its report turns logging on; the case above holds it)
+- diagnostics contract: with logging already on, the report writes no second enable line
 - diagnostics contract: both forms run while the addon is disabled
 - diagnostics contract: no other name runs the report
 
@@ -1103,7 +1121,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 46 |
 | test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 35 |
+| test_debuglog.lua | 51 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 82 |
@@ -1124,5 +1142,5 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| test_diagnostics_contract.lua | 7 |
-| **Total** | **975** |
+| test_diagnostics_contract.lua | 9 |
+| **Total** | **993** |

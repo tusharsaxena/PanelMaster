@@ -511,3 +511,289 @@ test("bulk log: bulkEnd adds nothing when the act was a whole-profile reset", fu
   assertEqual(#tagged("Set"), 1, "the seam stayed muted after the bracket")
   bulkFresh()
 end)
+
+-- ── Coverage: the diagnosis checklist and the quiet steady state (debug-logging-§8, §9) ──
+--
+-- The lines a support read of a pasted log needs beyond the flows: the combat and loading-screen
+-- edges the renderer acts on, the combat-held unlocks and their flush, the refusals with the guard
+-- that said no, the dependencies, and the errors a pcall swallows. Each case below names what goes
+-- red without the line it pins. docs/debug.md ▸ Coverage lists every tag.
+
+local function covFresh()
+  quiet()
+  T.mocks.__inCombat = false
+  NS.Unlock:SetUnlocked(false)
+  NS.Registry:DeleteAll()
+  NS.Canvas:RenderAll()
+  quiet()
+end
+
+local function has(tag, fragment)
+  for _, msg in ipairs(tagged(tag)) do
+    if msg:find(fragment, 1, true) then return true end
+  end
+  return false
+end
+
+test("coverage: a combat-held unlock logs its hold and its flush", function()
+  -- Red without the hold lines in U:SetUnlocked / U:SetPanelUnlocked, or the flush line in
+  -- U:ResumePending: "I unlocked in combat and nothing happened" reads as a lost request, because
+  -- the chat line is the only trace and it never reaches a pasted log.
+  covFresh()
+  local rec = NS.Registry:New("Held")
+  NS.State.debug = true
+  T.mocks.__inCombat = true
+  NS.Unlock:SetUnlocked(true)
+  NS.Unlock:SetPanelUnlocked(rec.id, true)
+  T.mocks.__inCombat = false
+  assertTrue(has("Unlock", "unlock all held: in combat"), "the global hold left no line")
+  assertTrue(has("Unlock", "'Held' unlock held: in combat"), "the panel hold left no line")
+  NS.Unlock:ResumePending()
+  assertTrue(has("Unlock", "combat over: flushed held unlocks (all=yes, 1 panel(s), 0 gone)"),
+    "the flush left no line, so the holds above read as never flushed")
+  covFresh()
+end)
+
+test("coverage: a hold that ends in a lock or a profile change says where it went", function()
+  -- Red without the dropped count on the lock line, or ForgetPending's line: a hold with no flush
+  -- after it is exactly the shape §8 says must be visible, and these are the two ways it never
+  -- flushes on purpose.
+  covFresh()
+  local a, b = NS.Registry:New("DropA"), NS.Registry:New("DropB")
+  NS.State.debug = true
+  T.mocks.__inCombat = true
+  NS.Unlock:SetUnlocked(true)
+  NS.Unlock:SetPanelUnlocked(a.id, true)
+  NS.Unlock:SetUnlocked(false)
+  assertTrue(has("Unlock", "panels locked, 2 held unlock(s) dropped"), "the lock hid the drop")
+  NS.Unlock:SetPanelUnlocked(b.id, true)
+  NS.Unlock:ForgetPending()
+  assertTrue(has("Unlock", "dropped 1 held panel unlock(s): profile changed"),
+    "a profile change dropped a held unlock without a line")
+  T.mocks.__inCombat = false
+  covFresh()
+end)
+
+test("coverage: a combat exit with nothing held writes nothing", function()
+  -- The quiet half of the flush: every pull ends in PLAYER_REGEN_ENABLED, so a flush line written
+  -- unconditionally would be one line per pull for a whole dungeon.
+  covFresh()
+  NS.State.debug = true
+  local before = #D.buffer
+  for _ = 1, 20 do NS.addon:OnRegenEnabled() end
+  assertEqual(#D.buffer, before, "an empty combat exit logged")
+  covFresh()
+end)
+
+test("coverage: the combat edge is logged only when the renderer acts on it", function()
+  -- Red without the edge line in Canvas:RenderForCombat (a repaint with no cause), or if it moved
+  -- above the visibility test (an Always profile writing two lines per pull).
+  covFresh()
+  local settings = NS.db.profile.settings
+  local was = settings.visibility
+  NS.State.debug = true
+  settings.visibility = "always"
+  local before = #D.buffer
+  NS.addon:OnRegenDisabled()
+  NS.addon:OnRegenEnabled()
+  assertEqual(#D.buffer, before, "an edge the renderer ignores still logged")
+  settings.visibility = "inCombat"
+  NS.addon:OnRegenDisabled()
+  assertTrue(has("Canvas", "combat entered: repainting for visibility 'inCombat'"),
+    "the combat entry the renderer acted on left no line")
+  NS.addon:OnRegenEnabled()
+  assertTrue(has("Canvas", "combat left: repainting for visibility 'inCombat'"),
+    "the combat exit the renderer acted on left no line")
+  settings.visibility = was
+  covFresh()
+end)
+
+test("coverage: a loading screen names itself ahead of the repaint it causes", function()
+  -- Red without OnEnterWorld's line: every zone change repaints, and without it the log shows a
+  -- "rendered" line nothing asked for.
+  covFresh()
+  NS.State.debug = true
+  NS.addon:OnEnterWorld()
+  local canvas = tagged("Canvas")
+  assertEqual(canvas[1], "entered world: repainting")
+  assertTrue(canvas[2] ~= nil and canvas[2]:find("^rendered ") ~= nil, "no repaint after the edge")
+  covFresh()
+end)
+
+test("coverage: the render summary carries how many panels the ladder left shown", function()
+  -- Red if the summary loses its second figure: "rendered 2 panels" cannot tell "my panel is gone"
+  -- from "my panel is hidden by a setting" without a diagnostics run.
+  covFresh()
+  NS.Registry:New("Shown")
+  NS.Registry:New("Hidden", { enabled = false })
+  NS.State.debug = true
+  NS.Canvas:RenderAll()
+  assertTrue(has("Canvas", "rendered 2 panels, 1 shown"), "the summary lost its shown count")
+  covFresh()
+end)
+
+test("coverage: a refused panel verb logs the guard's reason", function()
+  -- Red without R's `refuse` helper: the editor and the slash both reach these verbs, and a refusal
+  -- that only reached chat left the log saying nothing happened.
+  covFresh()
+  local rec = NS.Registry:New("Taken")
+  NS.State.debug = true
+  NS.Registry:New("Taken")
+  NS.Registry:Rename("Nobody", "X")
+  NS.Registry:Set(rec.id, "width", "wide")
+  assertTrue(has("Panel", "create refused: a panel named 'Taken' already exists"))
+  assertTrue(has("Panel", "rename refused: no panel called 'Nobody'"))
+  assertTrue(has("Panel", "set 'Taken'.width refused: expected a number"))
+  covFresh()
+end)
+
+test("coverage: the [Init] summary names the optional dependencies", function()
+  -- Red without NS.DependencySummary: the flag is off at login, so the summary on enable is the
+  -- only place a pasted log learns whether LibSharedMedia (every texture name) and LibDBIcon (the
+  -- minimap button) loaded. The headless client ships LibDBIcon and deliberately no LSM.
+  local line = NS.InitSummary()
+  assertTrue(line:find("LSM no, LibDBIcon yes, Sunn themes %d+$") ~= nil, line)
+end)
+
+test("NS.DebugOnce: one line per distinct key, and a key met while off still logs once on", function()
+  quiet()
+  NS.DebugOnce("test site", "k1", "Test", "first %s", "k1")
+  assertEqual(#D.buffer, 0, "DebugOnce logged with the flag off")
+  NS.State.debug = true
+  for _ = 1, 5 do NS.DebugOnce("test site", "k1", "Test", "first %s", "k1") end
+  NS.DebugOnce("test site", "k2", "Test", "second")
+  assertEqual(#tagged("Test"), 2, "not one line per distinct key")
+  quiet()
+end)
+
+test("NS.DebugOnce: each logging enable re-arms the seen-set", function()
+  -- Red without the re-arm in the descriptor's setEnabled: the support sequence (on, reproduce, off,
+  -- on, reproduce, copy) would carry no trace of an error that still recurs, because the first
+  -- session already spent its one line.
+  quiet()
+  D:SetEnabled(true)
+  for _ = 1, 3 do NS.DebugOnce("rearm site", "boom", "Test", "rearm %s", "boom") end
+  assertEqual(#tagged("Test"), 1, "not once within one logging session")
+  D:SetEnabled(false)
+  D:SetEnabled(true)
+  NS.DebugOnce("rearm site", "boom", "Test", "rearm %s", "boom")
+  assertEqual(#tagged("Test"), 2, "a re-enable did not re-arm the seen-set")
+  quiet()
+end)
+
+test("coverage: a page closure's failure is keyed on the closure, not only the message", function()
+  -- Red with a constant site in settings/Panel.lua's safeRun: two closures raising the same message
+  -- (both calling one broken widget method) would log only the first, hiding the second failure.
+  quiet()
+  local safeRun = NS.Panel.__ui.safeRun
+  local function boom() error("coverage: same boom", 0) end
+  NS.State.debug = true
+  for _ = 1, 3 do
+    safeRun(boom, "Closure A")
+    safeRun(boom, "Closure B")
+  end
+  local a, b = 0, 0
+  for _, msg in ipairs(tagged("Panel")) do
+    if msg == "Closure A failed: coverage: same boom" then a = a + 1 end
+    if msg == "Closure B failed: coverage: same boom" then b = b + 1 end
+  end
+  assertEqual(a, 1, "closure A: not exactly one line")
+  assertEqual(b, 1, "closure B: not exactly one line")
+  quiet()
+end)
+
+test("coverage: a /pm panel refusal made before any Registry verb logs its reason", function()
+  -- Red without the R.Refuse calls in Sl:CliPanel: a mistyped panel or field name is refused in the
+  -- slash, never reaches a Registry verb, and left the log saying nothing happened.
+  covFresh()
+  NS.Registry:New("Known")
+  NS.State.debug = true
+  NS.Slash:CliPanel("Nobody")
+  NS.Slash:CliPanel("Known bogusfield")
+  assertTrue(has("Panel", "panel refused: no panel called 'Nobody'"), "the unknown panel left no line")
+  assertTrue(has("Panel", "panel refused: unknown field 'bogusfield'"), "the unknown field left no line")
+  covFresh()
+end)
+
+test("coverage: a recover that cannot measure the screen says so", function()
+  -- Red without the refusal in R:Recover: the guard returned 0 silently, the slash then claimed
+  -- every panel was on screen, and the log held nothing at all.
+  covFresh()
+  NS.Registry:New("Lost", { x = 9000, y = 0 })
+  local real = NS.Compat.GetScreenSize
+  NS.Compat.GetScreenSize = function() return nil end
+  NS.State.debug = true
+  local ok, moved, reason = pcall(function() return NS.Registry:Recover() end)
+  local chat = T.mocks.__chat
+  local before = #chat
+  local ok2, err2 = pcall(function() NS.Slash:CliRecover() end)
+  NS.Compat.GetScreenSize = real
+  assertTrue(ok and ok2, tostring(moved) .. " / " .. tostring(err2))
+  assertEqual(moved, 0)
+  assertEqual(reason, "cannot measure the screen")
+  assertTrue(has("Panel", "recover refused: cannot measure the screen"), "the guard left no line")
+  local said = chat[before + 1] or ""
+  assertTrue(said:find("cannot measure the screen", 1, true) ~= nil, "the slash hid the reason: " .. said)
+  covFresh()
+end)
+
+-- The one steady-state repeating path: the shared 10Hz mouseover OnUpdate. Driven through the
+-- driver's real script, so a line added anywhere under the tick is counted.
+local function tick(n)
+  local driver = NS.Canvas.__mouseoverDriver
+  local script = driver and driver:GetScript("OnUpdate")
+  assertTrue(script ~= nil, "no mouseover tick to drive")
+  for _ = 1, n do script(driver, 0.1) end
+end
+
+test("quiet steady state: 100 mouseover ticks with nothing changing write nothing", function()
+  covFresh()
+  NS.Registry:New("Fader", { mouseover = true })
+  NS.State.debug = true
+  local before = #D.buffer
+  tick(100)
+  assertEqual(#D.buffer, before, "the 10Hz tick logged in steady state")
+  covFresh()
+end)
+
+test("quiet steady state: an error the tick swallows is one line, not ten a second", function()
+  -- Red both ways: without the line in Compat.MouseIsOver the error is invisible (0), and with a
+  -- plain NS.Debug there it is one line per tick (100), evicting the log in under six minutes.
+  covFresh()
+  NS.Registry:New("Fader", { mouseover = true })
+  local real = T.mocks.MouseIsOver
+  T.mocks.MouseIsOver = function() error("coverage: mouseover boom", 0) end
+  NS.State.debug = true
+  tick(100)
+  T.mocks.MouseIsOver = real
+  local n = 0
+  for _, msg in ipairs(tagged("Canvas")) do
+    if msg:find("MouseIsOver failed: coverage: mouseover boom", 1, true) then n = n + 1 end
+  end
+  assertEqual(n, 1)
+  covFresh()
+end)
+
+test("quiet steady state: a missing texture is one line however often it repaints", function()
+  -- Red without the line in Compat.FetchMedia (a panel drawn plain with no reason in the log), or
+  -- if it were not once per name: every repaint of the panel would repeat it.
+  covFresh()
+  local libs = T.mocks.__libs
+  libs["LibSharedMedia-3.0"] = { Fetch = function() return nil end }
+  local ok, err = pcall(function()
+    local rec = NS.Registry:New("Plain")
+    rec.bgTexture = "Coverage Gone Texture"
+    NS.State.debug = true
+    for _ = 1, 10 do NS.Canvas:RenderAll() end
+  end)
+  libs["LibSharedMedia-3.0"] = nil
+  assertTrue(ok, tostring(err))
+  local n = 0
+  for _, msg in ipairs(tagged("Canvas")) do
+    if msg:find("background texture 'Coverage Gone Texture' not found: drawn as Solid", 1, true) then
+      n = n + 1
+    end
+  end
+  assertEqual(n, 1)
+  covFresh()
+end)

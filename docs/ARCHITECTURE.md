@@ -127,7 +127,7 @@ version enable disable debug perf diagnostics get set list reset resetall`, read
 so does `profile`, the one host verb this addon adds to its own live set so a player can switch to a
 profile where the addon is enabled without opening the panel.
 `perf` sits in that set as a **reservation**, not a command: this addon does not register it —
-`NS.COMMANDS` (`settings/Slash.lua:322`) holds 21 verbs and `perf` is not among them — so the
+`NS.COMMANDS` (`settings/Slash.lua:329`) holds 21 verbs and `perf` is not among them — so the
 twelve reserved verbs it does ship, `diagnostics` among them (`debug-logging-§14`), are the ones
 that behave normally. The only
 refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`, and that gate is **the library's**:
@@ -284,7 +284,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 |---|---|---|
 | `slash-dispatch.md` | Present | 21 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
-| `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) and `NS.DebugBuild` are the addon's own, beyond the library console |
+| `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) `NS.DebugBuild`, `NS.DebugOnce` and the tag-by-tag Coverage map are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |
 | `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. The one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and it is no longer this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15) owns it for the whole collection, called from `settings/OptionsSetup.lua` |
 | `compat-layer.md` | Present | 8 shims in `core/Compat.lua` (threshold is 3) |
@@ -365,14 +365,14 @@ above carrying a re-check trigger. This census records which one each breach sit
 suite on an over-cap file it does not name, on a row naming a file that is no longer over the cap,
 and on a heading that is missing, misplaced or standing empty.
 
-**Nothing is over the cap today.** Measured 2026-09-27 with
+**Nothing is over the cap today.** Measured 2026-09-30 with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-The largest authored file is `tests/test_libka0s.lua` at 1131 lines, and the largest shipped one
-`modules/Registry.lua` at 969. `settings/PanelEditor.lua`, which held both places at 1464, was
+The largest authored file is `tests/test_libka0s.lua` at 1160 lines, and the largest shipped one
+`modules/Registry.lua` at 987. `settings/PanelEditor.lua`, which held both places at 1464, was
 peeled on 2026-09-26 by the automated-tests sweep ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47))
 into itself (746) and `settings/PanelEditorTabs.lua` (798). `modules/Artwork.lua`, the largest
 shipped file after it at 1188, was peeled on 2026-09-27 along the catalog / geometry seam into

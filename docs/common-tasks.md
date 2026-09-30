@@ -50,7 +50,7 @@ This is the change with the most places to touch, and `core/Constants.lua` is ne
 
 ## Add a slash verb
 
-Append one triple to `NS.COMMANDS` (`settings/Slash.lua:322`), shaped
+Append one triple to `NS.COMMANDS` (`settings/Slash.lua:329`), shaped
 `{ name, description, handler }`. The help index and the settings landing page's command list are
 both generated from it, so nothing else needs editing.
 

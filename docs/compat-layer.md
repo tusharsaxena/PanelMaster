@@ -65,7 +65,7 @@ headlessly, and the stub reports 0×0.
 either reading is not a positive number. A zero reading is "cannot tell", not a tiny screen.
 Otherwise the recovery pass would drag every panel to the origin.
 
-**Who calls it.** `modules/Registry.lua:921` (`R:Recover`, which does nothing on `nil`) and
+**Who calls it.** `modules/Registry.lua:937` (`R:Recover`, which on `nil` moves nothing and refuses with the reason `cannot measure the screen`) and
 `modules/Diagnostics.lua:114` and `:200` (the diagnostics report's screen section and its per-panel
 position line).
 
@@ -119,7 +119,7 @@ draw nothing.
 **Who calls it.** `modules/Canvas.lua:351`, `:409`, `:433` and `:461` (border, accent bar, background
 and border again, at render time).
 
-## `MediaList` — `core/Compat.lua:151`
+## `MediaList` — `core/Compat.lua:157`
 
 **What varies.** Whether LSM is loaded, and which names other addons have registered so far this
 session. It is queried at click time rather than cached for that reason.
@@ -128,9 +128,9 @@ session. It is queried at click time rather than cached for that reason.
 not LSM ships it, because "draw no border" is a choice this addon's UI must always be able to offer.
 
 **Who calls it.** `settings/PanelEditor.lua:285` and `settings/PanelEditorTabs.lua:243` (the media dropdowns) and
-`modules/Registry.lua:739` (`COERCE.media`, matching a name typed on the command line against the live list).
+`modules/Registry.lua:752` (`COERCE.media`, matching a name typed on the command line against the live list).
 
-## `MouseIsOver` — `core/Compat.lua:176`
+## `MouseIsOver` — `core/Compat.lua:182`
 
 **What varies.** Whether the global `MouseIsOver` exists, and whether it accepts the frame in hand.
 The call is wrapped in `pcall`.

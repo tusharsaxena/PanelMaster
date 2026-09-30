@@ -107,7 +107,7 @@ end)
 -- ── DebugLog ───────────────────────────────────────────────────────────────────
 
 test("Parity: the DebugLog seam's degraded surface matches the live one", function()
-  -- The live half is the LibKa0s-DebugLog-1.0 instance core/DebugLogSetup.lua:159 builds, which
+  -- The live half is the LibKa0s-DebugLog-1.0 instance core/DebugLogSetup.lua:112 builds, which
   -- tests/run.lua registers under that name. The addon's own call sites are
   --   grep -rn "NS\.DebugLog[:.]" core modules settings
   local degradedNS = loadPartial({ DebugLog = true })
@@ -135,6 +135,9 @@ test("Parity: the DebugLog seam's degraded surface matches the live one", functi
   })
   assertTrue(type(degradedNS.Debug) == "function", "the degraded NS.Debug is missing")
   assertTrue(type(degradedNS.DebugBuild) == "function", "the degraded NS.DebugBuild is missing")
+  -- core/Compat.lua and settings/Panel.lua call it from the mouseover tick, the media fallback and
+  -- the page closures; a stub without it is a crash moved to the first swallowed error.
+  assertTrue(type(degradedNS.DebugOnce) == "function", "the degraded NS.DebugOnce is missing")
 end)
 
 -- ── Launcher ────────────────────────────────────────────────────────────

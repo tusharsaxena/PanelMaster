@@ -28,6 +28,19 @@ local function fire(message, ...)
   if NS.bus then NS.bus:SendMessage(message, ...) end
 end
 
+-- A refused verb, logged once with the guard's own reason and handed straight back to the caller
+-- (debug-logging-§8's refusals, with the reason). The reason is the string the caller prints
+-- anyway, so logging it builds nothing extra. The editor and the slash both reach these verbs, so
+-- one line here covers "I pressed it and nothing happened" for every refusal the Registry makes.
+-- A refusal the slash makes BEFORE it reaches a verb (`/pm panel` naming no panel, or an unknown
+-- field) is not the Registry's, so settings/Slash.lua calls this same helper as R.Refuse: one
+-- wording for every `[Panel] <verb> refused:` line, whichever file said no.
+local function refuse(verb, fail, reason)
+  NS.Debug("Panel", "%s refused: %s", verb, reason)
+  return fail, reason
+end
+R.Refuse = refuse
+
 -- The write seam's log arguments, built only once NS.DebugBuild is past the gate. A plain function
 -- taking (rec, field) rather than a closure over them: a closure would be created at the call site
 -- on every field write whether or not logging is on, which is the cost this defers.
@@ -372,7 +385,7 @@ end
 
 function R:New(name, overrides)
   local rec, reason = create(name, overrides)
-  if not rec then return nil, reason end
+  if not rec then return refuse("create", nil, reason) end
   fire(MSG.PANELS)
   return rec
 end
@@ -396,9 +409,9 @@ end
 
 function R:Delete(key)
   local p = NS.db and NS.db.profile
-  if not p then return false, "database not ready" end
+  if not p then return refuse("delete", false, "database not ready") end
   local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if not rec then return refuse("delete", false, ("no panel called '%s'"):format(tostring(key))) end
 
   destroy(p, rec)
   fire(MSG.PANELS)
@@ -419,9 +432,9 @@ end
 -- defaults.
 function R:Reset(key)
   local p = NS.db and NS.db.profile
-  if not p then return false, "database not ready" end
+  if not p then return refuse("reset", false, "database not ready") end
   local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if not rec then return refuse("reset", false, ("no panel called '%s'"):format(tostring(key))) end
 
   local id, name, frameName = rec.id, rec.name, rec.frameName
   local before = Util.DeepCopy(rec)
@@ -460,10 +473,10 @@ local COPY_EXCLUDED = {
 -- end up sharing a color array — an in-place edit of one would otherwise silently change the other.
 function R:CopyFrom(targetKey, sourceKey)
   local target = R:Resolve(targetKey)
-  if not target then return false, ("no panel called '%s'"):format(tostring(targetKey)) end
+  if not target then return refuse("copy", false, ("no panel called '%s'"):format(tostring(targetKey))) end
   local source = R:Resolve(sourceKey)
-  if not source then return false, ("no panel called '%s'"):format(tostring(sourceKey)) end
-  if source.id == target.id then return false, "a panel cannot copy from itself" end
+  if not source then return refuse("copy", false, ("no panel called '%s'"):format(tostring(sourceKey))) end
+  if source.id == target.id then return refuse("copy", false, "a panel cannot copy from itself") end
 
   local before = Util.DeepCopy(target)
   for field, value in pairs(source) do
@@ -546,16 +559,16 @@ end
 
 function R:Rename(key, newName)
   local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if not rec then return refuse("rename", false, ("no panel called '%s'"):format(tostring(key))) end
   newName = Util.CleanName(newName)
-  if not newName then return false, "a panel needs a name" end
+  if not newName then return refuse("rename", false, "a panel needs a name") end
 
   -- Renaming a panel to a different case of its own name is a legitimate edit ("chat bg" → "Chat
   -- BG"), so the collision check must ignore the panel being renamed rather than just testing for
   -- any match.
   local clash = R:FindByName(newName)
   if clash and clash.id ~= rec.id then
-    return false, ("a panel named '%s' already exists"):format(newName)
+    return refuse("rename", false, ("a panel named '%s' already exists"):format(newName))
   end
 
   -- No frame-name check here, deliberately. The frame name is stamped at create and a rename does
@@ -653,14 +666,14 @@ end
 -- and sees nothing happen, and both deserve a sentence.
 function R:FitToArtwork(key)
   local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if not rec then return refuse("fit", false, ("no panel called '%s'"):format(tostring(key))) end
 
   local beforeW, beforeH = rec.width, rec.height
   if not R.ApplyArtSize(rec) then
     if not (NS.Artwork and NS.Artwork.NativeSize and NS.Artwork.NativeSize(rec)) then
-      return false, "this panel draws no artwork to fit to"
+      return refuse("fit", false, "this panel draws no artwork to fit to")
     end
-    return false, "already fitted to its artwork"
+    return refuse("fit", false, "already fitted to its artwork")
   end
   R.Sanitize(rec)
 
@@ -787,10 +800,10 @@ end
 -- and the repaint broadcast happen exactly once and identically for both.
 function R:Set(key, field, value)
   local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if not rec then return refuse("set", false, ("no panel called '%s'"):format(tostring(key))) end
 
   local kind = C.PANEL_FIELD_TYPE[field]
-  if not kind then return false, ("unknown field '%s'"):format(tostring(field)) end
+  if not kind then return refuse("set", false, ("unknown field '%s'"):format(tostring(field))) end
 
   -- `name` is routed to Rename rather than written directly: it is the only field with a uniqueness
   -- constraint, and duplicating that check here is how the two would eventually disagree.
@@ -801,7 +814,10 @@ function R:Set(key, field, value)
   local coerce = COERCE[kind]
   if coerce then
     local coerced, err = coerce(value, field)
-    if err then return false, err end
+    if err then
+      NS.Debug("Panel", "set '%s'.%s refused: %s", rec.name, field, err)
+      return false, err
+    end
     value = coerced
   end
 
@@ -826,7 +842,7 @@ end
 -- changes x and y together, and two calls would fire two repaints for one gesture.
 function R:SetPosition(key, x, y)
   local rec = R:Resolve(key)
-  if not rec then return false, ("no panel called '%s'"):format(tostring(key)) end
+  if not rec then return refuse("move", false, ("no panel called '%s'"):format(tostring(key))) end
   rec.x, rec.y = tonumber(x) or rec.x, tonumber(y) or rec.y
   R.Sanitize(rec)
   NS.Debug("Panel", "'%s' moved to %s, %s", rec.name, rec.x, rec.y)
@@ -919,7 +935,9 @@ end
 
 function R:Recover()
   local w, h = NS.Compat.GetScreenSize()
-  if not w then return 0 end   -- cannot measure the screen: do nothing rather than guess
+  -- Cannot measure the screen: do nothing rather than guess, and say so. Without the reason the
+  -- caller could not tell this from "nothing was off screen".
+  if not w then return refuse("recover", 0, "cannot measure the screen") end
 
   local settings = currentSettings()
   local moved, rows = 0, 0
