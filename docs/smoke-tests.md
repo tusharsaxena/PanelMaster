@@ -26,7 +26,7 @@ client and is run when one is available, not per release.
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
-| DIAG-1 to 19 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report |
+| DIAG-1 to 25 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
@@ -42,7 +42,7 @@ client and is run when one is available, not per release.
 - COMBAT and several other checks need a training dummy. PROFILE-1 needs a second character, and
   LOOK-23 a character of a different class.
 - Optional, each only for the checks that name it: another Ka0s addon with a settings page and a debug
-  console (DIAG-1, PANEL-3, PANEL-4, PANEL-12, DEGRADED-13), KickCD for its Icons page (PANEL-14),
+  console (DIAG-1, DIAG-23, PANEL-3, PANEL-4, PANEL-12, DEGRADED-13), KickCD for its Icons page (PANEL-14),
   KickCD, AbsorbTracker, ConsumableMaster and MultiMeters together (LOOK-10), a UI skin
   such as ElvUI (INSTALL-6), another addon that registers an LSM texture, such as ElvUI, WeakAuras,
   Details or SharedMedia (LOOK-13), Titan Panel, ElvUI or Bazooka (LAUNCH-12), Sunn - Viewport Art and
@@ -726,6 +726,30 @@ and at least one art pack; skip those without it.
 - **DIAG-19. The line cap.** With logging on, fill past 3000 lines (drag panels, or repeat
   `/pm diagnostics`) → the counter pins at `3000 / 3000 lines`, and the copy mark opens its window
   without a noticeable hitch. Result:
+- **DIAG-20. The console resizes.** `/pm debug` → a small grip sits in the console's bottom-right
+  corner, clear of the `0 / 3000 lines` counter. Drag it out on both axes → the log, the scrollbar
+  and the counter follow the new edges, the title-bar controls stay at the right end, and the lines
+  and the scroll position are kept. Wheel-scroll and drag the scrollbar → both still work at the new
+  size. Result:
+- **DIAG-21. The console's minimum holds.** Drag the grip as far in as it goes → it stops while the
+  `Debug:` toggle, the gold title and the three title-bar controls still fit without
+  overlapping, and a few log lines still show between the title bar and the status bar. Result:
+- **DIAG-22. The console keeps its size for the session.** Resize the console, close it with its
+  close mark, `/pm debug` → it reopens at the size you left. Close it with **Esc** and reopen → the
+  same. `/reload`, `/pm debug` → it opens at the default 700 × 344 again. **Fail:** the resized size
+  survives the `/reload` (the size reached the client's layout cache; debug-logging-§1 keeps it on
+  the window for the session only). Result:
+- **DIAG-23. Another addon's console is its own.** With another Ka0s addon installed, resize this
+  console, then open the other addon's console → it opens at its own size, unchanged; resize it →
+  this one is unchanged. Result:
+- **DIAG-24. The copy window resizes.** Click the copy mark → its window has a grip in the
+  bottom-right corner, and the scroll bar's down button sits above the grip and takes a click on
+  its whole face. Drag the grip out on both axes → the text area widens and deepens with it and the
+  lines rewrap to the new width; drag it in → it stops at a minimum that still shows the close mark
+  and some text. Result:
+- **DIAG-25. The copy window keeps its size for the session.** Resize the copy window, close it,
+  click the copy mark again → it reopens at the size you left, and resizing it did not change the
+  console's size. `/reload`, open the console and the copy window → both at their defaults. Result:
 
 ## LAUNCH
 
@@ -916,6 +940,7 @@ corrected in it against the code.
 | DIAG-1, DIAG-3 to DIAG-12 | § 11 steps 1, 1c, 2-8, 10 and 11, § 16 steps 1 and 9 | No result recorded |
 | DIAG-13, DIAG-18 | § 11 steps 9 and 16 | Partly run: the 2026-09-26 pass (PM-S2, PM-S8) did not check the section order, `frame=yes` and `0 orphaned`, or `/pm debug diag` |
 | DIAG-2 | § 11 step 1b, § 16 step 2 | No result recorded; corrected: the icon marks replaced the words *Copy* and *Clear* |
+| DIAG-20 to DIAG-25 | none | New with the resizable console and copy window (LibKa0s v1.64.0) |
 | LAUNCH-1 to LAUNCH-12 | § 7b | No result recorded |
 | DEGRADED-1, DEGRADED-3, DEGRADED-7, DEGRADED-8, DEGRADED-10, DEGRADED-11 | § 14 steps 1-4, 7, 11, 11b, 11c, 12, 13 and 13b | No result recorded |
 | DEGRADED-2, DEGRADED-9 | § 14 steps 5, 6 and 11d | No result recorded; corrected: `/pm unlock` and `/pm lock` print the library-absent line |

@@ -1,6 +1,8 @@
 # Debug
 
-`debug-logging`: a 700×344 `DIALOG`-strata window in JetBrains Mono at 10pt — the face now arrives
+`debug-logging`: a `DIALOG`-strata window, 700×344 by default and resizable from a bottom-right grip
+(LibKa0s v1.64.0; the size is kept on the window for the session only and never saved, so a
+`/reload` restores the default), in JetBrains Mono at 10pt — the face now arrives
 inside the LibKa0s payload rather than in this addon's own `media/` — with timestamped color-coded
 `<HH:MM:SS> | [Tag] <content>` lines, a right-edge scrollbar and an `N / MAX lines` counter
 (`debug-logging-§11`), a clear and a copy control, and `UISpecialFrames` for ESC.
