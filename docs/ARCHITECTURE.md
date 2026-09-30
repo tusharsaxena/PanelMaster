@@ -365,14 +365,14 @@ above carrying a re-check trigger. This census records which one each breach sit
 suite on an over-cap file it does not name, on a row naming a file that is no longer over the cap,
 and on a heading that is missing, misplaced or standing empty.
 
-**Nothing is over the cap today.** Measured 2026-09-27 with
+**Nothing is over the cap today.** Measured 2026-09-30 with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-The largest authored file is `tests/test_libka0s.lua` at 1131 lines, and the largest shipped one
-`modules/Registry.lua` at 969. `settings/PanelEditor.lua`, which held both places at 1464, was
+The largest authored file is `tests/test_libka0s.lua` at 1160 lines, and the largest shipped one
+`modules/Registry.lua` at 987. `settings/PanelEditor.lua`, which held both places at 1464, was
 peeled on 2026-09-26 by the automated-tests sweep ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47))
 into itself (746) and `settings/PanelEditorTabs.lua` (798). `modules/Artwork.lua`, the largest
 shipped file after it at 1188, was peeled on 2026-09-27 along the catalog / geometry seam into
