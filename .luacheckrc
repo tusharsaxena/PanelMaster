@@ -163,7 +163,7 @@ files["modules/Unlock.lua"] = {
 }
 
 -- The settings page. `Register` and `Refresh` are both probed rather than called outright --
--- core/PanelMaster.lua:43 and :68 for the first, core/DebugLogSetup.lua:163 for the second -- so
+-- core/PanelMaster.lua:43 and :68 for the first, core/DebugLogSetup.lua:164 for the second -- so
 -- that a missing options library costs the page and nothing else.
 files["settings/Panel.lua"] = {
   ignore = { "212/self" },

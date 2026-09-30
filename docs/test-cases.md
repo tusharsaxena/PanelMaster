@@ -554,6 +554,20 @@ badge and any count quoted in the docs must agree with it.
 - quiet steady state: an error the tick swallows is one line, not ten a second
 - quiet steady state: a missing texture is one line however often it repaints
 
+### test_library_debug.lua (11)
+
+- library lines: a feature verb refused while disabled is one [Cmd] line, and chat is unchanged
+- library lines: an unknown verb is one [Cmd] line
+- library lines: a /pm set the parser refuses is one [Cmd] line and no [Set] line
+- library lines: /pm get of an unknown path and /pm profile to the current one are one line each
+- library lines: a verb that succeeds writes no [Cmd] line
+- library lines: each stand-down and stand-up edge is one [Lifecycle] line, with its holds
+- library lines: a latch call that fires no edge writes no [Lifecycle] line
+- library lines: the settings panel refused in combat is one [Cfg] line
+- library lines: NS.DebugOnce is re-armed by a console Clear
+- library lines: NS.DebugOnce keys on site and key together
+- library lines: the launcher's registration and the Sunn scan land the first time logging is on
+
 ### test_diagnostics.lua (22)
 
 - Diagnostics: the report carries the brand and this addon's sections, in order
@@ -1122,6 +1136,7 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
 | test_debuglog.lua | 51 |
+| test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 82 |
@@ -1143,4 +1158,4 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
-| **Total** | **993** |
+| **Total** | **1004** |

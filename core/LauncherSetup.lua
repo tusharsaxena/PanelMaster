@@ -222,6 +222,11 @@ NS.Launcher = lib:New({
 
   print = function(line) NS.Print(line) end,
   debug = function(tag, fmt, ...) NS.Debug(tag, fmt, ...) end,
+  -- The STATE lines (Launcher minor 5): a broker library absent, no minimap table, `registered`.
+  -- Register runs at OnEnable, where the session-only flag is always off, so through `debug` they
+  -- never landed; the console's at-enable queue holds them and writes them the first time logging
+  -- is turned on (debug-logging-§8). Events (shown, hidden, a refusal, a raise) stay on `debug`.
+  debugAtEnable = function(tag, message) NS.DebugAtEnable(tag, "%s", message) end,
 
   -- DELIBERATELY NOT PASSED:
   --

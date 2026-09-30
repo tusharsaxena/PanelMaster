@@ -24,7 +24,8 @@ local lib = LibStub and LibStub("LibKa0s-DebugLog-1.0", true)
 if not lib then
   -- Degrade, never error. `/pm debug` is registered unconditionally and settings/Schema.lua's
   -- console row calls IsShown on every panel refresh, so every member the addon actually calls has
-  -- to answer. The list is `grep -n "NS.DebugLog" -r` plus NS.Debug, NS.DebugBuild and NS.DebugOnce.
+  -- to answer. The list is `grep -n "NS.DebugLog" -r` plus NS.Debug, NS.DebugBuild, NS.DebugOnce and
+  -- NS.DebugAtEnable.
   --
   -- SetEnabled still really flips the flag and still acknowledges: logging is a session flag the
   -- addon owns, and it is only the WINDOW that has gone away. Everything that would have drawn
@@ -107,14 +108,8 @@ if not lib then
   NS.Debug = function() end
   NS.DebugBuild = function() end
   NS.DebugOnce = function() end
+  NS.DebugAtEnable = function() end
   return
-end
-
--- NS.DebugOnce's seen-set, declared ahead of the descriptor because its setEnabled closure clears
--- it on every enable edge. site -> { [key] = true }.
-local onceSeen = {}
-local function rearmOnce()
-  for site in pairs(onceSeen) do onceSeen[site] = nil end
 end
 
 NS.DebugLog = lib:New({
@@ -137,14 +132,12 @@ NS.DebugLog = lib:New({
 
   -- The enable flag stays the HOST's. Both are closures rather than direct references because
   -- core/State.lua is not guaranteed to have loaded when this file does, and because a library that
-  -- kept its own copy would leave two truths about whether logging is on.
-  -- Each enable also re-arms NS.DebugOnce (below): a support read turns logging on, reproduces and
-  -- copies, and an error or fallback that still recurs must land again in that session's log rather
-  -- than stay suppressed by a line an earlier session already wrote.
+  -- kept its own copy would leave two truths about whether logging is on. Re-arming NS.DebugOnce
+  -- on each enable is the console's own job since DebugLog minor 18 (its gates, below), so this
+  -- closure only stores the flag.
   isEnabled  = function() return NS.State and NS.State.debug end,
   setEnabled = function(on)
     if NS.State then NS.State.debug = on end
-    if on then rearmOnce() end
   end,
 
   -- Through a closure, not `print = NS.Print`: core/PanelMaster.lua's AceConsole embed replaces
@@ -223,19 +216,22 @@ end
 -- NS.Debug for a line that must land ONCE per distinct key, however often its site runs: an error a
 -- pcall swallows on a repeating path (the 10Hz mouseover tick), or a media name that no longer
 -- resolves and falls back to Solid on every repaint (debug-logging-§8's "once per distinct error").
--- `site` and `key` are two levels rather than one concatenated string so that a site erroring on
--- every pass allocates nothing at the call. The seen-set is written only PAST the gate: a key met
--- while logging was off has not been logged, so it must still log the first time logging is on
--- (the comparison sits behind the gate, debug-logging-§9). The set is re-armed on every enable
--- edge (the descriptor's setEnabled, above), so each logging session sees each distinct key once.
--- A console Clear does NOT re-arm it: LibKa0s-DebugLog-1.0 exposes no clear hook to the host.
+--
+-- THE MEMORY IS THE CONSOLE'S (`D.DebugOnce`, DebugLogGates minor 1), not this file's: the console
+-- re-arms it on Clear and on every enable edge, so a support read that clears, or turns logging on,
+-- and reproduces sees a recurring error again. This addon's own seen-set, which a Clear could not
+-- re-arm, was deleted with that adoption. What stays is the two-level key: `site` and `key` travel
+-- apart so a site erroring on every pass builds no string while logging is off, and they are joined
+-- only past the gate, into the one key the console's gate takes. Nothing is remembered while
+-- logging is off, so a key met then still logs the first time logging is on.
+local consoleOnce = NS.DebugLog.DebugOnce
 function NS.DebugOnce(site, key, tag, fmt, ...)
   if not (NS.State and NS.State.debug) then return end
-  if site == nil then site = "?" end
-  if key == nil then key = "?" end
-  local seen = onceSeen[site]
-  if not seen then seen = {}; onceSeen[site] = seen end
-  if seen[key] then return end
-  seen[key] = true
-  return NS.Debug(tag, fmt, ...)
+  return consoleOnce(NS.SafeToString(site) .. "\31" .. NS.SafeToString(key), tag, fmt, ...)
 end
+
+-- A STATE line written while logging may be off (debug-logging-§8's "dependencies once at enable"):
+-- the console's at-enable queue (`D.DebugAtEnable`) writes it now when logging is on, and otherwise
+-- holds it and writes it after the `[Init]` summary the first time logging is turned on. Used for
+-- what OnEnable finds (the Sunn scan, the launcher's registration), never for an event.
+NS.DebugAtEnable = NS.DebugLog.DebugAtEnable

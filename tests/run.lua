@@ -97,7 +97,7 @@ local SUITES = {
   "test_mediasetup", "test_envsetup",
   "test_registry", "test_canvas", "test_unlock", "test_media",
   "test_accent", "test_artwork", "test_artwork_geometry",
-  "test_database", "test_debuglog", "test_diagnostics",
+  "test_database", "test_debuglog", "test_library_debug", "test_diagnostics",
   "test_schema", "test_slash", "test_panel", "test_panels_page", "test_profiles",
   "test_launcher",
   -- The stand-down conformance suite slash-commands-§7 MUSTs. Listed here like any other suite,

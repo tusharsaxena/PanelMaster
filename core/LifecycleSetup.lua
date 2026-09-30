@@ -108,7 +108,9 @@ function NS.StandDown()
     NS.addon:UnregisterEvent("PLAYER_REGEN_ENABLED")
     NS.addon:UnregisterEvent("PLAYER_REGEN_DISABLED")
   end
-  NS.Debug("Lifecycle", "stood down (%s)", table.concat(NS.Lifecycle:Holds(), ", "))
+  -- No `[Lifecycle]` line here: the latch writes the edge itself, with the hold that caused it and
+  -- the resulting set, through the descriptor's `debug` (Lifecycle minor 3), and a second line from
+  -- the callback would put every edge in the log twice.
 end
 
 --- Build the addon's features back, FROM CURRENT STATE and never from a snapshot taken on the way
@@ -145,7 +147,7 @@ function NS.StandUp()
     NS.Canvas:Enable()
     if NS.__booted then NS.Canvas:RenderAll() end
   end
-  NS.Debug("Lifecycle", "stood up")
+  -- The edge line is the latch's, as NS.StandDown's is.
 end
 
 --- The one entry point every surface that can change the answer calls: the composed *Enable Ka0s
@@ -232,7 +234,13 @@ NS.Lifecycle = Lifecycle:New({
   name      = addonName,
   standDown = function() NS.StandDown() end,
   standUp   = function() NS.StandUp() end,
-  -- Used by :PrintHolds() and by nothing else. The library emits no line of its own: a latch that
-  -- narrated every edge would print into a player's chat on every profile switch.
+  -- Used by :PrintHolds() and by nothing else. The library prints no chat line of its own: a latch
+  -- that narrated every edge would print into a player's chat on every profile switch.
   print     = function(line) NS.Print(line) end,
+  -- The host's gated sink (Lifecycle minor 3). Each stand-down and stand-up edge writes ONE
+  -- `[Lifecycle]` line through it, before the callback runs: `stood down: added <key> (holds: <set>)`
+  -- or `stood up: released <key> (holds: none)`. A call that fires no edge writes nothing. The
+  -- message arrives formatted, so it is handed on as the format with no arguments, which NS.Debug
+  -- writes as it stands. A closure because NS.Debug is resolved at call time.
+  debug     = function(tag, message) NS.Debug(tag, message) end,
 })
