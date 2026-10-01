@@ -393,6 +393,10 @@ test("Panel: the Profiles container is inset to the library's PADDING_X on both 
   assertEqual(br.relativePoint, "BOTTOMRIGHT")
   assertEqual(br.x, -16)
   assertEqual(br.y, 8)
+  -- Tied to the library's value, not to the literal: a retune of PADDING_X in LibKa0s moves this
+  -- container with the header and divider (PanelMaster#56).
+  assertEqual(tl.x, ns.Helpers.PADDING_X, "the container's left inset is not the library's PADDING_X")
+  assertEqual(br.x, -ns.Helpers.PADDING_X, "the container's right inset is not the library's PADDING_X")
 end)
 
 -- ── The AceDB fake ──────────────────────────────────────────────────────────────

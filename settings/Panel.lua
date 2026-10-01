@@ -50,12 +50,13 @@ local ADDON_TAGLINE =
 
 -- Layout constants. The Ka0s values (options-ui-§8) now live in ONE place — LibKa0s-Options-1.0's
 -- lib.LAYOUT, re-exported on the instance — rather than being restated here, so this page's spacing
--- and the flow engine's cannot drift apart. PADDING_X, HEADER_TOP, HEADER_HEIGHT and DEFAULTS_W are
--- entirely the library's now; the three below are read by this file or by settings/PanelEditor.lua.
+-- and the flow engine's cannot drift apart. HEADER_TOP, HEADER_HEIGHT and DEFAULTS_W are entirely the
+-- library's; the three below are read by this file or by settings/PanelEditor.lua. PADDING_X is read
+-- off the instance where it is used, at the Profiles page's hand-anchored container, so that
+-- container moves with the header and divider the library draws at the same inset.
 local ROW_VSPACER       = O.ROW_VSPACER
 local SECTION_HEADING_H = O.SECTION_HEADING_H
 local BUTTON_PAIR_REL   = O.BUTTON_PAIR_REL
-local PADDING_X         = 16   -- still needed for the Profiles page's hand-anchored container
 local LOGO_SIZE         = 300  -- landing-page logo display size, this page's own
 
 -- `mainCategoryID` is gone: the library owns the category handle and `O.OpenOptionsPanel` is the
@@ -510,8 +511,8 @@ function P:Register()
       container:SetLayout("Fill")
       container.frame:SetParent(prctx.body)
       container.frame:ClearAllPoints()
-      container.frame:SetPoint("TOPLEFT",     prctx.body, "TOPLEFT",      PADDING_X, -8)
-      container.frame:SetPoint("BOTTOMRIGHT", prctx.body, "BOTTOMRIGHT", -PADDING_X, 8)
+      container.frame:SetPoint("TOPLEFT",     prctx.body, "TOPLEFT",      O.PADDING_X, -8)
+      container.frame:SetPoint("BOTTOMRIGHT", prctx.body, "BOTTOMRIGHT", -O.PADDING_X, 8)
     end
 
     -- Re-opened on every show, not just the first: after a profile switch the whole options tree is

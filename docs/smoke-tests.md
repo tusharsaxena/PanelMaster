@@ -23,7 +23,7 @@ client and is run when one is available, not per release.
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
 | PANEL-1 to 32 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
-| PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
+| PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
 | DIAG-1 to 30 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on, the library's own refusal, edge and at-enable lines |
@@ -638,6 +638,12 @@ and at least one art pack; skip those without it.
 - **PROFILE-17. An open General page refreshes.** Give two profiles different **Master scale**
   values. Open **General ▸ Master controls**, then `/pm profile <the other>` from chat with the window
   still open → the slider shows the new profile's value without reopening the page. Result:
+- **PROFILE-18. The Profiles page lines up with its header.** `/pm config` → **Profiles** → the left
+  edge of Ace's profile controls (the **Reset Profile** button, the **Current Profile** label) sits in
+  line with the left end of the gold divider and the page title, and the right edge of the widest
+  control stops in line with the right end of the divider. There is no horizontal scrollbar and
+  nothing is clipped at either edge. Compare with **General**: its body starts on the same vertical
+  line as the Profiles controls. Result:
 
 ## STATE
 
@@ -1000,6 +1006,7 @@ corrected in it against the code.
 | PROFILE-1 to PROFILE-10 | § 5e-6 step 6, § 12, § 12b, § 12b-2 steps 1 and 3 | No result recorded |
 | PROFILE-11 to PROFILE-14, PROFILE-16, PROFILE-17 | none | New with the `/pm profile` verb |
 | PROFILE-15 | § 7 step 12 | No result recorded; `/pm profile` is new in it |
+| PROFILE-18 | none | New with the Profiles container reading `O.PADDING_X` (PanelMaster#56) |
 | STATE-1, STATE-2, STATE-4, STATE-5, STATE-7 | § 7 steps 4-5, 7, 8, 10 and 13 | No result recorded |
 | STATE-3 | § 7 steps 6 and 9 | No result recorded; corrected: the disabled line prints under the help index's version header |
 | STATE-6 | § 7 step 11 | No result recorded; corrected: the switch goes through the Profiles page between two disabled profiles, since `/pm profile` answers in chat |

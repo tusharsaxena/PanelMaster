@@ -143,7 +143,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 ### `C_Timer` — 0 hits
 
-None. The one scheduling seam is `settings/OptionsSetup.lua:256`, which forwards to the addon's
+None. The one scheduling seam is `settings/OptionsSetup.lua:259`, which forwards to the addon's
 AceTimer embed for a **one-shot** panel-refresh delay — not a repeating ticker.
 
 ### `ScheduleRepeatingTimer` — 0 hits
