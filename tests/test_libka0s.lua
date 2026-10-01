@@ -180,6 +180,30 @@ test("DebugLog seam: the library is told the FOLDER name, not just the frame nam
     "the descriptor does not pass addonName, so the console draws the minor-8 title bar")
 end)
 
+test("Options seam: the descriptor is told the FOLDER name, so IdList help art can resolve", function()
+  -- LibKa0s#42. OptionsIdList draws a help mark from Media.Icon(d.addonName, "info"), a path into
+  -- this addon's own folder; with no `addonName` it falls back to Blizzard's blue information disc.
+  -- No list here carries `help` today, so this is latent: it protects the first help line anyone
+  -- adds. The value must be the first vararg (the folder), never a display label such as the
+  -- brand, which the library's loaded-addon check would reject. Comments are stripped first.
+  -- red under: `local _, NS = ...` or a descriptor without `addonName = addonName,`.
+  local src = readFile("settings/OptionsSetup.lua"):gsub("%-%-[^\r\n]*", "")
+  assertTrue(src:match("^%s*local%s+addonName%s*,%s*NS%s*=%s*%.%.%.") ~= nil,
+    "settings/OptionsSetup.lua no longer keeps its first vararg as addonName")
+  local desc = src:match("lib:New%((%b{})%)")
+  assertTrue(desc ~= nil, "the lib:New({ ... }) descriptor was not found in settings/OptionsSetup.lua")
+  assertTrue(desc:match("addonName%s*=%s*addonName%s*,") ~= nil,
+    "the Options descriptor does not pass addonName, so IdList help marks draw the client glyph")
+end)
+
+test("Options seam: the info art the descriptor's addonName points at is on disk", function()
+  -- The library's loaded-addon guard cannot see a missing file: a right folder name with no art
+  -- under it builds a dead texture path. Pin the file the path resolves to.
+  local f = io.open("libs/LibKa0s/media/icons/info.tga", "rb")
+  assertTrue(f ~= nil, "libs/LibKa0s/media/icons/info.tga is missing from the vendored payload")
+  if f then f:close() end
+end)
+
 test("Core seam: MakeCloseButton is wrapped to say which addon folder is asking", function()
   -- The one Core member this addon WRAPS rather than republishes, and the wrapper exists for its
   -- third argument alone. `lib.MakeCloseButton(parent, onClick, addonName)` — a two-argument

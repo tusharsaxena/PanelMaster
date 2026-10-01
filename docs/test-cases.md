@@ -974,7 +974,7 @@ badge and any count quoted in the docs must agree with it.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (51)
+### test_libka0s.lua (53)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -987,6 +987,8 @@ badge and any count quoted in the docs must agree with it.
 - DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
 - DebugLog seam: the console's title bar is three marks, at the icon pitch
 - DebugLog seam: the library is told the FOLDER name, not just the frame name
+- Options seam: the descriptor is told the FOLDER name, so IdList help art can resolve
+- Options seam: the info art the descriptor's addonName points at is on disk
 - Core seam: MakeCloseButton is wrapped to say which addon folder is asking
 - L trap (DebugLog): every rendered console string resolves to prose, not to its own key
 - Slash seam: the dispatcher is the library's, not a host re-implementation
@@ -1182,7 +1184,7 @@ badge and any count quoted in the docs must agree with it.
 | test_launcher.lua | 37 |
 | test_disabled.lua | 21 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 51 |
+| test_libka0s.lua | 53 |
 | test_surface_parity.lua | 8 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
@@ -1195,4 +1197,4 @@ badge and any count quoted in the docs must agree with it.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1033** |
+| **Total** | **1035** |

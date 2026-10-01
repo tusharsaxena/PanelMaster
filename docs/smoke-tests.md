@@ -22,7 +22,7 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 31 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
+| PANEL-1 to 32 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
@@ -578,6 +578,11 @@ and at least one art pack; skip those without it.
 - **PANEL-31. Panel fields are not profile settings.** `/pm list` → no `panel.` row anywhere in the
   listing, and **General** has no extra tab. `/pm set panel.width 500` → refused as an unknown
   setting, and no panel changes. `/pm panel <name> width 500` → that panel takes it. Result: pass (owner, 2026-10-02)
+- **PANEL-32. The panel still opens with the folder name on its descriptor.** `/reload`, then
+  `/pm config` → no Lua error on load or on open, and the General, Panels and Profiles pages each
+  render exactly as before. No list on these pages carries help marks, so there is no art to check:
+  `settings/OptionsSetup.lua` now passes `addonName = addonName,` to the Options descriptor
+  (LibKa0s#42), which is latent until a list here gains a help line. Result:
 
 ## PROFILE
 
@@ -991,6 +996,7 @@ corrected in it against the code.
 | PANEL-10 | § 9 step 5, § 16 step 12 | No result recorded; corrected: the six panel acts are on the General tab, not in the band |
 | PANEL-16, PANEL-17 | § 9 steps 5c and 5c-2 (session 3) | Not yet run since the acts and the rename box moved to the General tab |
 | PANEL-26 | § 19 (`M4-01`) | Not yet run since the pooled `TabStrip` (LibKa0s v1.27.0) |
+| PANEL-32 | none | New with the Options descriptor passing `addonName` (LibKa0s v1.67.0, LibKa0s#42) |
 | PROFILE-1 to PROFILE-10 | § 5e-6 step 6, § 12, § 12b, § 12b-2 steps 1 and 3 | No result recorded |
 | PROFILE-11 to PROFILE-14, PROFILE-16, PROFILE-17 | none | New with the `/pm profile` verb |
 | PROFILE-15 | § 7 step 12 | No result recorded; `/pm profile` is new in it |

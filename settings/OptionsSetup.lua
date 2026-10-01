@@ -1,4 +1,4 @@
-local _, NS = ...
+local addonName, NS = ...
 
 -- LibKa0s-Options-1.0 seam: the Blizzard settings-canvas shell (options-ui).
 --
@@ -173,6 +173,9 @@ NS.Helpers = lib:New({
   -- Names the main canvas so /framestack attributes it to this addon. The old createPanel passed
   -- nil here, so every one of this addon's canvases was anonymous and unattributable.
   mainPanelName = "PanelMasterOptionsPanel",
+  -- The FOLDER name (first vararg), not a display label: OptionsIdList builds its help-mark art
+  -- path from it (LibKa0s#42) and checks it against the client's loaded-addon list.
+  addonName     = addonName,
 
   print = function(line) NS.Print(line) end,
   debug = function(tag, fmt, ...) NS.Debug(tag, fmt, ...) end,
