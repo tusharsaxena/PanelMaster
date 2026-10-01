@@ -34,7 +34,7 @@ path that already has a row.
 
 This is the change with the most places to touch, and `core/Constants.lua` is nearly all of them.
 
-1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:267`) with its shipped default.
+1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:273`) with its shipped default.
 2. Add it to `C.PANEL_FIELD_TYPE`, and to `C.PANEL_FIELD_ORDER` (`:509`) at the position it should
    appear in `/pm panel <name>` output and in the editor. That alone gives it a `panel.<field>`
    schema row (`settings/PanelSchema.lua` generates one per `PANEL_FIELD_ORDER` field), so every
@@ -51,7 +51,7 @@ This is the change with the most places to touch, and `core/Constants.lua` is ne
    headless test with no frames involved. `applySpec` stays a thin application of the result.
 6. If the field should **not** be reachable from the CLI, leave it out of `PANEL_FIELD_TYPE`,
    `PANEL_FIELD_ORDER` and `PANEL_TEMPLATE` — that omission is the mechanism, and
-   `core/Constants.lua:546` documents the existing case.
+   `core/Constants.lua:559` documents the existing case.
 
 ## Add a slash verb
 
