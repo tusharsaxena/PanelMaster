@@ -150,7 +150,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
 
-### test_panel_schema.lua (9)
+### test_panel_schema.lua (20)
 
 - Panel verbs: R:Set stores the value and repaints that one panel once
 - Panel verbs: R:Set of `name` is a rename -- the SET changed, so PANELS and no PANEL
@@ -161,6 +161,17 @@ badge and any count quoted in the docs must agree with it.
 - Panel verbs: R:ResetPositions re-homes every panel and sends ONE PANELS
 - Panel verbs: a drag-stop stores point, relPoint and both offsets, with ONE PANEL
 - Panel verbs: R:SetPosition writes both offsets with ONE PANEL
+- Panel rows: S.ResolveRoot answers the record and first = 2 for a known panel id
+- Panel rows: S.ResolveRoot refuses an unknown or missing id, and still answers the profile
+- Panel rows: one hidden panel.<field> row per panel field but name, defaulting to the template
+- Panel rows: a seam write stores, clamps, refuses in the coercer's words, repaints once
+- Panel rows: a panel write logs ONE [Set] line in the library's shape, naming the panel
+- Panel rows: R:Set and every record verb write through the seam with the panel id
+- Panel rows: a drag-stop writes point, relPoint, x and y as ONE act
+- Panel rows: the profile surfaces never see a panel row
+- Panel rows: the boot shape check resolves every panel row against the template
+- Panel rows: R:Reset drops a key the template does not declare, as the wipe did
+- Panel rows: a library-less Schema load drives the same panel writes
 
 ### test_canvas.lua (37)
 
@@ -1153,7 +1164,7 @@ badge and any count quoted in the docs must agree with it.
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
 | test_registry.lua | 46 |
-| test_panel_schema.lua | 9 |
+| test_panel_schema.lua | 20 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
@@ -1185,4 +1196,4 @@ badge and any count quoted in the docs must agree with it.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1023** |
+| **Total** | **1034** |

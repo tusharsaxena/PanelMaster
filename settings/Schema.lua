@@ -22,9 +22,11 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 -- else numeric is a slider), so a second field naming the widget was a second selector to keep in
 -- step and nothing read it. options-ui-§1 argues against exactly that shape.
 --
--- NOTE: these are the addon's settings. The PANELS themselves are not rows here — the panel set is
--- a structural registry, and its one writer is modules/Registry.lua (architecture-§5, named in
--- docs/ARCHITECTURE.md → Settings Schema).
+-- NOTE: these are the addon's settings. The PANEL SET is not a row -- it is a structural registry,
+-- and its one writer is modules/Registry.lua (architecture-§5, named in docs/ARCHITECTURE.md →
+-- Settings Schema). Each panel's FIELDS are rows, but not here: settings/PanelSchema.lua generates
+-- the `panel.<field>` rows, addressed by panel id through S.ResolveRoot below, and the profile
+-- surfaces read S.ProfileRows so those rows never reach them.
 
 -- Sole sender (architecture-§4): every settings mutation that the renderer must react to broadcasts
 -- this one message, from this file only.
@@ -204,7 +206,7 @@ S.MINIMAP_STORE = "global.minimap.hide"
 -- The rows above are this addon's; the machinery around them is the library's. The path walk, the
 -- row index, the single write seam, the bulk bracket and the boot shape check are ONE instance
 -- built below, and every public name this file used to define for itself -- `S:Set`, `S:Get`,
--- `S:FindRow`, `S:Default`, `S:Register`, `S.BulkBegin`, `S.BulkEnd`, `S.BulkLine` -- now delegates
+-- `S:FindRow`, `S:Default`, `S:Register`, `S.BulkBegin`, `S.BulkEnd` -- now delegates
 -- to it, so not one call site moved. The Options and Slash descriptors take the instance's members
 -- as values (settings/OptionsSetup.lua, settings/Slash.lua), which is safe because nothing sits in
 -- front of this seam: the minimap inversion that used to branch inside it is the row's own
@@ -459,24 +461,69 @@ end
 
 local SchemaLib = LibStub and LibStub("LibKa0s-Schema-1.0", true) or hostSchemaStub()
 
+-- ── Where a row's value lives: the profile, or one panel's record ─────────────
+--
+-- The record the last `panel.*` resolve answered. The library resolves a write's root BEFORE it logs
+-- the write, and hands the `[Set]` line's formatter only (row, value), so this is how that line
+-- names the panel. It is read immediately after it is set -- inside the same Set, or the same
+-- SetMany, whose entries all share one instance id -- and never cached across writes.
+local resolvedPanel
+
+--- The descriptor's resolver (architecture-§5). A `panel.<field>` path resolves against the record
+--- whose id is `id`, starting at segment 2, and answers that id as the resolved instance; with no
+--- such panel, or no id at all, there is nowhere to store it, and the reason is the refusal the
+--- seam returns. Every other path lives in the active profile, as it always has. Looked up at call
+--- time through NS.Registry:Get, never cached: ids are per profile, so a profile switch makes every
+--- id name a different panel.
+function S.ResolveRoot(parts, id)
+  if parts[1] ~= "panel" then return NS.db and NS.db.profile, 1 end
+  local rec = id ~= nil and NS.Registry and NS.Registry:Get(id) or nil
+  if not rec then return nil, id ~= nil and "no such panel" or "panel rows need a panel" end
+  resolvedPanel = rec
+  return rec, 2, rec.id
+end
+
+-- The `[Set]` line's value (debug-logging-§10). A panel row renders through R.FormatValue -- the
+-- formatter `/pm panel show` and the CLI echo use -- and names the panel, so a panel write reads
+-- `[Set] panel.width = 300 on 'Alpha'`. A profile row answers nil, which is the library's own
+-- `tostring` fallback: the line every settings write has always printed, byte for byte.
+--
+-- Nothing is built while logging is off: the formatter runs on every write the seam makes (the
+-- descriptor carries no `debugEnabled`, because NS.Debug gates itself), and a panel write formats
+-- a color or an edge set on every slider mouse-up and every drag stop. The session flag is the one
+-- NS.Debug reads, so the line that would be discarded is the line not built.
+local function formatWrite(row, value)
+  if row.scope ~= "panel" or not resolvedPanel then return nil end
+  if not (NS.State and NS.State.debug) then return nil end
+  return ("%s on '%s'"):format(NS.Registry.FormatValue(row.field, value), tostring(resolvedPanel.name))
+end
+
 -- The instance. `rows` is the array above, held by reference, so the composed block
 -- S:InstallMaster splices in through AddRows is in the same table every reader already holds.
 local R = SchemaLib:New({
   rows = S.Schema,
-  -- Every stored row but one lives in the active profile, and the one that does not (the minimap
-  -- row) carries its own get/set, so it never reaches this resolver. `nil, 1` before the DB exists
-  -- is "nowhere yet", which the seam refuses rather than raising on a nil index.
-  resolveRoot = function() return NS.db and NS.db.profile, 1 end,
+  -- Every profile row lives in the active profile, and the one stored row that does not (the
+  -- minimap row) carries its own get/set, so it never reaches this resolver. `nil, 1` before the DB
+  -- exists is "nowhere yet", which the seam refuses rather than raising on a nil index. A
+  -- `panel.<field>` row resolves against the panel whose id the write names (S.ResolveRoot above).
+  resolveRoot = function(parts, id) return S.ResolveRoot(parts, id) end,
   -- Read at CALL time, so the sink is whatever core/DebugLogSetup.lua left in NS.Debug. No
-  -- `debugEnabled`: NS.Debug gates on the session flag itself, as it always has. No `format`: the
-  -- library's `tostring` fallback is the line this seam always wrote, byte for byte.
+  -- `debugEnabled`: NS.Debug gates on the session flag itself, as it always has. `format` is the
+  -- panel rows' (formatWrite above); a profile row keeps the library's `tostring` fallback.
   debug = function(tag, fmt, ...) NS.Debug(tag, fmt, ...) end,
+  format = function(row, value) return formatWrite(row, value) end,
   print = function(line) print(line) end,
   -- A PLAIN table of the two refusals this addon has always answered with, never NS.L (the `L`
   -- trap: its metatable answers every key with the key itself).
   L = { NOT_FOUND = "unknown path: %s", INVALID = "invalid value" },
-  -- No `announce`: every row that broadcasts does it from its own onChange. No `resetExempt`: see
-  -- docs/revendor/2026-09-23-v1.55.0/05_SUMMARY.md -- no player reaches a library sweep of these rows.
+  -- `announce` / `announceBatch` are for the panel rows: modules/Registry.lua repaints the panel a
+  -- write landed on, and stays the sole sender of the panel messages (architecture-§4). A profile
+  -- row's reaction is still its own onChange, so for one of those both do nothing. Resolved at call
+  -- time, because the Registry's halves are published before this file but read only on a write.
+  -- No `resetExempt`: see docs/revendor/2026-09-23-v1.55.0/05_SUMMARY.md -- no player reaches a
+  -- library sweep of these rows.
+  announce = function(row, path, value, rid) NS.Registry.AnnounceWrite(row, path, value, rid) end,
+  announceBatch = function(writes, rid) NS.Registry.AnnounceBatch(writes, rid) end,
   --
   -- `writeThrough` (Schema minor 2; options-ui-§1 route (a), slash-commands-§1). The master switch
   -- is a COMPOSED row, so whenever the Options composer is absent -- the whole library, or Options
@@ -708,13 +755,6 @@ function S:ReadPath(root, path) return SchemaLib.Read(root, path) end
 -- logs that one line. All of that is the runtime's; the two descriptors hand it the pair.
 S.BulkBegin, S.BulkEnd = R.BulkBegin, R.BulkEnd
 
---- A bulk act the host performs itself, outside the schema rows: the Registry's record verbs count
---- the fields they changed and hand the figure here. A bracket of its own, so inside an open one it
---- only adds to the tally and the outermost act's line carries it.
-function S.BulkLine(act, scope, n)
-  R.BulkRun(act, scope, function() R.BulkAdd(n) end)
-end
-
 -- A profile reset's row count. AceDB fires OnProfileReset AFTER it has replaced the profile, so the
 -- rows it changed can only be counted against a picture taken before: Sl:DoResetAll takes one, and
 -- the handler compares. The Profiles page's own Reset Profile takes none, and its line carries no
@@ -726,7 +766,7 @@ end
 -- pair already answers it.
 function S:SnapshotPersisted()
   local snap = {}
-  for _, row in ipairs(S.Schema) do
+  for _, row in ipairs(S.ProfileRows()) do
     -- The minimap row is stored in db.GLOBAL, which AceDB's profile reset does not touch, so it is
     -- out of the picture by definition rather than by luck. Snapshotting it against db.profile
     -- would read nil on both sides and compare equal, which is the right answer reached by
@@ -751,10 +791,14 @@ end
 --- The single write seam. Panel widgets, the slash `set` and every host writer route through it, so
 --- validation, the debug trace and the onChange reaction can never be skipped by one caller.
 --- Answers `true`, or `false, err[, why]` with nothing stored: an unknown path is refused, never
---- stored (architecture-§5 scopes the seam to schema-row paths).
-function S:Set(path, value) return R.Set(path, value) end
+--- stored (architecture-§5 scopes the seam to schema-row paths). `id` is the instance a
+--- `panel.<field>` row is written on -- the panel's id -- and is ignored by a profile row.
+function S:Set(path, value, id) return R.Set(path, value, id) end
 
-function S:Get(path) return R.Get(path) end
+function S:Get(path, id) return R.Get(path, id) end
+
+--- Several rows as ONE act, all or nothing: `opts = { instanceId, act, scope }` (Schema minor 2).
+function S:SetMany(entries, opts) return R.SetMany(entries, opts) end
 
 function S:Default(path) return R.Default(path) end
 
@@ -776,12 +820,20 @@ function S:Default(path) return R.Default(path) end
 -- (`defaultsRoot` answers nil for it) and its STORE is checked instead, against NS.defaults whole
 -- because it is spelled from the DB root and begins `global.`. Checked, not exempted: a store that
 -- does not resolve counts one missing, with the same printed schema error the runtime gives.
+--
+-- The `panel.<field>` rows resolve against C.PANEL_TEMPLATE from segment 2: the template is the
+-- panel fields' declaration site (savedvariables-§2), so the boot check covers every panel field
+-- too. Their row `type` may also be `table` (the accent edge set), which no drawn row carries.
+local VALID_TYPES = { bool = true, number = true, string = true, color = true, table = true }
+
 function S:Register()
   if not (NS.defaults and NS.defaults.profile) then return 0 end
   local errors, _, missing = R.Validate({
+    types = VALID_TYPES,
     defaultsRoot = function(parts, row)
       if row and row.path == S.MINIMAP_PATH then return nil end
       if parts[1] == "global" then return NS.defaults, 1 end
+      if parts[1] == "panel" then return C.PANEL_TEMPLATE, 2 end
       return NS.defaults.profile, 1
     end,
   })

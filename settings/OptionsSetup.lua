@@ -186,7 +186,9 @@ NS.Helpers = lib:New({
   get          = NS.SchemaRuntime.Get,
   set          = NS.SchemaRuntime.Set,
   applyDefault = NS.SchemaRuntime.ApplyDefault,
-  allRows      = NS.SchemaRuntime.AllRows,
+  -- The PROFILE view (settings/PanelSchema.lua), so the General page never draws, tabs or resets a
+  -- `panel.<field>` row: those are edited on the Panels page, through NS.Registry:Set.
+  allRows      = NS.Schema.ProfileRows,
 
   -- The bulk bracket (debug-logging-§10, Options minor 16), and it is DEFENSIVE. Neither of this
   -- addon's own reset controls reaches a library walk: the global reset is `db:ResetProfile()`

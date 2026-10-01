@@ -22,7 +22,7 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 27 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip |
+| PANEL-1 to 31 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
@@ -560,6 +560,24 @@ and at least one art pack; skip those without it.
   **7**; its tooltip says strata decides first and level orders panels within one strata. Drag the
   second panel's **Frame level** above 7 → it moves in front of the first live, as you release, and
   back below 7 → behind again. `/pm panel <second> level 150` → the slider reads **100**. Result:
+- **PANEL-28. Every editor control still repaints live.** Select a panel and visit each of the six
+  editor tabs (**General**, **Position and size**, **Background and border**, **Accent bar**,
+  **Artwork**, **Opacity and fade**). Change every control once: each slider on release, each
+  dropdown, each checkbox, each color swatch → the panel changes on screen at once, and the control
+  reads back what you set when you leave the tab and come back. No Lua error. Result:
+- **PANEL-29. A drag persists.** Unlock, drag a panel into the top-left corner (the frame re-anchors to
+  the corner it ends nearest), lock, `/reload` → the panel is exactly where you left it, and
+  `/pm panel <name>` shows the new `point`, `relPoint`, `x` and `y`. Result:
+- **PANEL-30. One `[Set]` line per panel write.** `/pm debug on`, open the console. Drag a panel's
+  **Width** slider and release → exactly one line, `[Set] panel.width = <n> on '<name>'`, and no
+  `[Panel]` line for it. Drag the panel in unlock mode → four `[Set] panel.…` lines (point,
+  relPoint, x, y) naming it. Then press **Reset** on the General tab → one
+  `[Set] reset '<name>': N rows`; **Copy from** another panel → one `[Set] copy from '<a>' to '<b>':
+  N rows`; `/pm recover` with a panel off-screen → one `[Set] recover positions: N rows`; **Master
+  controls ▸ Reset position** → one `[Set] reset positions: N rows`. Result:
+- **PANEL-31. Panel fields are not profile settings.** `/pm list` → no `panel.` row anywhere in the
+  listing, and **General** has no extra tab. `/pm set panel.width 500` → refused as an unknown
+  setting, and no panel changes. `/pm panel <name> width 500` → that panel takes it. Result:
 
 ## PROFILE
 
@@ -971,6 +989,7 @@ corrected in it against the code.
 | PANEL-16, PANEL-17 | § 9 steps 5c and 5c-2 (session 3) | Not yet run since the acts and the rename box moved to the General tab |
 | PANEL-26 | § 19 (`M4-01`) | Not yet run since the pooled `TabStrip` (LibKa0s v1.27.0) |
 | PANEL-27 | none | New with the Frame level slider (#15) |
+| PANEL-28 to PANEL-31 | none | New with the instance-addressed panel rows (#54) |
 | PROFILE-1 to PROFILE-10 | § 5e-6 step 6, § 12, § 12b, § 12b-2 steps 1 and 3 | No result recorded |
 | PROFILE-11 to PROFILE-14, PROFILE-16, PROFILE-17 | none | New with the `/pm profile` verb |
 | PROFILE-15 | § 7 step 12 | No result recorded; `/pm profile` is new in it |

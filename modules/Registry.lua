@@ -8,9 +8,12 @@ local Util = NS.Util
 -- edit goes through here, so validation, clamping and the change broadcast can never be skipped by a
 -- caller. The settings panel, the CLI and unlock-mode dragging are all just callers.
 --
--- The panel set is a structural registry and this module is its one runtime writer (architecture-§5;
--- the load pass is core/Database.lua). Per-panel FIELDS are not Schema rows: R:Set, R:SetPosition,
--- the whole-record and bulk verbs here and Unlock's drag-stop write them — an open §5 question.
+-- The panel SET is a structural registry and this module is its one runtime writer (architecture-§5;
+-- the load pass is core/Database.lua): create, delete and rename edit the record list directly.
+-- Per-panel FIELDS are schema rows -- `panel.<field>`, generated in settings/PanelSchema.lua and
+-- addressed by the panel id -- so R:Set, R:SetPosition and every whole-record and bulk verb below
+-- write them through SchemaRuntime.Set/SetMany, the one seam every profile setting already takes:
+-- one validation, one `[Set]` line shape, one announce (PanelMaster#54).
 
 -- Sole senders (architecture-§4): the two panel messages below are sent from this file and nowhere
 -- else. `PanelsChanged` means the SET changed (a panel was added, deleted or renamed) and the whole
@@ -41,11 +44,72 @@ local function refuse(verb, fail, reason)
 end
 R.Refuse = refuse
 
--- The write seam's log arguments, built only once NS.DebugBuild is past the gate. A plain function
--- taking (rec, field) rather than a closure over them: a closure would be created at the call site
--- on every field write whether or not logging is on, which is the cost this defers.
-local function describeWrite(rec, field)
-  return rec.name, field, R.FormatField(rec, field)
+-- ── The write seam (architecture-§5) ─────────────────────────────────────────────
+
+-- The schema runtime, read at CALL time: settings/Schema.lua builds it after this file loads.
+local function seam() return NS.SchemaRuntime end
+
+-- Depth of the record-to-record writes in flight: Reset, CopyFrom, FitToArtwork, SetPosition,
+-- Recover and ResetPositions. Their values come from a record, the template or the geometry, never
+-- from a player's keyboard, so the `panel.<field>` rows' normalize REPAIRS them (R.SanitizeField)
+-- instead of parsing them (settings/PanelSchema.lua's coercers): a texture copied from a panel
+-- whose media addon has not loaded yet must copy, exactly as the raw copy and Sanitize always did,
+-- rather than refuse the whole act. A value a player typed (R:Set) is parsed and repaired.
+local recordWrites = 0
+
+--- True while a record-to-record write is in flight (read by settings/PanelSchema.lua).
+function R.InRecordWrite() return recordWrites > 0 end
+
+-- Write `entries` onto one record as ONE act through SetMany: every entry validated first, then
+-- stored, then one announce. `opts` is SetMany's (act, scope); the instance id is always the
+-- record's own.
+local function writeRecord(rec, entries, opts)
+  opts = opts or {}
+  opts.instanceId = rec.id
+  recordWrites = recordWrites + 1
+  local ok, done, err, why = pcall(seam().SetMany, entries, opts)
+  recordWrites = recordWrites - 1
+  if not ok then error(done, 0) end
+  return done, err, why
+end
+
+-- Depth of the multi-record sweeps in flight (Recover, ResetPositions). While one runs, the
+-- per-record announce is held back, and the sweep sends ONE PanelsChanged at the end: a repaint per
+-- record before the repaint of all of them would be a storm for one button press.
+local sweeping = 0
+
+-- Run `fn` as one multi-record act: one bracket, so ONE `[Set] <act> <scope>: N rows` line with N
+-- the fields that actually changed, and no per-record announce.
+local function sweepRecords(act, scope, fn)
+  sweeping = sweeping + 1
+  local ok, err = pcall(seam().BulkRun, act, scope, fn)
+  sweeping = sweeping - 1
+  if not ok then error(err, 0) end
+end
+
+-- The tail of a write to one panel's rows: the record-level repair every single-record verb has
+-- always ended on, then the targeted repaint.
+local function announceRecord(rid)
+  local rec = R:Get(rid)
+  if not rec then return end
+  R.Sanitize(rec)
+  fire(MSG.PANEL, rid)
+end
+
+--- The schema descriptor's `announce` (settings/Schema.lua): one write landed. Only a panel row
+--- repaints a panel; a profile row's reaction is its own onChange, as it always was.
+function R.AnnounceWrite(row, _, _, rid)
+  if row.scope ~= "panel" or sweeping > 0 then return end
+  announceRecord(rid)
+end
+
+--- The schema descriptor's `announceBatch`: one SetMany landed, all of it on one instance, so one
+--- repaint for the whole act (a drag's four fields, a reset's fifty).
+function R.AnnounceBatch(writes, rid)
+  if sweeping > 0 then return end
+  for _, w in ipairs(writes) do
+    if w.row.scope == "panel" then return announceRecord(rid) end
+  end
 end
 
 -- Match a value against the closed list a field belongs to (C.PANEL_FIELD_ENUM), returning the
@@ -77,6 +141,7 @@ local function enumMatch(field, value)
   end
   return nil, list
 end
+R.EnumMatch = enumMatch
 
 -- The live registry array. Returns an empty table (not nil) before the DB exists, so every caller
 -- can iterate unconditionally.
@@ -95,7 +160,7 @@ end
 -- identical shapes, so they are DECLARED here and applied by a loop below rather than written out
 -- as fifty near-identical statements: a field added to C.PANEL_TEMPLATE later costs one row, and
 -- the fallback is always the template's own value, which is the one thing that must never diverge.
--- The fields whose repair carries a real decision stay written out in R.Sanitize itself.
+-- The fields whose repair carries a real decision are written out by name, after the lists.
 
 -- {field, min, max} — clamped into range, falling back to t[field].
 local CLAMPED = {
@@ -139,7 +204,7 @@ local FREE_NUMBERS = { "x", "y", "artX", "artY" }
 -- catalog loads after this addon), and BuildArtSpec already degrades an unresolvable id to "draw
 -- nothing" at render time. Rewriting it to "None" on the first touch would destroy the user's choice
 -- permanently to fix a problem that fixes itself. R:Set still refuses a typo up front, which is when
--- there is somebody to tell. artCustomPath is NOT on this list — see R.Sanitize.
+-- there is somebody to tell. artCustomPath is NOT on this list — see REPAIR.artCustomPath.
 local NONEMPTY_STRINGS = {
   "bgTexture", "borderTexture", "accentTexture", "accentBorderTexture", "artTexture",
 }
@@ -159,53 +224,87 @@ local POINT_FIELDS = { "point", "relPoint", "artPoint" }
 local ENUM_FIELDS = { "artFill", "artRotation", "artLayer" }
 
 -- Flags coerced to a real boolean. `enabled` is NOT one of them — nil means enabled there, which is
--- the opposite default and is written out in R.Sanitize.
+-- the opposite default and is written out as REPAIR.enabled below.
 local BOOL_FIELDS = { "mouseover", "accentEnabled", "artFlipH", "artFlipV" }
 
-local function sanitizeNumbers(rec, t)
-  for _, rule in ipairs(CLAMPED) do
-    rec[rule[1]] = Util.Clamp(rec[rule[1]], rule[2], rule[3], t[rule[1]])
-  end
-  for _, field in ipairs(FREE_NUMBERS) do
-    rec[field] = tonumber(rec[field]) or t[field]
-  end
+-- field -> repair(value, templateValue) -> the value to store. Built ONCE from the rule lists above,
+-- plus the handful of fields whose repair is a decision of its own, so the whole-record repair
+-- (R.Sanitize) and the per-field one every schema write runs (R.SanitizeField, the `panel.<field>`
+-- rows' normalize in settings/PanelSchema.lua) are one table and cannot diverge.
+local REPAIR = {}
+
+for _, rule in ipairs(CLAMPED) do
+  local lo, hi = rule[2], rule[3]
+  REPAIR[rule[1]] = function(v, t) return Util.Clamp(v, lo, hi, t) end
 end
 
-local function sanitizeTokens(rec, t)
-  for _, field in ipairs(NONEMPTY_STRINGS) do
-    if type(rec[field]) ~= "string" or rec[field] == "" then rec[field] = t[field] end
-  end
-  for _, field in ipairs(POINT_FIELDS) do
-    if not Util.IsPoint(rec[field]) then rec[field] = t[field] end
-  end
-  for _, field in ipairs(ENUM_FIELDS) do
-    rec[field] = enumMatch(field, rec[field]) or t[field]
-  end
+local function freeNumber(v, t) return tonumber(v) or t end
+local function nonEmptyString(v, t)
+  if type(v) ~= "string" or v == "" then return t end
+  return v
+end
+local function anchorPoint(v, t)
+  if Util.IsPoint(v) then return v end
+  return t
+end
+local function flag(v) return v and true or false end
+local function color(v, t) return Util.Color(v, t) end
+
+for _, field in ipairs(FREE_NUMBERS) do REPAIR[field] = freeNumber end
+for _, field in ipairs(NONEMPTY_STRINGS) do REPAIR[field] = nonEmptyString end
+for _, field in ipairs(POINT_FIELDS) do REPAIR[field] = anchorPoint end
+for _, field in ipairs(ENUM_FIELDS) do
+  REPAIR[field] = function(v, t) return enumMatch(field, v) or t end
+end
+for _, field in ipairs(BOOL_FIELDS) do REPAIR[field] = flag end
+-- Class-color flags, driven off C.COLOR_FIELDS so a color added later needs no edit here.
+for _, companion in pairs(C.COLOR_FIELDS) do REPAIR[companion] = flag end
+
+-- Anything but an explicit false means enabled.
+function REPAIR.enabled(v) return v ~= false end
+
+-- Strata has its own predicate rather than a rule table row: it is the one token field that is not
+-- a point.
+function REPAIR.strata(v, t)
+  if Util.IsStrata(v) then return v end
+  return t
 end
 
-local function sanitizeFlags(rec)
-  for _, field in ipairs(BOOL_FIELDS) do
-    rec[field] = rec[field] and true or false
-  end
-  -- Class-color flags, driven off C.COLOR_FIELDS so a color added later needs no edit here.
-  for _, flag in pairs(C.COLOR_FIELDS) do
-    rec[flag] = rec[flag] and true or false
-  end
+REPAIR.bgColor, REPAIR.borderColor, REPAIR.artColor = color, color, color
+
+-- The accent edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
+-- (the user unticked every edge) and must not be quietly repopulated with TOP, so only a
+-- non-table falls back to the template's.
+function REPAIR.accentEdges(v, t) return Util.EdgeSet(type(v) == "table" and v or t) end
+
+-- An EMPTY custom path is a legitimate state — the user has picked Custom and has not typed the
+-- path yet — so only a non-string falls back, the same distinction the accent edge set makes.
+function REPAIR.artCustomPath(v, t)
+  if type(v) ~= "string" then return t end
+  return v
+end
+
+--- One field's repair: the value a stored `field` must hold, given `value`. A field with no rule is
+--- stored as given. PURE, and the per-field half of R.Sanitize below.
+function R.SanitizeField(field, value)
+  local repair = REPAIR[field]
+  if not repair then return value end
+  return repair(value, C.PANEL_TEMPLATE[field])
 end
 
 -- Fill every missing field from the template and clamp every numeric one into range. PURE with
 -- respect to the DB — it mutates the record it is handed and returns it, so it is equally usable on
 -- a stored record, on a candidate that has not been stored yet, and in a headless test.
 --
--- This runs on the way IN (every write) rather than on the way out, so the stored file is always
--- already valid: an old record missing a field added in a later build is repaired the first time it
--- is touched, and a hand-edited SavedVariables file cannot feed a string width into SetWidth.
+-- The whole-record repair: at create, on a profile switch, and once after every single-record write
+-- (R.AnnounceWrite below), so an old record missing a field added in a later build is repaired the
+-- first time it is touched and a hand-edited SavedVariables file cannot feed a string width into
+-- SetWidth. The written field itself was already repaired by its row's normalize.
 function R.Sanitize(rec)
   if type(rec) ~= "table" then return nil end
   local t = C.PANEL_TEMPLATE
 
-  rec.name    = Util.CleanName(rec.name) or t.name
-  rec.enabled = (rec.enabled ~= false)   -- anything but an explicit false means enabled
+  rec.name = Util.CleanName(rec.name) or t.name
 
   -- The stored frame name is stamped at create and NEVER recomputed from the name afterwards — that
   -- is the whole point of storing it (see R.FrameName). So this fills it only when it is missing:
@@ -219,28 +318,7 @@ function R.Sanitize(rec)
     rec.frameName = Util.FrameName(rec.name)
   end
 
-  -- Strata has its own predicate rather than a rule table row: it is the one token field that is not
-  -- a point.
-  if not Util.IsStrata(rec.strata) then rec.strata = t.strata end
-
-  rec.bgColor     = Util.Color(rec.bgColor, t.bgColor)
-  rec.borderColor = Util.Color(rec.borderColor, t.borderColor)
-  rec.artColor    = Util.Color(rec.artColor, t.artColor)
-
-  -- The accent edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
-  -- (the user unticked every edge) and must not be quietly repopulated with TOP, so only a
-  -- non-table falls back to the template's.
-  rec.accentEdges = Util.EdgeSet(
-    type(rec.accentEdges) == "table" and rec.accentEdges or t.accentEdges)
-
-  -- An EMPTY custom path is a legitimate state — the user has picked Custom and has not typed the
-  -- path yet — so only a non-string falls back, the same distinction the accent edge set makes.
-  if type(rec.artCustomPath) ~= "string" then rec.artCustomPath = t.artCustomPath end
-
-  sanitizeNumbers(rec, t)
-  sanitizeTokens(rec, t)
-  sanitizeFlags(rec)
-
+  for field, repair in pairs(REPAIR) do rec[field] = repair(rec[field], t[field]) end
   return rec
 end
 
@@ -430,25 +508,38 @@ end
 -- The profile's New-Panel-Defaults are applied exactly as R:New applies them, so "reset" and "make a
 -- new one" land on the same state — otherwise the two would drift the moment a user changed their
 -- defaults.
+-- Drop every key on `rec` that is neither identity nor a template field, answering how many went:
+-- the half of the old wipe-and-refill that writing the declared fields does not reproduce.
+local function stripUndeclared(rec)
+  local n = 0
+  for k in pairs(rec) do
+    if k ~= "id" and k ~= "frameName" and C.PANEL_TEMPLATE[k] == nil then rec[k], n = nil, n + 1 end
+  end
+  return n
+end
+
 function R:Reset(key)
   local p = NS.db and NS.db.profile
   if not p then return refuse("reset", false, "database not ready") end
   local rec = R:Resolve(key)
   if not rec then return refuse("reset", false, ("no panel called '%s'"):format(tostring(key))) end
 
-  local id, name, frameName = rec.id, rec.name, rec.frameName
-  local before = Util.DeepCopy(rec)
-  for k in pairs(rec) do rec[k] = nil end
-  for k, v in pairs(C.PANEL_TEMPLATE) do rec[k] = Util.DeepCopy(v) end
-  rec.id, rec.name, rec.frameName = id, name, frameName
-  applyNewPanelDefaults(rec, p)
-  R.Sanitize(rec)
+  local fresh = Util.DeepCopy(C.PANEL_TEMPLATE)
+  applyNewPanelDefaults(fresh, p)
+  local entries = {}
+  for _, field in ipairs(C.PANEL_FIELD_ORDER) do
+    if field ~= "name" then entries[#entries + 1] = { path = "panel." .. field, value = fresh[field] } end
+  end
 
-  -- A bulk reset: ONE [Set] line, N the fields it changed (debug-logging-§10, settings/Schema.lua).
-  NS.Schema.BulkLine("reset", ("'%s'"):format(rec.name), Util.CountChanged(before, rec))
-  -- A field-level change, not a structural one: the SET of panels is unchanged, so the targeted
-  -- repaint is the honest message, and the settings editor refreshes its stale widgets itself.
-  fire(MSG.PANEL, rec.id)
+  -- A bulk reset: ONE [Set] line, N the fields it changed (debug-logging-§10). The bracket is opened
+  -- here rather than by SetMany's own `act`, so the keys the old wipe also removed -- anything the
+  -- template does not declare, left by an older build -- count into the same N. The announce is a
+  -- field-level one, not a structural one: the SET of panels is unchanged, so the targeted repaint is
+  -- the honest message, and the settings editor refreshes its stale widgets itself.
+  seam().BulkRun("reset", ("'%s'"):format(rec.name), function()
+    seam().BulkAdd(stripUndeclared(rec))
+    writeRecord(rec, entries)
+  end)
   return true, rec.name
 end
 
@@ -469,8 +560,8 @@ local COPY_EXCLUDED = {
 
 -- Copy every appearance setting from one panel onto another.
 --
--- Returns (true, sourceName) or (false, reason). Deep-copies each value, so the two panels do not
--- end up sharing a color array — an in-place edit of one would otherwise silently change the other.
+-- Returns (true, sourceName) or (false, reason). Copies the declared panel fields only: a key an older
+-- build left on the source is not a setting, and no row would accept it.
 function R:CopyFrom(targetKey, sourceKey)
   local target = R:Resolve(targetKey)
   if not target then return refuse("copy", false, ("no panel called '%s'"):format(tostring(targetKey))) end
@@ -478,15 +569,16 @@ function R:CopyFrom(targetKey, sourceKey)
   if not source then return refuse("copy", false, ("no panel called '%s'"):format(tostring(sourceKey))) end
   if source.id == target.id then return refuse("copy", false, "a panel cannot copy from itself") end
 
-  local before = Util.DeepCopy(target)
-  for field, value in pairs(source) do
-    if not COPY_EXCLUDED[field] then target[field] = Util.DeepCopy(value) end
+  local entries = {}
+  for _, field in ipairs(C.PANEL_FIELD_ORDER) do
+    if not COPY_EXCLUDED[field] and source[field] ~= nil then
+      entries[#entries + 1] = { path = "panel." .. field, value = source[field] }
+    end
   end
-  R.Sanitize(target)
-
-  NS.Schema.BulkLine("copy", ("from '%s' to '%s'"):format(source.name, target.name),
-    Util.CountChanged(before, target))   -- a bulk copy: ONE [Set] line (debug-logging-§10)
-  fire(MSG.PANEL, target.id)
+  -- A bulk copy: ONE [Set] line, N the fields it changed (debug-logging-§10). The seam copies each
+  -- value on the way in, so the two panels never share a color array.
+  writeRecord(target, entries,
+    { act = "copy", scope = ("from '%s' to '%s'"):format(source.name, target.name) })
   return true, source.name
 end
 
@@ -619,8 +711,9 @@ end
 -- only at scale 1 and a shrinking spiral below it -- press twice at 0.5 and the panel is a quarter
 -- the size, press again and it is a sixteenth.
 --
--- Unpublished and side-effect-free beyond the record: it mutates and reports whether anything moved,
--- but does not sanitize, fire or log. R:FitToArtwork below is the seam callers use.
+-- Unpublished and side-effect-free beyond the record it is handed: it mutates and reports whether
+-- anything moved, but does not sanitize, fire or log. R:FitToArtwork runs it on a COPY and writes
+-- the answer through the seam.
 function R.ApplyArtSize(rec)
   if type(rec) ~= "table" then return false end
   -- Guarded on its own line, NOT as `local w, h = NS.Artwork and ... and NativeSize(rec)`. An `and`
@@ -657,9 +750,10 @@ end
 -- editor button and `/pm panel <name> fitart` are both callers, and an action that sanitized in one
 -- path and not the other is the kind of divergence the single write seam exists to prevent.
 --
--- Sanitize runs AFTER the sizing, so the adopted dimensions meet the same MIN/MAX clamp every stored
--- size does and a 4096px piece cannot push a panel outside C.MIN_SIZE/C.MAX_SIZE. A clamp is why the
--- success value is read back off the record rather than returned from the arithmetic.
+-- The adopted size is written through the panel.width / panel.height rows, so it meets the same
+-- MIN/MAX clamp every stored size does and a 4096px piece cannot push a panel outside
+-- C.MIN_SIZE/C.MAX_SIZE. A clamp is why the success value is read back off the record rather than
+-- returned from the arithmetic.
 --
 -- Returns false plus a reason the caller can print, rather than failing silently. "This panel draws
 -- no artwork" and "the art it names is not installed" are the two ways a player reaches this button
@@ -668,136 +762,27 @@ function R:FitToArtwork(key)
   local rec = R:Resolve(key)
   if not rec then return refuse("fit", false, ("no panel called '%s'"):format(tostring(key))) end
 
-  local beforeW, beforeH = rec.width, rec.height
-  if not R.ApplyArtSize(rec) then
+  local probe = Util.DeepCopy(rec)
+  if not R.ApplyArtSize(probe) then
     if not (NS.Artwork and NS.Artwork.NativeSize and NS.Artwork.NativeSize(rec)) then
       return refuse("fit", false, "this panel draws no artwork to fit to")
     end
     return refuse("fit", false, "already fitted to its artwork")
   end
-  R.Sanitize(rec)
 
-  NS.Debug("Panel", "fit '%s' to artwork: %sx%s -> %sx%s", rec.name, tostring(beforeW),
-    tostring(beforeH), tostring(rec.width), tostring(rec.height))
-  fire(MSG.PANEL, rec.id)
+  -- Two `[Set]` lines, one per axis, each naming the panel: the write is the trace.
+  writeRecord(rec, { { path = "panel.width", value = probe.width },
+                     { path = "panel.height", value = probe.height } })
   return true, rec.width, rec.height
 end
 
 -- ── Field edits ─────────────────────────────────────────────────────────────────
 
--- kind -> coerce(value, field), returning the value to store, or nil plus the sentence to show the
--- user. Built once at file load and keyed off C.PANEL_FIELD_TYPE, so the write seam below is a
--- lookup rather than a chain of `elseif kind ==` arms.
---
--- A kind ABSENT from this table is stored verbatim — that is "string" (artCustomPath), and it is
--- exactly what the old chain's fall-through did.
-local COERCE = {}
-
-function COERCE.number(value)
-  local n = tonumber(value)
-  if n == nil then return nil, "expected a number" end
-  return n
-end
-
-function COERCE.boolean(value)
-  local parsed = Util.ParseBool(value)
-  if parsed == nil then return nil, Util.BOOL_USAGE end
-  return parsed
-end
-
-function COERCE.point(value)
-  value = tostring(value):upper()
-  if not Util.IsPoint(value) then
-    return nil, "expected one of: " .. table.concat(C.POINTS, ", ")
-  end
-  return value
-end
-
-function COERCE.strata(value)
-  value = tostring(value):upper()
-  if not Util.IsStrata(value) then
-    return nil, "expected one of: " .. table.concat(C.STRATA, ", ")
-  end
-  return value
-end
-
-function COERCE.color(value)
-  if type(value) ~= "table" then
-    local parsed = Util.ParseColor(value)
-    if not parsed then return nil, "expected r,g,b[,a] (0-1 or 0-255)" end
-    return parsed
-  end
-  return value
-end
-
-function COERCE.edges(value)
-  if type(value) ~= "table" then
-    local parsed = Util.ParseEdges(value)
-    if not parsed then
-      return nil, ("expected any of: %s (or 'none')"):format(table.concat(C.EDGES, ", "):lower())
-    end
-    value = parsed
-  end
-  -- Copied, not aliased, on BOTH paths: a caller that keeps its table would otherwise be able to
-  -- mutate the stored set behind the registry's back, skipping the write seam entirely.
-  return Util.EdgeSet(value)
-end
-
--- Matched case-insensitively against the LIVE LibSharedMedia list so the CLI accepts
--- `/pm panel X bgTexture blizzard marble` for "Blizzard Marble", and so a typo is refused with
--- the real list rather than silently stored and resolved to the fallback at render time.
-function COERCE.media(value, field)
-  value = tostring(value)
-  local mediaType = C.PANEL_FIELD_MEDIA[field]
-  local names = NS.Compat.MediaList(mediaType)
-  local wanted, matched = value:lower(), nil
-  for _, candidate in ipairs(names) do
-    if candidate:lower() == wanted then matched = candidate break end
-  end
-  if not matched then
-    return nil, ("unknown %s texture. Available: %s"):format(mediaType, table.concat(names, ", "))
-  end
-  return matched
-end
-
--- One coercer for every closed-list field. See enumMatch above for why the artwork enums share a
--- kind instead of getting a branch each: they differ only in their contents, so the next one is a
--- C.PANEL_FIELD_ENUM row rather than another copy of this code.
-function COERCE.enum(value, field)
-  local matched, list = enumMatch(field, value)
-  -- A field typed "enum" with no list is a Constants bug, not user error, so say so rather than
-  -- crashing table.concat on a nil.
-  if not list then return nil, ("'%s' has no value list"):format(tostring(field)) end
-  if not matched then
-    return nil, "expected one of: " .. table.concat(list, ", ")
-  end
-  return matched
-end
-
--- Matched case-insensitively against the LIVE catalog, mirroring the media coercer above and
--- for the same reason: a typo must come back with the real list of ids rather than being stored
--- and then silently resolving to nothing at render time, which reads as "artwork is broken"
--- instead of "that is not one of the names".
---
--- Artwork.List() is the source rather than the raw catalog because it already carries the two
--- reserved ids in their agreed places — "None" first, "Custom" last — so accepting them costs
--- nothing here and the offered order matches what the dropdown shows.
-function COERCE.artwork(value)
-  value = tostring(value)
-  local wanted, matched, ids = value:lower(), nil, {}
-  for _, entry in ipairs(NS.Artwork.List()) do
-    ids[#ids + 1] = entry.id
-    if tostring(entry.id):lower() == wanted then matched = entry.id end
-  end
-  if not matched then
-    return nil, ("unknown artwork. Available: %s"):format(table.concat(ids, ", "))
-  end
-  return matched
-end
-
 -- The write seam for one panel field. Every field control in the editor and the CLI `set` route
--- through here (a drag-stop takes R:SetPosition below), so validation, sanitizing, the debug trace
--- and the repaint broadcast happen exactly once and identically for both.
+-- through here (a drag-stop takes R:SetPosition below), and here hands the write to the schema
+-- seam with the panel id: the `panel.<field>` row parses and repairs the value, the seam stores it
+-- and writes the one `[Set]` line, and R.AnnounceWrite repaints the panel. Name lookup, the `name`
+-- route and the refusal trace stay here, because they are about the panel rather than the field.
 function R:Set(key, field, value)
   local rec = R:Resolve(key)
   if not rec then return refuse("set", false, ("no panel called '%s'"):format(tostring(key))) end
@@ -806,56 +791,46 @@ function R:Set(key, field, value)
   if not kind then return refuse("set", false, ("unknown field '%s'"):format(tostring(field))) end
 
   -- `name` is routed to Rename rather than written directly: it is the only field with a uniqueness
-  -- constraint, and duplicating that check here is how the two would eventually disagree.
+  -- constraint, and it is identity rather than a setting, so it has no schema row at all.
   if field == "name" then return R:Rename(rec.id, value) end
 
-  -- `err` rather than a nil test on the coerced value: the boolean coercer's success value is
-  -- legitimately `false`, and a nil test would refuse every `/pm panel X mouseover off`.
-  local coerce = COERCE[kind]
-  if coerce then
-    local coerced, err = coerce(value, field)
-    if err then
-      NS.Debug("Panel", "set '%s'.%s refused: %s", rec.name, field, err)
-      return false, err
-    end
-    value = coerced
+  -- The row's refusal is `false, "invalid value", why`; the coercer's sentence is the `why`, and it
+  -- is what the player is shown.
+  local ok, err, why = seam().Set("panel." .. field, value, rec.id)
+  if not ok then
+    why = why or err
+    NS.Debug("Panel", "set '%s'.%s refused: %s", rec.name, field, tostring(why))
+    return false, why
   end
-
-  rec[field] = value
-  R.Sanitize(rec)
-
-  -- Every panel mutation is logged ONCE, here at the write seam, mirroring the settings rule
-  -- (debug-logging-§10). Downstream reactors must not re-echo the same change. The one field this
-  -- seam does not log is `name`: it returned into R:Rename above, which logs the old and new names
-  -- itself, and only once its uniqueness checks have passed.
-  --
-  -- Through DebugBuild rather than Debug: R.FormatField formats (and for colors and edge sets,
-  -- builds) a string, and this seam runs on every field write — every slider mouse-up, every drag
-  -- stop, every `/pm panel set`. describeWrite is called only once past the sink's gate, so a user
-  -- with logging off pays nothing for a line nobody reads, and the gate stays in one place.
-  NS.DebugBuild("Panel", "'%s'.%s = %s", describeWrite, rec, field)
-  fire(MSG.PANEL, rec.id)
   return true
 end
 
--- Move a panel to an absolute offset. Its own seam rather than two R:Set calls because a drag
--- changes x and y together, and two calls would fire two repaints for one gesture.
-function R:SetPosition(key, x, y)
+-- Move a panel to an absolute offset, and optionally re-anchor it. Its own seam rather than R:Set
+-- calls because a drag changes up to four fields together (Unlock's drag-stop passes the point and
+-- relPoint the frame ended up on), and one SetMany is one act with one repaint for one gesture.
+function R:SetPosition(key, x, y, point, relPoint)
   local rec = R:Resolve(key)
   if not rec then return refuse("move", false, ("no panel called '%s'"):format(tostring(key))) end
-  rec.x, rec.y = tonumber(x) or rec.x, tonumber(y) or rec.y
-  R.Sanitize(rec)
-  NS.Debug("Panel", "'%s' moved to %s, %s", rec.name, rec.x, rec.y)
-  fire(MSG.PANEL, rec.id)
-  return true
+  local entries = {}
+  if point ~= nil then entries[#entries + 1] = { path = "panel.point", value = point } end
+  if relPoint ~= nil then entries[#entries + 1] = { path = "panel.relPoint", value = relPoint } end
+  x, y = tonumber(x), tonumber(y)
+  if x then entries[#entries + 1] = { path = "panel.x", value = x } end
+  if y then entries[#entries + 1] = { path = "panel.y", value = y } end
+  if #entries == 0 then return true end
+  return (writeRecord(rec, entries))
 end
 
 -- ── Formatting ──────────────────────────────────────────────────────────────────
 
--- One field → display string, shared by `/pm panel show`, the CLI set echo and the debug trace, so
--- the three can never render the same value differently.
+-- One field's value → display string, shared by `/pm panel show`, the CLI set echo and the `[Set]`
+-- line (settings/Schema.lua's format hook), so the three can never render the same value
+-- differently.
 function R.FormatField(rec, field)
-  local v = rec and rec[field]
+  return R.FormatValue(field, rec and rec[field])
+end
+
+function R.FormatValue(field, v)
   if v == nil then return "nil" end
   local kind = C.PANEL_FIELD_TYPE[field]
   if kind == "color" then return Util.FormatColor(v) end
@@ -940,15 +915,20 @@ function R:Recover()
   if not w then return refuse("recover", 0, "cannot measure the screen") end
 
   local settings = currentSettings()
-  local moved, rows = 0, 0
-  for _, rec in ipairs(R:All()) do
-    local x, y = R.RecoveredOffsets(rec, w, h, settings)
-    if x ~= rec.x or y ~= rec.y then
-      rows = rows + (x ~= rec.x and 1 or 0) + (y ~= rec.y and 1 or 0)
-      rec.x, rec.y, moved = x, y, moved + 1
+  local moved = 0
+  -- ONE [Set] line, N the offsets changed, and one PanelsChanged for every panel moved.
+  sweepRecords("recover", "positions", function()
+    for _, rec in ipairs(R:All()) do
+      local x, y = R.RecoveredOffsets(rec, w, h, settings)
+      local entries = {}
+      if x ~= rec.x then entries[#entries + 1] = { path = "panel.x", value = x } end
+      if y ~= rec.y then entries[#entries + 1] = { path = "panel.y", value = y } end
+      if #entries > 0 then
+        writeRecord(rec, entries)
+        moved = moved + 1
+      end
     end
-  end
-  NS.Schema.BulkLine("recover", "positions", rows)   -- ONE [Set] line, N the offsets changed
+  end)
   if moved > 0 then fire(MSG.PANELS) end
   return moved
 end
@@ -973,15 +953,20 @@ end
 local POSITION_FIELDS = { "point", "relPoint", "x", "y" }
 function R:ResetPositions()
   local t = C.PANEL_TEMPLATE
-  local moved, rows = 0, 0
-  for _, rec in ipairs(R:All()) do
-    local n = 0
-    for _, f in ipairs(POSITION_FIELDS) do
-      if rec[f] ~= t[f] then rec[f], n = t[f], n + 1 end
+  local moved = 0
+  -- ONE [Set] line, N the fields changed, and one PanelsChanged for every panel moved.
+  sweepRecords("reset", "positions", function()
+    for _, rec in ipairs(R:All()) do
+      local entries = {}
+      for _, f in ipairs(POSITION_FIELDS) do
+        if rec[f] ~= t[f] then entries[#entries + 1] = { path = "panel." .. f, value = t[f] } end
+      end
+      if #entries > 0 then
+        writeRecord(rec, entries)
+        moved = moved + 1
+      end
     end
-    if n > 0 then moved, rows = moved + 1, rows + n end
-  end
-  NS.Schema.BulkLine("reset", "positions", rows)   -- ONE [Set] line, N the fields changed
+  end)
   if moved > 0 then fire(MSG.PANELS) end
   return moved
 end

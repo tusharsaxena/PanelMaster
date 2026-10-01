@@ -375,7 +375,7 @@ end
 -- calls tabWidgets; a test that wants the page's whole vocabulary calls generalWidgets.
 local function generalTabs()
   local names, seen = {}, {}
-  for _, row in ipairs(NS.Schema.Schema) do
+  for _, row in ipairs(NS.Schema.ProfileRows()) do   -- the General page's rows (allRows)
     if row.group and not seen[row.group] then
       seen[row.group] = true
       names[#names + 1] = row.group
@@ -473,7 +473,7 @@ test("Options: the General page renders one widget per schema row, by type", fun
 
   for _, tab in ipairs(generalTabs()) do
     local wanted = { CheckBox = 0, Slider = 0, Dropdown = 0 }
-    for _, row in ipairs(NS.Schema.Schema) do
+    for _, row in ipairs(NS.Schema.ProfileRows()) do
       if row.group == tab then
         local widget = WIDGET[row.type]
         assertTrue(widget ~= nil, row.path .. " has a type no widget maker knows: " .. row.type)

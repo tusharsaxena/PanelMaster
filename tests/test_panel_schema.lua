@@ -1,7 +1,7 @@
 local T = _G.PM_TEST
 local NS = T.NS
-local test, assertEqual, assertTrue, assertFalse =
-  T.test, T.assertEqual, T.assertTrue, T.assertFalse
+local test, assertEqual, assertTrue, assertFalse, assertNil =
+  T.test, T.assertEqual, T.assertTrue, T.assertFalse, T.assertNil
 local R = NS.Registry
 local C = NS.Constants
 
@@ -11,6 +11,9 @@ local C = NS.Constants
 -- The CHARACTERIZATION half pins what each whole-record and bulk verb does today -- what it
 -- stores, what it broadcasts and how often -- so moving those verbs onto SchemaRuntime.Set/SetMany
 -- is provably a change of route and not of behavior. It is green before the move and after it.
+--
+-- The INSTANCE-ROW half pins the seam itself: the resolver, the generated rows, the write path, the
+-- [Set] line's shape, and that the rows never reach a profile surface.
 
 local function fresh()
   R:DeleteAll()
@@ -152,4 +155,229 @@ test("Panel verbs: R:SetPosition writes both offsets with ONE PANEL", function()
   assertEqual(R:Get(rec.id).x, 12)
   assertEqual(R:Get(rec.id).y, -34)
   assertEqual(table.concat(log, ","), "PANEL:" .. rec.id)
+end)
+
+-- ── The instance rows (panel.<field>) ──────────────────────────────────────────
+
+local S = NS.Schema
+local D = NS.DebugLog
+
+local function quiet()
+  NS.State.debug = false
+  D:Clear()
+end
+
+-- The message of every buffered debug line carrying `tag`, in order.
+local function tagged(tag)
+  local out, pat = {}, "%[" .. tag .. "%] (.*)$"
+  for _, line in ipairs(D.buffer) do
+    local msg = line:match(pat)
+    if msg then out[#out + 1] = msg end
+  end
+  return out
+end
+
+-- Every runtime Set / SetMany call made while `fn` runs, as "Set panel.width @3" and
+-- "SetMany panel.x,panel.y @3" strings. Registry reaches the runtime at call time, so wrapping the
+-- two members sees every write the verbs make.
+local function seamCalls(fn)
+  local rt, log = NS.SchemaRuntime, {}
+  local set, many = rt.Set, rt.SetMany
+  rt.Set = function(path, value, id)
+    log[#log + 1] = ("Set %s @%s"):format(tostring(path), tostring(id))
+    return set(path, value, id)
+  end
+  rt.SetMany = function(entries, opts)
+    local paths = {}
+    for i, e in ipairs(entries) do paths[i] = e.path end
+    log[#log + 1] = ("SetMany %s @%s"):format(table.concat(paths, ","),
+      tostring(type(opts) == "table" and opts.instanceId))
+    return many(entries, opts)
+  end
+  local ok, err = pcall(fn)
+  rt.Set, rt.SetMany = set, many
+  if not ok then error(err, 0) end
+  return log
+end
+
+-- Whether any entry of `log` starts with `prefix` and ends naming `id`.
+local function called(log, prefix, id)
+  for _, entry in ipairs(log) do
+    if entry:sub(1, #prefix) == prefix and entry:sub(-#("@" .. id)) == "@" .. id then return true end
+  end
+  return false
+end
+
+test("Panel rows: S.ResolveRoot answers the record and first = 2 for a known panel id", function()
+  fresh()
+  local rec = R:New("ResolveMe")
+  local root, first, rid = S.ResolveRoot({ "panel", "width" }, rec.id)
+  assertTrue(root == R:Get(rec.id), "the resolver did not answer the panel's own record")
+  assertEqual(first, 2)
+  assertEqual(rid, rec.id)
+end)
+
+test("Panel rows: S.ResolveRoot refuses an unknown or missing id, and still answers the profile",
+  function()
+  fresh()
+  local root, why = S.ResolveRoot({ "panel", "width" }, 9999)
+  assertNil(root)
+  assertEqual(why, "no such panel")
+  root, why = S.ResolveRoot({ "panel", "width" }, nil)
+  assertNil(root)
+  assertEqual(why, "panel rows need a panel")
+  local profile, first = S.ResolveRoot({ "settings", "gridSize" })
+  assertTrue(profile == NS.db.profile, "a settings path no longer resolves against the profile")
+  assertEqual(first, 1)
+end)
+
+test("Panel rows: one hidden panel.<field> row per panel field but name, defaulting to the template",
+  function()
+  local n = 0
+  for _, field in ipairs(C.PANEL_FIELD_ORDER) do
+    local row = S:FindRow("panel." .. field)
+    if field == "name" then
+      assertNil(row, "`name` is identity and must not be a schema row")
+    else
+      assertTrue(row ~= nil, "no row for panel field " .. field)
+      assertTrue(NS.Util.DeepEqual(row.default, C.PANEL_TEMPLATE[field]),
+        field .. "'s row default is not the template's")
+      assertEqual(row.scope, "panel", field)
+      assertEqual(row.hidden, true, field)
+      assertEqual(row.skipRender, true, field)
+      n = n + 1
+    end
+  end
+  local rows = 0
+  for _, row in ipairs(NS.SchemaRuntime.AllRows()) do
+    if row.scope == "panel" then rows = rows + 1 end
+  end
+  assertEqual(rows, n, "a panel row exists for a field C.PANEL_FIELD_ORDER does not list")
+  for field in pairs(C.PANEL_FIELD_TYPE) do
+    if field ~= "name" then
+      assertTrue(S:FindRow("panel." .. field) ~= nil, "typed field " .. field .. " has no row")
+    end
+  end
+end)
+
+test("Panel rows: a seam write stores, clamps, refuses in the coercer's words, repaints once",
+  function()
+  fresh()
+  local rec = R:New("SeamWrite")
+  local log = messages(function() assertTrue(S:Set("panel.width", 300, rec.id)) end)
+  assertEqual(R:Get(rec.id).width, 300)
+  assertEqual(table.concat(log, ","), "PANEL:" .. rec.id)
+  assertTrue(S:Set("panel.width", 99999, rec.id))
+  assertEqual(R:Get(rec.id).width, C.MAX_SIZE)
+  local ok, _, why = S:Set("panel.width", "abc", rec.id)
+  assertFalse(ok)
+  assertEqual(why, "expected a number")
+  assertEqual(R:Get(rec.id).width, C.MAX_SIZE, "a refused write still stored")
+  assertEqual(S:Get("panel.width", rec.id), C.MAX_SIZE)
+end)
+
+test("Panel rows: a panel write logs ONE [Set] line in the library's shape, naming the panel",
+  function()
+  fresh()
+  local rec = R:New("Alpha")
+  quiet()
+  NS.State.debug = true
+  assertTrue(R:Set(rec.id, "width", 300))
+  assertEqual(table.concat(tagged("Set"), " | "), "panel.width = 300 on 'Alpha'")
+  assertEqual(#tagged("Panel"), 0, "the Registry still writes its own per-write line")
+  D:Clear()
+  assertTrue(R:Set(rec.id, "alpha", 0.5))
+  assertEqual(tagged("Set")[1], "panel.alpha = 0.50 on 'Alpha'", "the value is not R.FormatField's")
+  quiet()
+end)
+
+test("Panel rows: R:Set and every record verb write through the seam with the panel id", function()
+  fresh()
+  local rec = R:New("Routed", { artTexture = "class-warrior" })
+  local src = R:New("RoutedSrc", { width = 480 })
+  local lost = R:New("RoutedLost", { x = 9000, y = 9000 })
+  local log = seamCalls(function()
+    R:Set(rec.id, "width", 310)
+    R:SetPosition(rec.id, 8, 12)
+    R:FitToArtwork(rec.id)
+    R:CopyFrom(rec.id, src.id)
+    R:Reset(rec.id)
+  end)
+  assertTrue(called(log, "Set panel.width", rec.id), "R:Set bypassed the seam:\n" .. table.concat(log, "\n"))
+  assertTrue(called(log, "SetMany panel.x,panel.y", rec.id), "R:SetPosition bypassed the seam")
+  assertTrue(called(log, "SetMany panel.width,panel.height", rec.id), "R:FitToArtwork bypassed the seam")
+  local many = 0
+  for _, entry in ipairs(log) do
+    if entry:sub(1, 8) == "SetMany " and entry:sub(-#("@" .. rec.id)) == "@" .. rec.id then many = many + 1 end
+  end
+  assertEqual(many, 4, "CopyFrom and Reset did not each take one SetMany:\n" .. table.concat(log, "\n"))
+  log = seamCalls(function() R:Recover() end)
+  assertTrue(called(log, "SetMany panel.x,panel.y", lost.id), "R:Recover bypassed the seam")
+  R:SetPosition(rec.id, 30, 30)
+  log = seamCalls(function() R:ResetPositions() end)
+  assertTrue(called(log, "SetMany", rec.id), "R:ResetPositions bypassed the seam")
+end)
+
+test("Panel rows: a drag-stop writes point, relPoint, x and y as ONE act", function()
+  fresh()
+  local rec = R:New("DragAct")
+  local f = draggedFrame(rec, "TOPLEFT", "BOTTOMRIGHT", 40, -80)
+  local log = seamCalls(function() f:GetScript("OnDragStop")(f) end)
+  assertEqual(table.concat(log, " | "), "SetMany panel.point,panel.relPoint,panel.x,panel.y @" .. rec.id)
+end)
+
+test("Panel rows: the profile surfaces never see a panel row", function()
+  for _, row in ipairs(S.ProfileRows()) do
+    assertTrue(row.scope ~= "panel", tostring(row.path) .. " reached the profile rows")
+  end
+  assertNil(S.FindProfileRow("panel.width"), "FindProfileRow answered a panel row")
+  assertTrue(S.FindProfileRow("settings.gridSize") ~= nil)
+  for _, line in ipairs(NS.Slash:BuildListLines()) do
+    assertEqual(line:find("panel%."), nil, "/pm list shows a panel row: " .. line)
+  end
+  for path in pairs(S:SnapshotPersisted()) do
+    assertEqual(path:find("^panel%."), nil, "the reset snapshot holds " .. path)
+  end
+  fresh()
+  local rec = R:New("NotAProfileRow")
+  NS.Slash:OnSlash("set panel.width 500")
+  assertEqual(R:Get(rec.id).width, C.PANEL_TEMPLATE.width, "/pm set wrote a panel row")
+end)
+
+test("Panel rows: the boot shape check resolves every panel row against the template", function()
+  assertEqual(S:Register(), 0)
+  local rows = NS.SchemaRuntime.AllRows()
+  rows[#rows + 1] = { path = "panel.noSuchField", scope = "panel", default = 1, type = "number",
+    group = "Panel", label = "probe", tooltip = "probe", hidden = true, skipRender = true }
+  local n = S:Register()
+  rows[#rows] = nil
+  assertEqual(n, 1, "a panel row naming no template field was not reported")
+end)
+
+test("Panel rows: R:Reset drops a key the template does not declare, as the wipe did", function()
+  fresh()
+  local rec = R:New("Legacy", { width = 500 })
+  rec.legacyKey = 5
+  quiet()
+  NS.State.debug = true
+  assertTrue((R:Reset(rec.id)))
+  assertNil(R:Get(rec.id).legacyKey, "the reset kept a key the template does not declare")
+  assertEqual(tagged("Set")[1], "reset 'Legacy': 2 rows")
+  quiet()
+end)
+
+local Env = dofile("tests/degraded_env.lua")
+
+test("Panel rows: a library-less Schema load drives the same panel writes", function()
+  local ns = Env.loadPartial({ Schema = true })
+  local rec = ns.Registry:New("Stubbed")
+  assertTrue(ns.Registry:Set(rec.id, "width", 300))
+  assertEqual(rec.width, 300)
+  assertTrue(ns.Schema:Set("panel.height", 200, rec.id))
+  assertEqual(rec.height, 200)
+  assertTrue(ns.Registry:SetPosition(rec.id, 5, 6))
+  assertEqual(rec.x, 5)
+  assertEqual(rec.y, 6)
+  assertFalse((ns.Registry:Set(rec.id, "width", "wide")))
+  assertEqual(rec.width, 300)
 end)

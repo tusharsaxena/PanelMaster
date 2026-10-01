@@ -162,8 +162,9 @@ actually changed, and never a line per field or per row (standard v2.44.0). The 
 
 **N is the rows the act changed**, not what it covered: a field already at its default, a field
 already equal to the source's, a position field already at the new-panel template is not counted. An
-act that changes nothing still logs its line, with `0`. For `R:Reset` and `R:CopyFrom` N comes from
-`Util.CountChanged` over a copy of the record taken before the act. The two position verbs count
+act that changes nothing still logs its line, with `0`. For `R:Reset` and `R:CopyFrom` N is the schema
+runtime's read-back tally over the `panel.<field>` writes (plus, for a reset, the undeclared keys an
+older build left on the record, which the reset drops). The two position verbs count
 the `point` / `relPoint` / `x` / `y` fields they rewrote, across every panel (`R:Recover` only ever
 clamps `x` and `y`); they still return the panels moved, which is what their callers print. For
 `resetall` N is the persisted schema rows that read back differently from the snapshot
@@ -186,7 +187,7 @@ the write seam. `Registry:ReloadProfile` logs nothing, so a reset is not also re
 **One bracket, the schema runtime's.** `LibKa0s-Schema-1.0`'s instance (`NS.SchemaRuntime`, built
 in `settings/Schema.lua`) owns it. `S.BulkBegin` / `S.BulkEnd` are its members, the pair the Options
 descriptor hands LibKa0s (Options minor 16) for `O.RestoreDefaults` and `O.RestoreAllDefaults`, and
-`S.BulkLine` (its `BulkRun` plus `BulkAdd`) is how the Registry's verbs log. While a bracket is open,
+the Registry's verbs open it through `SetMany`'s `act` or the instance's `BulkRun` (PanelMaster#54). While a bracket is open,
 the write seam mutes its per-row line and tallies a write only when the row reads back differently,
 so the library's own `count` (every row `applyDefault` returned) is never used as N. Brackets nest by depth over one shared tally, and
 only the **outermost** act emits: an act run inside another adds to its total. If any level reports
@@ -226,14 +227,14 @@ Every other tag below is this addon's own.
 | `Debug` | the library (`SetEnabled`) | `logging enabled` / `logging disabled`, at each flip of the flag, including the enable a `/pm diagnostics` run makes when logging was off |
 | `Init` | the library, with `NS.InitSummary` (`core/Database.lua`) | Once per enable: addon and version, schema, profile, panel count, then the optional dependencies: `LSM yes/no, LibDBIcon yes/no, Sunn themes N` |
 | `Diag` | the library and `modules/Diagnostics.lua` | Every line of a `/pm diagnostics` report, written in full through the ungated append |
-| `Set` | the library's schema seam; `settings/Schema.lua` `S.BulkLine`; `core/Database.lua` | `[Set] <path> = <value>` once per settings write; one line per bulk copy or reset; one per profile reset or copy (see *Bulk copy and reset*) |
+| `Set` | the library's schema seam; `core/Database.lua` | `[Set] <path> = <value>` once per settings write, and `[Set] panel.<field> = <value> on '<panel>'` once per panel field write (the editor, `/pm panel`, a drag-stop's four fields, a fit's two); one line per bulk copy or reset; one per profile reset or copy (see *Bulk copy and reset*) |
 | `Profile` | `core/Database.lua` | `switched to '<name>', N panels`, on a profile switch |
 | `Migrate` | `core/Database.lua` | A schema migration, only when one runs (at load) |
 | `Preview` | `core/Database.lua` | `swept N orphaned preview panel(s)`, at load, only when there were some |
 | `Lifecycle` | the library (Lifecycle), through `core/LifecycleSetup.lua`'s `debug` | `stood down: added <key> (holds: <set>)` and `stood up: released <key> (holds: none)`, one line per stand-down or stand-up edge, before the callback runs. A call that fires no edge writes nothing. `NS.StandDown` and `NS.StandUp` write no line of their own |
 | `Cmd` | the library (Slash), through `settings/Slash.lua`'s `debug` | `refused <verb>[ <arg>]: <guard>` after the chat line, for every refusal the dispatcher decides: `disabled` (a feature verb while the addon is off), `unknown verb`, `usage`, `not found`, `parse`, `write refused`, `no default`, and the profile verb's `unavailable`, `already current`, `in combat` and `unknown profile` |
 | `Events` | `core/LifecycleSetup.lua` | `rejected <name>`, an event name the client refused at a stand-up |
-| `Panel` | `modules/Registry.lua` | Every panel mutation: created, deleted, deleted all, renamed, fitted to artwork, a field written, moved |
+| `Panel` | `modules/Registry.lua` | Every structural panel mutation: created, deleted, deleted all, renamed. A field write is the seam's `[Set]` line, never a second `[Panel]` one |
 | `Panel` | `modules/Registry.lua` (`refuse`) | `<verb> refused: <reason>` for create, delete, reset, copy, rename, fit, set and move, and `set '<panel>'.<field> refused: <reason>` for a value the field's coercer rejected. The reason is the one the caller prints |
 | `Panel` | `modules/Registry.lua` (`R:Recover`, through `refuse`) | `recover refused: cannot measure the screen`, when the client reports no screen size and `/pm recover` moves nothing. The slash prints the same reason rather than "every panel is already on screen" |
 | `Panel` | `settings/Slash.lua` (`Sl:CliPanel`, through `R.Refuse`) | `panel refused: no panel called '<name>'` and `panel refused: unknown field '<field>'`, the two `/pm panel` refusals made before any Registry verb runs |
