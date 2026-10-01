@@ -150,6 +150,18 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
 
+### test_panel_schema.lua (9)
+
+- Panel verbs: R:Set stores the value and repaints that one panel once
+- Panel verbs: R:Set of `name` is a rename -- the SET changed, so PANELS and no PANEL
+- Panel verbs: R:Reset lands on the new-panel state, keeps identity, one PANEL
+- Panel verbs: R:CopyFrom copies appearance, not identity or position, one PANEL
+- Panel verbs: R:FitToArtwork adopts the art's size with one PANEL; a refusal sends none
+- Panel verbs: R:Recover moves every lost panel and sends ONE PANELS, no per-panel PANEL
+- Panel verbs: R:ResetPositions re-homes every panel and sends ONE PANELS
+- Panel verbs: a drag-stop stores point, relPoint and both offsets, with ONE PANEL
+- Panel verbs: R:SetPosition writes both offsets with ONE PANEL
+
 ### test_canvas.lua (37)
 
 - Canvas.BuildSpec: carries the record's geometry through
@@ -1141,6 +1153,7 @@ badge and any count quoted in the docs must agree with it.
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
 | test_registry.lua | 46 |
+| test_panel_schema.lua | 9 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
@@ -1172,4 +1185,4 @@ badge and any count quoted in the docs must agree with it.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1014** |
+| **Total** | **1023** |

@@ -148,6 +148,7 @@ The suites, one per subject:
 | `tests/test_options_groups.lua` | The `options-ui-§16` gate over the Panels page's composed blocks. |
 | `tests/test_panel.lua` | The settings pages: registration, opening, Defaults, the Panels page's repaint policy, panel scale. |
 | `tests/test_panels_page.lua` | The built Panels page: its tab strip, chrome band, editor tabs and color swatches. |
+| `tests/test_panel_schema.lua` | The instance-addressed `panel.<field>` rows (PanelMaster#54): what every panel verb stores and broadcasts. |
 | `tests/test_profiles.lua` | `Registry.CopyFrom`, profile switching, and the Profiles page. |
 | `tests/test_register.lua` | Every deviation id `docs/ARCHITECTURE.md` cites resolves to an audit bundle. |
 | `tests/test_registry.lua` | `Registry` create, set, rename, sanitize, recover and delete. |
