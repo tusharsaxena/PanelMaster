@@ -265,20 +265,6 @@ function Util.DeepEqual(a, b)
   return true
 end
 
--- How many keys `after` holds a different value under than `before` did: rewritten, added or
--- removed. A bulk copy or reset logs this as its row count, because debug-logging-§10's N is the
--- rows an act actually wrote, and a field it set to the value already there was not a write.
-function Util.CountChanged(before, after)
-  local n = 0
-  for k, v in pairs(after) do
-    if not Util.DeepEqual(before[k], v) then n = n + 1 end
-  end
-  for k in pairs(before) do
-    if after[k] == nil then n = n + 1 end
-  end
-  return n
-end
-
 -- The scale a panel is actually drawn at: its own scale, clamped to the panel bounds, times the
 -- addon-wide master scale (options-ui-§15: master rows are multipliers). This is the ONE definition
 -- the renderer (Canvas addGeometry, which hands it to SetScale) and `/pm recover` (which bounds the
