@@ -941,7 +941,7 @@ badge and any count quoted in the docs must agree with it.
 - SunnArt: an unreadable addon roster does not silently disable a working install
 - SunnArt: a theme left in saved variables by an UNINSTALLED pack is not offered
 - SunnArt: a hand-edited custom theme naming a missing folder is not offered
-- SunnArt: Installed() agrees with the dropdown rather than with the globals
+- SunnArt: a SunnArt whose every theme is uninstalled offers nothing
 - SunnArt: Inject offers only what is installed, across both discovery paths
 - Fit: a quarter turn transposes the fitted size
 - Fit: the artwork scale multiplies the fitted size

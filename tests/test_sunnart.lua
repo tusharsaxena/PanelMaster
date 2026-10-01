@@ -101,8 +101,10 @@ end
 
 test("SunnArt: nothing is installed — the adapter is completely silent", function()
   clearSunn()
-  assertFalse(S.Installed(), "reported a pack with no Sunn global present")
-  assertEqual(#S.Themes(), 0)
+  -- The feature silences itself through S.Rows(S.Themes()); the old S.Installed() export had no
+  -- caller and was deleted (#42). Bringing it back is a decision, not a drift.
+  assertNil(S.Installed, "S.Installed is back; it was deleted as dead in #42")
+  assertEqual(#S.Themes(), 0, "reported a pack with no Sunn global present")
   assertEqual(#S.Rows(), 0)
   local before = #Artwork.Catalog
   assertEqual(S.Inject(), 0)
@@ -112,7 +114,7 @@ end)
 test("SunnArt: an official pack is discovered through SunnArt's options table", function()
   clearSunn()
   officialPack()
-  assertTrue(S.Installed())
+  assertTrue(#S.Themes() > 0)
   local themes = S.Themes()
   -- Three real themes; "solid" is reserved and must not become a row.
   assertEqual(#themes, 3)
@@ -126,7 +128,7 @@ test("SunnArt: a community pack is discovered with NO SunnArt addon present", fu
   -- and do not need the base addon, so a lookup that started at SunnArt would find nothing.
   clearSunn()
   communityPack()
-  assertTrue(S.Installed())
+  assertTrue(#S.Themes() > 0)
   assertEqual(#S.Themes(), 1)
   assertEqual(S.Themes()[1].name, "Warcraft III - Horde")
 end)
@@ -684,7 +686,7 @@ test("SunnArt: with no Sunn globals at all, an installed pack folder still yield
     -- folder is on disk, so the art is drawable and the manifest is what knows about it.
     installed(file:match("^([^\\]+)"))
     withManifest(function()
-      assertTrue(S.Installed(), "a known pack folder on disk did not count as installed")
+      assertTrue(#S.Themes() > 0, "a known pack folder on disk did not count as installed")
 
       local found
       for _, t in ipairs(S.Themes()) do if t.file == file then found = t end end
@@ -701,7 +703,6 @@ test("SunnArt: a pack that is NOT installed is never offered", function()
   -- a dropdown full of entries that draw nothing.
   installed("SomeUnrelatedAddon")
   withManifest(function()
-    assertFalse(S.Installed(), "claimed an install with no Sunn folder present")
     assertEqual(#S.Themes(), 0, "offered themes for packs that are not on disk")
   end)
 end)
@@ -809,16 +810,16 @@ test("SunnArt: a hand-edited custom theme naming a missing folder is not offered
   assertNil(byFile["NeverInstalled\\art"], "a custom theme naming a missing folder was offered")
 end)
 
-test("SunnArt: Installed() agrees with the dropdown rather than with the globals", function()
+test("SunnArt: a SunnArt whose every theme is uninstalled offers nothing", function()
   clearSunn()
   -- The drift this guards: the earlier version answered yes whenever any Sunn global existed, so a
   -- SunnArt whose every theme named a deleted pack would light up the category and then show
-  -- nothing under it. Installed() is now defined as "does this yield anything to offer".
+  -- nothing under it. What is offered is decided by S.Themes() alone, folder gate included.
   _G.SunnArtPack = {
     theme = { ["SunnArtPack99\\deleted"] = "Long Gone" }, panels = {}, overlap = {}, length = {},
   }
   installed("SomeUnrelatedAddon")
-  assertFalse(S.Installed(), "claimed an install whose every theme is uninstalled")
+  assertEqual(#S.Themes(), 0, "offered themes whose every pack is uninstalled")
   assertEqual(#S.Rows(), 0, "synthesized rows for art that is not on disk")
 end)
 
