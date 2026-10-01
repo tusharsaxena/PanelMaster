@@ -257,9 +257,9 @@ is refused under lockdown.
 
 ## Known Limitations
 
-Seven, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
-reservation across renames, no per-panel level UI, the hard-cut mouseover fade, player-class-only
-coloring, and manual `/pm recover`. All in **[scope.md](scope.md)**.
+Six, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
+reservation across renames, the hard-cut mouseover fade, player-class-only coloring, and manual
+`/pm recover`. All in **[scope.md](scope.md)**.
 
 ## Documentation map
 

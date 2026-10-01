@@ -58,7 +58,7 @@ badge and any count quoted in the docs must agree with it.
 - Compat.InCombat answers false when neither combat API exists
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
-### test_constants.lua (19)
+### test_constants.lua (20)
 
 - Constants: the strata list runs lowest to highest and starts at BACKGROUND
 - Constants: new panels default to LOW
@@ -72,6 +72,7 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the template's own values are valid by its own rules
 - Constants: the editor's offset reach is named, symmetric and wide enough to be useful
 - Constants: no slider in the panel editor decides its own bounds
+- Constants: the panel level bounds are named, and the highest stack fits the client
 - Constants: the mono font and logo point at this addon's folder
 - Constants: the logo file named by LOGO_PATH exists
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
@@ -100,7 +101,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (45)
+### test_registry.lua (46)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -132,6 +133,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Set: accepts a lower-case anchor and stores it upper-case
 - Registry.Set: writing `name` routes through Rename's uniqueness check
 - Registry.Set: clamps out-of-range input rather than rejecting it
+- Registry.Set: the panel level clamps to the named level bounds
 - Registry.SetPosition: writes both coordinates at once
 - Registry.FormatField: renders each field type readably
 - Registry.Recover: leaves an on-screen TOPLEFT panel alone
@@ -1135,10 +1137,10 @@ badge and any count quoted in the docs must agree with it.
 |-------|------:|
 | test_util.lua | 32 |
 | test_compat.lua | 14 |
-| test_constants.lua | 19 |
+| test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 45 |
+| test_registry.lua | 46 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
@@ -1170,4 +1172,4 @@ badge and any count quoted in the docs must agree with it.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1012** |
+| **Total** | **1014** |

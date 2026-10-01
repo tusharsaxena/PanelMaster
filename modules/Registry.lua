@@ -101,7 +101,7 @@ end
 local CLAMPED = {
   { "width",              C.MIN_SIZE,             C.MAX_SIZE },
   { "height",             C.MIN_SIZE,             C.MAX_SIZE },
-  { "level",              0,                      100 },
+  { "level",              C.MIN_PANEL_LEVEL,      C.MAX_PANEL_LEVEL },
   { "scale",              C.MIN_PANEL_SCALE,      C.MAX_PANEL_SCALE },
   { "borderSize",         C.MIN_BORDER,           C.MAX_BORDER },
   { "borderOffset",       C.MIN_BORDER_OFFSET,    C.MAX_BORDER_OFFSET },

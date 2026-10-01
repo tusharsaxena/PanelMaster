@@ -98,7 +98,9 @@ rungs, so consecutive raw levels would *interleave* — one panel's accent bar l
 frame level as the next panel's background fill, with the winner decided by frame creation order,
 which the name-keyed pool does not keep in panel order. The `level` setting means "higher draws in
 front"; the stride is what makes that true for every distinct value rather than only for values far
-enough apart to clear the footprint.
+enough apart to clear the footprint. `level` is bounded by `C.MIN_PANEL_LEVEL`/`C.MAX_PANEL_LEVEL`
+(0–100), named once and read by the Registry's clamp, `BuildSpec` and the editor's **Frame level**
+slider, so the highest stack ends at frame level 807.
 
 The levels are **spread out** rather than consecutive because the artwork has to *interleave* with
 the other three: three of the six slots are the same single `f.artFrame`, whose level is reassigned

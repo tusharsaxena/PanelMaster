@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-1011%2F1011_passing-green)
+![Tests](https://img.shields.io/badge/Tests-1013%2F1013_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -52,7 +52,7 @@ Setting up a panel takes four steps, in this order.
    level. General → Editing is where you make the grid finer or turn snapping off. To move just one
    panel, tick **Unlock** on its General tab instead. Type `/pm lock` when you're done.
 - Style it. The Panels page shows one panel at a time, under six tabs. Position and size takes
-   exact numbers and the frame strata, while Background and border, Accent bar, and Opacity and
+   exact numbers, the frame strata and the frame level, while Background and border, Accent bar, and Opacity and
    fade cover the look. Any of the colors can follow your class color. Small changes are quicker
    from chat: `/pm panel ChatBG width 420`.
 - Add artwork, if you want it. The Artwork tab puts a picture inside the panel: one of the bundled
@@ -77,7 +77,8 @@ always covers one in a lower layer. Strata is what makes a panel a backdrop rath
 obstruction. New panels start in `LOW`, which sits above the game world and Blizzard's parchment art
 but under almost every interface frame. You can move a panel to any of the eight. `BACKGROUND` puts
 it under absolutely everything, while `DIALOG` and above will cover normal UI, which is occasionally
-what you want and usually not.
+what you want and usually not. Within one layer, **Frame level** on the Position and size tab
+decides which of two overlapping panels draws in front: the higher level wins.
 
 A locked panel never takes your mouse, whatever layer it is in. That holds with **Show on mouseover
 only** turned on too, because the panel watches where your cursor is without claiming the click.

@@ -57,6 +57,9 @@ test("Panels page: only the active tab's controls are built", function()
   local position = labelsOfTab(ctx, "Position and size")
   assertTrue(position["Width"], "the Position and size tab did not build Width")
   assertTrue(position["Panel scale"], "the Position and size tab did not build Panel scale")
+  -- #15: the level was CLI-only; the slider sits under Frame strata so the two layer controls read
+  -- together.
+  assertTrue(position["Frame level"], "the Position and size tab did not build Frame level")
   assertFalse(position["Background texture"] == true,
     "the Position and size tab built a surface control")
   -- The name box is in the chrome band, built once for the session. A tab render that produced it

@@ -22,7 +22,7 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 26 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip |
+| PANEL-1 to 27 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip |
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
@@ -148,10 +148,11 @@ client and is run when one is available, not per release.
   **Artwork** set to **None**, and two more panels in different colors, `/pm unlock` → every panel
   shows its gold outline and name clearly **on top of** its fill. **Fail:** a dim or invisible
   outline, which means the overlay fell behind the fill. Result:
-- **FRAME-12. Level stride.** Two overlapping panels in the same strata, with one-word names:
-  `/pm panel <first> level 0` and `/pm panel <second> level 1` (the Panels page has no Level control)
-  → the level-1 panel draws entirely in front, covering the other's accent bar and border, not just
-  part of them. `/pm panel <second> level 3` → the same. **Fail:** interleaved layers. Result:
+- **FRAME-12. Level stride.** Two overlapping panels in the same strata. On **Panels**, select the
+  first and set **Position and size ▸ Frame level** to 0, then the second to 1 (or, from chat,
+  `/pm panel <first> level 0` and `/pm panel <second> level 1`) → the level-1 panel draws entirely in
+  front, covering the other's accent bar and border, not just part of them. Set the second to 3 → the
+  same. **Fail:** interleaved layers. Result:
 - **FRAME-13. Master scale and alpha.** **General ▸ Master controls ▸ Master scale** to 1.5 → every
   panel grows together, border, accent bars and artwork included, and each panel's own **Panel
   scale** on the Panels page still reads what you set: the two multiply. **Master alpha** to 0.4 →
@@ -553,6 +554,12 @@ and at least one art pack; skip those without it.
   highlight on the wrong button, a body under the wrong tab, or a band that changes height: the
   per-`ctx` pool handed back a frame it did not finish dressing. The headless mock answers
   `GetHeight` with 0, so no automated check sees this. Result:
+- **PANEL-27. The Frame level slider.** Two overlapping panels in the same strata, with one-word
+  names. `/pm panel <first> level 7`, then open **Panels**, select it and go to **Position and
+  size** → **Frame level** sits on its own half-width row directly under **Frame strata** and reads
+  **7**; its tooltip says strata decides first and level orders panels within one strata. Drag the
+  second panel's **Frame level** above 7 → it moves in front of the first live, as you release, and
+  back below 7 → behind again. `/pm panel <second> level 150` → the slider reads **100**. Result:
 
 ## PROFILE
 
@@ -947,7 +954,7 @@ corrected in it against the code.
 | FRAME-1 to FRAME-7, FRAME-10, FRAME-11, FRAME-13 to FRAME-29 | § 3, § 4, § 4b steps 1, 2 and 5, § 5e-5 steps 1-2, § 5e-6 step 5, § 6 steps 1-2, § 7 steps 1-3, § 9 steps 2d, 5d, 5e, 12 and 14, § 10, § 11b, § 12c, § 17 steps 1-4 | No result recorded |
 | FRAME-8 | § 4b steps 3-4 | No result recorded; corrected: the CLI clamps an out-of-range outline rather than refusing it |
 | FRAME-9 | § 4b steps 6-9 | No result recorded; corrected: `/pm panel Wide reset` was never a command, so the reset is the General tab's **Reset** |
-| FRAME-12 | § 5e-5 step 3 | No result recorded; corrected: the Panels page has no Level control, so the levels are set with `/pm panel <name> level` |
+| FRAME-12 | § 5e-5 step 3 | No result recorded; corrected: the levels are set with the Panels page's **Frame level** slider (#15), the CLI kept as the alternative |
 | LOOK-1, LOOK-3 to LOOK-5, LOOK-7 to LOOK-9, LOOK-11 to LOOK-28 | § 5 steps 1-5, § 5b steps 1-10, § 5b-2, § 5b-3, § 5b-4 step 15, § 5c, § 5d steps 1-8 | No result recorded |
 | LOOK-2 | § 5 step 1a (`M4-18`) | Not yet run since the byte-alpha fix |
 | LOOK-6 | § 5b step 0 | No result recorded; corrected: PanelMaster has no font dropdown, so `JetBrains Mono` is checked with `/dump` |
@@ -963,6 +970,7 @@ corrected in it against the code.
 | PANEL-10 | § 9 step 5, § 16 step 12 | No result recorded; corrected: the six panel acts are on the General tab, not in the band |
 | PANEL-16, PANEL-17 | § 9 steps 5c and 5c-2 (session 3) | Not yet run since the acts and the rename box moved to the General tab |
 | PANEL-26 | § 19 (`M4-01`) | Not yet run since the pooled `TabStrip` (LibKa0s v1.27.0) |
+| PANEL-27 | none | New with the Frame level slider (#15) |
 | PROFILE-1 to PROFILE-10 | § 5e-6 step 6, § 12, § 12b, § 12b-2 steps 1 and 3 | No result recorded |
 | PROFILE-11 to PROFILE-14, PROFILE-16, PROFILE-17 | none | New with the `/pm profile` verb |
 | PROFILE-15 | § 7 step 12 | No result recorded; `/pm profile` is new in it |

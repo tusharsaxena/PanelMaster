@@ -53,10 +53,6 @@ Each of these is a decision that would still hold tomorrow, not a gap waiting to
   "Alpha" fails while a panel created as "Alpha" and since renamed still carries
   `PanelMaster_Panel_Alpha`. The refusal names the holder. Refusing is correct — two frames cannot
   share a global — but the reason is not obvious from the panel list.
-- **No per-panel strata *level* UI.** `level` is in the record and settable from the CLI, but the
-  settings page exposes only the strata dropdown. Two panels sharing a strata *and* a level are
-  ordered by frame creation, which the name-keyed pool does not keep in panel order; distinct
-  levels order cleanly (see *Panel levels are strided*).
 - **The mouseover fade is a hard cut, not a smooth fade.** Alpha snaps between the two values at the
   10Hz poll. An animated transition is a natural refinement.
 - **Class color is the player's own class only.** There is no "color by target's class" or

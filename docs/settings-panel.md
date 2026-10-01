@@ -71,6 +71,7 @@ the same size whether you have two panels or twenty. The controls, in full:
 | Width, Height, X offset, Y offset | Size and position. |
 | Anchor | Which corner or edge of the screen the offsets are measured from. |
 | Frame strata | Which layer the panel sits in. |
+| Frame level | Orders panels that share a frame strata, 0 to 100: a higher level draws entirely in front of a lower one (*Panel levels are strided* in [data-flow.md](data-flow.md)). Strata decides first. Two panels on the same strata **and** level have no guaranteed order: they fall back to frame creation order, which the name-keyed pool does not keep in panel order. Same field as `/pm panel <name> level <n>`. |
 | Panel scale | Magnifies the whole panel — its size, its border, its accent bars and its artwork — as one piece, the way the game's own UI scale does. Not the same as changing Width and Height: those resize the panel and leave the border and bars at the thickness you set. Width and Height keep showing the numbers you typed; what changes is how big they turn out on screen. A scaled panel is anchored in its own scaled units, so it also shifts relative to its anchor — nudge the offsets afterwards if it matters. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
 | Background color / Use class color | The fill color, or your class color. Its opacity controls the fill alone. |

@@ -263,6 +263,18 @@ test("Registry.Set: clamps out-of-range input rather than rejecting it", functio
   assertEqual(R:Get(rec.id).alpha, 1)
 end)
 
+test("Registry.Set: the panel level clamps to the named level bounds", function()
+  -- #15: the editor's Frame level slider writes through R:Set, as `/pm panel <name> level <n>` does.
+  fresh()
+  local rec = R:New("Leveled")
+  R:Set(rec.id, "level", C.MAX_PANEL_LEVEL + 1)
+  assertEqual(R:Get(rec.id).level, C.MAX_PANEL_LEVEL)
+  R:Set(rec.id, "level", C.MIN_PANEL_LEVEL - 1)
+  assertEqual(R:Get(rec.id).level, C.MIN_PANEL_LEVEL)
+  R:Set(rec.id, "level", 7)
+  assertEqual(R:Get(rec.id).level, 7)
+end)
+
 test("Registry.SetPosition: writes both coordinates at once", function()
   fresh()
   local rec = R:New("Moved")
