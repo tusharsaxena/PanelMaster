@@ -346,6 +346,55 @@ test("Panel: the Profiles page builds lazily on OnShow", function()
   assertEqual(type(panel:GetScript("OnShow")), "function")
 end)
 
+test("Panel: the Profiles container is inset to the library's PADDING_X on both edges", function()
+  -- The AceConfigDialog container is the one widget on this page that is hand-anchored rather than
+  -- laid out by the flow engine, so its horizontal inset is the one place the page could drift from
+  -- the header and divider the library draws at its own PADDING_X. The kit's AceGUI widget frames
+  -- do not record anchors, and the page is built once at registration, so the case builds a fresh
+  -- whole-library environment (tests/degraded_env.lua with nothing omitted) whose SimpleGroup frames
+  -- record SetPoint before the addon's files load. No production seam is involved.
+  local groups = {}
+  local ns = dofile("tests/degraded_env.lua").loadPartial({}, function(m)
+    local AceGUI = m.LibStub("AceGUI-3.0", true)
+    local create = AceGUI.Create
+    AceGUI.Create = function(self, wtype)
+      local w = create(self, wtype)
+      if wtype == "SimpleGroup" and w.frame then
+        local f = w.frame
+        f.__anchors = {}
+        f.ClearAllPoints = function() f.__anchors = {} end
+        f.SetPoint = function(_, point, relativeTo, relativePoint, x, y)
+          f.__anchors[#f.__anchors + 1] =
+            { point = point, relativeTo = relativeTo, relativePoint = relativePoint, x = x, y = y }
+        end
+        groups[#groups + 1] = w
+      end
+      return w
+    end
+  end)
+  local body = ns.Panel.profiles and ns.Panel.profiles.body
+  assertTrue(body ~= nil, "the Profiles page context was never built")
+  local container
+  for _, w in ipairs(groups) do
+    local a1 = w.frame.__anchors[1]
+    if a1 and a1.relativeTo == body then container = w end
+  end
+  assertTrue(container ~= nil, "no AceGUI container is anchored to the Profiles body")
+  local anchors = container.frame.__anchors
+  assertEqual(#anchors, 2, "the container is not held by exactly two points")
+  local pts = {}
+  for _, a in ipairs(anchors) do pts[a.point] = a end
+  local tl, br = pts.TOPLEFT, pts.BOTTOMRIGHT
+  assertTrue(tl ~= nil and br ~= nil, "the container is not anchored TOPLEFT and BOTTOMRIGHT")
+  assertTrue(tl.relativeTo == body and br.relativeTo == body, "a corner is anchored off the body")
+  assertEqual(tl.relativePoint, "TOPLEFT")
+  assertEqual(tl.x, 16)
+  assertEqual(tl.y, -8)
+  assertEqual(br.relativePoint, "BOTTOMRIGHT")
+  assertEqual(br.x, -16)
+  assertEqual(br.y, 8)
+end)
+
 -- ── The AceDB fake ──────────────────────────────────────────────────────────────
 
 test("AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does", function()

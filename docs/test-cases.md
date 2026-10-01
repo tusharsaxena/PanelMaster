@@ -826,7 +826,7 @@ badge and any count quoted in the docs must agree with it.
 - Panels page: every color declares WHOSE class it means, and all five are the player's
 - Panels page: the per-panel Unlock tick tracks global, per-panel and deferred unlocks
 
-### test_profiles.lua (25)
+### test_profiles.lua (26)
 
 - Registry.CopyFrom: copies appearance across
 - Registry.CopyFrom: does NOT copy position
@@ -852,6 +852,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: the Profiles page carries the framework contract like every other
 - Panel: the Profiles page has NO Defaults button
 - Panel: the Profiles page builds lazily on OnShow
+- Panel: the Profiles container is inset to the library's PADDING_X on both edges
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
 ### test_launcher.lua (37)
@@ -1180,7 +1181,7 @@ badge and any count quoted in the docs must agree with it.
 | test_slash.lua | 82 |
 | test_panel.lua | 47 |
 | test_panels_page.lua | 18 |
-| test_profiles.lua | 25 |
+| test_profiles.lua | 26 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 21 |
 | test_sunnart.lua | 53 |
@@ -1197,4 +1198,4 @@ badge and any count quoted in the docs must agree with it.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1035** |
+| **Total** | **1036** |
