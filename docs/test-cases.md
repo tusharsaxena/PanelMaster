@@ -6,10 +6,9 @@ badge and any count quoted in the docs must agree with it.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (32)
+### test_util.lua (31)
 
 - Util.DeepEqual: compares plain data by value, nested tables included
-- Util.CountChanged: counts keys written, added or removed, and not keys left alone
 - Util.SplitPath: splits a dotted path
 - Util.SplitPath: a single segment is one part
 - Util.EffectiveScale: the own scale clamped to the panel bounds, times the master scale
@@ -1158,7 +1157,7 @@ badge and any count quoted in the docs must agree with it.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 32 |
+| test_util.lua | 31 |
 | test_compat.lua | 14 |
 | test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
@@ -1196,4 +1195,4 @@ badge and any count quoted in the docs must agree with it.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1034** |
+| **Total** | **1033** |
