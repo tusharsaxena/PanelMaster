@@ -1,0 +1,1 @@
+OK GI-PM-01 — dead S.Installed() deleted with comment; test assertions moved onto #S.Themes() per 02a, assertNil guard red-first; rendering.md sentence trimmed; no remaining callers
