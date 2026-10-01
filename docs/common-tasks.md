@@ -34,19 +34,24 @@ path that already has a row.
 
 This is the change with the most places to touch, and `core/Constants.lua` is nearly all of them.
 
-1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:267`) with its shipped default.
+1. Add the field to `C.PANEL_TEMPLATE` (`core/Constants.lua:273`) with its shipped default.
 2. Add it to `C.PANEL_FIELD_TYPE`, and to `C.PANEL_FIELD_ORDER` (`:509`) at the position it should
-   appear in `/pm panel <name>` output and in the editor.
+   appear in `/pm panel <name>` output and in the editor. That alone gives it a `panel.<field>`
+   schema row (`settings/PanelSchema.lua` generates one per `PANEL_FIELD_ORDER` field), so every
+   write to it goes through the schema seam with the panel id, and the boot check resolves it
+   against the template.
 3. Add its media / enum / color map entry if it needs one.
-4. Teach `Registry:Sanitize` to validate and clamp it. **Sanitize is the repair path, not just the
-   create path** — `Registry:ReloadProfile` sanitizes every record it finds, which is how an incoming
-   profile gets per-record repairs without a migration.
+4. Teach `Registry:Sanitize` to validate and clamp it: a row in one of the rule lists, or a
+   `REPAIR.<field>` entry, in `modules/Registry.lua`. That one table is both the whole-record repair
+   and the per-field one the field's schema row normalizes through. **Sanitize is the repair path,
+   not just the create path** — `Registry:ReloadProfile` sanitizes every record it finds, which is
+   how an incoming profile gets per-record repairs without a migration.
 5. Teach `Canvas.BuildSpec` to consume it. `BuildSpec` is **pure** — record + settings → exactly what
    the frame should look like, every value already validated and clamped — so the new behavior gets a
    headless test with no frames involved. `applySpec` stays a thin application of the result.
 6. If the field should **not** be reachable from the CLI, leave it out of `PANEL_FIELD_TYPE`,
    `PANEL_FIELD_ORDER` and `PANEL_TEMPLATE` — that omission is the mechanism, and
-   `core/Constants.lua:546` documents the existing case.
+   `core/Constants.lua:559` documents the existing case.
 
 ## Add a slash verb
 

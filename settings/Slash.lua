@@ -636,8 +636,11 @@ local dispatcher = lib:New({
   -- two different paths to the store.
   get          = NS.SchemaRuntime.Get,
   set          = NS.SchemaRuntime.Set,
-  findRow      = NS.SchemaRuntime.FindRow,
-  allRows      = NS.SchemaRuntime.AllRows,
+  -- The row lookups are the PROFILE view (settings/PanelSchema.lua): the runtime also holds the
+  -- `panel.<field>` rows, which are per-panel and addressed by id, so `/pm list|get|set|reset`
+  -- never see them and `/pm set panel.width 5` is an unknown setting. `/pm panel` is the panel CLI.
+  findRow      = NS.Schema.FindProfileRow,
+  allRows      = NS.Schema.ProfileRows,
   applyDefault = NS.SchemaRuntime.ApplyDefault,
 
   -- ADAPTER. The library groups `/pm list` by `row.page`; this addon's schema has always grouped by

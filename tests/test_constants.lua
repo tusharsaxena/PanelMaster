@@ -97,11 +97,37 @@ test("Constants: no slider in the panel editor decides its own bounds", function
     ['"Height", "height"']    = "C.MIN_SIZE, C.MAX_SIZE",
     ['"X offset", "x"']       = "-C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE",
     ['"Y offset", "y"']       = "-C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE",
+    ['"Frame level", "level"'] = "C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL",
   }
   for field, bounds in pairs(expected) do
-    local call = src:match("numberField%([%w_]+, " .. field:gsub("%p", "%%%0") .. ", ([^)]*)%)")
+    -- The two bound arguments only: a slider that also passes a step and a tooltip still has its
+    -- bounds in the same two places.
+    local call = src:match("numberField%([%w_]+, " .. field:gsub("%p", "%%%0")
+      .. ", ([^,)]+, [^,)]+)[,)]")
     assertTrue(call ~= nil, "no numberField call for " .. field)
     assertEqual(call, bounds, field .. " should take its bounds from Constants")
+  end
+end)
+
+-- The client clamps SetFrameLevel to this; a panel stack placed above it would silently collapse
+-- onto one level.
+local CLIENT_FRAME_LEVEL_CEILING = 10000
+
+test("Constants: the panel level bounds are named, and the highest stack fits the client", function()
+  -- #15. The bounds were spelled inline as 0 and 100 in Registry's clamp table and in Canvas's
+  -- BuildSpec; the editor slider made a third reader, so they are named once (options-ui-§8).
+  assertEqual(C.MIN_PANEL_LEVEL, 0)
+  assertEqual(C.MAX_PANEL_LEVEL, 100)
+  assertTrue(C.MAX_PANEL_LEVEL * C.PANEL_LEVEL_STRIDE + C.UNLOCK_FRAME_LEVEL
+    < CLIENT_FRAME_LEVEL_CEILING, "the highest panel level's stack exceeds the client's ceiling")
+  for path, needle in pairs({
+    ["modules/Registry.lua"] = '{ "level",              C.MIN_PANEL_LEVEL,      C.MAX_PANEL_LEVEL },',
+    ["modules/Canvas.lua"]   = "Util.Clamp(rec.level, C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL, 0)",
+  }) do
+    local f = assert(io.open(path, "r"))
+    local src = f:read("*a")
+    f:close()
+    assertTrue(src:find(needle, 1, true) ~= nil, path .. " does not clamp the level by the named bounds")
   end
 end)
 

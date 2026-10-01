@@ -113,8 +113,13 @@ modules\Diagnostics.lua
 
 # Settings (last — depend on everything else being initialized)
 settings\Schema.lua
-# Slash AFTER Schema, load-bearing: its dispatcher descriptor takes NS.SchemaRuntime's members as
-# VALUES at file load (settings/Slash.lua:637-641).
+# The per-panel fields as `panel.<field>` schema rows (PanelMaster#54), AFTER Schema (it adds its
+# rows to NS.SchemaRuntime at file load, and defines S.ProfileRows / S.FindProfileRow on NS.Schema)
+# and after modules\Registry.lua (its rows' normalize reads R.SanitizeField). BEFORE Slash and
+# OptionsSetup, load-bearing: both descriptors take S.ProfileRows / S.FindProfileRow as VALUES.
+settings\PanelSchema.lua
+# Slash AFTER Schema and PanelSchema, load-bearing: its dispatcher descriptor takes NS.SchemaRuntime's
+# members and PanelSchema's profile-row filter as VALUES at file load (settings/Slash.lua).
 settings\Slash.lua
 settings\PanelEditor.lua
 # The editor's six tabs, peeled out of PanelEditor.lua (layout-§1, PanelMaster#47). Either order

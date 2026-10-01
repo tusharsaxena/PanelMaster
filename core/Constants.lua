@@ -253,9 +253,15 @@ C.UNLOCK_FRAME_LEVEL = 7
 -- too) and artwork widened the footprint enough to matter. Multiplying is the fix for both: every
 -- DISTINCT level now separates cleanly, which is what the setting has always claimed.
 --
--- Bounded safely: a panel's level is clamped to 100 (Registry.Sanitize, Canvas.BuildSpec), so the
--- highest frame level this can produce is 800 — far under the client's per-strata ceiling.
+-- Bounded safely: a panel's level is clamped to C.MIN_PANEL_LEVEL .. C.MAX_PANEL_LEVEL
+-- (Registry.Sanitize, Canvas.BuildSpec, the editor's Frame level slider), so the highest frame level
+-- this can produce is 800 — far under the client's per-strata ceiling.
 C.PANEL_LEVEL_STRIDE = C.UNLOCK_FRAME_LEVEL + 1
+
+-- The per-panel `level` setting's range. Named once, because three places read it: the Registry's
+-- clamp, Canvas's BuildSpec and the Frame level slider on the Position and size tab (options-ui-§8).
+C.MIN_PANEL_LEVEL = 0
+C.MAX_PANEL_LEVEL = 100
 
 -- ── Panel record template ───────────────────────────────────────────────────────
 -- The shipped shape of a new panel, and the source every field default is read from when an older

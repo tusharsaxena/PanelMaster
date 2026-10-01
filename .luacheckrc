@@ -177,7 +177,7 @@ files["settings/PanelEditor.lua"] = {
   ignore = { "212/self" },
 }
 
--- The schema seam's kept names. `NS.Schema:Set`, `:Get`, `:FindRow`, `:Default`, `:ReadPath`,
+-- The schema seam's kept names. `NS.Schema:Set`, `:Get`, `:SetMany`, `:FindRow`, `:Default`, `:ReadPath`,
 -- `:Register`, `:SnapshotPersisted` and `:CountChangedSince` are colon methods because every caller
 -- in this addon reaches them by colon -- core/LifecycleSetup.lua's switch read, core/LauncherSetup.lua's
 -- lock accessor, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates

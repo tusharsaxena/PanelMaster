@@ -22,7 +22,7 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 26 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip |
+| PANEL-1 to 31 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
 | PROFILE-1 to 17 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
@@ -148,10 +148,11 @@ client and is run when one is available, not per release.
   **Artwork** set to **None**, and two more panels in different colors, `/pm unlock` → every panel
   shows its gold outline and name clearly **on top of** its fill. **Fail:** a dim or invisible
   outline, which means the overlay fell behind the fill. Result:
-- **FRAME-12. Level stride.** Two overlapping panels in the same strata, with one-word names:
-  `/pm panel <first> level 0` and `/pm panel <second> level 1` (the Panels page has no Level control)
-  → the level-1 panel draws entirely in front, covering the other's accent bar and border, not just
-  part of them. `/pm panel <second> level 3` → the same. **Fail:** interleaved layers. Result:
+- **FRAME-12. Level stride.** Two overlapping panels in the same strata. On **Panels**, select the
+  first and set **Position and size ▸ Frame level** to 0, then the second to 1 (or, from chat,
+  `/pm panel <first> level 0` and `/pm panel <second> level 1`) → the level-1 panel draws entirely in
+  front, covering the other's accent bar and border, not just part of them. Set the second to 3 → the
+  same. **Fail:** interleaved layers. Result: pass (owner, 2026-10-02)
 - **FRAME-13. Master scale and alpha.** **General ▸ Master controls ▸ Master scale** to 1.5 → every
   panel grows together, border, accent bars and artwork included, and each panel's own **Panel
   scale** on the Panels page still reads what you set: the two multiply. **Master alpha** to 0.4 →
@@ -553,6 +554,30 @@ and at least one art pack; skip those without it.
   highlight on the wrong button, a body under the wrong tab, or a band that changes height: the
   per-`ctx` pool handed back a frame it did not finish dressing. The headless mock answers
   `GetHeight` with 0, so no automated check sees this. Result:
+- **PANEL-27. The Frame level slider.** Two overlapping panels in the same strata, with one-word
+  names. `/pm panel <first> level 7`, then open **Panels**, select it and go to **Position and
+  size** → **Frame level** sits on its own half-width row directly under **Frame strata** and reads
+  **7**; its tooltip says strata decides first and level orders panels within one strata. Drag the
+  second panel's **Frame level** above 7 → it moves in front of the first live, as you release, and
+  back below 7 → behind again. `/pm panel <second> level 150` → the slider reads **100**. Result: pass (owner, 2026-10-02)
+- **PANEL-28. Every editor control still repaints live.** Select a panel and visit each of the six
+  editor tabs (**General**, **Position and size**, **Background and border**, **Accent bar**,
+  **Artwork**, **Opacity and fade**). Change every control once: each slider on release, each
+  dropdown, each checkbox, each color swatch → the panel changes on screen at once, and the control
+  reads back what you set when you leave the tab and come back. No Lua error. Result: pass (owner, 2026-10-02)
+- **PANEL-29. A drag persists.** Unlock, drag a panel into the top-left corner (the frame re-anchors to
+  the corner it ends nearest), lock, `/reload` → the panel is exactly where you left it, and
+  `/pm panel <name>` shows the new `point`, `relPoint`, `x` and `y`. Result: pass (owner, 2026-10-02)
+- **PANEL-30. One `[Set]` line per panel write.** `/pm debug on`, open the console. Drag a panel's
+  **Width** slider and release → exactly one line, `[Set] panel.width = <n> on '<name>'`, and no
+  `[Panel]` line for it. Drag the panel in unlock mode → four `[Set] panel.…` lines (point,
+  relPoint, x, y) naming it. Then press **Reset** on the General tab → one
+  `[Set] reset '<name>': N rows`; **Copy from** another panel → one `[Set] copy from '<a>' to '<b>':
+  N rows`; `/pm recover` with a panel off-screen → one `[Set] recover positions: N rows`; **Master
+  controls ▸ Reset position** → one `[Set] reset positions: N rows`. Result: pass (owner, 2026-10-02)
+- **PANEL-31. Panel fields are not profile settings.** `/pm list` → no `panel.` row anywhere in the
+  listing, and **General** has no extra tab. `/pm set panel.width 500` → refused as an unknown
+  setting, and no panel changes. `/pm panel <name> width 500` → that panel takes it. Result: pass (owner, 2026-10-02)
 
 ## PROFILE
 
@@ -893,7 +918,7 @@ panel names a player types, and two seams treat non-ASCII bytes as punctuation:
 - **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore, and
   Lua's `%w` is ASCII-only: `Übersicht` slugs to `bersicht`, and `Ärger` and `Örger` both slug to
   `rger`. That slug is the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25).
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:295-303`) and the Panels list's sort
+- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:373-381`) and the Panels list's sort
   (`settings/PanelEditor.lua:195`) use `string.lower`, which folds ASCII only.
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a
@@ -934,7 +959,11 @@ unchanged expectations, so they are not listed: PANEL-11 and PANEL-25 (§ 9 step
 passed in this doc), PANEL-12 (§ 9 step 5-x, passed in the 2026-09-26 navrail adoption's report),
 and DIAG-14, DIAG-16, DIAG-17, DIAG-19 and DEGRADED-6 (§ 11 steps 12, 14, 15 and 17,
 § 14 step 10, passed as PM-S1 to PM-S5, PM-S7 and PM-X1 in the 2026-09-25 diagnostics plan's
-report). Every other check carried over is owed, and so is every check new in this rewrite or
+report). Six checks from the 2026-10-01 GitHub issue pass passed on the owner's run of 2026-10-02
+and are signed off on their own `Result:` lines, so they are not listed either: FRAME-12 (corrected
+for the **Frame level** slider, #15), PANEL-27 (new with it) and PANEL-28 to PANEL-31 (new with the
+instance-addressed panel rows, #54).
+Every other check carried over is owed, and so is every check new in this rewrite or
 corrected in it against the code.
 
 | New ID | Origin (old section and step) | Why it is owed |
@@ -947,7 +976,6 @@ corrected in it against the code.
 | FRAME-1 to FRAME-7, FRAME-10, FRAME-11, FRAME-13 to FRAME-29 | § 3, § 4, § 4b steps 1, 2 and 5, § 5e-5 steps 1-2, § 5e-6 step 5, § 6 steps 1-2, § 7 steps 1-3, § 9 steps 2d, 5d, 5e, 12 and 14, § 10, § 11b, § 12c, § 17 steps 1-4 | No result recorded |
 | FRAME-8 | § 4b steps 3-4 | No result recorded; corrected: the CLI clamps an out-of-range outline rather than refusing it |
 | FRAME-9 | § 4b steps 6-9 | No result recorded; corrected: `/pm panel Wide reset` was never a command, so the reset is the General tab's **Reset** |
-| FRAME-12 | § 5e-5 step 3 | No result recorded; corrected: the Panels page has no Level control, so the levels are set with `/pm panel <name> level` |
 | LOOK-1, LOOK-3 to LOOK-5, LOOK-7 to LOOK-9, LOOK-11 to LOOK-28 | § 5 steps 1-5, § 5b steps 1-10, § 5b-2, § 5b-3, § 5b-4 step 15, § 5c, § 5d steps 1-8 | No result recorded |
 | LOOK-2 | § 5 step 1a (`M4-18`) | Not yet run since the byte-alpha fix |
 | LOOK-6 | § 5b step 0 | No result recorded; corrected: PanelMaster has no font dropdown, so `JetBrains Mono` is checked with `/dump` |

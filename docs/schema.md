@@ -131,20 +131,13 @@ color was one `COLOR_FIELDS` row and no new class-color logic anywhere.
 Membership and bookkeeping (`db.profile.panels`, `nextID`, and each record's `id` and `frameName`)
 are written by `modules/Registry.lua` at runtime and by the load pass, `NS:SweepPreviewPanels` with
 `NS:RunMigrations`' frame-name backfill, at init and on a profile change. `ARCHITECTURE.md` →
-Settings Schema names all three. The fields **on** a panel are a separate question. They are not
-Schema rows either. The field controls and the CLI write them through `NS.Registry:Set`, a drag
-through `:SetPosition` plus a direct anchor write in `modules/Unlock.lua`, and the whole-record and
-bulk verbs (`:Reset`, `:CopyFrom`, `:FitToArtwork`, `:Recover`, `:ResetPositions`) write them in
-place. None of these is the schema helper; the register row below lists every one of them.
-Under standard v2.43.0 they would need instance-relative rows or a register row, and the owner
-ruled for a register row on 2026-09-12
-([#49](https://github.com/tusharsaxena/PanelMaster/issues/49)): the schema helper addresses paths,
-not records. The row is `architecture-§5` (the fields on a panel) in
-[`ARCHITECTURE.md` → Documented deviations](ARCHITECTURE.md#documented-deviations). Its trigger is
-host-side: it retires when `resolveRoot` maps an instance id to a registry record and
-`NS.Schema:Set` / `:Get` forward that id ([#54](https://github.com/tusharsaxena/PanelMaster/issues/54)).
-The record-backed bind arm in `LibKa0s-Options-1.0` is not that trigger: it changes how a control
-binds to a record, not where the write goes.
+Settings Schema names all three. The fields **on** a panel are a separate question, and since
+[#54](https://github.com/tusharsaxena/PanelMaster/issues/54) they are schema rows: one
+`panel.<field>` row per field, addressed by the panel id. The field controls and the CLI reach them
+through `NS.Registry:Set`, a drag through `:SetPosition` (point, relPoint and both offsets in one
+act), and the whole-record and bulk verbs through `SetMany`; see
+[Instance rows](#instance-rows-panel). The register row this section used to cite (`architecture-§5`,
+the fields on a panel, [#49](https://github.com/tusharsaxena/PanelMaster/issues/49)) is retired.
 
 #### The artwork fields
 
@@ -176,7 +169,7 @@ anywhere — the third time that seam has paid for itself.
 `artTexture` defaults to `"None"`, so a record that predates this change renders exactly as before —
 `BuildArtSpec` returns `nil` for it before touching anything else.
 
-The six closed lists are **not** six branches in `Registry:Set`. One generic `"enum"` kind reads
+The six closed lists are **not** six branches in the field parser (`settings/PanelSchema.lua`). One generic `"enum"` kind reads
 `C.PANEL_FIELD_ENUM` — four rows now, `artFill`, `artRotation`, `artLayer` and `artBlend` — so a
 further enum field later costs one row and no code; `artPoint` rides the shared `"point"` kind that
 the panel's own anchor already uses; and `artTexture` has its own `"artwork"` kind validated
@@ -190,7 +183,9 @@ Two deliberate asymmetries in `Sanitize`:
   `Artwork.Catalog` loads after this addon), and `BuildArtSpec` already degrades an unresolvable
   id to "draw nothing". Rewriting it to `"None"` on first touch would destroy the user's choice
   permanently to fix a problem that fixes itself. `R:Set` still refuses a typo up front, which is
-  when there is somebody to tell.
+  when there is somebody to tell: its row parses what the player typed. A record-to-record verb
+  (copy, reset) repairs instead of parsing, so a texture copied from a panel whose media addon has
+  not loaded yet still copies.
 - **`artX` / `artY` are unbounded**, like the panel's own offsets: the offset is measured against a
   panel size `Sanitize` does not know, so an invented bound would clamp a good placement on a large
   panel the first time the record was touched.
@@ -207,10 +202,13 @@ unknown blend mode cannot produce a nil geometry the way the other four can — 
 
 #### Sanitizing
 
-`Registry.Sanitize` runs on the way **in**, on every write, not on the way out. The stored file is
-therefore always already valid: a record missing a field added in a later build is repaired the
-first time it is touched, and a hand-edited SavedVariables file cannot feed a string width into
-`SetWidth`.
+`Registry.Sanitize` runs on the way **in**, not on the way out. Its per-field half,
+`R.SanitizeField`, is every `panel.<field>` row's normalize, so each write is repaired at the seam;
+the whole record is repaired at create, on a profile switch, and once after every single-record
+write (the Registry's `announce`). The stored file is therefore always already valid: a record
+missing a field added in a later build is repaired the first time it is touched, and a hand-edited
+SavedVariables file cannot feed a string width into `SetWidth`. Both halves read one `REPAIR` table,
+so they cannot disagree.
 
 One deliberate exception: **offsets are not clamped to the screen.** A legitimate multi-monitor
 layout carries offsets far outside the current `UIParent`, and clamping on every write would quietly
@@ -276,17 +274,50 @@ defaults instead.
 `docs/revendor/2026-09-23-v1.55.0/`). The rows are this addon's. The machinery around them is one
 library instance, `NS.SchemaRuntime`, built in `settings/Schema.lua`: the path walk, the row index,
 the single write seam, the bulk bracket (`debug-logging-§10`) and the boot shape check. The seam
-**keeps this addon's names**: `NS.Schema:Set`, `:Get`, `:FindRow`, `:Default` and `:Register`, plus
-`S.BulkBegin`, `S.BulkEnd` and `S.BulkLine`, each delegate to the instance, so no caller moved. The
-Options and Slash descriptors take the instance's members **as values** (`set =
-NS.SchemaRuntime.Set`, and the same for `get`, `applyDefault`, `findRow`, `allRows` and the bracket
-pair). That is safe because nothing sits in front of the seam: the minimap inversion is the row's
+**keeps this addon's names**: `NS.Schema:Set`, `:Get`, `:SetMany`, `:FindRow`, `:Default` and
+`:Register`, plus `S.BulkBegin` and `S.BulkEnd`, each delegate to the instance, so no caller moved;
+`:Set` and `:Get` forward an instance id for the panel rows. The Options and Slash descriptors take
+the instance's members **as values** (`set = NS.SchemaRuntime.Set`, and the same for `get`,
+`applyDefault` and the bracket pair), and the row lookups as the profile view (`findRow =
+S.FindProfileRow`, `allRows = S.ProfileRows`). That is safe because nothing sits in front of the seam: the minimap inversion is the row's
 own `get`/`set`, and a refusal belongs in a row's `validate`, which `ApplyDefault` reaches too.
-Stored rows resolve against the active profile (`resolveRoot`). The refusal texts are this addon's
+Stored profile rows resolve against the active profile (`S.ResolveRoot`), and `panel.*` rows
+against one panel's record. The refusal texts are this addon's
 own (`unknown path: <path>`, `invalid value`), restored through the descriptor's plain-table `L`.
 `S:Register` is the instance's `Validate` with a `global.`-aware defaults root, and it counts shape
 errors as well as unresolved paths. The profile reset's row count stays host-side
 (`S:SnapshotPersisted` / `S:CountChangedSince`), as the design allows.
+
+#### Instance rows (`panel.*`)
+
+**Every per-panel field is a schema row, addressed by the panel id**
+([#54](https://github.com/tusharsaxena/PanelMaster/issues/54)). `settings/PanelSchema.lua` generates
+one row per `C.PANEL_FIELD_ORDER` field except `name` (50 rows) from the field tables in
+`core/Constants.lua`, so a new field gets its row with no edit there:
+
+- **Path and default.** `panel.<field>`, defaulting to `C.PANEL_TEMPLATE[field]`. `S:Register`
+  resolves these paths against the template from segment 2, so the boot shape check covers every
+  panel field.
+- **Normalize.** The field's parser (the `kind → coerce` table moved here from the Registry), then
+  `R.SanitizeField`. A refusal is `false, "invalid value", <the parser's sentence>`, and `R:Set`
+  hands the sentence back. A record-to-record verb (`R.InRecordWrite()`) skips the parse and only
+  repairs, as the old raw copy plus `Sanitize` did.
+- **The resolver.** `S.ResolveRoot(parts, id)` answers the record whose id is `id`, `first = 2` and
+  the id; with no such panel it answers `nil, "no such panel"`, and with no id `nil, "panel rows
+  need a panel"`. It looks the record up at call time, because ids are per profile.
+- **The `[Set]` line.** The descriptor's `format` renders a panel row through `R.FormatValue` and
+  names the panel the write resolved to: `[Set] panel.width = 300 on 'Alpha'`. A profile row keeps
+  the library's `tostring` line. The Registry's own per-write `[Panel]` line is gone.
+- **The announce.** `NS.Registry.AnnounceWrite` / `AnnounceBatch` repair the record and send
+  `PanelChanged` once per act. `Recover` and `ResetPositions` hold them back and send one
+  `PanelsChanged`. The Registry stays the sole sender.
+- **Off the profile surfaces.** The rows are `hidden` and `skipRender`, and the descriptors take
+  `S.ProfileRows` / `S.FindProfileRow`, so `/pm list|get|set|reset|resetall`, the General page, the
+  reset snapshot and the diagnostics dump never see them. `/pm set panel.width 5` is an unknown
+  setting; `/pm panel <name> width 5` is the panel CLI.
+
+`name` and `frameName` have no row: they are identity. `create`, `destroy` and `Rename` stay
+structural, in the Registry.
 
 #### The degradation stub
 

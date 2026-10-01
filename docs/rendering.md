@@ -253,9 +253,7 @@ options outlives the pack being deleted; and `SunnCustomTheme` is a hand-edited 
 anything at all. Both produce a dropdown entry that draws nothing, which reads as this addon being
 broken rather than the art being absent. WoW exposes no way to ask whether a texture *file* exists,
 so the pack folder is the only evidence available — and for a manifest theme it is a real check,
-since the generator verified the files when it measured them. `S.Installed()` is therefore defined
-as `#S.Themes() > 0` rather than as its own inspection of the globals, so it cannot answer yes to a
-question the dropdown then answers no to.
+since the generator verified the files when it measured them.
 
 A nil roster means "cannot tell" and offers the theme anyway, because withholding every theme would
 disable a working feature where offering a missing one merely draws nothing.

@@ -236,17 +236,6 @@ local function addonFolders()
   return NS.Compat and NS.Compat.AddOnFolders and NS.Compat.AddOnFolders() or nil
 end
 
--- Is anything Sunn-shaped installed at all? Used to keep the whole feature silent on a machine
--- without it — no category, no rows, no settings copy about an addon the player does not have.
---
--- Defined as "does this yield anything to offer" rather than as its own inspection of the globals,
--- so it cannot answer yes to a question the dropdown then answers no to. That drift was reachable:
--- the earlier version returned true whenever any Sunn global existed, including for a SunnArt whose
--- every theme named an uninstalled pack.
-function S.Installed()
-  return #S.Themes() > 0
-end
-
 -- `SunnArtPack2` -> "Sunn: Art Pack 2". Cosmetic only: the folder name is what the dropdown would
 -- otherwise show, and "SunnArtPack2" reads like a path rather than a group.
 local function prettyFolder(folder)

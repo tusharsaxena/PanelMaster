@@ -418,6 +418,15 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "what a backdrop usually wants. DIALOG and above will cover normal UI.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
+    -- Directly under Frame strata, so the two layer controls read together; half width, alone on
+    -- its row. The write goes through NS.Registry:Set, the seam `/pm panel <name> level <n>` uses.
+    local layerRow = editorRow(group)
+    numberField(layerRow, "Frame level", "level", C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL, 1,
+      "Orders panels that share a frame strata: a higher level draws entirely in front of a lower "
+      .. "one. Panels on the same strata and level have no guaranteed order. Strata decides first; "
+      .. "level only orders panels within one strata.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
     -- Full width, spanning both columns. Scale is the one control on this page that acts on
     -- EVERYTHING above it at once — width, height, border, accent bars and artwork together — so it
     -- reads as a footer to the section rather than as one of a pair, and pairing it with any single

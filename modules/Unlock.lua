@@ -221,9 +221,9 @@ function U:ArmDrag(f)
     x, y = U.SnapPosition(x, y, settings)
     -- The anchor point can change during a drag (StartMoving re-anchors to whichever corner the
     -- frame ends up nearest), so both the point and the offset are written back — storing only the
-    -- offset against a stale point would teleport the panel on the next login.
-    rec.point, rec.relPoint = point, relPoint
-    NS.Registry:SetPosition(rec.id, x, y)
+    -- offset against a stale point would teleport the panel on the next login. All four go in ONE
+    -- act through the schema seam: one write path, one repaint for one gesture.
+    NS.Registry:SetPosition(rec.id, x, y, point, relPoint)
   end)
 end
 

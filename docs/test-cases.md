@@ -58,7 +58,7 @@ badge and any count quoted in the docs must agree with it.
 - Compat.InCombat answers false when neither combat API exists
 - Compat owns the deprecated-API surface: no flavor branching in the addon
 
-### test_constants.lua (19)
+### test_constants.lua (20)
 
 - Constants: the strata list runs lowest to highest and starts at BACKGROUND
 - Constants: new panels default to LOW
@@ -72,6 +72,7 @@ badge and any count quoted in the docs must agree with it.
 - Constants: the template's own values are valid by its own rules
 - Constants: the editor's offset reach is named, symmetric and wide enough to be useful
 - Constants: no slider in the panel editor decides its own bounds
+- Constants: the panel level bounds are named, and the highest stack fits the client
 - Constants: the mono font and logo point at this addon's folder
 - Constants: the logo file named by LOGO_PATH exists
 - Constants: the logo is a Targa, which is the only format WoW loads at runtime
@@ -100,7 +101,7 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (45)
+### test_registry.lua (46)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -132,6 +133,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Set: accepts a lower-case anchor and stores it upper-case
 - Registry.Set: writing `name` routes through Rename's uniqueness check
 - Registry.Set: clamps out-of-range input rather than rejecting it
+- Registry.Set: the panel level clamps to the named level bounds
 - Registry.SetPosition: writes both coordinates at once
 - Registry.FormatField: renders each field type readably
 - Registry.Recover: leaves an on-screen TOPLEFT panel alone
@@ -147,6 +149,29 @@ badge and any count quoted in the docs must agree with it.
 - Registry: a new panel is born at the profile's default size
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
+
+### test_panel_schema.lua (20)
+
+- Panel verbs: R:Set stores the value and repaints that one panel once
+- Panel verbs: R:Set of `name` is a rename -- the SET changed, so PANELS and no PANEL
+- Panel verbs: R:Reset lands on the new-panel state, keeps identity, one PANEL
+- Panel verbs: R:CopyFrom copies appearance, not identity or position, one PANEL
+- Panel verbs: R:FitToArtwork adopts the art's size with one PANEL; a refusal sends none
+- Panel verbs: R:Recover moves every lost panel and sends ONE PANELS, no per-panel PANEL
+- Panel verbs: R:ResetPositions re-homes every panel and sends ONE PANELS
+- Panel verbs: a drag-stop stores point, relPoint and both offsets, with ONE PANEL
+- Panel verbs: R:SetPosition writes both offsets with ONE PANEL
+- Panel rows: S.ResolveRoot answers the record and first = 2 for a known panel id
+- Panel rows: S.ResolveRoot refuses an unknown or missing id, and still answers the profile
+- Panel rows: one hidden panel.<field> row per panel field but name, defaulting to the template
+- Panel rows: a seam write stores, clamps, refuses in the coercer's words, repaints once
+- Panel rows: a panel write logs ONE [Set] line in the library's shape, naming the panel
+- Panel rows: R:Set and every record verb write through the seam with the panel id
+- Panel rows: a drag-stop writes point, relPoint, x and y as ONE act
+- Panel rows: the profile surfaces never see a panel row
+- Panel rows: the boot shape check resolves every panel row against the template
+- Panel rows: R:Reset drops a key the template does not declare, as the wipe did
+- Panel rows: a library-less Schema load drives the same panel writes
 
 ### test_canvas.lua (37)
 
@@ -941,7 +966,7 @@ badge and any count quoted in the docs must agree with it.
 - SunnArt: an unreadable addon roster does not silently disable a working install
 - SunnArt: a theme left in saved variables by an UNINSTALLED pack is not offered
 - SunnArt: a hand-edited custom theme naming a missing folder is not offered
-- SunnArt: Installed() agrees with the dropdown rather than with the globals
+- SunnArt: a SunnArt whose every theme is uninstalled offers nothing
 - SunnArt: Inject offers only what is installed, across both discovery paths
 - Fit: a quarter turn transposes the fitted size
 - Fit: the artwork scale multiplies the fitted size
@@ -1118,16 +1143,28 @@ badge and any count quoted in the docs must agree with it.
 - diagnostics contract: both forms run while the addon is disabled
 - diagnostics contract: no other name runs the report
 
+### test_lizard_sighted.lua (8)
+
+- lizard sighted: every hazard lizard loses a function over is neutralized
+- lizard sighted: fields, strings, comments and look-alike names come through unchanged
+- lizard sighted: a method definition is rewritten to its dot form with self
+- lizard sighted: no line is added or removed, CRLF included
+- lizard sighted: countFunctions counts the keyword, not strings, comments or longer names
+- lizard sighted: listedCounts reads the per-file table, once per file
+- lizard sighted: parity names every file whose counts differ, and only those
+- lizard sighted: lizard lists every function of a hazard fixture once it is sanitized
+
 ## Totals
 
 | Suite | Cases |
 |-------|------:|
 | test_util.lua | 32 |
 | test_compat.lua | 14 |
-| test_constants.lua | 19 |
+| test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 45 |
+| test_registry.lua | 46 |
+| test_panel_schema.lua | 20 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
@@ -1158,4 +1195,5 @@ badge and any count quoted in the docs must agree with it.
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 9 |
-| **Total** | **1004** |
+| test_lizard_sighted.lua | 8 |
+| **Total** | **1034** |

@@ -100,7 +100,7 @@ end
 
 local function settingsSection(out)
   local S = NS.Schema
-  local n = out:nonDefaults(S.Schema, function(row) return S:Get(row.path) end, nil, nil,
+  local n = out:nonDefaults(S.ProfileRows(), function(row) return S:Get(row.path) end, nil, nil,
     { always = { S.ENABLED_PATH }, tag = TAG })
   -- Session-only, so the walk skips it; printed by hand because a locked or unlocked UI is the
   -- first thing a report about panels needs.

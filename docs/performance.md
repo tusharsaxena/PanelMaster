@@ -67,7 +67,7 @@ setting alpha. There is no `InCombatLockdown` gate and none is wanted — the wh
 is that it keeps working while the player is busy.
 
 The driver exists only once a panel has **Show on mouseover only** ticked (`mouseover` defaults to
-`false`, `core/Constants.lua:311`), and the frame is never destroyed afterwards — only its script,
+`false`, `core/Constants.lua:317`), and the frame is never destroyed afterwards — only its script,
 which `Canvas.SetMouseoverTracked` removes when the tracked set empties and re-installs when it
 refills. That makes it a user-reachable hot path, not dead code, so:
 
@@ -92,7 +92,7 @@ The reason is the shape of the one path, not a claim that the path does not exis
   `NS.Compat.MouseIsOver(f)` and one `SetAlpha(...)` for each panel in the tracked set. There is no
   per-record work, no allocation, no string building, and no scan that grows with saved data.
 - **The set is bounded by a number the player sets.** A panel joins it only with *Show on mouseover
-  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:311`). With none ticked
+  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:317`). With none ticked
   `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the frame
   survives but its `OnUpdate` does not — `SetMouseoverTracked` clears the script on the untrack that
   empties the set, so the dormant cost is a bare frame and no per-frame callback at all.
@@ -143,7 +143,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 ### `C_Timer` — 0 hits
 
-None. The one scheduling seam is `settings/OptionsSetup.lua:251`, which forwards to the addon's
+None. The one scheduling seam is `settings/OptionsSetup.lua:253`, which forwards to the addon's
 AceTimer embed for a **one-shot** panel-refresh delay — not a repeating ticker.
 
 ### `ScheduleRepeatingTimer` — 0 hits

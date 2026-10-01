@@ -45,7 +45,8 @@ test("Slash.PrintHelp: one row per command, plus a header", function()
 end)
 
 test("Slash.PrintHelp: no line ends in a colon (slash-commands-§4)", function()
-  for _, line in ipairs(capture(function() Sl:PrintHelp() end)) do
+  local lines = capture(function() Sl:PrintHelp() end)
+  for _, line in ipairs(lines) do
     assertFalse(line:match(":%s*$") ~= nil, "trailing colon: " .. line)
   end
 end)
@@ -180,7 +181,7 @@ test("Slash.BuildListLines: lists every schema row exactly once", function()
   for _, line in ipairs(Sl:BuildListLines()) do
     if line:sub(1, 4) == "    " then rows = rows + 1 end
   end
-  assertEqual(rows, #NS.Schema.Schema)
+  assertEqual(rows, #NS.Schema.ProfileRows())   -- the listing's rows: panel.* is /pm panel's
 end)
 
 test("Slash.BuildListLines: groups appear in schema DECLARATION order", function()
@@ -190,7 +191,7 @@ test("Slash.BuildListLines: groups appear in schema DECLARATION order", function
   -- the reasoning that a schema's own order is the order its panel shows and a listing that
   -- disagreed with the panel would be its own puzzle. The property is now asserted directly.
   local declared, seen = {}, {}
-  for _, row in ipairs(NS.Schema.Schema) do
+  for _, row in ipairs(NS.Schema.ProfileRows()) do
     local g = row.group or "?"
     if not seen[g] then seen[g] = true; declared[#declared + 1] = g end
   end
@@ -211,7 +212,7 @@ test("Slash.BuildListLines: every group in the schema reaches the listing", func
     local g = line:match("^  |cff3399ff%[(.-)%]|r$")
     if g then rendered[g] = true end
   end
-  for _, row in ipairs(NS.Schema.Schema) do
+  for _, row in ipairs(NS.Schema.ProfileRows()) do
     assertTrue(rendered[row.group], "group '" .. tostring(row.group) .. "' never reaches /pm list")
   end
 end)

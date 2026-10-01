@@ -112,7 +112,7 @@ local function addGeometry(spec, rec, settings)
   spec.x        = tonumber(rec.x) or 0
   spec.y        = tonumber(rec.y) or 0
   spec.strata   = Util.IsStrata(rec.strata) and rec.strata or C.PANEL_TEMPLATE.strata
-  spec.level    = Util.Clamp(rec.level, 0, 100, 0)
+  spec.level    = Util.Clamp(rec.level, C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL, 0)
 end
 
 -- What the panel looks like: opacity and its mouseover fade, the background and the border.

@@ -191,7 +191,9 @@ test("Schema: the defaults match the shipped profile", function()
   -- its boolean says SHOWN where its store, S.MINIMAP_STORE, says hidden. Skipping it would leave the one row
   -- whose default is written down twice AND negated between the two spellings unchecked, which is
   -- the drift this case exists for.
-  for _, row in ipairs(S.Schema) do
+  -- The PROFILE rows: the `panel.<field>` rows declare against C.PANEL_TEMPLATE, not the profile
+  -- (tests/test_panel_schema.lua holds them to it).
+  for _, row in ipairs(S.ProfileRows()) do
     if row.path == S.MINIMAP_PATH then
       assertEqual(S:ReadPath(NS.defaults, S.MINIMAP_STORE), not row.default,
         row.path .. " default disagrees with defaults/Global.lua, or the inversion has been dropped")
@@ -248,7 +250,8 @@ test("Schema: the numeric rows declare min and max", function()
   -- Keyed on `type`, which is what RenderField dispatches on, so the composed rows are covered by
   -- it too. Under the old `widget == "Slider"` gate they were not: a composed row carries no
   -- `widget`, so master scale and master alpha would have been skipped silently.
-  for _, row in ipairs(S.Schema) do
+  -- The drawn rows: the never-drawn `panel.<field>` rows carry their bounds in the Registry's repair.
+  for _, row in ipairs(S.ProfileRows()) do
     if row.type == "number" then
       assertTrue(row.min ~= nil and row.max ~= nil, row.path .. " is a slider with no range")
       assertTrue(row.min < row.max, row.path .. " has an inverted range")
@@ -278,7 +281,7 @@ test("Schema: the General page's tabs are the designed partition, in strip order
   }
 
   local order, counts = {}, {}
-  for _, row in ipairs(S.Schema) do
+  for _, row in ipairs(S.ProfileRows()) do   -- what the General page renders (allRows)
     if counts[row.group] == nil then
       counts[row.group] = 0
       order[#order + 1] = row.group
@@ -435,7 +438,7 @@ test("Schema: no color row is ever disabled by its class-color companion", funct
   -- RECORDS rather than on schema rows (settings/PanelEditor.lua draws them from C.COLOR_FIELDS),
   -- so there is no `type = "color"` row to walk. It goes red the day one is added carrying either
   -- defect, which is exactly when nobody would think to look.
-  local rows = S.Schema
+  local rows = S.ProfileRows()   -- the drawn rows; panel colors are the Panels page's swatches
   for i, row in ipairs(rows) do
     assertEqual(row.disabledIf, nil, row.path .. " carries disabledIf")
     if row.type == "color" then
@@ -618,7 +621,7 @@ test("Schema stub: Reset All, the page Defaults and a Registry bulk act all comp
   local rec = ns.Registry:New("Stubbed", { width = 500 })
   assertTrue((ns.Registry:Reset(rec.id)), "a Registry bulk act failed on a degraded load")
   assertEqual(rec.width, ns.Schema:Get("settings.defaultWidth"))
-  assertFalse(R.InBulk(), "S.BulkLine left the stub's bracket open")
+  assertFalse(R.InBulk(), "the Registry's reset left the stub's bracket open")
 end)
 
 test("Schema stub: with no LibKa0s at all, the boot check is silent and a write still lands", function()

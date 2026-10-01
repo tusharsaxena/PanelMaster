@@ -7,6 +7,17 @@ placed in, the pool that owns the frames, and the events that drive a render. Th
 The README's player-facing description of how panels work is the same pipeline one level up; the two
 must not contradict each other.
 
+**How a field edit reaches the record** ([#54](https://github.com/tusharsaxena/PanelMaster/issues/54)).
+An editor control, `/pm panel <name> <field> <value>` and a drag-stop all call into
+`NS.Registry` (`:Set`, or `:SetPosition` for a move), which resolves the name or id and hands the
+write to the schema seam as `SchemaRuntime.Set("panel.<field>", value, id)` (a move, and every
+whole-record verb, is one `SetMany` with that id). The seam resolves the id to the record
+(`S.ResolveRoot`), parses and repairs the value through the row's normalize, stores it, writes the
+one `[Set] panel.<field> = <value> on '<name>'` line, and calls the descriptor's announce:
+`NS.Registry.AnnounceWrite`, which repairs the whole record and sends `PanelChanged` with the id.
+The canvas repaints that one panel and the open editor refreshes in place. `Recover` and
+`ResetPositions` hold the per-panel announce back and send one `PanelsChanged` instead.
+
 `Canvas.BuildSpec(record, settings, inCombat)` is **pure**: record + settings + the combat state →
 exactly what the frame should look like, with every value already validated and clamped. All of
 "what does this panel render as" is therefore unit-testable headlessly, and `applySpec` is a thin,
@@ -98,7 +109,9 @@ rungs, so consecutive raw levels would *interleave* — one panel's accent bar l
 frame level as the next panel's background fill, with the winner decided by frame creation order,
 which the name-keyed pool does not keep in panel order. The `level` setting means "higher draws in
 front"; the stride is what makes that true for every distinct value rather than only for values far
-enough apart to clear the footprint.
+enough apart to clear the footprint. `level` is bounded by `C.MIN_PANEL_LEVEL`/`C.MAX_PANEL_LEVEL`
+(0–100), named once and read by the Registry's clamp, `BuildSpec` and the editor's **Frame level**
+slider, so the highest stack ends at frame level 807.
 
 The levels are **spread out** rather than consecutive because the artwork has to *interleave* with
 the other three: three of the six slots are the same single `f.artFrame`, whose level is reassigned
