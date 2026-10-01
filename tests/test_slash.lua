@@ -45,7 +45,8 @@ test("Slash.PrintHelp: one row per command, plus a header", function()
 end)
 
 test("Slash.PrintHelp: no line ends in a colon (slash-commands-§4)", function()
-  for _, line in ipairs(capture(function() Sl:PrintHelp() end)) do
+  local lines = capture(function() Sl:PrintHelp() end)
+  for _, line in ipairs(lines) do
     assertFalse(line:match(":%s*$") ~= nil, "trailing colon: " .. line)
   end
 end)

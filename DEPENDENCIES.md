@@ -78,7 +78,7 @@ you are overriding the distribution's package manager. Prefer pipx.
 ```sh
 lua tests/run.lua                                    # the headless suite — must be green
 luacheck .                                           # must be 0 errors, 0 warnings
-lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .    # the complexity report (release only)
+bash tests/_kit/run-automated-tests.sh --suite complexity  # sighted lizard report (release only)
 ```
 
 The first two are the commit gate. The third is a **release** step, not a commit gate

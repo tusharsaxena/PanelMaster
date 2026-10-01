@@ -126,6 +126,10 @@ local SUITES = {
   -- rule, run against this addon's own dispatcher through `Kit.diagnostics` below. The domain
   -- sections are this repo's own tests/test_diagnostics.lua.
   { name = "test_diagnostics_contract", dir = "tests/_kit/" },
+  -- The kit's sighted-complexity gate (revision 35, automated-tests-§3): it pins the sanitizer
+  -- and the parity reader the complexity suite measures lizard through, and runs lizard on a
+  -- hazard fixture when it is on PATH (a declared skip otherwise).
+  { name = "test_lizard_sighted", dir = "tests/_kit/" },
 }
 
 -- Published so tests/test_harness.lua can state the inventory gate as a NAMED case over the
