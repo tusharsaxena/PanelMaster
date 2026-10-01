@@ -1,0 +1,1 @@
+OK GI-PM-02 — Frame level slider under Frame strata via Registry:Set, named C.MIN/MAX_PANEL_LEVEL used by Registry and Canvas, red-first tests (page, bounds scan, constants, clamp), docs/smoke updated; gate 1013/0/1, luacheck 0/0
