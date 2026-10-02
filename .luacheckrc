@@ -192,7 +192,7 @@ files["settings/Schema.lua"] = {
 -- LibKa0s-Slash dispatcher's verbs beside host-owned ones rather than being the dispatcher. Twenty
 -- seven methods across the two arms, every one reached by colon: `NS.Slash:Register()` behind the
 -- probe at core/PanelMaster.lua:34, `NS.Slash:ConfirmResetAll()` behind the one at
--- settings/Panel.lua:343, and the verbs themselves through the COMMANDS table.
+-- settings/Panel.lua:344, and the verbs themselves through the COMMANDS table.
 files["settings/Slash.lua"] = {
   ignore = { "212/self" },
 }

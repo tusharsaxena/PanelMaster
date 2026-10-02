@@ -1,4 +1,4 @@
-local _, NS = ...
+local addonName, NS = ...
 
 -- LibKa0s-Options-1.0 seam: the Blizzard settings-canvas shell (options-ui).
 --
@@ -29,7 +29,7 @@ if not lib then
   -- Degrade, never error. `/pm config` is registered unconditionally and says why; everything else
   -- must merely LOAD, because settings/Panel.lua and settings/PanelEditor.lua both run at file
   -- scope against this table. The member set is therefore whatever those two files call, and the
-  -- three layout constants are set to ZERO rather than to the library's real values: a stub that
+  -- four layout constants are set to ZERO rather than to the library's real values: a stub that
   -- reported plausible geometry would let a caller lay something out against numbers no widget was
   -- ever built from.
   -- Answers EVERY time, and this is the one place in the addon where that is the rule rather than
@@ -114,8 +114,11 @@ if not lib then
     --
     -- `__degraded` above STAYS: it is this addon's own flag, not the library's, and it is how the
     -- suite tells which arm ran.
-    ROW_VSPACER = 0, SECTION_HEADING_H = 0, BUTTON_PAIR_REL = 0,
-    -- The three chrome heights, ZERO for exactly the reason the three above are: a stub reporting
+    -- PADDING_X is read by settings/Panel.lua's Profiles container (PanelMaster#56). That builder
+    -- never runs here, because RegisterOptionsPage is a no-op on this arm, but the stub still
+    -- answers zero rather than nil, like the other three.
+    PADDING_X = 0, ROW_VSPACER = 0, SECTION_HEADING_H = 0, BUTTON_PAIR_REL = 0,
+    -- The three chrome heights, ZERO for exactly the reason the four above are: a stub reporting
     -- the library's real band geometry would let a caller lay something out against numbers no
     -- widget was ever built from.
     CHROME_GAP = 0, TAB_H = 0, BANNER_H = 0,
@@ -173,6 +176,9 @@ NS.Helpers = lib:New({
   -- Names the main canvas so /framestack attributes it to this addon. The old createPanel passed
   -- nil here, so every one of this addon's canvases was anonymous and unattributable.
   mainPanelName = "PanelMasterOptionsPanel",
+  -- The FOLDER name (first vararg), not a display label: OptionsIdList builds its help-mark art
+  -- path from it (LibKa0s#42) and checks it against the client's loaded-addon list.
+  addonName     = addonName,
 
   print = function(line) NS.Print(line) end,
   debug = function(tag, fmt, ...) NS.Debug(tag, fmt, ...) end,

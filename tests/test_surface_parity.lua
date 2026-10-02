@@ -214,10 +214,10 @@ test("Parity: the Options seam's degraded surface matches the live one", functio
     -- The library's AceGUI handle. The branch sets the key to nil ON PURPOSE: handing back a real
     -- AceGUI with no panel to build into is worse than a nil a caller must guard.
     "AceGUI",
-    -- Library-side page builders and layout this addon never calls: its landing page is its own
-    -- (settings/Panel.lua), and the three layout constants it DOES read are answered by the branch
-    -- as zero rather than as plausible geometry.
-    "BuildLandingPage", "TextRow", "PADDING_X",
+    -- Library-side page builders this addon never calls: its landing page is its own
+    -- (settings/Panel.lua). The four layout constants it DOES read, PADDING_X among them since
+    -- PanelMaster#56, are answered by the branch as zero rather than as plausible geometry.
+    "BuildLandingPage", "TextRow",
     -- WHAT IS NO LONGER ON THIS LIST, and why the change made the STUB shorter rather than this
     -- file laxer. `__print` was exempted here by hand when LibKa0s v1.27.0 published it, and the
     -- library's own comment at O.__print says a degradation stub does not mirror it BECAUSE
@@ -227,10 +227,10 @@ test("Parity: the Options seam's degraded surface matches the live one", functio
     -- reason was "the parity case reads the WHOLE live surface". It does not any more, and they
     -- went with this change.
   })
-  -- The three layout constants the addon reads are present and are ZERO, not the library's values:
+  -- The four layout constants the addon reads are present and are ZERO, not the library's values:
   -- a stub reporting plausible geometry lets a caller lay something out against numbers no widget
   -- was ever built from.
-  for _, k in ipairs({ "ROW_VSPACER", "SECTION_HEADING_H", "BUTTON_PAIR_REL" }) do
+  for _, k in ipairs({ "PADDING_X", "ROW_VSPACER", "SECTION_HEADING_H", "BUTTON_PAIR_REL" }) do
     assertEqual(degradedNS.Helpers[k], 0, "the Options stub reports a real-looking " .. k)
   end
 end)
