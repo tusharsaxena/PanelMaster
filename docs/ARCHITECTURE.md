@@ -118,7 +118,7 @@ test harness hid it by calling `Canvas:Enable()` itself; it now drives the real 
 from one table and cannot drift. No hand-kept copy of the descriptions is carried anywhere: `slash-dispatch.md` names the verbs to
 structure its own prose, and that is the only list of them outside the table.
 
-Schema-driven verbs: `config version get set list reset resetall debug enable disable help` — `resetall` is a
+Schema-driven verbs: `config version get set list reset resetall debug diagnostics enable disable help` — `resetall` is a
 **profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it
 takes the player's panels with it because `db.profile.panels` is in the profile. Profile verb:
 `profile` — bare lists the profiles with the current one marked, `profile <name>` switches to an
