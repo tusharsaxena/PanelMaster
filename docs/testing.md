@@ -247,7 +247,7 @@ measured, recorded and diffed — a threshold on every commit teaches everyone t
 which is a signal rather than a stop.
 
 **They do gate the tag.** A release requires all four suites at `pass` plus **zero** functions above
-CCN 15 (`automated-tests-§3`, *The release gate*), evaluated by `/wow-addon:bump-version` from the
+CCN 15 (`automated-tests-§3`, *The release gate*), evaluated by `/dev-copilot:bump-version` from the
 `manifest.json` the release run writes — not by the runner, whose exit code is unchanged because the
 same script is the commit gate. **A missing tool is a skip recorded with its reason**, never a pass,
 and at the release gate a skip is **NOT EVALUATED** rather than passed: install the tool and re-run.
