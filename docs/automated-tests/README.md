@@ -34,7 +34,7 @@ after which the gate protects nothing and the habit remains. They contribute `am
 signal rather than a stop.
 
 **The tag is a stricter gate**: all four suites at `pass` plus **zero** functions above CCN 15
-(`automated-tests-§3`, *The release gate*), evaluated by `/wow-addon:bump-version` from this run's
+(`automated-tests-§3`, *The release gate*), evaluated by `/dev-copilot:bump-version` from this run's
 `manifest.json` — never by the runner, whose exit code is unchanged because the same script is the
 commit gate. The manifest's `suites.<name>.gates` object describes both checkpoints; nothing reads
 it, and nothing should.
