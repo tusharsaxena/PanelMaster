@@ -281,7 +281,7 @@ name the component that moved when a mismatch turns up, instead of leaving a rev
 a binary diff.
 
 The poster is stamped with the addon's `## Version:` from the TOC, which makes **a version bump
-stale the poster**: regenerate after `/wow-addon:bump-version`. A build *date* was rejected for the
+stale the poster**: regenerate after `/dev-copilot:bump-version`. A build *date* was rejected for the
 obvious reason — it would change on every run, and a file that differs from the committed one every
 time it is generated cannot be checked for staleness at all.
 
