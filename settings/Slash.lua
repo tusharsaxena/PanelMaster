@@ -176,9 +176,6 @@ function Sl:BuildPanelShowLines(rec)
   return lines
 end
 
--- The confirm-gated wipe. The StaticPopup fallback is what lets the headless suite drive DeleteAll
--- without a popup, so the test is on the function's presence rather than a nil check on some other
--- global that happens to be absent too.
 -- The profile name the delete-all confirm formats into its text (text_arg1). Guarded so a confirm
 -- raised before the database exists still reads sensibly rather than erroring.
 function Sl.ActiveProfileName()
@@ -186,6 +183,9 @@ function Sl.ActiveProfileName()
   return (db and db.GetCurrentProfile and db:GetCurrentProfile()) or "current"
 end
 
+-- The confirm-gated wipe. The StaticPopup fallback is what lets the headless suite drive DeleteAll
+-- without a popup, so the test is on the function's presence rather than a nil check on some other
+-- global that happens to be absent too.
 local function doDeleteAll()
   if type(StaticPopup_Show) == "function" then
     StaticPopup_Show("KA0S_PANELMASTER_DELETEALL", Sl.ActiveProfileName())
