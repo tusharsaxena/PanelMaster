@@ -37,6 +37,52 @@ test("Registry.New: rejects a duplicate name, case-insensitively", function()
   assertEqual(R:Count(), 1)
 end)
 
+-- Non-Latin panel names (PM-R-01, PanelMaster#26), as decimal byte escapes so the source stays ASCII.
+local CYR_OBZOR  = "\208\158\208\177\208\183\208\190\209\128"           -- Cyrillic "Obzor"
+local CYR_SPISOK = "\208\161\208\191\208\184\209\129\208\190\208\186"   -- Cyrillic "Spisok"
+local CJK_A      = "\230\166\130\232\166\129"                           -- Han "overview"
+local CJK_B      = "\232\174\190\231\189\174"                           -- Han "settings"
+local U_UPPER    = "\195\156bersicht"                                   -- capital U umlaut
+local U_LOWER    = "\195\188bersicht"                                   -- small u umlaut
+
+test("Registry.New: two Cyrillic and two Han panels coexist with distinct frame names", function()
+  -- red under: Slugify dropping bytes >= 0x80, so every such name stamps PanelMaster_Panel_Panel
+  fresh()
+  local a, errA = R:New(CYR_OBZOR)
+  local b, errB = R:New(CYR_SPISOK)
+  local c, errC = R:New(CJK_A)
+  local d, errD = R:New(CJK_B)
+  assertTrue(a ~= nil, tostring(errA))
+  assertTrue(b ~= nil, tostring(errB))
+  assertTrue(c ~= nil, tostring(errC))
+  assertTrue(d ~= nil, tostring(errD))
+  local seen = {}
+  for _, rec in ipairs({ a, b, c, d }) do
+    assertEqual(seen[rec.frameName], nil, "frame name shared: " .. rec.frameName)
+    seen[rec.frameName] = true
+  end
+  assertEqual(R:Count(), 4)
+end)
+
+test("Registry.New: a non-ASCII name differing only in case is a duplicate", function()
+  -- red under: FindByName folding with ASCII-only string.lower
+  fresh()
+  assertTrue(R:New(U_UPPER) ~= nil)
+  local rec, err = R:New(U_LOWER)
+  assertEqual(rec, nil)
+  assertTrue(err:find("already exists", 1, true) ~= nil, tostring(err))
+  assertEqual(R:Resolve(U_LOWER).name, U_UPPER, "the lower-case lookup did not find the panel")
+end)
+
+test("Registry.ReloadProfile: a stored frame name is never re-derived under the new slug", function()
+  -- An older build stamped every non-Latin name PanelMaster_Panel_Panel; that stamp is identity.
+  fresh()
+  local rec = R:New(CYR_OBZOR)
+  rec.frameName = "PanelMaster_Panel_Panel"
+  R:ReloadProfile()
+  assertEqual(R:Get(rec.id).frameName, "PanelMaster_Panel_Panel")
+end)
+
 test("Registry.New: ids are never reused after a delete", function()
   fresh()
   local first = R:New("One")

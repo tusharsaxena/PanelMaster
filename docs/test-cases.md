@@ -8,7 +8,7 @@ Total.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (31)
+### test_util.lua (35)
 
 - Util.DeepEqual: compares plain data by value, nested tables included
 - Util.SplitPath: splits a dotted path
@@ -35,6 +35,10 @@ Total.
 - Util.FormatColor: round-trips the mixed-scale byte form too (PANELMASTER-R-03)
 - Util.CleanName: trims and collapses whitespace
 - Util.CleanName: empty and whitespace-only names are nil
+- Util.Slugify: distinct non-Latin names give distinct slugs (PM-R-01)
+- Util.Slugify: bytes >= 0x80 are written as upper-case hex, joined to the ASCII text
+- Util.Slugify: ASCII names keep the slug they always had
+- Util.FoldName: folds case across Latin-1, Latin Extended-A, Greek and Cyrillic
 - Util.DeepCopy: copies nested tables rather than aliasing
 - Util.IsPoint / IsStrata: accept valid tokens, reject the rest
 - NS.SafeToString: renders ordinary values and booleans
@@ -102,11 +106,14 @@ Total.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (46)
+### test_registry.lua (49)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
 - Registry.New: rejects a duplicate name, case-insensitively
+- Registry.New: two Cyrillic and two Han panels coexist with distinct frame names
+- Registry.New: a non-ASCII name differing only in case is a duplicate
+- Registry.ReloadProfile: a stored frame name is never re-derived under the new slug
 - Registry.New: ids are never reused after a delete
 - Registry.New: applies the profile's default strata and alpha
 - Registry.New: overrides are applied but cannot set the id
@@ -1172,12 +1179,12 @@ Total.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 31 |
+| test_util.lua | 35 |
 | test_compat.lua | 14 |
 | test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 46 |
+| test_registry.lua | 49 |
 | test_panel_schema.lua | 20 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
@@ -1211,4 +1218,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1045** |
+| **Total** | **1052** |

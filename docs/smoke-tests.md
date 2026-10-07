@@ -943,19 +943,23 @@ This addon reads almost nothing the client translates: no chat or tooltip `_G` c
 line parsed in place of an API return, no `subType` where a `classID` exists
 (`grep -rn '_G\[' core modules settings` returned no lines when this section was last revised).
 Recheck that grep rather than trusting this sentence. The exposure runs the other way, through the
-panel names a player types, and two seams treat non-ASCII bytes as punctuation:
+panel names a player types, through two seams:
 
-- **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore, and
-  Lua's `%w` is ASCII-only: `Übersicht` slugs to `bersicht`, and `Ärger` and `Örger` both slug to
-  `rger`. That slug is the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25).
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:373-381`) and the Panels list's sort
-  (`settings/PanelEditor.lua:195`) use `string.lower`, which folds ASCII only.
+- **`Util.Slugify`** (`core/Util.lua`) keeps ASCII letters and digits, collapses each run of ASCII
+  punctuation to one underscore, and writes every byte >= 0x80 as two upper-case hex digits:
+  `Übersicht` slugs to `C39Cbersicht`, `Ärger` to `C384rger` and `Örger` to `C396rger`. That slug is
+  the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25). Before PM-R-01 (#26) Lua's
+  ASCII-only `%w` dropped those bytes, so `Ärger` and `Örger` both slugged to `rger`.
+- **Case folding.** `Registry:FindByName` folds with `Util.FoldName`: ASCII plus a UTF-8 case fold
+  for Latin-1, Latin Extended-A, Greek and Cyrillic. The Panels list's sort
+  (`settings/PanelEditor.lua:221`) still uses `string.lower`, which folds ASCII only (LOC-4).
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a
 regression. Steps LOC-1 to LOC-4 can be provoked on an English client by typing the same letters into
 `/pm new`, which is worth doing but is not the same test: it says nothing about the client's own
 fonts, its text input, or what a player of that language types. `tests/test_util.lua` and
-`tests/test_registry.lua` feed ASCII names throughout.
+`tests/test_registry.lua` cover the slug and the fold headless for accented, Cyrillic and Han
+names, but only as byte strings.
 
 - **LOC-1. A panel named in the client's language.** `/pm new Übersicht` (or `Écran` on frFR), pick it
   on **Panels**, hover **Panel name** on its **General** tab for the frame name, then `/run
@@ -964,16 +968,16 @@ fonts, its text input, or what a player of that language types. `tests/test_util
   frame name resolves. **Fail:** `?` or mojibake anywhere, or a reported frame name that does not
   resolve. Write down the slug the tooltip reports: a player who cannot work the frame name out from
   the panel name in their own alphabet has no contract. Result:
-- **LOC-2. Two names, one slug.** `/pm new Ärger`, then `/pm new Örger` → two panels with two distinct
-  frame names if the contract holds. **Fail:** the second refused with a message naming
-  `PanelMaster_Panel_rger`, a name that looks like neither. Record which happened; a refusal is a
-  finding to file, not a step to re-run. Result:
-- **LOC-3. Name lookup folds only ASCII.** With `Übersicht` created, `/pm panel übersicht` (lower-case
-  `ü`) and another verb that takes a name → the panel resolves, the way `/pm panel wide` resolves a
-  panel named `Wide`. **Fail:** `no panel called 'übersicht'`. Then `/pm new übersicht` and read which
-  refusal answers: `a panel named 'übersicht' already exists` means the name guard folded it, while
-  `'übersicht' would share the frame name … with 'Übersicht'` means only the frame-name check caught
-  it and the duplicate-name guard has the same hole. Record which. Result:
+- **LOC-2. Two names, two slugs.** `/pm new Ärger`, then `/pm new Örger` → two panels with two
+  distinct frame names, `PanelMaster_Panel_C384rger` and `PanelMaster_Panel_C396rger`. Pasting two
+  different Cyrillic or Han names likewise gives two panels. **Fail:** the second refused with a
+  message naming a shared frame name. Record which happened; a refusal is a finding to file, not a
+  step to re-run. Result:
+- **LOC-3. Name lookup folds non-ASCII case.** With `Übersicht` created, `/pm panel übersicht`
+  (lower-case `ü`) and another verb that takes a name → the panel resolves, the way `/pm panel wide`
+  resolves a panel named `Wide`. **Fail:** `no panel called 'übersicht'`. Then `/pm new übersicht` →
+  refused with `a panel named 'übersicht' already exists`. **Fail:** a second panel is created, or
+  the refusal is the frame-name one instead. Result:
 - **LOC-4. Sort order.** With three or four panels starting with accented and plain letters, open
   **Panels** → sorted the way a reader of the language expects. **Fail:** accented names clumped at
   one end; cosmetic, but worth knowing. Result:

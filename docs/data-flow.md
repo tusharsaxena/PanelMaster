@@ -130,6 +130,11 @@ value that landed may not be the one asked for.
 Every panel frame is created under a global name, `PanelMaster_Panel_<slug>`, derived from the
 panel's name by `Util.Slugify` **at create time and then stored on the record** as `rec.frameName`.
 That is a **public contract**: another addon or a WeakAura anchors to it by name with no API call.
+The slug keeps ASCII letters and digits, collapses each run of ASCII punctuation to one `_`, and
+writes every byte >= 0x80 as two upper-case hex digits (`Ärger` gives `C384rger`), so distinct
+non-Latin names get distinct frame names. Whether two names are the *same* name is decided apart
+from the slug, by `Registry:FindByName` on `Util.FoldName` (ASCII plus a UTF-8 case fold for
+Latin-1, Latin Extended-A, Greek and Cyrillic), so `Übersicht` and `übersicht` are one panel.
 
 The frame name is **identity, like the id** — `Registry.FrameName` reads the stored field and never
 recomputes it. `R:Reset` preserves it alongside `id` and `name`; `COPY_EXCLUDED` keeps `CopyFrom`

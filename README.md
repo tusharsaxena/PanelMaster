@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-1045%2F1045_passing-green)
+![Tests](https://img.shields.io/badge/Tests-1052%2F1052_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -96,8 +96,9 @@ skip it.*
 
 Every panel has a fixed frame name built from the name you gave it when you created it:
 `PanelMaster_Panel_` followed by that name, with anything that is not a letter or number turned into
-an underscore. A panel created as **Chat BG** is `PanelMaster_Panel_Chat_BG`. Other addons can
-anchor to that name:
+an underscore. A panel created as **Chat BG** is `PanelMaster_Panel_Chat_BG`. Letters outside A-Z
+are written as hex codes, so a panel created as **Ärger** is `PanelMaster_Panel_C384rger`. Other
+addons can anchor to that name:
 
 ```lua
 myFrame:SetPoint("TOPLEFT", "PanelMaster_Panel_Chat_BG", "TOPLEFT", 4, -4)

@@ -10,10 +10,10 @@ local test, assertTrue = T.test, T.assertTrue
 --
 -- WHY THIS REPOSITORY IN PARTICULAR. This addon reads almost nothing the client translates, and
 -- that is exactly why the gap was easy to miss: its locale exposure runs the other way, through
--- the panel NAMES a player types. Util.Slugify matches on [^%w]+ and Registry:FindByName folds
--- case with string.lower, and both of those are ASCII-only in Lua -- so on a German or French
--- client the frame name in this addon's PUBLIC contract can lose characters, and two different
--- names can slug to one global. Nothing headless can see it: every suite here feeds ASCII in.
+-- the panel NAMES a player types. Util.Slugify hex-encodes non-ASCII bytes and Registry:FindByName
+-- folds case with Util.FoldName (PM-R-01); the headless suites cover both as byte strings, but
+-- nothing headless can see what a player of that language actually types or how the client's
+-- fonts render the result.
 --
 -- The failure vocabulary is matched loosely on purpose: this file says "Fail" in some sections and
 -- "Expect" in others, and pinning one spelling would redden the tree for a rewording.

@@ -369,13 +369,15 @@ end
 
 -- Find by name, case-insensitively. Names are what the user types at the CLI, and requiring them to
 -- reproduce the exact casing of a name they chose themselves is friction with no upside. Returns the
--- record and its index.
+-- record and its index. Util.FoldName, not string.lower: the latter is ASCII-only, so an accented,
+-- Greek or Cyrillic name in another case was a second panel (PM-R-01). This is also the duplicate
+-- check create and rename rely on, independent of the frame-name slug.
 function R:FindByName(name)
   name = Util.CleanName(name)
   if not name then return nil end
-  local lowered = name:lower()
+  local folded = Util.FoldName(name)
   for i, rec in ipairs(R:All()) do
-    if tostring(rec.name):lower() == lowered then return rec, i end
+    if Util.FoldName(rec.name) == folded then return rec, i end
   end
   return nil
 end
