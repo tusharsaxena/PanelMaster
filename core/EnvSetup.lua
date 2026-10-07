@@ -26,8 +26,9 @@ local addonName, NS = ...
 -- ── WHY THE FALLBACKS ARE WRITTEN OUT RATHER THAN LEFT TO ANSWER nil ────────────
 --
 -- Because this is a seam, not a feature. An install missing LibKa0s must get exactly what this
--- addon got before the library existed: each helper below repeats the ladder the deleted shim ran,
--- so such an install still reads its own TOC. Nothing here resolves anything at load beyond the
+-- addon got before the library existed: each helper below repeats the library's ladder, so such
+-- an install still reads its own TOC. That ladder is C_AddOns alone: the bare-global TOC reader
+-- went in the 11.0 AddOns purge and exists on no Interface 120100 client. Nothing here resolves anything at load beyond the
 -- LibStub lookup, so this file's TOC position is conventional rather than load-bearing — unlike
 -- core/MediaSetup.lua's, which is, and says so.
 --
@@ -51,9 +52,6 @@ function NS.Meta(field)
   if Env then return Env.GetAddOnMetadata(addonName, field) end
   if C_AddOns and C_AddOns.GetAddOnMetadata then
     return C_AddOns.GetAddOnMetadata(addonName, field)
-  end
-  if type(GetAddOnMetadata) == "function" then
-    return GetAddOnMetadata(addonName, field)
   end
   return nil
 end

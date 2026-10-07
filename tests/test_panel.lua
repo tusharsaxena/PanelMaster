@@ -381,6 +381,20 @@ local function unwatch()
   NS.Registry:DeleteAll()
 end
 
+-- The editor's Delete and Reset ask first (PM-R-05): a click shows a popup, and the act runs from the
+-- popup's OnAccept. These accept the LAST popup shown the way the client does, handing OnAccept the
+-- `data` (the panel id) the click passed to StaticPopup_Show.
+local function acceptLastPopup(name)
+  local n = #T.mocks.__popupsShown
+  assertEqual(T.mocks.__popupsShown[n], name, "the click did not show " .. name)
+  T.mocks.StaticPopupDialogs[name].OnAccept({}, T.mocks.__popupData[n])
+end
+
+local function clickAndAccept(action, rec, name)
+  actions[action](rec)
+  acceptLastPopup(name)
+end
+
 test("Panel: deleting from the page rebuilds it exactly once (F-002)", function()
   NS.Registry:DeleteAll()
   NS.Registry:New("Keeper")
@@ -389,7 +403,7 @@ test("Panel: deleting from the page rebuilds it exactly once (F-002)", function(
   pctx.panel:Show()
   local n = watch()
 
-  actions.delete(doomed)
+  clickAndAccept("delete", doomed, "KA0S_PANELMASTER_DELETE")
 
   assertEqual(n.rebuilds, 1, "the delete rebuilt the page more than once")
   assertEqual(n.selectedAtRebuild, nil, "the selection was not cleared BEFORE the rebuild")
@@ -469,12 +483,98 @@ test("Panel: deleting the LAST panel reaches the empty-state branch cleanly", fu
   pctx.panel:Show()
   local n = watch()
 
-  actions.delete(only)
+  clickAndAccept("delete", only, "KA0S_PANELMASTER_DELETE")
 
   assertEqual(n.rebuilds, 1, "the last delete rebuilt the page more than once")
   assertEqual(n.recordsAtRebuild, 0, "the rebuild did not see an empty registry")
   assertEqual(n.selectedAtRebuild, nil, "the rebuild still pointed at the panel that was deleted")
   unwatch()
+end)
+
+-- red under: pageAction.delete called Registry:Delete on the click, with no popup, so the panel was
+-- gone before anyone could say No (PM-R-05).
+test("Panel: the editor's Delete asks first, naming the panel, and deletes nothing (PM-R-05)", function()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Doomed")
+  local before = #T.mocks.__popupsShown
+
+  actions.delete(rec)
+
+  local n = #T.mocks.__popupsShown
+  assertEqual(n, before + 1, "the editor's Delete skipped the confirm")
+  assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_DELETE")
+  assertEqual(T.mocks.__popupData[n], rec.id, "the popup does not carry the panel id")
+  local text = T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETE.text:format(T.mocks.__popupArgs[n][1])
+  assertEqual(text, 'Delete the panel "Doomed"? This cannot be undone.')
+  assertTrue(NS.Registry:Get(rec.id) ~= nil, "the panel went before the confirm was accepted")
+
+  acceptLastPopup("KA0S_PANELMASTER_DELETE")
+  assertEqual(NS.Registry:Get(rec.id), nil, "accepting the confirm did not delete the panel")
+  NS.Registry:DeleteAll()
+end)
+
+-- red under: pageAction.reset called Registry:Reset on the click, so a changed width was lost with
+-- no popup (PM-R-05).
+test("Panel: the editor's Reset asks first, naming the panel, and changes nothing (PM-R-05)", function()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Wide")
+  local shipped = rec.width
+  NS.Registry:Set(rec.id, "width", 321)
+  local before = #T.mocks.__popupsShown
+
+  actions.reset(rec)
+
+  local n = #T.mocks.__popupsShown
+  assertEqual(n, before + 1, "the editor's Reset skipped the confirm")
+  assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_RESET")
+  assertEqual(T.mocks.__popupData[n], rec.id, "the popup does not carry the panel id")
+  local text = T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_RESET.text:format(T.mocks.__popupArgs[n][1])
+  assertEqual(text, 'Reset the panel "Wide" to how a new panel starts? Its size, position, '
+    .. 'textures and colors are lost; its name is kept.')
+  assertEqual(NS.Registry:Get(rec.id).width, 321, "the panel reset before the confirm was accepted")
+
+  acceptLastPopup("KA0S_PANELMASTER_RESET")
+  local after = NS.Registry:Get(rec.id)
+  assertEqual(after.width, shipped, "accepting the confirm did not reset the panel")
+  assertEqual(after.name, "Wide", "the reset did not keep the name")
+  NS.Registry:DeleteAll()
+end)
+
+-- red under: no KA0S_PANELMASTER_DELETE / _RESET dialog existed to accept.
+test("Panel: accepting a confirm for a panel deleted meanwhile is a no-op (PM-R-05)", function()
+  NS.Registry:DeleteAll()
+  local keeper = NS.Registry:New("Keeper")
+  local gone = NS.Registry:New("Gone")
+  actions.delete(gone)
+  actions.reset(gone)
+  local n = #T.mocks.__popupsShown
+  NS.Registry:Delete(gone.id)   -- removed some other way while both popups were up
+  NS.Registry:Set(keeper.id, "width", 321)
+
+  T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETE.OnAccept({}, T.mocks.__popupData[n - 1])
+  T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_RESET.OnAccept({}, T.mocks.__popupData[n])
+
+  assertEqual(NS.Registry:Count(), 1, "a stale delete confirm removed another panel")
+  assertEqual(NS.Registry:Get(keeper.id).width, 321, "a stale reset confirm touched another panel")
+  NS.Registry:DeleteAll()
+end)
+
+test("Panel: without StaticPopup the editor's Delete and Reset act at once (headless)", function()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Direct")
+  local shipped = rec.width
+  NS.Registry:Set(rec.id, "width", 321)
+  local saved = T.mocks.StaticPopup_Show
+  T.mocks.StaticPopup_Show = nil
+  local ok, err = pcall(function()
+    actions.reset(rec)
+    assertEqual(NS.Registry:Get(rec.id).width, shipped, "the headless reset did not act")
+    actions.delete(rec)
+    assertEqual(NS.Registry:Get(rec.id), nil, "the headless delete did not act")
+  end)
+  T.mocks.StaticPopup_Show = saved
+  NS.Registry:DeleteAll()
+  if not ok then error(err, 0) end
 end)
 
 test("Panel: a field change on the SELECTED panel refreshes in place and never rebuilds", function()
@@ -588,6 +688,20 @@ test("Panel: the Panels page's Defaults action is confirm-gated", function()
   P.panels.panel.OnDefault()
   assertEqual(#T.mocks.__popupsShown, before + 1, "deleting every panel skipped the confirm")
   assertEqual(NS.Registry:Count(), 1, "panels went before the confirm was accepted")
+  NS.Registry:DeleteAll()
+end)
+
+-- red under: the Defaults closure showed KA0S_PANELMASTER_DELETEALL with no text_arg1, so the
+-- confirm could not name the shared profile it is about to empty.
+test("Panel: the Panels page's Defaults confirm names the active profile (PM-R-02)", function()
+  NS.Registry:DeleteAll()
+  NS.Registry:New("A")
+  P.panels.panel.OnDefault()
+  local n = #T.mocks.__popupsShown
+  assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_DELETEALL")
+  local text = T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETEALL.text:format(T.mocks.__popupArgs[n][1])
+  assertTrue(text:find('"' .. NS.db:GetCurrentProfile() .. '"', 1, true) ~= nil,
+    "the confirm does not name the profile: " .. text)
   NS.Registry:DeleteAll()
 end)
 

@@ -37,9 +37,11 @@ local Util = NS.Util
 -- exactly what the old chain's fall-through did.
 local COERCE = {}
 
+-- Finite only: tonumber("nan"), ("inf") and ("1e999") are numbers to Lua, and a stored NaN or
+-- infinity reaches SetSize / SetPoint and the SavedVariables file (PanelMaster-R-03).
 function COERCE.number(value)
   local n = tonumber(value)
-  if n == nil then return nil, "expected a number" end
+  if not Util.IsFinite(n) then return nil, "expected a number" end
   return n
 end
 

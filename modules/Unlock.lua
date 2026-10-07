@@ -30,6 +30,16 @@ local function describeLock(id, on)
   return panelName(id), on and "unlocked" or "locked"
 end
 
+-- Is the addon stood down? Asked by both combat gates, which apply an unlock at once rather than
+-- hold it while the answer is yes: a stood-down addon has no frames to hand the player and no
+-- PLAYER_REGEN_ENABLED to replay a hold from, so a held request could only fire at some LATER combat
+-- exit after a re-enable. Either source counts -- the master switch, or any hold on the latch (the
+-- `perf` one included) -- and both are read at call time, because the latch is built after this file.
+local function addonDown()
+  if NS.IsAddonEnabled and not NS.IsAddonEnabled() then return true end
+  return NS.Lifecycle ~= nil and NS.Lifecycle.IsDown ~= nil and NS.Lifecycle:IsDown() == true
+end
+
 -- ── Snap ────────────────────────────────────────────────────────────────────────
 
 -- PURE: a dragged position → the position that is actually stored. The whole of the drag maths lives
@@ -133,7 +143,7 @@ end
 -- because of combat — the same contract as the global SetUnlocked, and gated for the same reason.
 function U:SetPanelUnlocked(id, on)
   on = not not on
-  if on and InCombatLockdown and InCombatLockdown() then
+  if on and not addonDown() and InCombatLockdown and InCombatLockdown() then
     pendingPanels[id] = true
     print("|cff808080unlock queued \226\128\148 that panel unlocks when you leave combat|r")
     -- The hold half of debug-logging-§8's deferred work; ResumePending logs the flush.
@@ -229,6 +239,25 @@ end
 
 -- ── Lock / unlock ───────────────────────────────────────────────────────────────
 
+-- The held-request half of every drop: both queues emptied, the global request counting as one.
+-- Returns how many were dropped. Touches no applied unlock -- NS.State is the caller's business.
+local function dropHeld()
+  local dropped = pendingUnlock and 1 or 0
+  pendingUnlock = false
+  for id in pairs(pendingPanels) do
+    pendingPanels[id] = nil
+    dropped = dropped + 1
+  end
+  return dropped
+end
+
+-- The lock half of SetUnlocked: every per-panel unlock and every held request goes. Returns how
+-- many HELD requests were dropped (the global one counts as one), which the lock line reports.
+local function dropAllUnlocks()
+  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
+  return dropHeld()
+end
+
 -- Enter or leave unlock mode. Returns the resulting state, or nil when the request was deferred.
 --
 -- Combat gate: unlocking hands the user draggable frames, which is a bad thing to do mid-pull, so
@@ -239,22 +268,13 @@ end
 --
 -- It asks InCombatLockdown, NOT NS.Compat.InCombat (the combat flag): an unlock is a lockdown
 -- question, not a display one.
--- The lock half of SetUnlocked: every per-panel unlock and every held request goes. Returns how
--- many HELD requests were dropped (the global one counts as one), which the lock line reports.
-local function dropAllUnlocks()
-  local dropped = pendingUnlock and 1 or 0
-  pendingUnlock = false
-  for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
-  for id in pairs(pendingPanels) do
-    pendingPanels[id] = nil
-    dropped = dropped + 1
-  end
-  return dropped
-end
-
+--
+-- The gate stands aside while the addon is stood down (addonDown above): there is nothing to hand
+-- the player and nothing to replay a hold, so the session state is written at once and the stand-up
+-- draws it from state as it is then.
 function U:SetUnlocked(on)
   on = not not on
-  if on and InCombatLockdown and InCombatLockdown() then
+  if on and not addonDown() and InCombatLockdown and InCombatLockdown() then
     pendingUnlock = true
     print("|cff808080unlock queued \226\128\148 panels unlock when you leave combat|r")
     NS.Debug("Unlock", "unlock all held: in combat")
@@ -297,6 +317,19 @@ function U:ForgetPending()
   end
   -- A held unlock discarded rather than flushed: without this line the hold would read as lost.
   if n > 0 then NS.Debug("Unlock", "dropped %d held panel unlock(s): profile changed", n) end
+end
+
+-- Discard EVERY combat-deferred unlock, the global request and the per-panel ones alike, without
+-- replaying any of them. Called by NS.StandDown (core/LifecycleSetup.lua): PLAYER_REGEN_ENABLED goes
+-- down with the rest of the addon, so a held request could not flush at the combat exit it was
+-- queued for, and left here it would fire at the next combat exit after a re-enable -- unlocking
+-- every panel in a fight the player never asked about. Applied unlocks (NS.State) are left alone:
+-- they are session state the stand-up redraws, not a pending action. Returns the number dropped.
+function U:DropPending(reason)
+  local n = dropHeld()
+  -- A hold discarded rather than flushed: the line says where it went (debug-logging-§8).
+  if n > 0 then NS.Debug("Unlock", "dropped %d held unlock(s): %s", n, tostring(reason)) end
+  return n
 end
 
 -- Replay every combat-deferred unlock. Called from PLAYER_REGEN_ENABLED (core/PanelMaster.lua).

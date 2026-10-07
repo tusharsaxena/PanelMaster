@@ -496,8 +496,14 @@ test("Panels page: the acts follow the picker rather than the panel they were bu
     assertEqual(acts.copy.list[second.id], nil, "the copy list offers the selected panel itself")
 
     -- And the destructive act lands on what the picker is showing. This is the assertion a stale
-    -- captured record fails.
+    -- captured record fails. The click only asks (PM-R-05), so the popup must carry the picked
+    -- panel's id and name, and accepting it is what deletes.
     acts.delete.callbacks.OnClick(acts.delete, "OnClick")
+    local n = #T.mocks.__popupsShown
+    assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_DELETE", "Delete did not ask first")
+    assertEqual(T.mocks.__popupArgs[n][1], "Bravo", "the confirm names the panel the band was built on")
+    assertTrue(NS.Registry:Get(second.id) ~= nil, "Delete acted before the confirm was accepted")
+    T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETE.OnAccept({}, T.mocks.__popupData[n])
     assertEqual(NS.Registry:Get(second.id), nil, "Delete did not remove the selected panel")
     assertTrue(NS.Registry:Get(first.id) ~= nil, "Delete removed the panel the band was built on")
 

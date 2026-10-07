@@ -12,11 +12,22 @@ function Util.SplitPath(path)
   return parts
 end
 
--- Clamp n into [lo, hi]. Non-numbers fall back to `fallback` (then to lo), so a hand-edited
--- SavedVariables string can never propagate into a SetWidth call.
+-- A real, finite number: not a string, not NaN (the one value that is not equal to itself) and not
+-- either infinity. tonumber reads "nan", "inf" and "1e999" as numbers, so every guard that asks "is
+-- this a usable number" asks this instead (PanelMaster-R-03).
+function Util.IsFinite(n)
+  return type(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge
+end
+
+-- Clamp n into [lo, hi]. Non-numbers and non-finite numbers fall back to `fallback` when that is
+-- finite, then to lo, so neither a hand-edited SavedVariables string nor a NaN can propagate into a
+-- SetWidth call. NaN fails both comparisons below, which is why it has to be caught first.
 function Util.Clamp(n, lo, hi, fallback)
   n = tonumber(n)
-  if n == nil then n = tonumber(fallback) or lo end
+  if not Util.IsFinite(n) then
+    n = tonumber(fallback)
+    if not Util.IsFinite(n) then n = lo end
+  end
   if n < lo then return lo end
   if n > hi then return hi end
   return n
@@ -186,19 +197,71 @@ end
 -- always produces the same slug, which is the whole point — another addon anchors to
 -- `PanelMaster_Panel_<slug>` and must be able to work that name out from the panel name alone.
 --
--- Every run of non-alphanumerics collapses to a single underscore, and leading/trailing underscores
--- are trimmed, so "Chat  BG!" and "Chat-BG" both give "Chat_BG". Case is PRESERVED (frame names are
--- case-sensitive and "ChatBG" reads better than "chatbg"), which means two panel names differing
--- only in case would collide — but the registry already rejects those as duplicates, so that pair
--- can never both exist.
+-- ASCII alphanumerics are kept. Every run of ASCII non-alphanumerics collapses to a single
+-- underscore, and leading/trailing underscores are trimmed, so "Chat  BG!" and "Chat-BG" both give
+-- "Chat_BG". Case is PRESERVED (frame names are case-sensitive and "ChatBG" reads better than
+-- "chatbg").
 --
--- A name made entirely of punctuation slugs to "" and would produce a bare-prefix frame name shared
--- by every such panel, so it falls back to "Panel". The registry's slug-uniqueness check turns any
--- remaining collision into a rejected rename rather than two frames fighting over one global.
+-- Every byte >= 0x80 -- the bytes of any letter outside A-Z, accented or not Latin at all -- is
+-- written as two upper-case hex digits, joined to the ASCII text around it with no separator, so
+-- "<A-umlaut>rger" gives "C384rger". `%w` is ASCII-only in Lua, so before this a Cyrillic, Han or
+-- Hangul name slugged to "" and every accented pair (A-umlaut/O-umlaut + "rger") slugged to one
+-- name: the second panel was refused for a frame-name clash it could not see (PM-R-01). Encoding
+-- the bytes keeps distinct UTF-8 names distinct and keeps the result a legal global name. ASCII
+-- names are byte-identical to what every earlier build gave them.
+--
+-- The slug does NOT decide whether two names are the same name. Case is preserved, so "Chat BG" and
+-- "chat bg" give different slugs; the registry refuses such case variants itself, on
+-- Util.FoldName, before it ever derives a frame name.
+--
+-- A name made entirely of ASCII punctuation slugs to "" and would produce a bare-prefix frame name
+-- shared by every such panel, so it falls back to "Panel". The registry's frame-name check turns
+-- any remaining collision into a refused create rather than two frames fighting over one global.
+--
+-- Only a NEW frame name is derived here (R:Create, and the backfill for a record that has none).
+-- A frame name already stamped on a record is never re-derived, so this change moves no anchor.
+local function hexByte(c) return ("%02X"):format(c:byte()) end
+
 function Util.Slugify(name)
-  local s = tostring(name or ""):gsub("[^%w]+", "_"):gsub("^_+", ""):gsub("_+$", "")
+  local s = tostring(name or ""):gsub("[\128-\255]", hexByte)
+  s = s:gsub("[^%w]+", "_"):gsub("^_+", ""):gsub("_+$", "")
   if s == "" then return "Panel" end
   return s
+end
+
+-- Simple case fold for the two-byte UTF-8 range, as a map from an upper-case character's bytes to
+-- its lower-case bytes, built once at load. Covers Latin-1 Supplement (U+00C0-U+00DE except U+00D7,
+-- +0x20), Latin Extended-A (its upper/lower pairs, whose parity flips twice across the block, plus
+-- U+0178 -> U+00FF), Greek (U+0391-U+03A9, +0x20) and Cyrillic (U+0410-U+042F, +0x20;
+-- U+0400-U+040F, +0x50). Every source and target is below U+0800, so each is exactly two bytes.
+local function utf8Two(cp)
+  return string.char(0xC0 + math.floor(cp / 64), 0x80 + cp % 64)
+end
+
+local FOLD = {}
+local function foldRange(lo, hi, delta, step)
+  for cp = lo, hi, step or 1 do FOLD[utf8Two(cp)] = utf8Two(cp + delta) end
+end
+foldRange(0x00C0, 0x00D6, 0x20)
+foldRange(0x00D8, 0x00DE, 0x20)        -- U+00D7 is the multiplication sign: no case
+foldRange(0x0100, 0x0136, 1, 2)        -- upper-case on the even code point
+foldRange(0x0139, 0x0147, 1, 2)        -- upper-case on the odd code point
+foldRange(0x014A, 0x0176, 1, 2)        -- even again
+foldRange(0x0179, 0x017D, 1, 2)        -- odd again
+FOLD[utf8Two(0x0178)] = utf8Two(0x00FF)
+foldRange(0x0391, 0x03A1, 0x20)
+foldRange(0x03A3, 0x03A9, 0x20)        -- U+03A2 is unassigned
+foldRange(0x0410, 0x042F, 0x20)
+foldRange(0x0400, 0x040F, 0x50)
+
+-- A panel name folded for comparison: two names are the same name when their folds are equal.
+-- string.lower is ASCII-only, so on its own it let "<U-umlaut>bersicht" and "<u-umlaut>bersicht"
+-- become two panels; the map above extends the fold to the scripts a WoW client is localized into
+-- that have case. Scripts with no case (Han, Hangul) pass through byte for byte. Used for
+-- comparison only, never stored or displayed.
+function Util.FoldName(name)
+  local s = tostring(name or ""):lower()
+  return (s:gsub("[\192-\223][\128-\191]", FOLD))
 end
 
 -- The global frame name for a panel. One definition, used by the renderer that creates the frame,

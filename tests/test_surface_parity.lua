@@ -53,7 +53,7 @@
 --     resolves the instance rather than the library table.
 
 local T = _G.PM_TEST
-local NS, mocks = T.NS, T.mocks
+local NS = T.NS
 local test, assertEqual, assertTrue = T.test, T.assertEqual, T.assertTrue
 local assertSurfaceParity = T.assertSurfaceParity
 
@@ -186,12 +186,15 @@ test("Parity: the Slash seam's degraded surface matches the live one", function(
     table.concat(extra, ", ") .. ")")
 
   -- And the limit the primitive states in its own docs: it cannot see a stub with the right member
-  -- set and a WRONG implementation. FormatKV has no library to route to on this path, so its one
-  -- line is reproduced — and pinned against the library's own so the two cannot drift.
-  local libSlash = mocks.LibStub("LibKa0s-Slash-1.0", true)
-  assertTrue(libSlash ~= nil, "LibKa0s-Slash-1.0 did not register on the live path")
-  assertEqual(Sl.FormatKV("a.b", "7"), libSlash.FormatKV("a.b", "7"))
-  assertEqual(Sl.FormatKV("a.b", "7"), "|cFFFFFF00a.b|r = |cFFFFFFFF7|r")
+  -- set and a WRONG implementation. FormatKV must exist on this arm (the PANEL verbs call it), but
+  -- it is deliberately NOT the library's colored format: slash-commands-§1 lets a stub carry only
+  -- DISABLED_LINE_FORMAT, so the degraded line is plain `path = value`, with no |c escape to copy.
+  local line = Sl.FormatKV("a.b", "7")
+  assertEqual(type(line), "string", "the degraded FormatKV did not return a line")
+  assertTrue(line:find("a.b", 1, true) ~= nil, "the degraded line lost the path: " .. line)
+  assertTrue(line:find("7", 1, true) ~= nil, "the degraded line lost the value: " .. line)
+  assertTrue(line:find(" = ", 1, true) ~= nil, "the degraded line lost ' = ': " .. line)
+  assertTrue(line:find("|c", 1, true) == nil, "the degraded line copies the library's colors: " .. line)
 
   -- The one library string a Slash stub may carry (slash-commands-§1, kit 26), pinned byte for byte
   -- against the live library's, and the stub's refusal line built from it.

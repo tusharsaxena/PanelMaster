@@ -27,11 +27,9 @@ local Compat = NS.Compat
 function Compat.AddOnFolders()
   local count = C_AddOns and C_AddOns.GetNumAddOns
   local info  = C_AddOns and C_AddOns.GetAddOnInfo
-  if type(count) ~= "function" or type(info) ~= "function" then
-    count = type(GetNumAddOns) == "function" and GetNumAddOns or nil
-    info  = type(GetAddOnInfo) == "function" and GetAddOnInfo or nil
-  end
-  if not count or not info then return nil end
+  -- C_AddOns is the only reader: the bare-global roster pair went in the 11.0 AddOns purge and
+  -- exists on no Interface 120100 client.
+  if type(count) ~= "function" or type(info) ~= "function" then return nil end
 
   local n = tonumber(count())
   if not n then return nil end

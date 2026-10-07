@@ -39,8 +39,8 @@ game's own Settings ▸ AddOns list.
 | Master controls | General visibility | When your panels are drawn at all: always, only in combat, only out of combat, or never. |
 | Master controls | Master scale | Magnifies every panel at once, on top of each panel's own scale. |
 | Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
-| Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload. |
-| Master controls | Debug console | Show the debug window. Resets when you reload. |
+| Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload, and by **Reset all settings** (or **Profiles → Reset Profile**, the same act). |
+| Master controls | Debug console | Show the debug window. Resets when you reload, and **Reset all settings** (or **Profiles → Reset Profile**) closes it. |
 | Master controls | Minimap button | Show this addon's button on the minimap. Unlike the two rows above it, this one is **remembered** — a button you hide stays hidden across a reload, across a profile switch, and across **both** resets on this page — the **Defaults** button in the header and **Reset all settings** below. Where the button sits is a per-installation display preference, like the angle you dragged it to, and no reset touches either (`launcher-§3`). Untick it and the button goes at once, and it comes back at the angle you left it. The button itself is drawn by `LibKa0s-Launcher-1.0` (`launcher-§2`, standard v2.67.0): **left-click opens this settings page**, in either state; **right-click opens the options menu**, whose entries here are **Enabled** (the *Enable Ka0s Panel Master* row above, through `/pm enable` / `disable`'s handler) and **Locked** (the *Lock frame* row, through `/pm lock` / `unlock`'s handler) — no *Test mode* (unlocking is the preview) and no *Show window* (no primary window). While the addon is disabled, **Locked** is grayed with the note *enable the addon first*. Hovering shows the status tooltip (`launcher-§1`), disabled included: `Ka0s Panel Master  v<version>`, **Enabled** and **Locked** (Yes/No, green/red), `Left-click: Open settings` and `Right-click: Options menu`. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
 | Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not affected."* |
@@ -64,8 +64,8 @@ the same size whether you have two panels or twenty. The controls, in full:
 |---|---|
 | Enabled | Draw this panel at all. |
 | Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
-| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. |
-| Delete | Remove the panel. |
+| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. It asks first, naming the panel: *Reset the panel "<name>" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.* |
+| Delete | Remove the panel. It asks first, naming the panel: *Delete the panel "<name>"? This cannot be undone.* |
 | Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to — renaming does not change it. |
 | Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
 | Width, Height, X offset, Y offset | Size and position. |
@@ -217,6 +217,21 @@ wording (LibKa0s-Options minor 18): *"Reset the current profile to its defaults 
 Profiles -> Reset Profile does. Your other profiles are not affected."* The reset itself is still
 `Sl:DoResetAll`. The library's other reader of `resetProfile`, `O.RestoreAllDefaults`, is never
 called here.
+
+The reset also sweeps the **session-only rows** (`options-ui-§12` restores them row by row). AceDB
+never stores **Lock frame** or **Debug console**, so `db:ResetProfile()` alone cannot reach them;
+the `OnProfileReset` handler in `core/Database.lua` drives every `sessionOnly` row to its default
+through its own `set` (the runtime's `ApplyDefault`), inside a bulk bracket. The sweep lives in the
+handler, not in `Sl:DoResetAll`, because the handler is where **both** resets arrive: this button
+and **Profiles → Reset Profile**, which calls `db:ResetProfile()` directly. The rule makes them the
+same act, so neither sweeps more than the other, and the tooltip's *"the same thing Profiles ->
+Reset Profile does"* stays true. The panels relock — per-panel and held unlocks go with them — and
+the console closes. The rows are found by their flag, so a session-only row added later is swept
+with no change to either reset. Nothing is written to the DB, each reset still logs its one
+`[Set] reset profile …` line, and Reset all still publishes exactly one `PanelsChanged` (the
+profile reload's). `tests/test_slash.lua`'s *blast radius* case pins Reset all, and
+`tests/test_debuglog.lua`'s *Profiles' own Reset Profile sweeps the session rows too* pins the
+Profiles page's path.
 Deleting every panel stays the separate, separately-confirmed act it was, on the Panels page's own
 Defaults button behind `KA0S_PANELMASTER_DELETEALL`.
 
@@ -417,7 +432,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:653` — because the page
+`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:682` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enabled** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.

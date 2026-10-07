@@ -51,6 +51,31 @@ test("Util.Clamp: a non-number falls back, then to the low bound", function()
   assertEqual(Util.Clamp(nil, 2, 10), 2)
 end)
 
+-- PanelMaster-R-03 (PM-06): NaN and +/-inf are numbers to tonumber, so they used to slip past every
+-- "is it a number" guard. NaN fails both comparisons and came back out of Clamp unchanged.
+-- red under: Util.IsFinite absent (nil call); Clamp returning NaN / the bound for a non-finite n.
+test("Util.IsFinite: true for ordinary numbers, false for NaN, infinities and non-numbers", function()
+  assertTrue(Util.IsFinite(0))
+  assertTrue(Util.IsFinite(-12.5))
+  assertTrue(Util.IsFinite(1e308))
+  assertFalse(Util.IsFinite(0 / 0), "NaN")
+  assertFalse(Util.IsFinite(math.huge), "+inf")
+  assertFalse(Util.IsFinite(-math.huge), "-inf")
+  assertFalse(Util.IsFinite(tonumber("1e999")), "1e999 overflows to +inf")
+  assertFalse(Util.IsFinite("5"), "a numeric string is not a number")
+  assertFalse(Util.IsFinite(nil))
+end)
+
+test("Util.Clamp: a non-finite value falls back like a non-number, then to the low bound", function()
+  assertEqual(Util.Clamp(0 / 0, 1, 10, 5), 5)
+  assertEqual(Util.Clamp(math.huge, 1, 10, 5), 5)
+  assertEqual(Util.Clamp(-math.huge, 1, 10, 5), 5)
+  assertEqual(Util.Clamp(0 / 0, 1, 10), 1)
+  assertEqual(Util.Clamp(math.huge, 1, 10), 1)
+  assertEqual(Util.Clamp(0 / 0, 1, 10, 0 / 0), 1, "a non-finite fallback is no fallback")
+  assertEqual(Util.Clamp(0 / 0, 1, 10, math.huge), 1)
+end)
+
 test("Util.Round: rounds away from zero on both signs", function()
   assertEqual(Util.Round(2.5), 3)
   -- floor(n + 0.5) would give -2 here, which is the bug this function exists to avoid: panel
@@ -180,6 +205,52 @@ test("Util.CleanName: empty and whitespace-only names are nil", function()
   assertEqual(Util.CleanName(""), nil)
   assertEqual(Util.CleanName("   "), nil)
   assertEqual(Util.CleanName(nil), nil)
+end)
+
+-- Non-Latin panel names (PM-R-01, PanelMaster#26). The strings are written as decimal byte escapes so
+-- the source stays ASCII; each is named in the comment beside it.
+local CYR_OBZOR   = "\208\158\208\177\208\183\208\190\209\128"             -- Cyrillic "Obzor"
+local CYR_SPISOK  = "\208\161\208\191\208\184\209\129\208\190\208\186"     -- Cyrillic "Spisok"
+local CYR_OBZOR_U = "\208\158\208\145\208\151\208\158\208\160"             -- the same, upper case
+local CJK_A       = "\230\166\130\232\166\129"                             -- Han "overview"
+local CJK_B       = "\232\174\190\231\189\174"                             -- Han "settings"
+local A_UMLAUT    = "\195\132rger"                                         -- "Aerger", A with umlaut
+local O_UMLAUT    = "\195\150rger"                                         -- "Oerger", O with umlaut
+local U_UPPER     = "\195\156bersicht"                                     -- "Uebersicht", capital U umlaut
+local U_LOWER     = "\195\188bersicht"                                     -- the same, lower case
+
+test("Util.Slugify: distinct non-Latin names give distinct slugs (PM-R-01)", function()
+  -- red under: Slugify matching [^%w]+ on raw bytes, which drops every byte >= 0x80
+  assertTrue(Util.Slugify(CYR_OBZOR) ~= Util.Slugify(CYR_SPISOK), "two Cyrillic names share a slug")
+  assertTrue(Util.Slugify(CJK_A) ~= Util.Slugify(CJK_B), "two Han names share a slug")
+  assertTrue(Util.Slugify(CJK_A) ~= "Panel", "a Han name fell back to the punctuation slug")
+  assertTrue(Util.Slugify(A_UMLAUT) ~= Util.Slugify(O_UMLAUT), "an accented pair shares a slug")
+end)
+
+test("Util.Slugify: bytes >= 0x80 are written as upper-case hex, joined to the ASCII text", function()
+  -- red under: Slugify matching [^%w]+ on raw bytes
+  assertEqual(Util.Slugify(A_UMLAUT), "C384rger")
+  assertEqual(Util.Slugify(CYR_OBZOR), "D09ED0B1D0B7D0BED180")
+end)
+
+test("Util.Slugify: ASCII names keep the slug they always had", function()
+  assertEqual(Util.Slugify("Chat  BG!"), "Chat_BG")
+  assertEqual(Util.Slugify("!!!"), "Panel")
+end)
+
+test("Util.FoldName: folds case across Latin-1, Latin Extended-A, Greek and Cyrillic", function()
+  -- red under: no Util.FoldName (FindByName folding with ASCII-only string.lower)
+  assertEqual(Util.FoldName(U_UPPER), Util.FoldName(U_LOWER))
+  assertEqual(Util.FoldName(CYR_OBZOR_U), Util.FoldName(CYR_OBZOR))
+  assertEqual(Util.FoldName("\206\163"), "\207\131")           -- Greek U+03A3 -> U+03C3
+  assertEqual(Util.FoldName("Chat BG"), "chat bg")
+  -- Latin Extended-A pairs are not all upper-even: U+0139/U+013A (L acute) is upper-odd.
+  assertEqual(Util.FoldName("\196\185"), "\196\186")
+  assertEqual(Util.FoldName("\196\128"), "\196\129")          -- U+0100 -> U+0101
+  -- U+00D7 (multiplication sign) has no case and must not fold to U+00F7 (division sign).
+  assertEqual(Util.FoldName("\195\151"), "\195\151")
+  -- Distinct letters stay distinct.
+  assertTrue(Util.FoldName(A_UMLAUT) ~= Util.FoldName(O_UMLAUT))
 end)
 
 test("Util.DeepCopy: copies nested tables rather than aliasing", function()

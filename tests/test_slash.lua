@@ -408,6 +408,60 @@ test("Slash: accepting the reset empties the PROFILE, panels included", function
   fresh()
 end)
 
+test("Slash: the reset's blast radius -- every panel, this profile only, session rows swept", function()
+  -- options-ui-§12 Testing: a reset case has to prove what the reset reaches and what it leaves.
+  -- Several panels go, another profile and the profile list stay, the active profile stays active,
+  -- and the SESSION-ONLY rows (Lock frame, Debug console) are put back too: AceDB never stores
+  -- them, so db:ResetProfile() alone left the screen unlocked and the console open.
+  fresh()
+  local db = NS.db
+  local home = db:GetCurrentProfile()
+  T.mocks.__switchProfile("Alt")          -- a second profile, created and then left
+  T.mocks.__switchProfile(home)
+  for i = 1, 3 do R:New("Doomed " .. i) end
+  NS.Unlock:SetUnlocked(true)
+  NS.DebugLog:Show()
+  local function profiles()
+    local list, n = db:GetProfiles({})
+    table.sort(list)
+    return table.concat(list, ",", 1, n)
+  end
+  local before = profiles()
+  assertTrue(before:find("Alt", 1, true) ~= nil, "the second profile was never created")
+  assertTrue(NS.State.unlocked and NS.DebugLog:IsShown(), "the preconditions did not take")
+
+  local panels = 0
+  local bus = NS.bus
+  local orig = bus.SendMessage
+  bus.SendMessage = function(self, msg, ...)
+    if msg == R.MSG.PANELS then panels = panels + 1 end
+    return orig(self, msg, ...)
+  end
+  local ok, err = pcall(function()
+    Sl:OnSlash("resetall")
+    T.mocks.StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"].OnAccept()
+  end)
+  bus.SendMessage = orig
+  assertTrue(ok, tostring(err))
+
+  -- red under: DoResetAll going back to a row walk (the panels are profile data).
+  assertEqual(R:Count(), 0, "the reset left panels behind")
+  -- red under: a reset that deletes or switches profiles rather than resetting the active one.
+  assertEqual(profiles(), before, "the reset changed the profile list")
+  assertEqual(db:GetCurrentProfile(), home, "the reset changed the active profile")
+  -- red under: the reset handler without the session-only sweep (PM-A-01).
+  assertFalse(NS.State.unlocked, "the reset left the screen unlocked")
+  assertTrue(S:Get("state.locked"), "Lock frame does not read locked after the reset")
+  -- red under: the reset handler without the session-only sweep (PM-A-01).
+  assertFalse(NS.DebugLog:IsShown(), "the reset left the debug console open")
+  -- red under: the sweep or the reload publishing its own PanelsChanged beside the profile reload's.
+  assertEqual(panels, 1, "a reset published PanelsChanged " .. panels .. " times")
+  -- red under: the sweep missing settings.locked, so the next panel is born draggable.
+  local after = R:New("Afterwards")
+  assertFalse(NS.Canvas:FrameFor(after.id):IsMouseEnabled(), "a panel made after the reset is unlocked")
+  fresh()
+end)
+
 test("Slash.CliVersion: prints v<version>", function()
   local lines = capture(function() Sl:CliVersion() end)
   assertTrue(lines[1]:find("v" .. NS.Version(), 1, true) ~= nil)
@@ -484,6 +538,15 @@ test("Slash.BuildPanelLines: a disabled panel is dimmed, not hidden", function()
   assertTrue(lines[2]:find("|cff808080", 1, true) ~= nil, "a disabled panel was not dimmed")
 end)
 
+test("Slash.BuildPanelLines: a record with enabled = nil lists as enabled (PM-R-07)", function()
+  -- red under: `rec.enabled and ...`, which dims a nil the renderer and REPAIR.enabled both draw
+  fresh()
+  local rec = R:New("Unsanitized")
+  R:Get(rec.id).enabled = nil   -- a hand-edited or imported record, before its first write
+  local lines = Sl:BuildPanelLines()
+  assertTrue(lines[2]:find("|cffffff00", 1, true) ~= nil, "an enabled = nil panel was dimmed")
+end)
+
 test("Slash.CliPanel: with no field, dumps every field in the declared order", function()
   fresh()
   R:New("Dumped")
@@ -546,6 +609,25 @@ test("Slash.CliPanel deleteall: goes through the confirm popup", function()
   assertEqual(T.mocks.__popupsShown[#T.mocks.__popupsShown], "KA0S_PANELMASTER_DELETEALL")
   -- Destructive, so nothing is deleted until the user accepts.
   assertEqual(R:Count(), 2, "panels were deleted before the confirm was accepted")
+  fresh()
+end)
+
+-- red under: the dialog text said "on this character" and doDeleteAll passed no text_arg1, so the
+-- confirm neither named the shared profile nor warned that every character on it loses its panels.
+test("Slash.CliPanel deleteall: the confirm names the active profile, not 'this character' (PM-R-02)", function()
+  fresh()
+  R:New("A")
+  assertEqual(NS.db:GetCurrentProfile(), "Default", "the suite should start on the Default profile")
+  Sl:CliPanel("deleteall")
+  local n = #T.mocks.__popupsShown
+  assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_DELETEALL")
+  local dialog = T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETEALL
+  local text = dialog.text:format(T.mocks.__popupArgs[n][1])
+  assertTrue(text:find('"Default"', 1, true) ~= nil, "the confirm does not name the profile: " .. text)
+  assertTrue(text:find("Every character using this profile", 1, true) ~= nil,
+    "the confirm does not say the profile is shared: " .. text)
+  assertTrue(text:find("this character", 1, true) == nil, "the confirm still says 'this character'")
+  assertEqual(R:Count(), 1, "panels were deleted before the confirm was accepted")
   fresh()
 end)
 

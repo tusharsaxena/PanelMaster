@@ -137,7 +137,7 @@ version enable disable debug perf diagnostics get set list reset resetall`, read
 so does `profile`, the one host verb this addon adds to its own live set so a player can switch to a
 profile where the addon is enabled without opening the panel.
 `perf` sits in that set as a **reservation**, not a command: this addon does not register it —
-`NS.COMMANDS` (`settings/Slash.lua:329`) holds 21 verbs and `perf` is not among them — so the
+`NS.COMMANDS` (`settings/Slash.lua:371`) holds 21 verbs and `perf` is not among them — so the
 twelve reserved verbs it does ship, `diagnostics` among them (`debug-logging-§14`), are the ones
 that behave normally. The only
 refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`, and that gate is **the library's**:
@@ -249,7 +249,9 @@ fourth registration reddens the suite rather than joining the exemption quietly.
 `PLAYER_REGEN_ENABLED` so that secure-attribute and state-driver work refused under lockdown can
 finish. This addon has none to hold: every panel is a plain non-secure `CreateFrame("Frame")`, it
 calls no `SetAttribute`, registers no state or attribute driver and installs no secure hook. The
-stand-down therefore completes in the same turn as the write, every time.
+stand-down therefore completes in the same turn as the write, every time. The unlock module's
+combat queue is a UX deferral, not secure work: the stand-down drops it
+(`NS.Unlock:DropPending`), and while the addon is down an unlock applies at once instead of queueing.
 
 **Restoration is from current state, never from a snapshot** (`performance-§6`): `NS.StandUp`
 re-registers and repaints from the registry and the settings *as they are now*, so a panel created
@@ -267,9 +269,9 @@ is refused under lockdown.
 
 ## Known Limitations
 
-Six, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
-reservation across renames, the hard-cut mouseover fade, player-class-only coloring, and manual
-`/pm recover`. All in **[scope.md](scope.md)**.
+Seven, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
+reservation across renames, the hard-cut mouseover fade, player-class-only coloring, the Panels
+list's ASCII-only sort, and manual `/pm recover`. All in **[scope.md](scope.md)**.
 
 ## Documentation map
 
@@ -330,23 +332,10 @@ audit bundle, and the **Why** column cites that id — but a deviation that is n
 This is not a graveyard. A row whose cited rule the standard has since changed — so the behavior is
 now mandated or permitted outright — is **retired**, not kept for the history.
 
-**The `Perf` decline IS a row here, as of 2026-08-25, and it cites `performance-§1` directly.**
-It was deliberately withheld until then, on reasoning worth keeping: the obvious row would have
-cited `performance-§12`'s no-combat-path exemption, and **this addon does not qualify for it** —
-criterion (a) requires no `OnUpdate` handler, and `modules/Canvas.lua:662` installs a shared 10Hz
-driver the moment any panel has *Show on mouseover only* ticked, with no combat gate. A `§12` row
-would have been a false row, so no row was written and an audit re-filed `performance-§1` every
-cycle, which was the correct outcome for as long as the choice was unmade.
-
-The choice is now made, and it is the other one this section allows: a **deliberate deviation from
-`performance-§1` itself**, ratified by the owner on a bounded-cost argument, rather than an
-exemption claimed under `§12`. `§12` remains unclaimable here and the row below does not claim it.
-See [`performance.md`](performance.md) for the cost argument and the committed sweep.
-
 | Rule | What differs | Why | Decided | Re-check trigger |
 |---|---|---|---|---|
 | `performance-§1` (the wiring MUST) | No `core/PerfSetup.lua`, no `PanelMasterPerfDB`, no `perf` verb, no `tests/perf.lua`. The `perf` verb stays **reserved** so it can never mean anything else here. | **Ratified as a deviation from `§1`, NOT as a `§12` exemption — `§12` does not apply and is not claimed.** The addon's one in-combat path is a single shared 10Hz `OnUpdate` (`modules/Canvas.lua:647-652`) whose whole body is, per mouseover-tracked panel, one `NS.Compat.MouseIsOver` and one `SetAlpha`. The cost is bounded by a number the player sets: panels with *Show on mouseover only* ticked, which defaults to `false` (`core/Constants.lua:317`). With none ticked the driver is never created; with the set emptied afterwards the frame survives but its script does not — `SetMouseoverTracked` clears the `OnUpdate` on the untrack that empties the set, and `ensureMouseoverDriver` re-installs it when the set refills, so the dormant cost is no per-frame callback at all. There is no per-record work, no allocation, no scan that grows with saved data, and nothing whose cost a raid can change. Wiring the full harness — a setup file, a second SavedVariables global, a slash verb, a `suspend`/`resume` contract and an offline scenario — to bracket two API calls at 10Hz is a cost the measurement could not repay. Owner's decision, 2026-08-25, over [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). | 2026-08-25 | Any of: a second `OnUpdate` or repeating ticker; `updateMouseover` growing work that is not O(tracked panels) of two API calls; a panel count that stops being player-bounded; or `performance-§12` gaining a bounded-cost clause upstream, at which point the exemption becomes claimable and this row is replaced by one that cites it. |
-| `events-frames-taint-§8` (the pre-formatting **SHOULD**) | Roughly 25 chat and slash lines build their text with `("…"):format(…)` or `..` before handing it to `NS.Print` — `settings/Slash.lua`, `settings/PanelEditor.lua`, `settings/PanelEditorTabs.lua`, `settings/Schema.lua` — rather than the preferred `print("count", n)` varargs form. | **The MUST does not engage here, and this was re-graded, not waived.** §8 scopes the MUST NOT to call sites whose arguments are, or derive from, a return of a named combat-protected API. This addon reads **none** of them: a whole-repo sweep of `core/ modules/ settings/ defaults/ locales/` for the trigger set (`UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`, `UnitGetIncomingHeals`, `UnitHealth`, `UnitHealthMax`, `UnitThreatSituation`, `UnitDetailedThreatSituation`, the aura amount/`points` fields, `UNIT_AURA`) returns nothing, and the only unit/client APIs it calls at all are `UnitClass` and `C_AddOns.GetAddOnMetadata`. Every one of these lines formats values the addon owns — a panel name, a stored geometry field, a count it computed, a literal — so none can be handed a secret and the residue is the SHOULD, graded Info. Neither of §8's two unrelaxed points is touched: no site calls the global `print()` (every file takes `local print = NS.Print`), and the seam's guarantee is unconditional — `core/CoreSetup.lua` publishes the library's `IsConcatSafe` / `SafeToString` and builds the printer from `lib:New`, so every argument is stringified through the `table.concat` probe whatever a call site hands it. Converting the sites is therefore a readability change with no reachable behavior, and is declined at `1.0.0`. | 2026-08-05 | The first chat or debug line whose arguments include, or derive from, a return of any API in §8's trigger set — that site converts as a MUST, and an audit files it as one. Re-check also when §8's trigger list grows upstream. |
+| `events-frames-taint-§8` (the pre-formatting **SHOULD**) | Roughly 25 chat and slash lines build their text with `("…"):format(…)` or `..` before handing it to `NS.Print` — `settings/Slash.lua`, `settings/PanelEditor.lua`, `settings/PanelEditorTabs.lua`, `settings/Schema.lua` — rather than the preferred `print("count", n)` varargs form. | **The MUST does not engage here, and this was re-graded, not waived.** §8 scopes the MUST NOT to call sites whose arguments are, or derive from, a return of a named combat-protected API. This addon reads **none** of them: a whole-repo sweep of `core/ modules/ settings/ defaults/ locales/` for the trigger set (`UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`, `UnitGetIncomingHeals`, `UnitHealth`, `UnitHealthMax`, `UnitThreatSituation`, `UnitDetailedThreatSituation`, the aura amount/`points` fields, `UNIT_AURA`) returns nothing, and the only unit and AddOns APIs it calls at all are `UnitAffectingCombat` (`core/Compat.lua`) and the `C_AddOns` readers `GetAddOnMetadata`, `GetNumAddOns` and `GetAddOnInfo` (the class color resolves through the library's `ResolveColor`). Every one of these lines formats values the addon owns — a panel name, a stored geometry field, a count it computed, a literal — so none can be handed a secret and the residue is the SHOULD, graded Info. Neither of §8's two unrelaxed points is touched: no site calls the global `print()` (every file takes `local print = NS.Print`), and the seam's guarantee is unconditional — `core/CoreSetup.lua` publishes the library's `IsConcatSafe` / `SafeToString` and builds the printer from `lib:New`, so every argument is stringified through the `table.concat` probe whatever a call site hands it. Converting the sites is therefore a readability change with no reachable behavior, and is declined at `1.0.0`. | 2026-08-05 | The first chat or debug line whose arguments include, or derive from, a return of any API in §8's trigger set — that site converts as a MUST, and an audit files it as one. Re-check also when §8's trigger list grows upstream. |
 | `localization-§1` | Two user-facing strings route through `NS.L`: the collection's library-absent line (`"%s is unavailable: the LibKa0s library did not load."`, `slash-commands-§1`), printed by `Sl:LibraryAbsentLine` and by the degraded DebugLog stub's `RunDiagnostics` (`core/DebugLogSetup.lua`), and the `profile` verb's `NS.COMMANDS` description. (The launcher tooltip's two left-click hints went with Launcher minor 4, whose hints are the library's.) Everything else — every label, tooltip, other slash line and message — is still hardcoded English. | `1.0.0` ships **English-only** — the second of the two terminal compliant states `localization-§3` names, not an open routing gap. Both MUSTs are met unconditionally: the `NS.L` seam is exported with the key-returning metatable fallback (`locales/enUS.lua:6`) and `enUS.lua` ships, so a later pass wraps strings without touching call sites. Reasoned at `locales/enUS.lua:8-10`. Panel **names** are user data and must never route through `NS.L`; neither must the stored `point` / `strata` tokens (`localization-§4`). | 2026-08-05 | The first non-English locale file added to `locales/` — that change routes the strings and retires this row |
 
 **Retired rows** (one entry each; the reasoning is in the cited issue or bundle):
@@ -381,42 +370,18 @@ above carrying a re-check trigger. This census records which one each breach sit
 suite on an over-cap file it does not name, on a row naming a file that is no longer over the cap,
 and on a heading that is missing, misplaced or standing empty.
 
-**Nothing is over the cap today.** Measured 2026-09-30 with
+**Nothing is over the cap today.** Measure it, rather than trusting a figure written here, with
 
 ```
 git ls-files '*.lua' | grep -v '^libs/' | grep -v '^tests/_kit/' | xargs wc -l | sort -rn
 ```
 
-The largest authored file is `tests/test_libka0s.lua` at 1160 lines, and the largest shipped one
-`modules/Registry.lua` at 987. `settings/PanelEditor.lua`, which held both places at 1464, was
-peeled on 2026-09-26 by the automated-tests sweep ([#47](https://github.com/tusharsaxena/PanelMaster/issues/47))
-into itself (746) and `settings/PanelEditorTabs.lua` (798). `modules/Artwork.lua`, the largest
-shipped file after it at 1188, was peeled on 2026-09-27 along the catalog / geometry seam into
-itself (693), which keeps the catalog and its lookups, and `modules/ArtworkGeometry.lua` (518),
-which takes `BuildArtSpec`, `NativeSize` and the fill math. Its mirror suite `tests/test_artwork.lua`,
-at 1356 the largest authored file until then, was peeled the same day along the same seam into
-itself (738) and `tests/test_artwork_geometry.lua` (670), which takes the single-texture
-`BuildArtSpec` cases.
-
-**The 1000–1500 band is not recorded here.** `layout-§1` and `automated-tests-§4` disposition it in
-the release watch list and only there: the *Files by `layout-§1` band* table in
-[`automated-tests/RESULTS.md`](automated-tests/RESULTS.md), whose rows the runner generates on every
-run and whose `Disposition` column is the one authored cell. A file moving between bands therefore
-moves on one line of one document. All five files in the band on 2026-09-24 carry a
-disposition there: `settings/PanelEditor.lua` (1447), whose peel was issue
-[#47](https://github.com/tusharsaxena/PanelMaster/issues/47) and which reached 1464 before the
-automated-tests sweep peeled it: the editor's six tabs moved into
-`settings/PanelEditorTabs.lua`, leaving the page, its control kit, the strip and the chrome band
-behind, and both files under 1000; `tests/test_panel.lua` (1399), which
-reached 1491 on 2026-09-26 and was peeled ahead of #47 by the automated-tests sweep: the built
-Panels page's cases — the tab strip, the chrome band and the editor tabs — moved whole into
-`tests/test_panels_page.lua`, leaving both suites under 1000; `modules/Artwork.lua` (1188), peeled
-on 2026-09-27 along the catalog / geometry seam into itself (693) and `modules/ArtworkGeometry.lua`
-(518), with its mirror suite `tests/test_artwork.lua` (1356), peeled the same day along the same seam into
-itself (738) and `tests/test_artwork_geometry.lua` (670); and
-`tests/test_libka0s.lua` (1086), new to the band in the 2026-09-23 remediation, whose degraded-install
-cases are its own seam. The next file to reach 1000 arrives in that table with a blank
-`Disposition` cell, which is the file saying something crossed and nobody has ruled on it yet.
+The first line after the total is the largest authored file; while it reads under 1500, this
+census stays empty. The 1000–1500 band is not recorded here: `layout-§1` and `automated-tests-§4`
+disposition it only in the *Files by `layout-§1` band* table of
+[`automated-tests/RESULTS.md`](automated-tests/RESULTS.md), whose rows the runner generates and whose
+`Disposition` cell is the one authored field (past peels are in
+[#47](https://github.com/tusharsaxena/PanelMaster/issues/47) and the automated-test bundles).
 
 **Retired on 2026-09-23: this repo's own band gate** — the kit's `test_layout_cap.lua` took the
 cap, and the band moved to the watch list (`docs/revendor/2026-09-23-v1.55.0/`).

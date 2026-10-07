@@ -158,3 +158,38 @@ test("Compat owns the deprecated-API surface: no flavor branching in the addon",
       path .. " branches on WOW_PROJECT_ID")
   end
 end)
+
+-- ── Removed AddOns globals (compat: the 11.0 AddOns purge) ──────────────────────
+--
+-- GetAddOnMetadata, GetNumAddOns and GetAddOnInfo went in the 11.0 AddOns purge and exist on no
+-- Interface 120100 client, so a rung that reads them is dead code. These cases plant the bare
+-- globals AS FUNCTIONS and assert they are still never read: C_AddOns is the only reader, and its
+-- absence answers nil ("cannot tell"), which every caller already handles.
+
+test("Compat.AddOnFolders: ignores bare GetNumAddOns/GetAddOnInfo when C_AddOns is absent", function()
+  -- red under: the global fallback rung in Compat.AddOnFolders (it answered { Planted = true }).
+  local mocks = T.mocks
+  local savedC, savedN, savedI = mocks.C_AddOns, mocks.GetNumAddOns, mocks.GetAddOnInfo
+  mocks.C_AddOns = nil
+  mocks.GetNumAddOns = function() return 1 end
+  mocks.GetAddOnInfo = function() return "Planted", "Planted" end
+  local ok, folders = pcall(NS.Compat.AddOnFolders)
+  mocks.C_AddOns, mocks.GetNumAddOns, mocks.GetAddOnInfo = savedC, savedN, savedI
+  assertTrue(ok, "Compat.AddOnFolders raised: " .. tostring(folders))
+  assertEqual(folders, nil)
+end)
+
+test("NS.Meta: ignores a bare GetAddOnMetadata when Env and C_AddOns are absent", function()
+  -- red under: the bare GetAddOnMetadata rung in NS.Meta (it answered "planted").
+  -- Env is captured when core/EnvSetup.lua loads, so the library-absent arm needs a fresh load of
+  -- that one file under a mock set whose LibStub answers nothing.
+  local Loader = dofile("tests/_kit/loader.lua")
+  local fresh = {}
+  local env = {
+    LibStub = function() return nil end,
+    GetAddOnMetadata = function() return "planted" end,
+  }
+  Loader.addonName = "PanelMaster"
+  Loader.load("core/EnvSetup.lua", fresh, env)
+  assertEqual(fresh.Meta("Version"), nil)
+end)

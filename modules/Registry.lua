@@ -220,12 +220,13 @@ local POINT_FIELDS = { "point", "relPoint", "artPoint" }
 -- corrupt file is artwork that looks wrong, which the user can see and re-pick.
 --
 -- enumMatch also normalizes case, so a lower-case token typed straight into the file is repaired
--- rather than discarded.
-local ENUM_FIELDS = { "artFill", "artRotation", "artLayer" }
+-- rather than discarded. artBlend is one of them: BuildArtSpec also guards it, but the stored value
+-- must be a member too, or CopyFrom carries the junk on to the next panel.
+local ENUM_FIELDS = { "artFill", "artRotation", "artLayer", "artBlend" }
 
 -- Flags coerced to a real boolean. `enabled` is NOT one of them — nil means enabled there, which is
 -- the opposite default and is written out as REPAIR.enabled below.
-local BOOL_FIELDS = { "mouseover", "accentEnabled", "artFlipH", "artFlipV" }
+local BOOL_FIELDS = { "mouseover", "accentEnabled", "artFlipH", "artFlipV", "artDesaturate" }
 
 -- field -> repair(value, templateValue) -> the value to store. Built ONCE from the rule lists above,
 -- plus the handful of fields whose repair is a decision of its own, so the whole-record repair
@@ -238,7 +239,11 @@ for _, rule in ipairs(CLAMPED) do
   REPAIR[rule[1]] = function(v, t) return Util.Clamp(v, lo, hi, t) end
 end
 
-local function freeNumber(v, t) return tonumber(v) or t end
+local function freeNumber(v, t)
+  v = tonumber(v)
+  if Util.IsFinite(v) then return v end
+  return t
+end
 local function nonEmptyString(v, t)
   if type(v) ~= "string" or v == "" then return t end
   return v
@@ -271,6 +276,7 @@ function REPAIR.strata(v, t)
 end
 
 REPAIR.bgColor, REPAIR.borderColor, REPAIR.artColor = color, color, color
+REPAIR.accentColor, REPAIR.accentBorderColor = color, color
 
 -- The accent edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
 -- (the user unticked every edge) and must not be quietly repopulated with TOP, so only a
@@ -283,6 +289,11 @@ function REPAIR.artCustomPath(v, t)
   if type(v) ~= "string" then return t end
   return v
 end
+
+--- The record keys with NO rule, stored as given: identity, not preferences. `name` is cleaned by
+--- R.Sanitize and the rename verb, `frameName` and `id` are stamped once at create. Read-only; the
+--- headless property case proves every other C.PANEL_TEMPLATE key has a rule.
+R.UNREPAIRED_FIELDS = { "name", "frameName", "id" }
 
 --- One field's repair: the value a stored `field` must hold, given `value`. A field with no rule is
 --- stored as given. PURE, and the per-field half of R.Sanitize below.
@@ -369,13 +380,15 @@ end
 
 -- Find by name, case-insensitively. Names are what the user types at the CLI, and requiring them to
 -- reproduce the exact casing of a name they chose themselves is friction with no upside. Returns the
--- record and its index.
+-- record and its index. Util.FoldName, not string.lower: the latter is ASCII-only, so an accented,
+-- Greek or Cyrillic name in another case was a second panel (PM-R-01). This is also the duplicate
+-- check create and rename rely on, independent of the frame-name slug.
 function R:FindByName(name)
   name = Util.CleanName(name)
   if not name then return nil end
-  local lowered = name:lower()
+  local folded = Util.FoldName(name)
   for i, rec in ipairs(R:All()) do
-    if tostring(rec.name):lower() == lowered then return rec, i end
+    if Util.FoldName(rec.name) == folded then return rec, i end
   end
   return nil
 end
@@ -814,9 +827,10 @@ function R:SetPosition(key, x, y, point, relPoint)
   local entries = {}
   if point ~= nil then entries[#entries + 1] = { path = "panel.point", value = point } end
   if relPoint ~= nil then entries[#entries + 1] = { path = "panel.relPoint", value = relPoint } end
+  -- A non-finite coordinate is dropped exactly as a non-number is (PanelMaster-R-03).
   x, y = tonumber(x), tonumber(y)
-  if x then entries[#entries + 1] = { path = "panel.x", value = x } end
-  if y then entries[#entries + 1] = { path = "panel.y", value = y } end
+  if Util.IsFinite(x) then entries[#entries + 1] = { path = "panel.x", value = x } end
+  if Util.IsFinite(y) then entries[#entries + 1] = { path = "panel.y", value = y } end
   if #entries == 0 then return true end
   return (writeRecord(rec, entries))
 end
@@ -903,6 +917,9 @@ function R.RecoveredOffsets(rec, w, h, settings)
 end
 
 -- Would `/pm recover` move this record? The same test recover applies, answered without moving it.
+-- A non-finite x or y comes back from RecoveredOffsets as the finite fallback (Util.Clamp), so it
+-- counts as off screen once and, after recover writes that value, never again: NaN ~= NaN used to
+-- report "moved 1 panel" on every run (PanelMaster-R-03).
 function R.IsOffScreen(rec, w, h, settings)
   local x, y = R.RecoveredOffsets(rec, w, h, settings)
   return x ~= rec.x or y ~= rec.y
@@ -943,7 +960,8 @@ end
 -- artwork: a button labeled "Reset position" that also reset an evening's worth of sizing would be
 -- doing something its own label did not warn about, which is the failure options-ui-§12 spends its
 -- whole length preventing at the global scale. R:Reset is the per-panel verb that does take the
--- whole record, and it is confirmed on its own control.
+-- whole record, and the editor's Reset button asks before calling it (the KA0S_PANELMASTER_RESET
+-- popup, settings/Slash.lua).
 --
 -- Distinct from R:Recover, which is the other thing on this page that moves panels: recover clamps
 -- an anchor that has ended up beyond a screen edge and leaves everything already visible exactly

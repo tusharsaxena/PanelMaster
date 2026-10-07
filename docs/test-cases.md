@@ -1,12 +1,14 @@
 # Test Cases
 
 The full inventory of every headless test case in this repo, grouped by the suite file it
-lives in. The `## Totals` table below is the **authoritative pass count** — the README test
-badge and any count quoted in the docs must agree with it.
+lives in. The `## Totals` table below counts the cases that run: its **Total** is the
+authoritative pass count, and the README test badge and any count quoted in the docs must equal
+it. A declared skip is listed by name in its group and counted on the `Skipped` row, never in
+Total.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (31)
+### test_util.lua (37)
 
 - Util.DeepEqual: compares plain data by value, nested tables included
 - Util.SplitPath: splits a dotted path
@@ -15,6 +17,8 @@ badge and any count quoted in the docs must agree with it.
 - Util.Clamp: passes a value already in range
 - Util.Clamp: clamps below and above
 - Util.Clamp: a non-number falls back, then to the low bound
+- Util.IsFinite: true for ordinary numbers, false for NaN, infinities and non-numbers
+- Util.Clamp: a non-finite value falls back like a non-number, then to the low bound
 - Util.Round: rounds away from zero on both signs
 - Util.Snap: a grid of 1 or less is the identity
 - Util.Snap: rounds to the nearest multiple
@@ -33,6 +37,10 @@ badge and any count quoted in the docs must agree with it.
 - Util.FormatColor: round-trips the mixed-scale byte form too (PANELMASTER-R-03)
 - Util.CleanName: trims and collapses whitespace
 - Util.CleanName: empty and whitespace-only names are nil
+- Util.Slugify: distinct non-Latin names give distinct slugs (PM-R-01)
+- Util.Slugify: bytes >= 0x80 are written as upper-case hex, joined to the ASCII text
+- Util.Slugify: ASCII names keep the slug they always had
+- Util.FoldName: folds case across Latin-1, Latin Extended-A, Greek and Cyrillic
 - Util.DeepCopy: copies nested tables rather than aliasing
 - Util.IsPoint / IsStrata: accept valid tokens, reject the rest
 - NS.SafeToString: renders ordinary values and booleans
@@ -40,7 +48,7 @@ badge and any count quoted in the docs must agree with it.
 - NS.Print: prepends the cyan [PM] tag
 - NS.Print survived the AceConsole embed (architecture-§2)
 
-### test_compat.lua (14)
+### test_compat.lua (16)
 
 - Compat.GetScreenSize: returns the UIParent dimensions
 - Compat.GetUIScale: defaults to 1 when the frame cannot answer
@@ -56,6 +64,8 @@ badge and any count quoted in the docs must agree with it.
 - Compat.InCombat falls back to InCombatLockdown when UnitAffectingCombat is absent
 - Compat.InCombat answers false when neither combat API exists
 - Compat owns the deprecated-API surface: no flavor branching in the addon
+- Compat.AddOnFolders: ignores bare GetNumAddOns/GetAddOnInfo when C_AddOns is absent
+- NS.Meta: ignores a bare GetAddOnMetadata when Env and C_AddOns are absent
 
 ### test_constants.lua (20)
 
@@ -100,11 +110,14 @@ badge and any count quoted in the docs must agree with it.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (46)
+### test_registry.lua (54)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
 - Registry.New: rejects a duplicate name, case-insensitively
+- Registry.New: two Cyrillic and two Han panels coexist with distinct frame names
+- Registry.New: a non-ASCII name differing only in case is a duplicate
+- Registry.ReloadProfile: a stored frame name is never re-derived under the new slug
 - Registry.New: ids are never reused after a delete
 - Registry.New: applies the profile's default strata and alpha
 - Registry.New: overrides are applied but cannot set the id
@@ -123,6 +136,8 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Sanitize: a string size from a hand-edited SV becomes a number
 - Registry.Sanitize: does NOT clamp offsets to the screen
 - Registry.Sanitize: enabled defaults to true, and only explicit false disables
+- Registry.SanitizeField: every template field has a repair rule or is declared unrepaired
+- Registry.Sanitize: fills and repairs the accent colors, artBlend and artDesaturate
 - Registry.Set: writes a number field
 - Registry.Set: coerces a CLI string to the field's type
 - Registry.Set: an unreadable boolean is refused, not stored as false (F-023)
@@ -134,6 +149,9 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Set: clamps out-of-range input rather than rejecting it
 - Registry.Set: the panel level clamps to the named level bounds
 - Registry.SetPosition: writes both coordinates at once
+- Registry.SetPosition: drops a non-finite coordinate the way it drops a non-number
+- Registry.Recover: repairs a non-finite position in one run; a second run moves nothing
+- Registry.Sanitize: a non-finite free number falls back to the template value
 - Registry.FormatField: renders each field type readably
 - Registry.Recover: leaves an on-screen TOPLEFT panel alone
 - Registry.Recover: still rescues a genuinely off-screen TOPLEFT panel
@@ -149,7 +167,7 @@ badge and any count quoted in the docs must agree with it.
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
 
-### test_panel_schema.lua (20)
+### test_panel_schema.lua (21)
 
 - Panel verbs: R:Set stores the value and repaints that one panel once
 - Panel verbs: R:Set of `name` is a rename -- the SET changed, so PANELS and no PANEL
@@ -164,6 +182,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel rows: S.ResolveRoot refuses an unknown or missing id, and still answers the profile
 - Panel rows: one hidden panel.<field> row per panel field but name, defaulting to the template
 - Panel rows: a seam write stores, clamps, refuses in the coercer's words, repaints once
+- Panel rows: a non-finite number is refused as 'expected a number' and nothing is stored
 - Panel rows: a panel write logs ONE [Set] line in the library's shape, naming the panel
 - Panel rows: R:Set and every record verb write through the seam with the panel id
 - Panel rows: a drag-stop writes point, relPoint, x and y as ONE act
@@ -524,7 +543,7 @@ badge and any count quoted in the docs must agree with it.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (51)
+### test_debuglog.lua (52)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -557,6 +576,7 @@ badge and any count quoted in the docs must agree with it.
 - bulk log: a reset-all that raises logs one marked line, unmutes and re-raises
 - bulk log: a page Defaults that raises logs one marked line, unmutes and re-raises
 - bulk log: the global reset is ONE line in total, counting the rows it changed
+- bulk log: Profiles' own Reset Profile sweeps the session rows too, in its one line
 - bulk log: a profile copy and a profile switch are each worded by their event
 - bulk log: an act inside another logs once, the outermost, with the total
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
@@ -670,7 +690,7 @@ badge and any count quoted in the docs must agree with it.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (82)
+### test_slash.lua (85)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -706,6 +726,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliReset: restores one setting's default
 - Slash.CliResetAll: CONFIRMS first, and never resets on the call itself
 - Slash: accepting the reset empties the PROFILE, panels included
+- Slash: the reset's blast radius -- every panel, this profile only, session rows swept
 - Slash.CliVersion: prints v<version>
 - Slash.CliNew: creates a panel and confirms
 - Slash.CliNew: with no name, prints usage
@@ -716,6 +737,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.BuildPanelLines: an empty registry says so and suggests the next step
 - Slash.BuildPanelLines: one row per panel, plus a header
 - Slash.BuildPanelLines: a disabled panel is dimmed, not hidden
+- Slash.BuildPanelLines: a record with enabled = nil lists as enabled (PM-R-07)
 - Slash.CliPanel: with no field, dumps every field in the declared order
 - Slash.CliPanel: with a field, prints just that field
 - Slash.CliPanel: with a value, sets it and echoes the stored result
@@ -724,6 +746,7 @@ badge and any count quoted in the docs must agree with it.
 - Slash.CliPanel: an unknown panel is reported
 - Slash.CliPanel: an unknown field lists the valid ones
 - Slash.CliPanel deleteall: goes through the confirm popup
+- Slash.CliPanel deleteall: the confirm names the active profile, not 'this character' (PM-R-02)
 - Slash.CliPanel: a panel genuinely named 'deleteall' is still reachable (F-022)
 - Slash.CliRecover: reports when nothing needed moving
 - Slash.CliRecover: reports how many it moved
@@ -755,7 +778,7 @@ badge and any count quoted in the docs must agree with it.
 - Profile verb: surrounding quotes are stripped, inner spaces and case kept
 - Profile verb: a switch in combat is refused, and the list still answers
 
-### test_panel.lua (47)
+### test_panel.lua (52)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -791,6 +814,10 @@ badge and any count quoted in the docs must agree with it.
 - Panel: creating from the page rebuilds once and lands on the NEW panel
 - Panel: a refused create leaves the typed name alone and does not rebuild
 - Panel: deleting the LAST panel reaches the empty-state branch cleanly
+- Panel: the editor's Delete asks first, naming the panel, and deletes nothing (PM-R-05)
+- Panel: the editor's Reset asks first, naming the panel, and changes nothing (PM-R-05)
+- Panel: accepting a confirm for a panel deleted meanwhile is a no-op (PM-R-05)
+- Panel: without StaticPopup the editor's Delete and Reset act at once (headless)
 - Panel: a field change on the SELECTED panel refreshes in place and never rebuilds
 - Panel: a field change on a DIFFERENT panel neither refreshes nor rebuilds
 - Panel: a hidden page is only marked dirty by a field change, never refreshed
@@ -798,6 +825,7 @@ badge and any count quoted in the docs must agree with it.
 - Panel: a profile switch drops the editor's selection
 - Panel: a rebuild drops the old refreshers before it releases their widgets
 - Panel: the Panels page's Defaults action is confirm-gated
+- Panel: the Panels page's Defaults confirm names the active profile (PM-R-02)
 - Tagline: the landing page, the TOC Notes and the README say one thing (F-019)
 - PanelEditor: the panel dropdowns are ordered by name, not by creation
 - Panel scale: defaults to 1, which is the identity
@@ -895,7 +923,7 @@ badge and any count quoted in the docs must agree with it.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (21)
+### test_disabled.lua (23)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
@@ -912,6 +940,8 @@ badge and any count quoted in the docs must agree with it.
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
 - Disabled 10: releasing one hold does not resurrect an addon the other still holds down
 - Disabled 10b: the hold keys are the library's exported constants, not local literals
+- Disabled 11: a combat-held unlock is dropped by the stand-down, not replayed at a later combat exit
+- Disabled 11b: while stood down an unlock applies at once rather than queueing
 - Disabled: a profile switch that flips the enable path re-evaluates the latch
 - Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
 - Events: a rejected event name is recorded and the rest still register
@@ -1160,13 +1190,13 @@ badge and any count quoted in the docs must agree with it.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 31 |
-| test_compat.lua | 14 |
+| test_util.lua | 37 |
+| test_compat.lua | 16 |
 | test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 46 |
-| test_panel_schema.lua | 20 |
+| test_registry.lua | 54 |
+| test_panel_schema.lua | 21 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
@@ -1174,16 +1204,16 @@ badge and any count quoted in the docs must agree with it.
 | test_artwork.lua | 46 |
 | test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 51 |
+| test_debuglog.lua | 52 |
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 82 |
-| test_panel.lua | 47 |
+| test_slash.lua | 85 |
+| test_panel.lua | 52 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_launcher.lua | 37 |
-| test_disabled.lua | 21 |
+| test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 53 |
 | test_surface_parity.lua | 8 |
@@ -1196,6 +1226,7 @@ badge and any count quoted in the docs must agree with it.
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
 | test_eol.lua | 2 |
-| test_diagnostics_contract.lua | 9 |
+| test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
-| **Total** | **1036** |
+| Skipped | 1 |
+| **Total** | **1063** |

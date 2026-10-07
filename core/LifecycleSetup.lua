@@ -50,8 +50,9 @@ local addonName, NS = ...
 --   * the AceDB handle, NS.Schema:Set and AceDB's three profile callbacks (core/Database.lua) --
 --     a profile switch can flip the enable path with nothing else being touched, so the addon MUST
 --     be able to re-evaluate the latch there;
---   * the launcher's registration (core/LauncherSetup.lua). The button stays on the minimap; what
---     its LEFT click does changes, and that gate is in that file.
+--   * the launcher's registration (core/LauncherSetup.lua). The button stays on the minimap and
+--     its LEFT click opens the settings panel in either state (Launcher minor 4); what reads the
+--     disabled state is the status tooltip and the options menu, through `isEnabled` in that file.
 --
 -- ── NO SECURE WORK, SO NO PENDING COMPLETION ────────────────────────────────────
 --
@@ -63,7 +64,8 @@ local addonName, NS = ...
 -- stand-down completes in the same turn as the write in every case, PLAYER_REGEN_ENABLED goes with
 -- the rest, and this addon never exercises the carve-out. The unlock module's own combat deferral
 -- (modules/Unlock.lua) is a UX rule about handing the player draggable frames mid-pull, not a taint
--- rule, and it has nothing to defer while the addon is down.
+-- rule. With PLAYER_REGEN_ENABLED gone it could never flush, so NS.StandDown DROPS anything it holds
+-- (NS.Unlock:DropPending), and while the addon is down an unlock applies at once instead of queueing.
 
 local Lifecycle = LibStub and LibStub("LibKa0s-Lifecycle-1.0", true)
 
@@ -103,6 +105,9 @@ function NS.StandDown()
     NS.Canvas:RenderAll()
     NS.Canvas:Disable()
   end
+  -- Before PLAYER_REGEN_ENABLED goes: a combat-held unlock has no replay without it, and kept it
+  -- would fire at the next combat exit after a re-enable, in a fight nobody asked about.
+  if NS.Unlock and NS.Unlock.DropPending then NS.Unlock:DropPending("stood down") end
   if NS.addon and NS.addon.UnregisterEvent then
     NS.addon:UnregisterEvent("PLAYER_ENTERING_WORLD")
     NS.addon:UnregisterEvent("PLAYER_REGEN_ENABLED")
@@ -114,8 +119,9 @@ function NS.StandDown()
 end
 
 --- Build the addon's features back, FROM CURRENT STATE and never from a snapshot taken on the way
---- down (performance-§6). Nothing here reads a saved registration list: it re-registers the same
---- three events core/PanelMaster.lua's OnEnable registers, re-subscribes the renderer, and repaints
+--- down (performance-§6). Nothing here reads a saved registration list: it registers the
+--- three STAND_UP_EVENTS above (core/PanelMaster.lua's OnEnable registers none itself: it calls
+--- this function when the latch is up), re-subscribes the renderer, and repaints
 --- from the registry and the settings AS THEY ARE NOW -- so a panel created, a setting changed or a
 --- profile switched while the addon was off comes back correct rather than stale.
 ---

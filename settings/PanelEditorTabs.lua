@@ -220,7 +220,7 @@ local function buildPanelEditor(ctx, parent, rec)
     get = function(field, row)
       local v = (NS.Registry:Get(rec.id) or rec)[field]
       if row.type ~= "color" then return v end
-      local c = NS.Util.Color(v)
+      local c = NS.Util.Color(v, C.PANEL_TEMPLATE[field])   -- junk shows the default, not white
       return { r = c[1], g = c[2], b = c[3], a = c[4] }
     end,
     set = function(field, v, row)
@@ -390,11 +390,11 @@ local function buildPanelEditor(ctx, parent, rec)
     local resetBtn = makePairButton("Reset", function() pageAction.reset(rec) end)
     attachTooltip(resetBtn, "Reset",
       "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors "
-      .. "and all. Its name is kept, so anything anchored to it stays anchored.")
+      .. "and all. Its name is kept, so anything anchored to it stays anchored. Asks first.")
     actionRow:AddChild(resetBtn)
 
     local deleteBtn = makePairButton("Delete", function() pageAction.delete(rec) end)
-    attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
+    attachTooltip(deleteBtn, "Delete", "Remove this panel. Asks first; this cannot be undone.")
     actionRow:AddChild(deleteBtn)
   end
 

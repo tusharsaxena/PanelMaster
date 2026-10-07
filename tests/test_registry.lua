@@ -37,6 +37,52 @@ test("Registry.New: rejects a duplicate name, case-insensitively", function()
   assertEqual(R:Count(), 1)
 end)
 
+-- Non-Latin panel names (PM-R-01, PanelMaster#26), as decimal byte escapes so the source stays ASCII.
+local CYR_OBZOR  = "\208\158\208\177\208\183\208\190\209\128"           -- Cyrillic "Obzor"
+local CYR_SPISOK = "\208\161\208\191\208\184\209\129\208\190\208\186"   -- Cyrillic "Spisok"
+local CJK_A      = "\230\166\130\232\166\129"                           -- Han "overview"
+local CJK_B      = "\232\174\190\231\189\174"                           -- Han "settings"
+local U_UPPER    = "\195\156bersicht"                                   -- capital U umlaut
+local U_LOWER    = "\195\188bersicht"                                   -- small u umlaut
+
+test("Registry.New: two Cyrillic and two Han panels coexist with distinct frame names", function()
+  -- red under: Slugify dropping bytes >= 0x80, so every such name stamps PanelMaster_Panel_Panel
+  fresh()
+  local a, errA = R:New(CYR_OBZOR)
+  local b, errB = R:New(CYR_SPISOK)
+  local c, errC = R:New(CJK_A)
+  local d, errD = R:New(CJK_B)
+  assertTrue(a ~= nil, tostring(errA))
+  assertTrue(b ~= nil, tostring(errB))
+  assertTrue(c ~= nil, tostring(errC))
+  assertTrue(d ~= nil, tostring(errD))
+  local seen = {}
+  for _, rec in ipairs({ a, b, c, d }) do
+    assertEqual(seen[rec.frameName], nil, "frame name shared: " .. rec.frameName)
+    seen[rec.frameName] = true
+  end
+  assertEqual(R:Count(), 4)
+end)
+
+test("Registry.New: a non-ASCII name differing only in case is a duplicate", function()
+  -- red under: FindByName folding with ASCII-only string.lower
+  fresh()
+  assertTrue(R:New(U_UPPER) ~= nil)
+  local rec, err = R:New(U_LOWER)
+  assertEqual(rec, nil)
+  assertTrue(err:find("already exists", 1, true) ~= nil, tostring(err))
+  assertEqual(R:Resolve(U_LOWER).name, U_UPPER, "the lower-case lookup did not find the panel")
+end)
+
+test("Registry.ReloadProfile: a stored frame name is never re-derived under the new slug", function()
+  -- An older build stamped every non-Latin name PanelMaster_Panel_Panel; that stamp is identity.
+  fresh()
+  local rec = R:New(CYR_OBZOR)
+  rec.frameName = "PanelMaster_Panel_Panel"
+  R:ReloadProfile()
+  assertEqual(R:Get(rec.id).frameName, "PanelMaster_Panel_Panel")
+end)
+
 test("Registry.New: ids are never reused after a delete", function()
   fresh()
   local first = R:New("One")
@@ -188,6 +234,44 @@ test("Registry.Sanitize: enabled defaults to true, and only explicit false disab
   assertFalse(R.Sanitize({ enabled = false }).enabled)
 end)
 
+-- PM-R-04: the REPAIR table claims the whole-record and per-field repairs "cannot diverge", which
+-- only holds if every template field has a rule. A sentinel table is junk to every rule, and no
+-- rule hands the identical table back, so a field whose repair returns it has no rule at all.
+test("Registry.SanitizeField: every template field has a repair rule or is declared unrepaired", function()
+  -- red under: no rule for accentColor, accentBorderColor, artBlend or artDesaturate; and no
+  -- R.UNREPAIRED_FIELDS to declare the exempt keys
+  local exempt = {}
+  for _, field in ipairs(R.UNREPAIRED_FIELDS) do exempt[field] = true end
+  for field in pairs(C.PANEL_TEMPLATE) do
+    local sentinel = {}
+    local repaired = R.SanitizeField(field, sentinel)
+    if exempt[field] then
+      assertTrue(repaired == sentinel, "'" .. field .. "' is declared unrepaired but has a rule")
+    else
+      assertTrue(repaired ~= sentinel, "'" .. field .. "' has no repair rule")
+    end
+  end
+end)
+
+test("Registry.Sanitize: fills and repairs the accent colors, artBlend and artDesaturate", function()
+  -- red under: the four fields missing from the REPAIR lists, so absent keys stay absent and junk
+  -- survives
+  local t = C.PANEL_TEMPLATE
+  local filled = R.Sanitize({})
+  assertEqual(filled.accentColor[4], t.accentColor[4])
+  assertEqual(filled.accentBorderColor[1], t.accentBorderColor[1])
+  assertEqual(filled.artBlend, t.artBlend)
+  assertEqual(filled.artDesaturate, false)
+  local junk = R.Sanitize({ accentColor = "x", accentBorderColor = 42, artBlend = "MULTIPLY",
+    artDesaturate = "yes" })
+  assertEqual(type(junk.accentColor), "table")
+  assertEqual(junk.accentBorderColor[1], 0, "a junk accentBorderColor must fall back to black")
+  assertEqual(junk.artBlend, t.artBlend)
+  assertEqual(junk.artDesaturate, true)
+  assertEqual(R.Sanitize({ artBlend = "add" }).artBlend, "ADD")
+  assertEqual(R.Sanitize({ artBlend = 42 }).artBlend, t.artBlend)
+end)
+
 test("Registry.Set: writes a number field", function()
   fresh()
   local rec = R:New("Sized")
@@ -281,6 +365,41 @@ test("Registry.SetPosition: writes both coordinates at once", function()
   assertTrue(R:SetPosition(rec.id, 120, -80))
   assertEqual(R:Get(rec.id).x, 120)
   assertEqual(R:Get(rec.id).y, -80)
+end)
+
+-- PanelMaster-R-03 (PM-06). red under: SetPosition's bare tonumber (NaN is a number, so it is written).
+test("Registry.SetPosition: drops a non-finite coordinate the way it drops a non-number", function()
+  fresh()
+  local rec = R:New("Steady", { x = 30, y = 40 })
+  R:SetPosition(rec.id, 0 / 0, 5)
+  assertEqual(R:Get(rec.id).x, 30, "a NaN x was written")
+  assertEqual(R:Get(rec.id).y, 5)
+  R:SetPosition(rec.id, 7, math.huge)
+  assertEqual(R:Get(rec.id).x, 7)
+  assertEqual(R:Get(rec.id).y, 5, "an infinite y was written")
+end)
+
+-- PanelMaster-R-03 (PM-06): a NaN offset left in SavedVariables used to make every /pm recover report
+-- "moved 1 panel" forever, because NaN ~= NaN. red under: Clamp returning NaN unchanged.
+test("Registry.Recover: repairs a non-finite position in one run; a second run moves nothing", function()
+  fresh()
+  local rec = R:New("Corrupt", { x = 100, y = 100 })
+  rec.x = 0 / 0
+  rec.y = math.huge
+  assertEqual(R:Recover(), 1)
+  local fixed = R:Get(rec.id)
+  assertEqual(fixed.x, 0, "a NaN x was not reset to the template offset")
+  assertEqual(fixed.y, 0, "an infinite y was not reset to the template offset")
+  assertEqual(R:Recover(), 0, "the second recover still found something to move")
+end)
+
+test("Registry.Sanitize: a non-finite free number falls back to the template value", function()
+  fresh()
+  local rec = R:New("Planted", { x = 0 / 0, y = -math.huge, artX = math.huge })
+  local got = R:Get(rec.id)
+  assertEqual(got.x, C.PANEL_TEMPLATE.x)
+  assertEqual(got.y, C.PANEL_TEMPLATE.y)
+  assertEqual(got.artX, C.PANEL_TEMPLATE.artX)
 end)
 
 test("Registry.FormatField: renders each field type readably", function()

@@ -25,22 +25,33 @@ Sl.RESET_ALL_TEXT = "this profile reset to defaults"
 ---
 --- The rebuild is the one every profile switch already takes: `OnProfileReset` reaches the `reload`
 --- closure NS:RegisterProfileCallbacks installed (core/Database.lua), which sweeps preview orphans
---- and calls Registry:ReloadProfile.
+--- and calls Registry:ReloadProfile -- the reset's ONE `PanelsChanged`.
+---
+--- THE SESSION-ONLY ROWS ARE SWEPT TOO (options-ui-§12), and not here. AceDB never stores
+--- `state.locked` or `state.debugConsole`, so `db:ResetProfile()` cannot reach them; the sweep that
+--- puts them back (Lock frame relocks, the console closes) runs in the OnProfileReset handler in
+--- core/Database.lua, which is the one place both this reset and the Profiles page's own Reset
+--- Profile arrive. Sweeping only here would make Reset all settings do more than Reset Profile,
+--- which the rule forbids. Inside this bracket the sweep's writes are tallied, never logged.
 ---
 --- Shared by the popup's OnAccept and by the headless fallback, so the two cannot diverge.
 ---
 --- It is logged ONCE, by that same handler: `[Set] reset profile 'X' to defaults (N rows)`
 --- (debug-logging-§10). The snapshot taken here is what lets the handler count the rows the reset
 --- CHANGED, and the bracket, reporting `profileReset`, keeps anything the reset runs from adding a
---- line of its own. A reset that raised never reached the handler, so the bracket logs instead.
+--- line of its own. The handler consumes the snapshot when it logs, so a consumed snapshot means the
+--- reset landed and was logged: anything that raises after that (the reload, the sweep) marks the
+--- bracket and reaches the caller without a second line. A reset that raised before the handler
+--- never logged, so the bracket logs instead.
 function Sl:DoResetAll()
   local db, S = NS.db, NS.Schema
   if db and db.ResetProfile then
     S.BulkBegin("reset", "all")
     S.resetSnapshot = S:SnapshotPersisted()
     local ok, err = pcall(db.ResetProfile, db)
+    local logged = S.resetSnapshot == nil   -- the handler consumes it as it logs the reset
     S.resetSnapshot = nil
-    S.BulkEnd("reset", "all", nil, err, { profileReset = ok })
+    S.BulkEnd("reset", "all", nil, err, { profileReset = logged })
     if not ok then error(err, 0) end
   end
   print(Sl.RESET_ALL_TEXT)
@@ -78,13 +89,35 @@ if type(StaticPopupDialogs) == "table" then
     preferredIndex = 3,
   }
   StaticPopupDialogs["KA0S_PANELMASTER_DELETEALL"] = {
-    text = "Delete ALL Ka0s Panel Master panels on this character? This cannot be undone.",
+    -- %s is the active profile (Sl.ActiveProfileName). Panels live in db.profile, and AceDB's
+    -- "Default" profile is shared, so the wipe reaches every character on it (PM-R-02).
+    text = "Delete ALL Ka0s Panel Master panels in the profile \"%s\"? Every character using this profile loses them. This cannot be undone.",
     button1 = YES or "Yes",
     button2 = NO or "No",
     OnAccept = function()
       local n = NS.Registry:DeleteAll()
       print(("deleted %d %s."):format(n, n == 1 and "panel" or "panels"))
     end,
+    timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
+    preferredIndex = 3,
+  }
+  -- The Panels editor's per-panel Delete and Reset (PM-R-05): the only other irreversible controls,
+  -- and they sit side by side, so a misclick on either used to cost a panel. %s is the panel's name;
+  -- the panel's ID travels as the popup's `data`, and the editor's accept path resolves it afresh,
+  -- so a panel deleted while the popup was up makes Yes a no-op rather than an act on another one.
+  StaticPopupDialogs["KA0S_PANELMASTER_DELETE"] = {
+    text = "Delete the panel \"%s\"? This cannot be undone.",
+    button1 = YES or "Yes",
+    button2 = NO or "No",
+    OnAccept = function(_, data) NS.PanelEditor.AcceptDelete(data) end,
+    timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
+    preferredIndex = 3,
+  }
+  StaticPopupDialogs["KA0S_PANELMASTER_RESET"] = {
+    text = "Reset the panel \"%s\" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.",
+    button1 = YES or "Yes",
+    button2 = NO or "No",
+    OnAccept = function(_, data) NS.PanelEditor.AcceptReset(data) end,
     timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
     preferredIndex = 3,
   }
@@ -152,8 +185,9 @@ function Sl:BuildPanelLines()
   local lines = { ("|cff33ff99Panels|r (%d)"):format(#records) }
   for _, rec in ipairs(records) do
     -- A disabled panel is dimmed rather than hidden from the list: it still exists, and the listing
-    -- is how you find it again to re-enable it.
-    local name = rec.enabled and ("|cffffff00%s|r"):format(rec.name)
+    -- is how you find it again to re-enable it. `~= false`, as REPAIR.enabled and the renderer read
+    -- it: an unsanitized nil is drawn, so it must not list as disabled.
+    local name = rec.enabled ~= false and ("|cffffff00%s|r"):format(rec.name)
       or ("|cff808080%s|r"):format(rec.name)
     lines[#lines + 1] = ("  %s |cffffffff%dx%d @ %s %d,%d|r"):format(
       name, rec.width, rec.height, rec.point, rec.x, rec.y)
@@ -174,12 +208,19 @@ function Sl:BuildPanelShowLines(rec)
   return lines
 end
 
+-- The profile name the delete-all confirm formats into its text (text_arg1). Guarded so a confirm
+-- raised before the database exists still reads sensibly rather than erroring.
+function Sl.ActiveProfileName()
+  local db = NS.db
+  return (db and db.GetCurrentProfile and db:GetCurrentProfile()) or "current"
+end
+
 -- The confirm-gated wipe. The StaticPopup fallback is what lets the headless suite drive DeleteAll
 -- without a popup, so the test is on the function's presence rather than a nil check on some other
 -- global that happens to be absent too.
 local function doDeleteAll()
   if type(StaticPopup_Show) == "function" then
-    StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
+    StaticPopup_Show("KA0S_PANELMASTER_DELETEALL", Sl.ActiveProfileName())
   else
     local n = NS.Registry:DeleteAll()
     print(("deleted %d %s."):format(n, n == 1 and "panel" or "panels"))
@@ -314,8 +355,9 @@ end
 
 -- Slash command table. It sits at the BOTTOM of this file, below every Cli* function its entries
 -- call, so the whole slash surface — table, dispatcher, generated help and the implementations —
--- reads as one thing. `/pm help`, the README's command table and the settings landing page all
--- generate from this, so they can never drift (slash-commands-§3).
+-- reads as one thing. `/pm help` and the settings landing page both generate from this, so they
+-- can never drift (slash-commands-§3). The README carries no command table: its command prose is
+-- hand-written (see the `debug` entry below).
 --
 -- POSITIONAL `{ name, description, handler }` triples, which is the shape LibKa0s-Slash-1.0 reads.
 -- They used to be keyed (`{ name =, desc =, fn = }`); the flip moved 18 entries, the dispatcher, the
@@ -364,14 +406,16 @@ NS.COMMANDS = {
   -- *unlock them* in every addon that carries them and can never be given a second meaning here.
   --
   -- They write `state.locked` THROUGH THE SAME SINGLE WRITE SEAM the Master-controls *Lock frame*
-  -- checkbox and the minimap button's left click write through, and hold no state of their own --
+  -- checkbox and the launcher menu's *Locked* entry write through, and hold no state of their own --
   -- the same no-second-state rule `enable` / `disable` carry above. Routed through `CliSet` for the
   -- same reason that pair is: `/pm unlock` is then LITERALLY `/pm set state.locked false`, with the
   -- same parse, the same write and the same canonical `path = value` echo read back AFTER the write
   -- (slash-commands-§5, §8's confirmation SHOULD). That read-back is load-bearing rather than
   -- decorative here: `NS.Unlock:SetUnlocked` DEFERS an unlock requested in combat, so the echo
   -- reports `state.locked = true` and tells the player the truth, where a line formatted from the
-  -- argument would have claimed the panels were unlocked.
+  -- argument would have claimed the panels were unlocked. (On a stood-down addon nothing is
+  -- deferred -- the unlock applies at once and the echo reads `false` -- and the stand-down itself
+  -- drops anything held, so the read-back is the truth in that state too.)
   --
   -- Calling `NS.Unlock:SetUnlocked` directly is what these used to do, and it was the one surface
   -- that bypassed the seam -- no validation, no single `[Set]` line, and a second wording for the
@@ -502,11 +546,13 @@ if not lib then
   -- the PANEL verbs call directly (`Sl:CliPanel`, `/pm panel <name> fitart`, and the
   -- field read and write echoes), and those verbs are exactly the ones this branch exists to keep
   -- working. Left unassigned it is nil, and `/pm panel <name>` raises "attempt to call field
-  -- 'FormatKV'" — a degraded install that hard-errors on its own host-owned verb. The one line is
-  -- reproduced rather than routed, because there is no library here to route to; it is asserted
-  -- byte-for-byte against `lib.FormatKV` by the degradation suite so the two cannot drift.
+  -- 'FormatKV'" — a degraded install that hard-errors on its own host-owned verb. It is
+  -- deliberately NOT the library's format: slash-commands-§1 lets a stub carry only
+  -- DISABLED_LINE_FORMAT, so this arm prints a plain `path = value` with no color escapes, and there
+  -- is no copy of `lib.FormatKV` here to drift. The degradation suite asserts the path, the value
+  -- and the ` = ` are present and that no `|c` escape is.
   Sl.FormatKV       = function(path, valueStr)
-    return ("|cFFFFFF00%s|r = |cFFFFFFFF%s|r"):format(tostring(path), tostring(valueStr))
+    return tostring(path) .. " = " .. tostring(valueStr)
   end
   -- The degraded help index (docs/api/Slash/version-15-docs.md, "The degradation stub"): the
   -- notice once, then one `/pm <cmd>  <desc>` row per NS.COMMANDS entry -- two spaces, no color,
@@ -697,8 +743,9 @@ function Sl:CliProfile(a)        return dispatcher:CliProfile(a)    end
 function Sl:ProfileSwitch(name)  return dispatcher:ProfileSwitch(name) end
 function Sl:Text(key)            return dispatcher:Text(key)        end
 -- The one refusal line, built by the library from `lib.DISABLED_LINE_FORMAT`, `brandName` and
--- `slash`. Republished because the LAUNCHER'S left click prints it too (launcher-§2, §7) and must
--- not write the line again -- one shape, collection-wide, from one place.
+-- `slash`. Republished so the tests compare against the one line rather than writing it again
+-- (slash-commands-§7) -- one shape, collection-wide, from one place. The launcher no longer prints
+-- it: its left click opens the settings panel in either state (Launcher minor 4).
 function Sl:DisabledLine()       return dispatcher:DisabledLine()   end
 -- The format string that line is built from, published on BOTH arms under one name: the degraded
 -- arm carries a byte-for-byte copy, and the parity suite pins that copy against this.

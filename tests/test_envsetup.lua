@@ -51,12 +51,12 @@ end)
 
 test("EnvSetup: NS.Version falls back to this addon's own constant", function()
   -- The fallback lives at the call site rather than in the library, so it is the seam's job to
-  -- prove it still works. Reached by removing both readers, which is what a client that cannot
-  -- answer looks like.
-  local savedC, savedG = mocks.C_AddOns, mocks.GetAddOnMetadata
-  mocks.C_AddOns, mocks.GetAddOnMetadata = nil, nil
+  -- prove it still works. Reached by removing C_AddOns, the only reader (the bare GetAddOnMetadata
+  -- global went in the 11.0 AddOns purge), which is what a client that cannot answer looks like.
+  local savedC = mocks.C_AddOns
+  mocks.C_AddOns = nil
   local ok, v = pcall(NS.Version)
-  mocks.C_AddOns, mocks.GetAddOnMetadata = savedC, savedG
+  mocks.C_AddOns = savedC
   assertTrue(ok, "NS.Version raised with no manifest reader: " .. tostring(v))
   assertEqual(v, NS.version)
   assertTrue(v ~= nil and v ~= "", "a version string, never nil — it goes straight into a banner")

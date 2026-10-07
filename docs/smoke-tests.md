@@ -22,14 +22,15 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 32 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
+| PANEL-1 to 33 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows |
 | PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
-| COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
+| COMBAT-1 to 7 | Combat | Queued unlocks, a stand-down dropping them, the settings lockout, General visibility |
 | DIAG-1 to 30 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on, the library's own refusal, edge and at-enable lines |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
+| NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
 
 ## Before you start
 
@@ -200,11 +201,13 @@ client and is run when one is available, not per release.
 - **FRAME-27. Copy with a lone panel.** Delete all but one panel → **Copy settings from panel** is
   disabled, with a tooltip saying to make another panel first. Result:
 - **FRAME-28. Reset one panel.** Resize, move, retexture, recolor and set a panel to mouseover, then
-  press **Reset** on its **General** tab → it returns to a new panel's look **and position** (the
+  press **Reset** on its **General** tab → a confirm popup naming the panel; **No** keeps every
+  change. Press **Reset** again and **Yes** → it returns to a new panel's look **and position** (the
   middle of the screen), every editor control re-reads, the name and frame name are unchanged, anything
   anchored to it stays anchored, and other panels are untouched. Result:
 - **FRAME-29. Delete-all asks first, from both entry points.** `/pm new GuardA`, `/pm new GuardB`.
-  `/pm panel deleteall` → a confirm popup; **No** → both survive. **Panels ▸ Defaults** → the same
+  `/pm panel deleteall` → a confirm popup that names your current profile (e.g. `"Default"`) and says
+  every character using it loses its panels, never "this character"; **No** → both survive. **Panels ▸ Defaults** → the same
   popup; **No** → both survive. **Yes** from either → both gone, and chat says `deleted 2 panels.`
   Result:
 
@@ -521,7 +524,8 @@ and at least one art pack; skip those without it.
   **Panel name** and **Copy settings from panel**, **Enabled** and **Unlock**, **Reset** and
   **Delete**. Walk the other five tabs → none of the six follows you. Back on **General**, with a
   panel picked: tick and untick **Enabled** (the panel goes and returns), tick **Unlock** (only that
-  panel grows a handle), press **Reset**, then **Delete** → each acts on the panel the picker shows.
+  panel grows a handle), press **Reset**, then **Delete**, answering **Yes** to each confirm → each
+  acts on the panel the picker shows, and each confirm names it.
   Pick another panel → the six rebuild against it. **Fail:** an act landing on the previously picked
   panel. The frame name is only on the **Panel name** tooltip, not a label of its own. Result:
 - **PANEL-17. The rename box keeps what you type.** Pick a panel, type into **Panel name** without
@@ -543,8 +547,13 @@ and at least one art pack; skip those without it.
   outline and drag handle; drag it, untick. With a panel open on **Panels**, untick **General ▸ Lock
   frame** → back on **Panels**, **Unlock** shows ticked and grayed; tick **Lock frame** → unticked and
   enabled again. Result:
-- **PANEL-24. Delete in the editor.** Click **Delete** → the panel leaves the screen and the picker,
-  and the editor falls back to another panel rather than going blank. Result:
+- **PANEL-24. Delete and Reset in the editor ask first.** Click **Delete** → a popup reads
+  *Delete the panel "<name>"? This cannot be undone.*; **No** → the panel stays. Click **Delete**
+  again, **Yes** → the panel leaves the screen and the picker, and the editor falls back to another
+  panel rather than going blank. Widen and recolor a panel, click **Reset** → a popup naming it and
+  saying its size, position, textures and colors are lost and its name is kept; **No** → the size and
+  colors stay; **Yes** → it is back to a new panel's look with the same name and frame name. Hover
+  **Reset** and **Delete** → each tooltip says it asks first. Result:
 - **PANEL-25. The picker rebuilds on show.** Close the options window, `/pm new Offscreen`, reopen
   **Panels** → the new panel is in the picker. Result:
 - **PANEL-26. The tab strip survives pooling.** `/pm` → **Panels**, and cycle every tab three times,
@@ -583,6 +592,14 @@ and at least one art pack; skip those without it.
   render exactly as before. No list on these pages carries help marks, so there is no art to check:
   `settings/OptionsSetup.lua` now passes `addonName = addonName,` to the Options descriptor
   (LibKa0s#42), which is latent until a list here gains a help line. Result:
+- **PANEL-33. Both resets sweep the session-only rows.** Untick **Lock frame**, open the debug console
+  (**Debug console** ticked), make sure a second profile exists under **Profiles**, then **Reset all
+  settings** → **Yes**. The panels lock (no drag handles or name labels), **Lock frame** reads ticked,
+  the console closes, the **Profiles** list is unchanged with the same profile active, and a panel
+  created afterwards is locked. Then unlock and open the console again and use **Profiles → Reset
+  Profile** instead: the same thing happens (the two resets are the same act). **Fail:** panels still
+  draggable or the console still open after either reset (that reset skipped its session-only
+  sweep). Result:
 
 ## PROFILE
 
@@ -700,6 +717,9 @@ and at least one art pack; skip those without it.
   panels hidden out of combat; pull → they appear on the first swing; leave → they hide. `Only out of
   combat` → the reverse, the instant combat starts and ends. `Never` → nothing draws at all. Back to
   `Always`. Result:
+- **COMBAT-7. A stand-down drops the queue.** On a target dummy, untick **Lock frame** (the gray
+  "unlock queued" notice), then `/pm disable`, `/pm enable`, and leave combat → the panels stay
+  **locked**. Repeat without disabling → they unlock on leaving combat, as COMBAT-2. Result:
 
 ## DIAG
 
@@ -924,19 +944,23 @@ This addon reads almost nothing the client translates: no chat or tooltip `_G` c
 line parsed in place of an API return, no `subType` where a `classID` exists
 (`grep -rn '_G\[' core modules settings` returned no lines when this section was last revised).
 Recheck that grep rather than trusting this sentence. The exposure runs the other way, through the
-panel names a player types, and two seams treat non-ASCII bytes as punctuation:
+panel names a player types, through two seams:
 
-- **`Util.Slugify`** (`core/Util.lua:198-202`) collapses every run of `[^%w]+` to one underscore, and
-  Lua's `%w` is ASCII-only: `Übersicht` slugs to `bersicht`, and `Ärger` and `Örger` both slug to
-  `rger`. That slug is the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25).
-- **Case folding.** `Registry:FindByName` (`modules/Registry.lua:373-381`) and the Panels list's sort
-  (`settings/PanelEditor.lua:195`) use `string.lower`, which folds ASCII only.
+- **`Util.Slugify`** (`core/Util.lua`) keeps ASCII letters and digits, collapses each run of ASCII
+  punctuation to one underscore, and writes every byte >= 0x80 as two upper-case hex digits:
+  `Übersicht` slugs to `C39Cbersicht`, `Ärger` to `C384rger` and `Örger` to `C396rger`. That slug is
+  the public contract `PanelMaster_Panel_<slug>` (FRAME-18 to FRAME-25). Before PM-R-01 (#26) Lua's
+  ASCII-only `%w` dropped those bytes, so `Ärger` and `Örger` both slugged to `rger`.
+- **Case folding.** `Registry:FindByName` folds with `Util.FoldName`: ASCII plus a UTF-8 case fold
+  for Latin-1, Latin Extended-A, Greek and Cyrillic. The Panels list's sort
+  (`settings/PanelEditor.lua:221`) still uses `string.lower`, which folds ASCII only (LOC-4).
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a
 regression. Steps LOC-1 to LOC-4 can be provoked on an English client by typing the same letters into
 `/pm new`, which is worth doing but is not the same test: it says nothing about the client's own
 fonts, its text input, or what a player of that language types. `tests/test_util.lua` and
-`tests/test_registry.lua` feed ASCII names throughout.
+`tests/test_registry.lua` cover the slug and the fold headless for accented, Cyrillic and Han
+names, but only as byte strings.
 
 - **LOC-1. A panel named in the client's language.** `/pm new Übersicht` (or `Écran` on frFR), pick it
   on **Panels**, hover **Panel name** on its **General** tab for the frame name, then `/run
@@ -945,22 +969,43 @@ fonts, its text input, or what a player of that language types. `tests/test_util
   frame name resolves. **Fail:** `?` or mojibake anywhere, or a reported frame name that does not
   resolve. Write down the slug the tooltip reports: a player who cannot work the frame name out from
   the panel name in their own alphabet has no contract. Result:
-- **LOC-2. Two names, one slug.** `/pm new Ärger`, then `/pm new Örger` → two panels with two distinct
-  frame names if the contract holds. **Fail:** the second refused with a message naming
-  `PanelMaster_Panel_rger`, a name that looks like neither. Record which happened; a refusal is a
-  finding to file, not a step to re-run. Result:
-- **LOC-3. Name lookup folds only ASCII.** With `Übersicht` created, `/pm panel übersicht` (lower-case
-  `ü`) and another verb that takes a name → the panel resolves, the way `/pm panel wide` resolves a
-  panel named `Wide`. **Fail:** `no panel called 'übersicht'`. Then `/pm new übersicht` and read which
-  refusal answers: `a panel named 'übersicht' already exists` means the name guard folded it, while
-  `'übersicht' would share the frame name … with 'Übersicht'` means only the frame-name check caught
-  it and the duplicate-name guard has the same hole. Record which. Result:
+- **LOC-2. Two names, two slugs.** `/pm new Ärger`, then `/pm new Örger` → two panels with two
+  distinct frame names, `PanelMaster_Panel_C384rger` and `PanelMaster_Panel_C396rger`. Pasting two
+  different Cyrillic or Han names likewise gives two panels. **Fail:** the second refused with a
+  message naming a shared frame name. Record which happened; a refusal is a finding to file, not a
+  step to re-run. Result:
+- **LOC-3. Name lookup folds non-ASCII case.** With `Übersicht` created, `/pm panel übersicht`
+  (lower-case `ü`) and another verb that takes a name → the panel resolves, the way `/pm panel wide`
+  resolves a panel named `Wide`. **Fail:** `no panel called 'übersicht'`. Then `/pm new übersicht` →
+  refused with `a panel named 'übersicht' already exists`. **Fail:** a second panel is created, or
+  the refusal is the frame-name one instead. Result:
 - **LOC-4. Sort order.** With three or four panels starting with accented and plain letters, open
   **Panels** → sorted the way a reader of the language expects. **Fail:** accented names clumped at
   one end; cosmetic, but worth knowing. Result:
 - **LOC-5. The round trip.** `/reload`, check LOC-1 to LOC-4 again, then switch profiles and back
   (PROFILE-4) → names, frame names and anchors identical. **Fail:** a name that changed shape, meaning
   it was re-slugified or re-encoded on its way out of SavedVariables. Result:
+
+## Non-finite numbers
+
+Lua's `tonumber` reads `nan`, `inf`, `-inf` and `1e999` (which overflows) as numbers. Every panel
+number field refuses them with `expected a number` (`Util.IsFinite` in `core/Util.lua`, used by
+`COERCE.number` in `settings/PanelSchema.lua`), and `/pm recover` resets a non-finite stored offset to
+`0` (PanelMaster-R-03). The headless suite covers the refusal and the recover; what it cannot see is
+what the client writes to SavedVariables for such a value, which is why NUM-3 plants one by hand.
+
+- **NUM-1. The CLI refuses a non-finite number.** On a panel you can see, `/pm panel <name> x nan`,
+  `/pm panel <name> x inf` and `/pm panel <name> width 1e999` → each is refused with `expected a
+  number`, and the panel does not move or resize. **Fail:** the panel vanishes, jumps, or the echo
+  shows `nan` or `inf`. Result:
+- **NUM-2. Nothing was stored.** After NUM-1, `/reload` → the panel is exactly where and as big as it
+  was before NUM-1, and `/pm panel <name>` lists the old `x` and `width`. Result:
+- **NUM-3. Recover repairs a stored non-finite value in one run.** Log out, edit
+  `WTF/Account/<account>/SavedVariables/PanelMaster.lua` and set one panel's `["x"]` to `0/0`, log in,
+  then `/pm recover` → `moved 1 panel back on screen`, and the panel's `x` is `0`. `/pm recover`
+  again → every panel is already on screen. **Fail:** the second run still reports a move (the old
+  `NaN ~= NaN` loop), or the login itself errors; record what the SavedVariables file held after the
+  login, since how the client serializes a NaN is the open question. Result:
 
 ## Pending sign-off
 
@@ -1026,3 +1071,9 @@ corrected in it against the code.
 | DEGRADED-12 | none | New with the `/pm profile` verb |
 | DEGRADED-13 | § 14 step 14 | No result recorded; corrected: it compares DEGRADED-3, 4, 7 and 11, the four lines that carry the cause clause |
 | LOC-1 to LOC-5 | § 22 steps 1-5 (`M5-08`) | No deDE or frFR client has run them yet; LOC-1 (where **Panel name** is) and LOC-3 (the lookup comparison and the refusal to read) are also corrected |
+| NUM-1 to NUM-3 | none | New with the non-finite number guard (PM-06, finding PM-R-03) |
+| FRAME-29 | PM-01 (finding PM-R-02) | Corrected in the 2026-10-07 remediation: the delete-all confirm names the active profile and says every character on it loses its panels; owed again even where a run predates it |
+| FRAME-28, PANEL-16, PANEL-24 | PM-03 (finding PM-R-05) | Corrected in the 2026-10-07 remediation: the editor's **Delete** and **Reset** ask first, naming the panel |
+| PANEL-33 | none | New with PM-02 (findings PM-A-01, PM-A-02): both resets sweep the session-only rows |
+| COMBAT-7 | none | New with PM-04 (finding PM-R-06): a stand-down drops a combat-held unlock |
+| LOC-2, LOC-3 | PM-05 (finding PM-R-01, PanelMaster#26) | Corrected in the 2026-10-07 remediation: non-ASCII bytes are hex-encoded in the slug and lookup folds UTF-8 case; already owed under the LOC row above |
