@@ -591,6 +591,20 @@ test("Panel: the Panels page's Defaults action is confirm-gated", function()
   NS.Registry:DeleteAll()
 end)
 
+-- red under: the Defaults closure showed KA0S_PANELMASTER_DELETEALL with no text_arg1, so the
+-- confirm could not name the shared profile it is about to empty.
+test("Panel: the Panels page's Defaults confirm names the active profile (PM-R-02)", function()
+  NS.Registry:DeleteAll()
+  NS.Registry:New("A")
+  P.panels.panel.OnDefault()
+  local n = #T.mocks.__popupsShown
+  assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_DELETEALL")
+  local text = T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETEALL.text:format(T.mocks.__popupArgs[n][1])
+  assertTrue(text:find('"' .. NS.db:GetCurrentProfile() .. '"', 1, true) ~= nil,
+    "the confirm does not name the profile: " .. text)
+  NS.Registry:DeleteAll()
+end)
+
 test("Tagline: the landing page, the TOC Notes and the README say one thing (F-019)", function()
   -- The one-line description used to exist in three different wordings, so whichever one a player
   -- read first was contradicted by the next. `ADDON_TAGLINE` in settings/Panel.lua is canonical —

@@ -349,7 +349,13 @@ return function()
   M.BackdropTemplateMixin = {}
   M.StaticPopupDialogs = {}
   M.__popupsShown = {}
-  M.StaticPopup_Show = function(name) M.__popupsShown[#M.__popupsShown + 1] = name end
+  -- __popupArgs runs parallel to __popupsShown: entry i is { text_arg1, text_arg2 } of show i, so a
+  -- case can assert the formatted confirm text (dialog.text:format(arg1)) a player actually reads.
+  M.__popupArgs = {}
+  M.StaticPopup_Show = function(name, arg1, arg2)
+    M.__popupsShown[#M.__popupsShown + 1] = name
+    M.__popupArgs[#M.__popupsShown] = { arg1, arg2 }
+  end
 
   -- Chat sink for NS.Print (core/Util.lua). Records every line, so the CLI's output shape is
   -- assertable without stubbing the printer itself.

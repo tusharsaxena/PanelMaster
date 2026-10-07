@@ -78,7 +78,9 @@ if type(StaticPopupDialogs) == "table" then
     preferredIndex = 3,
   }
   StaticPopupDialogs["KA0S_PANELMASTER_DELETEALL"] = {
-    text = "Delete ALL Ka0s Panel Master panels on this character? This cannot be undone.",
+    -- %s is the active profile (Sl.ActiveProfileName). Panels live in db.profile, and AceDB's
+    -- "Default" profile is shared, so the wipe reaches every character on it (PM-R-02).
+    text = "Delete ALL Ka0s Panel Master panels in the profile \"%s\"? Every character using this profile loses them. This cannot be undone.",
     button1 = YES or "Yes",
     button2 = NO or "No",
     OnAccept = function()
@@ -177,9 +179,16 @@ end
 -- The confirm-gated wipe. The StaticPopup fallback is what lets the headless suite drive DeleteAll
 -- without a popup, so the test is on the function's presence rather than a nil check on some other
 -- global that happens to be absent too.
+-- The profile name the delete-all confirm formats into its text (text_arg1). Guarded so a confirm
+-- raised before the database exists still reads sensibly rather than erroring.
+function Sl.ActiveProfileName()
+  local db = NS.db
+  return (db and db.GetCurrentProfile and db:GetCurrentProfile()) or "current"
+end
+
 local function doDeleteAll()
   if type(StaticPopup_Show) == "function" then
-    StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
+    StaticPopup_Show("KA0S_PANELMASTER_DELETEALL", Sl.ActiveProfileName())
   else
     local n = NS.Registry:DeleteAll()
     print(("deleted %d %s."):format(n, n == 1 and "panel" or "panels"))

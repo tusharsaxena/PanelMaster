@@ -549,6 +549,25 @@ test("Slash.CliPanel deleteall: goes through the confirm popup", function()
   fresh()
 end)
 
+-- red under: the dialog text said "on this character" and doDeleteAll passed no text_arg1, so the
+-- confirm neither named the shared profile nor warned that every character on it loses its panels.
+test("Slash.CliPanel deleteall: the confirm names the active profile, not 'this character' (PM-R-02)", function()
+  fresh()
+  R:New("A")
+  assertEqual(NS.db:GetCurrentProfile(), "Default", "the suite should start on the Default profile")
+  Sl:CliPanel("deleteall")
+  local n = #T.mocks.__popupsShown
+  assertEqual(T.mocks.__popupsShown[n], "KA0S_PANELMASTER_DELETEALL")
+  local dialog = T.mocks.StaticPopupDialogs.KA0S_PANELMASTER_DELETEALL
+  local text = dialog.text:format(T.mocks.__popupArgs[n][1])
+  assertTrue(text:find('"Default"', 1, true) ~= nil, "the confirm does not name the profile: " .. text)
+  assertTrue(text:find("Every character using this profile", 1, true) ~= nil,
+    "the confirm does not say the profile is shared: " .. text)
+  assertTrue(text:find("this character", 1, true) == nil, "the confirm still says 'this character'")
+  assertEqual(R:Count(), 1, "panels were deleted before the confirm was accepted")
+  fresh()
+end)
+
 test("Slash.CliPanel: a panel genuinely named 'deleteall' is still reachable (F-022)", function()
   fresh()
   local rec = R:New("deleteall")

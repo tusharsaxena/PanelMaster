@@ -204,7 +204,8 @@ client and is run when one is available, not per release.
   middle of the screen), every editor control re-reads, the name and frame name are unchanged, anything
   anchored to it stays anchored, and other panels are untouched. Result:
 - **FRAME-29. Delete-all asks first, from both entry points.** `/pm new GuardA`, `/pm new GuardB`.
-  `/pm panel deleteall` → a confirm popup; **No** → both survive. **Panels ▸ Defaults** → the same
+  `/pm panel deleteall` → a confirm popup that names your current profile (e.g. `"Default"`) and says
+  every character using it loses its panels, never "this character"; **No** → both survive. **Panels ▸ Defaults** → the same
   popup; **No** → both survive. **Yes** from either → both gone, and chat says `deleted 2 panels.`
   Result:
 

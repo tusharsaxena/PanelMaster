@@ -453,7 +453,8 @@ function P:Register()
     -- OnDefault forwards the Settings window's footer control to this same closure.
     pctx.panel.defaultsOnClick = function()
       if type(StaticPopup_Show) == "function" then
-        StaticPopup_Show("KA0S_PANELMASTER_DELETEALL")
+        StaticPopup_Show("KA0S_PANELMASTER_DELETEALL",
+          (NS.Slash and NS.Slash.ActiveProfileName) and NS.Slash.ActiveProfileName() or "current")
       else
         NS.Registry:DeleteAll()
       end

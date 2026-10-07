@@ -672,7 +672,7 @@ Total.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (82)
+### test_slash.lua (83)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -726,6 +726,7 @@ Total.
 - Slash.CliPanel: an unknown panel is reported
 - Slash.CliPanel: an unknown field lists the valid ones
 - Slash.CliPanel deleteall: goes through the confirm popup
+- Slash.CliPanel deleteall: the confirm names the active profile, not 'this character' (PM-R-02)
 - Slash.CliPanel: a panel genuinely named 'deleteall' is still reachable (F-022)
 - Slash.CliRecover: reports when nothing needed moving
 - Slash.CliRecover: reports how many it moved
@@ -757,7 +758,7 @@ Total.
 - Profile verb: surrounding quotes are stripped, inner spaces and case kept
 - Profile verb: a switch in combat is refused, and the list still answers
 
-### test_panel.lua (47)
+### test_panel.lua (48)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -800,6 +801,7 @@ Total.
 - Panel: a profile switch drops the editor's selection
 - Panel: a rebuild drops the old refreshers before it releases their widgets
 - Panel: the Panels page's Defaults action is confirm-gated
+- Panel: the Panels page's Defaults confirm names the active profile (PM-R-02)
 - Tagline: the landing page, the TOC Notes and the README say one thing (F-019)
 - PanelEditor: the panel dropdowns are ordered by name, not by creation
 - Panel scale: defaults to 1, which is the identity
@@ -1180,8 +1182,8 @@ Total.
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 82 |
-| test_panel.lua | 47 |
+| test_slash.lua | 83 |
+| test_panel.lua | 48 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_launcher.lua | 37 |
@@ -1201,4 +1203,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1035** |
+| **Total** | **1037** |
