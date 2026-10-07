@@ -599,9 +599,9 @@ function S:InstallMaster(H)
     -- and the schema runtime reads a nil default as "no restore", so without it a row reset --
     -- `/pm reset state.debugConsole`, or the library's RestoreDefaults("general") walk -- would
     -- leave an open console open. Both always closed it; tests/test_schema.lua pins both. The
-    -- General page's Defaults BUTTON is neither: settings/Panel.lua rebinds it to the profile
-    -- reset, which never writes this session-only row, so it leaves an open console open and
-    -- always has.
+    -- General page's Defaults BUTTON is neither: settings/Panel.lua rebinds it to the global
+    -- reset, Sl:DoResetAll, which closes the console by applying this same default after the
+    -- profile reset (its session-only sweep; tests/test_slash.lua pins it).
     defaults  = { enabled = true, visibility = "always", scale = 1, alpha = 1, locked = true,
                   debugConsole = false },
     -- No `testModePath`, on purpose (options-ui-§15, standard v2.49.0): unlocking already shows
@@ -759,7 +759,8 @@ S.BulkBegin, S.BulkEnd = R.BulkBegin, R.BulkEnd
 -- rows it changed can only be counted against a picture taken before: Sl:DoResetAll takes one, and
 -- the handler compares. The Profiles page's own Reset Profile takes none, and its line carries no
 -- count (debug-logging-§10: the count MAY be omitted where it is not cheap). Session-only rows live
--- in NS.State, which AceDB never sees, so a profile reset changes none of them.
+-- in NS.State, which AceDB never sees, so the profile reset changes none of them and the count
+-- skips them; Sl:DoResetAll sweeps them afterwards, inside its bracket, which keeps them out of N.
 --
 -- Kept rather than moved onto the runtime's ResetCounted / ConsumeResetCount (the design spec
 -- allows either): the handler's line is pinned byte for byte in tests/test_debuglog.lua, and this

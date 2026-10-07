@@ -672,7 +672,7 @@ Total.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (83)
+### test_slash.lua (84)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -708,6 +708,7 @@ Total.
 - Slash.CliReset: restores one setting's default
 - Slash.CliResetAll: CONFIRMS first, and never resets on the call itself
 - Slash: accepting the reset empties the PROFILE, panels included
+- Slash: the reset's blast radius -- every panel, this profile only, session rows swept
 - Slash.CliVersion: prints v<version>
 - Slash.CliNew: creates a panel and confirms
 - Slash.CliNew: with no name, prints usage
@@ -1182,7 +1183,7 @@ Total.
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 83 |
+| test_slash.lua | 84 |
 | test_panel.lua | 48 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
@@ -1203,4 +1204,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1037** |
+| **Total** | **1038** |

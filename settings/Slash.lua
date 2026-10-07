@@ -25,7 +25,17 @@ Sl.RESET_ALL_TEXT = "this profile reset to defaults"
 ---
 --- The rebuild is the one every profile switch already takes: `OnProfileReset` reaches the `reload`
 --- closure NS:RegisterProfileCallbacks installed (core/Database.lua), which sweeps preview orphans
---- and calls Registry:ReloadProfile.
+--- and calls Registry:ReloadProfile -- the reset's ONE `PanelsChanged`.
+---
+--- THE SESSION-ONLY ROWS ARE SWEPT TOO (options-ui-§12). AceDB never stores `state.locked` or
+--- `state.debugConsole`, so `db:ResetProfile()` cannot reach them, and a reset that left the screen
+--- unlocked and the console open would not be the fresh profile the rule promises. After a reset
+--- that succeeded, every session-only row is driven to its default through its own `set` (the
+--- runtime's ApplyDefault): Lock frame relocks, which also drops held and per-panel unlocks, and the
+--- console closes. The rows are found by their flag, not by name, so a session-only row added later
+--- is swept without touching this function. Nothing reaches the DB (a session row's write is its
+--- `set`), and the bracket keeps the writes out of the log (their `[Set]` lines go to its tally).
+--- Locking is never combat-deferred (modules/Unlock.lua), so nothing here waits for combat to end.
 ---
 --- Shared by the popup's OnAccept and by the headless fallback, so the two cannot diverge.
 ---
@@ -33,6 +43,14 @@ Sl.RESET_ALL_TEXT = "this profile reset to defaults"
 --- (debug-logging-§10). The snapshot taken here is what lets the handler count the rows the reset
 --- CHANGED, and the bracket, reporting `profileReset`, keeps anything the reset runs from adding a
 --- line of its own. A reset that raised never reached the handler, so the bracket logs instead.
+local function sweepSessionRows(S)
+  local apply = NS.SchemaRuntime and NS.SchemaRuntime.ApplyDefault
+  if type(apply) ~= "function" then return end
+  for _, row in ipairs(S.ProfileRows()) do
+    if row.sessionOnly or row.path == "state.debugConsole" then apply(row) end
+  end
+end
+
 function Sl:DoResetAll()
   local db, S = NS.db, NS.Schema
   if db and db.ResetProfile then
@@ -40,8 +58,13 @@ function Sl:DoResetAll()
     S.resetSnapshot = S:SnapshotPersisted()
     local ok, err = pcall(db.ResetProfile, db)
     S.resetSnapshot = nil
-    S.BulkEnd("reset", "all", nil, err, { profileReset = ok })
+    -- The handler has logged a reset that landed, so a sweep that raised is still a profile reset:
+    -- its error marks the bracket and reaches the caller, but adds no second line for the act.
+    local swept, why = true, nil
+    if ok then swept, why = pcall(sweepSessionRows, S) end
+    S.BulkEnd("reset", "all", nil, err or why, { profileReset = ok })
     if not ok then error(err, 0) end
+    if not swept then error(why, 0) end
   end
   print(Sl.RESET_ALL_TEXT)
 end

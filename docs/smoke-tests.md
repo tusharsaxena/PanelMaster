@@ -485,6 +485,12 @@ and at least one art pack; skip those without it.
   discarded — your other profiles are not affected."* **No** → nothing changes. **Yes** → every setting
   is back to shipped **and the panels are gone**, and chat says `this profile reset to defaults` (not
   `All settings reset to defaults`, and not *"your panels are untouched"*). Result:
+- **PANEL-8a. Reset all sweeps the session-only rows.** Untick **Lock frame**, open the debug console
+  (**Debug console** ticked), make sure a second profile exists under **Profiles**, then **Reset all
+  settings** → **Yes**. The panels lock (no drag handles or name labels), **Lock frame** reads ticked,
+  the console closes, the **Profiles** list is unchanged with the same profile active, and a panel
+  created afterwards is locked. **Fail:** panels still draggable or the console still open (the reset
+  skipped its session-only sweep). Result:
 - **PANEL-9. Defaults button tooltips.** Hover **Defaults** on **General** → *Reset this profile to
   the addon's defaults. Your panels go with it.* On **Panels** → *Delete every panel. This cannot be
   undone.* Result:

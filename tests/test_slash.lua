@@ -408,6 +408,60 @@ test("Slash: accepting the reset empties the PROFILE, panels included", function
   fresh()
 end)
 
+test("Slash: the reset's blast radius -- every panel, this profile only, session rows swept", function()
+  -- options-ui-§12 Testing: a reset case has to prove what the reset reaches and what it leaves.
+  -- Several panels go, another profile and the profile list stay, the active profile stays active,
+  -- and the SESSION-ONLY rows (Lock frame, Debug console) are put back too: AceDB never stores
+  -- them, so db:ResetProfile() alone left the screen unlocked and the console open.
+  fresh()
+  local db = NS.db
+  local home = db:GetCurrentProfile()
+  T.mocks.__switchProfile("Alt")          -- a second profile, created and then left
+  T.mocks.__switchProfile(home)
+  for i = 1, 3 do R:New("Doomed " .. i) end
+  NS.Unlock:SetUnlocked(true)
+  NS.DebugLog:Show()
+  local function profiles()
+    local list, n = db:GetProfiles({})
+    table.sort(list)
+    return table.concat(list, ",", 1, n)
+  end
+  local before = profiles()
+  assertTrue(before:find("Alt", 1, true) ~= nil, "the second profile was never created")
+  assertTrue(NS.State.unlocked and NS.DebugLog:IsShown(), "the preconditions did not take")
+
+  local panels = 0
+  local bus = NS.bus
+  local orig = bus.SendMessage
+  bus.SendMessage = function(self, msg, ...)
+    if msg == R.MSG.PANELS then panels = panels + 1 end
+    return orig(self, msg, ...)
+  end
+  local ok, err = pcall(function()
+    Sl:OnSlash("resetall")
+    T.mocks.StaticPopupDialogs["KA0S_PANELMASTER_RESETALL"].OnAccept()
+  end)
+  bus.SendMessage = orig
+  assertTrue(ok, tostring(err))
+
+  -- red under: DoResetAll going back to a row walk (the panels are profile data).
+  assertEqual(R:Count(), 0, "the reset left panels behind")
+  -- red under: a reset that deletes or switches profiles rather than resetting the active one.
+  assertEqual(profiles(), before, "the reset changed the profile list")
+  assertEqual(db:GetCurrentProfile(), home, "the reset changed the active profile")
+  -- red under: DoResetAll without the session-only sweep (PM-A-01).
+  assertFalse(NS.State.unlocked, "the reset left the screen unlocked")
+  assertTrue(S:Get("state.locked"), "Lock frame does not read locked after the reset")
+  -- red under: DoResetAll without the session-only sweep (PM-A-01).
+  assertFalse(NS.DebugLog:IsShown(), "the reset left the debug console open")
+  -- red under: the sweep or the reload publishing its own PanelsChanged beside the profile reload's.
+  assertEqual(panels, 1, "a reset published PanelsChanged " .. panels .. " times")
+  -- red under: the sweep missing settings.locked, so the next panel is born draggable.
+  local after = R:New("Afterwards")
+  assertFalse(NS.Canvas:FrameFor(after.id):IsMouseEnabled(), "a panel made after the reset is unlocked")
+  fresh()
+end)
+
 test("Slash.CliVersion: prints v<version>", function()
   local lines = capture(function() Sl:CliVersion() end)
   assertTrue(lines[1]:find("v" .. NS.Version(), 1, true) ~= nil)
