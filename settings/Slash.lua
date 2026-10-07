@@ -355,8 +355,9 @@ end
 
 -- Slash command table. It sits at the BOTTOM of this file, below every Cli* function its entries
 -- call, so the whole slash surface — table, dispatcher, generated help and the implementations —
--- reads as one thing. `/pm help`, the README's command table and the settings landing page all
--- generate from this, so they can never drift (slash-commands-§3).
+-- reads as one thing. `/pm help` and the settings landing page both generate from this, so they
+-- can never drift (slash-commands-§3). The README carries no command table: its command prose is
+-- hand-written (see the `debug` entry below).
 --
 -- POSITIONAL `{ name, description, handler }` triples, which is the shape LibKa0s-Slash-1.0 reads.
 -- They used to be keyed (`{ name =, desc =, fn = }`); the flip moved 18 entries, the dispatcher, the
@@ -405,7 +406,7 @@ NS.COMMANDS = {
   -- *unlock them* in every addon that carries them and can never be given a second meaning here.
   --
   -- They write `state.locked` THROUGH THE SAME SINGLE WRITE SEAM the Master-controls *Lock frame*
-  -- checkbox and the minimap button's left click write through, and hold no state of their own --
+  -- checkbox and the launcher menu's *Locked* entry write through, and hold no state of their own --
   -- the same no-second-state rule `enable` / `disable` carry above. Routed through `CliSet` for the
   -- same reason that pair is: `/pm unlock` is then LITERALLY `/pm set state.locked false`, with the
   -- same parse, the same write and the same canonical `path = value` echo read back AFTER the write
@@ -742,8 +743,9 @@ function Sl:CliProfile(a)        return dispatcher:CliProfile(a)    end
 function Sl:ProfileSwitch(name)  return dispatcher:ProfileSwitch(name) end
 function Sl:Text(key)            return dispatcher:Text(key)        end
 -- The one refusal line, built by the library from `lib.DISABLED_LINE_FORMAT`, `brandName` and
--- `slash`. Republished because the LAUNCHER'S left click prints it too (launcher-§2, §7) and must
--- not write the line again -- one shape, collection-wide, from one place.
+-- `slash`. Republished so the tests compare against the one line rather than writing it again
+-- (slash-commands-§7) -- one shape, collection-wide, from one place. The launcher no longer prints
+-- it: its left click opens the settings panel in either state (Launcher minor 4).
 function Sl:DisabledLine()       return dispatcher:DisabledLine()   end
 -- The format string that line is built from, published on BOTH arms under one name: the degraded
 -- arm carries a byte-for-byte copy, and the parity suite pins that copy against this.

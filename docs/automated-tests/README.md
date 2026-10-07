@@ -26,7 +26,7 @@ silently by the next re-vendor.
 | `lint` | `luacheck .` | **yes** | **yes** |
 | `tests` | `lua tests/run.lua` | **yes** | **yes** |
 | `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
-| `complexity` | `lizard -l lua -x "./libs/*" -x "./tests/_kit/*" .` | no — recorded only | **yes** |
+| `complexity` | `bash tests/_kit/run-automated-tests.sh --suite complexity` (`lizard -l lua -L 1500` over the kit's sighted shadow, at the kit revision the `CLAUDE.md` provenance line pins; a function-count parity mismatch is a fail) | no — recorded only | **yes** |
 
 `perf` and `complexity` are **measured, recorded and diffed — they never fail a run and never block
 a commit** (`testing-§4`). A threshold on every commit teaches everyone to reach for `--no-verify`,

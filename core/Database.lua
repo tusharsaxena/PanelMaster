@@ -83,7 +83,8 @@ end
 -- stores, so an inactive profile was already migrated at init. What a profile that arrives LATER
 -- needs — one imported or copied in from a file this runner never saw — is the per-RECORD repair,
 -- and that is R.Sanitize's: NS.Registry:ReloadProfile sanitizes every record it finds, which
--- includes the same frame-name backfill the v1 → v2 body performs (modules/Registry.lua:218-220).
+-- includes the same frame-name backfill the v1 → v2 body performs (R.Sanitize in
+-- modules/Registry.lua).
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()

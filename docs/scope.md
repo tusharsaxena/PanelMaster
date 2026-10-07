@@ -36,7 +36,8 @@ Each of these is a decision that would still hold tomorrow, not a gap waiting to
 - **Login-time off-screen recovery.** `/pm recover` is manual and never runs at login: a panel
   deliberately parked mostly off-screen is a legitimate layout, and a login-time sweep would silently
   rearrange it.
-- **Per-target class color.** The class-color flag reads `UnitClass("player")`. There is no "color by
+- **Per-target class color.** The class-color flag resolves the player's own class, through
+  LibKa0s-Core's `ResolveColor` with no unit (`C.COLOR_CLASS_SOURCE`). There is no "color by
   target's class" and no per-panel override.
 
 ## Known limitations (current, not decisions)
@@ -56,6 +57,6 @@ Each of these is a decision that would still hold tomorrow, not a gap waiting to
 - **The mouseover fade is a hard cut, not a smooth fade.** Alpha snaps between the two values at the
   10Hz poll. An animated transition is a natural refinement.
 - **Class color is the player's own class only.** There is no "color by target's class" or
-  per-panel class override; the flag reads `UnitClass("player")`.
+  per-panel class override; the flag resolves the player's class (LibKa0s-Core's `ResolveColor`).
 - **`/pm recover` is manual.** It never runs at login, because a panel deliberately parked mostly
   off-screen is a legitimate layout and a login-time sweep would silently rearrange it.
