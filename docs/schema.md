@@ -301,7 +301,10 @@ one row per `C.PANEL_FIELD_ORDER` field except `name` (50 rows) from the field t
   resolves these paths against the template from segment 2, so the boot shape check covers every
   panel field.
 - **Normalize.** The field's parser (the `kind → coerce` table moved here from the Registry), then
-  `R.SanitizeField`. A refusal is `false, "invalid value", <the parser's sentence>`, and `R:Set`
+  `R.SanitizeField`. A `number` field takes only a finite number: `Util.IsFinite` refuses `nan`,
+  `inf`, `-inf` and `1e999` with `expected a number`, and the repair side (`Util.Clamp` for a clamped
+  field, the template value for `x`, `y`, `artX` and `artY`) treats a stored non-finite value as
+  absent (PanelMaster-R-03). A refusal is `false, "invalid value", <the parser's sentence>`, and `R:Set`
   hands the sentence back. A record-to-record verb (`R.InRecordWrite()`) skips the parse and only
   repairs, as the old raw copy plus `Sanitize` did.
 - **The resolver.** `S.ResolveRoot(parts, id)` answers the record whose id is `id`, `first = 2` and

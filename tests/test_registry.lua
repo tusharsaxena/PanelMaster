@@ -329,6 +329,41 @@ test("Registry.SetPosition: writes both coordinates at once", function()
   assertEqual(R:Get(rec.id).y, -80)
 end)
 
+-- PanelMaster-R-03 (PM-06). red under: SetPosition's bare tonumber (NaN is a number, so it is written).
+test("Registry.SetPosition: drops a non-finite coordinate the way it drops a non-number", function()
+  fresh()
+  local rec = R:New("Steady", { x = 30, y = 40 })
+  R:SetPosition(rec.id, 0 / 0, 5)
+  assertEqual(R:Get(rec.id).x, 30, "a NaN x was written")
+  assertEqual(R:Get(rec.id).y, 5)
+  R:SetPosition(rec.id, 7, math.huge)
+  assertEqual(R:Get(rec.id).x, 7)
+  assertEqual(R:Get(rec.id).y, 5, "an infinite y was written")
+end)
+
+-- PanelMaster-R-03 (PM-06): a NaN offset left in SavedVariables used to make every /pm recover report
+-- "moved 1 panel" forever, because NaN ~= NaN. red under: Clamp returning NaN unchanged.
+test("Registry.Recover: repairs a non-finite position in one run; a second run moves nothing", function()
+  fresh()
+  local rec = R:New("Corrupt", { x = 100, y = 100 })
+  rec.x = 0 / 0
+  rec.y = math.huge
+  assertEqual(R:Recover(), 1)
+  local fixed = R:Get(rec.id)
+  assertEqual(fixed.x, 0, "a NaN x was not reset to the template offset")
+  assertEqual(fixed.y, 0, "an infinite y was not reset to the template offset")
+  assertEqual(R:Recover(), 0, "the second recover still found something to move")
+end)
+
+test("Registry.Sanitize: a non-finite free number falls back to the template value", function()
+  fresh()
+  local rec = R:New("Planted", { x = 0 / 0, y = -math.huge, artX = math.huge })
+  local got = R:Get(rec.id)
+  assertEqual(got.x, C.PANEL_TEMPLATE.x)
+  assertEqual(got.y, C.PANEL_TEMPLATE.y)
+  assertEqual(got.artX, C.PANEL_TEMPLATE.artX)
+end)
+
 test("Registry.FormatField: renders each field type readably", function()
   fresh()
   local rec = R:New("Formatted")

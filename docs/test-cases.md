@@ -8,7 +8,7 @@ Total.
 
 **Generated — do not hand-edit.** Regenerate with `lua tests/run.lua --list > docs/test-cases.md`.
 
-### test_util.lua (35)
+### test_util.lua (37)
 
 - Util.DeepEqual: compares plain data by value, nested tables included
 - Util.SplitPath: splits a dotted path
@@ -17,6 +17,8 @@ Total.
 - Util.Clamp: passes a value already in range
 - Util.Clamp: clamps below and above
 - Util.Clamp: a non-number falls back, then to the low bound
+- Util.IsFinite: true for ordinary numbers, false for NaN, infinities and non-numbers
+- Util.Clamp: a non-finite value falls back like a non-number, then to the low bound
 - Util.Round: rounds away from zero on both signs
 - Util.Snap: a grid of 1 or less is the identity
 - Util.Snap: rounds to the nearest multiple
@@ -106,7 +108,7 @@ Total.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (49)
+### test_registry.lua (52)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -143,6 +145,9 @@ Total.
 - Registry.Set: clamps out-of-range input rather than rejecting it
 - Registry.Set: the panel level clamps to the named level bounds
 - Registry.SetPosition: writes both coordinates at once
+- Registry.SetPosition: drops a non-finite coordinate the way it drops a non-number
+- Registry.Recover: repairs a non-finite position in one run; a second run moves nothing
+- Registry.Sanitize: a non-finite free number falls back to the template value
 - Registry.FormatField: renders each field type readably
 - Registry.Recover: leaves an on-screen TOPLEFT panel alone
 - Registry.Recover: still rescues a genuinely off-screen TOPLEFT panel
@@ -158,7 +163,7 @@ Total.
 - Registry.Reset: lands on the same state a new panel is born in
 - Registry.ResetPositions: moves every panel back to where a new one starts
 
-### test_panel_schema.lua (20)
+### test_panel_schema.lua (21)
 
 - Panel verbs: R:Set stores the value and repaints that one panel once
 - Panel verbs: R:Set of `name` is a rename -- the SET changed, so PANELS and no PANEL
@@ -173,6 +178,7 @@ Total.
 - Panel rows: S.ResolveRoot refuses an unknown or missing id, and still answers the profile
 - Panel rows: one hidden panel.<field> row per panel field but name, defaulting to the template
 - Panel rows: a seam write stores, clamps, refuses in the coercer's words, repaints once
+- Panel rows: a non-finite number is refused as 'expected a number' and nothing is stored
 - Panel rows: a panel write logs ONE [Set] line in the library's shape, naming the panel
 - Panel rows: R:Set and every record verb write through the seam with the panel id
 - Panel rows: a drag-stop writes point, relPoint, x and y as ONE act
@@ -1179,13 +1185,13 @@ Total.
 
 | Suite | Cases |
 |-------|------:|
-| test_util.lua | 35 |
+| test_util.lua | 37 |
 | test_compat.lua | 14 |
 | test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 49 |
-| test_panel_schema.lua | 20 |
+| test_registry.lua | 52 |
+| test_panel_schema.lua | 21 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
 | test_media.lua | 84 |
@@ -1218,4 +1224,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1052** |
+| **Total** | **1058** |

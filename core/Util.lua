@@ -12,11 +12,22 @@ function Util.SplitPath(path)
   return parts
 end
 
--- Clamp n into [lo, hi]. Non-numbers fall back to `fallback` (then to lo), so a hand-edited
--- SavedVariables string can never propagate into a SetWidth call.
+-- A real, finite number: not a string, not NaN (the one value that is not equal to itself) and not
+-- either infinity. tonumber reads "nan", "inf" and "1e999" as numbers, so every guard that asks "is
+-- this a usable number" asks this instead (PanelMaster-R-03).
+function Util.IsFinite(n)
+  return type(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge
+end
+
+-- Clamp n into [lo, hi]. Non-numbers and non-finite numbers fall back to `fallback` when that is
+-- finite, then to lo, so neither a hand-edited SavedVariables string nor a NaN can propagate into a
+-- SetWidth call. NaN fails both comparisons below, which is why it has to be caught first.
 function Util.Clamp(n, lo, hi, fallback)
   n = tonumber(n)
-  if n == nil then n = tonumber(fallback) or lo end
+  if not Util.IsFinite(n) then
+    n = tonumber(fallback)
+    if not Util.IsFinite(n) then n = lo end
+  end
   if n < lo then return lo end
   if n > hi then return hi end
   return n

@@ -276,6 +276,27 @@ test("Panel rows: a seam write stores, clamps, refuses in the coercer's words, r
   assertEqual(S:Get("panel.width", rec.id), C.MAX_SIZE)
 end)
 
+-- PanelMaster-R-03 (PM-06): tonumber reads "nan", "inf" and "1e999" as numbers, so the number rows
+-- used to store NaN or infinity and hand it to SetSize / SetPoint and the SavedVariables file.
+-- red under: COERCE.number as a bare tonumber (the write succeeds and stores the non-finite value).
+test("Panel rows: a non-finite number is refused as 'expected a number' and nothing is stored",
+  function()
+  fresh()
+  local rec = R:New("Finite", { x = 40, y = -20 })
+  local width = R:Get(rec.id).width
+  for _, field in ipairs({ "width", "x" }) do
+    local before = R:Get(rec.id)[field]
+    for _, typed in ipairs({ "nan", "inf", "-inf", "1e999", "-1e999" }) do
+      local ok, _, why = S:Set("panel." .. field, typed, rec.id)
+      assertFalse(ok, field .. " = " .. typed .. " was accepted")
+      assertEqual(why, "expected a number", field .. " = " .. typed)
+      assertEqual(R:Get(rec.id)[field], before, field .. " = " .. typed .. " still stored")
+    end
+  end
+  assertEqual(R:Get(rec.id).width, width)
+  assertEqual(R:Get(rec.id).x, 40)
+end)
+
 test("Panel rows: a panel write logs ONE [Set] line in the library's shape, naming the panel",
   function()
   fresh()

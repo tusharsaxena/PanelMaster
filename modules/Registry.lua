@@ -238,7 +238,11 @@ for _, rule in ipairs(CLAMPED) do
   REPAIR[rule[1]] = function(v, t) return Util.Clamp(v, lo, hi, t) end
 end
 
-local function freeNumber(v, t) return tonumber(v) or t end
+local function freeNumber(v, t)
+  v = tonumber(v)
+  if Util.IsFinite(v) then return v end
+  return t
+end
 local function nonEmptyString(v, t)
   if type(v) ~= "string" or v == "" then return t end
   return v
@@ -816,9 +820,10 @@ function R:SetPosition(key, x, y, point, relPoint)
   local entries = {}
   if point ~= nil then entries[#entries + 1] = { path = "panel.point", value = point } end
   if relPoint ~= nil then entries[#entries + 1] = { path = "panel.relPoint", value = relPoint } end
+  -- A non-finite coordinate is dropped exactly as a non-number is (PanelMaster-R-03).
   x, y = tonumber(x), tonumber(y)
-  if x then entries[#entries + 1] = { path = "panel.x", value = x } end
-  if y then entries[#entries + 1] = { path = "panel.y", value = y } end
+  if Util.IsFinite(x) then entries[#entries + 1] = { path = "panel.x", value = x } end
+  if Util.IsFinite(y) then entries[#entries + 1] = { path = "panel.y", value = y } end
   if #entries == 0 then return true end
   return (writeRecord(rec, entries))
 end
@@ -905,6 +910,9 @@ function R.RecoveredOffsets(rec, w, h, settings)
 end
 
 -- Would `/pm recover` move this record? The same test recover applies, answered without moving it.
+-- A non-finite x or y comes back from RecoveredOffsets as the finite fallback (Util.Clamp), so it
+-- counts as off screen once and, after recover writes that value, never again: NaN ~= NaN used to
+-- report "moved 1 panel" on every run (PanelMaster-R-03).
 function R.IsOffScreen(rec, w, h, settings)
   local x, y = R.RecoveredOffsets(rec, w, h, settings)
   return x ~= rec.x or y ~= rec.y

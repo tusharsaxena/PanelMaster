@@ -30,6 +30,7 @@ client and is run when one is available, not per release.
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
+| NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
 
 ## Before you start
 
@@ -985,6 +986,27 @@ names, but only as byte strings.
   (PROFILE-4) → names, frame names and anchors identical. **Fail:** a name that changed shape, meaning
   it was re-slugified or re-encoded on its way out of SavedVariables. Result:
 
+## Non-finite numbers
+
+Lua's `tonumber` reads `nan`, `inf`, `-inf` and `1e999` (which overflows) as numbers. Every panel
+number field refuses them with `expected a number` (`Util.IsFinite` in `core/Util.lua`, used by
+`COERCE.number` in `settings/PanelSchema.lua`), and `/pm recover` resets a non-finite stored offset to
+`0` (PanelMaster-R-03). The headless suite covers the refusal and the recover; what it cannot see is
+what the client writes to SavedVariables for such a value, which is why NUM-3 plants one by hand.
+
+- **NUM-1. The CLI refuses a non-finite number.** On a panel you can see, `/pm panel <name> x nan`,
+  `/pm panel <name> x inf` and `/pm panel <name> width 1e999` → each is refused with `expected a
+  number`, and the panel does not move or resize. **Fail:** the panel vanishes, jumps, or the echo
+  shows `nan` or `inf`. Result:
+- **NUM-2. Nothing was stored.** After NUM-1, `/reload` → the panel is exactly where and as big as it
+  was before NUM-1, and `/pm panel <name>` lists the old `x` and `width`. Result:
+- **NUM-3. Recover repairs a stored non-finite value in one run.** Log out, edit
+  `WTF/Account/<account>/SavedVariables/PanelMaster.lua` and set one panel's `["x"]` to `0/0`, log in,
+  then `/pm recover` → `moved 1 panel back on screen`, and the panel's `x` is `0`. `/pm recover`
+  again → every panel is already on screen. **Fail:** the second run still reports a move (the old
+  `NaN ~= NaN` loop), or the login itself errors; record what the SavedVariables file held after the
+  login, since how the client serializes a NaN is the open question. Result:
+
 ## Pending sign-off
 
 Every check below still needs a client run and a filled `Result:` line; sign one off there, then take
@@ -1049,3 +1071,4 @@ corrected in it against the code.
 | DEGRADED-12 | none | New with the `/pm profile` verb |
 | DEGRADED-13 | § 14 step 14 | No result recorded; corrected: it compares DEGRADED-3, 4, 7 and 11, the four lines that carry the cause clause |
 | LOC-1 to LOC-5 | § 22 steps 1-5 (`M5-08`) | No deDE or frFR client has run them yet; LOC-1 (where **Panel name** is) and LOC-3 (the lookup comparison and the refusal to read) are also corrected |
+| NUM-1 to NUM-3 | none | New with the non-finite number guard (PanelMaster-R-03) |

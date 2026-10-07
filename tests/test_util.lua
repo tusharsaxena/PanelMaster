@@ -51,6 +51,31 @@ test("Util.Clamp: a non-number falls back, then to the low bound", function()
   assertEqual(Util.Clamp(nil, 2, 10), 2)
 end)
 
+-- PanelMaster-R-03 (PM-06): NaN and +/-inf are numbers to tonumber, so they used to slip past every
+-- "is it a number" guard. NaN fails both comparisons and came back out of Clamp unchanged.
+-- red under: Util.IsFinite absent (nil call); Clamp returning NaN / the bound for a non-finite n.
+test("Util.IsFinite: true for ordinary numbers, false for NaN, infinities and non-numbers", function()
+  assertTrue(Util.IsFinite(0))
+  assertTrue(Util.IsFinite(-12.5))
+  assertTrue(Util.IsFinite(1e308))
+  assertFalse(Util.IsFinite(0 / 0), "NaN")
+  assertFalse(Util.IsFinite(math.huge), "+inf")
+  assertFalse(Util.IsFinite(-math.huge), "-inf")
+  assertFalse(Util.IsFinite(tonumber("1e999")), "1e999 overflows to +inf")
+  assertFalse(Util.IsFinite("5"), "a numeric string is not a number")
+  assertFalse(Util.IsFinite(nil))
+end)
+
+test("Util.Clamp: a non-finite value falls back like a non-number, then to the low bound", function()
+  assertEqual(Util.Clamp(0 / 0, 1, 10, 5), 5)
+  assertEqual(Util.Clamp(math.huge, 1, 10, 5), 5)
+  assertEqual(Util.Clamp(-math.huge, 1, 10, 5), 5)
+  assertEqual(Util.Clamp(0 / 0, 1, 10), 1)
+  assertEqual(Util.Clamp(math.huge, 1, 10), 1)
+  assertEqual(Util.Clamp(0 / 0, 1, 10, 0 / 0), 1, "a non-finite fallback is no fallback")
+  assertEqual(Util.Clamp(0 / 0, 1, 10, math.huge), 1)
+end)
+
 test("Util.Round: rounds away from zero on both signs", function()
   assertEqual(Util.Round(2.5), 3)
   -- floor(n + 0.5) would give -2 here, which is the bug this function exists to avoid: panel
