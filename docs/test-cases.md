@@ -48,7 +48,7 @@ Total.
 - NS.Print: prepends the cyan [PM] tag
 - NS.Print survived the AceConsole embed (architecture-§2)
 
-### test_compat.lua (14)
+### test_compat.lua (16)
 
 - Compat.GetScreenSize: returns the UIParent dimensions
 - Compat.GetUIScale: defaults to 1 when the frame cannot answer
@@ -64,6 +64,8 @@ Total.
 - Compat.InCombat falls back to InCombatLockdown when UnitAffectingCombat is absent
 - Compat.InCombat answers false when neither combat API exists
 - Compat owns the deprecated-API surface: no flavor branching in the addon
+- Compat.AddOnFolders: ignores bare GetNumAddOns/GetAddOnInfo when C_AddOns is absent
+- NS.Meta: ignores a bare GetAddOnMetadata when Env and C_AddOns are absent
 
 ### test_constants.lua (20)
 
@@ -1189,7 +1191,7 @@ Total.
 | Suite | Cases |
 |-------|------:|
 | test_util.lua | 37 |
-| test_compat.lua | 14 |
+| test_compat.lua | 16 |
 | test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
@@ -1227,4 +1229,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1061** |
+| **Total** | **1063** |

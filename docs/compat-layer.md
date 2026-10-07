@@ -34,29 +34,29 @@ Retail-only addon with no `WOW_PROJECT_ID` branching, and `tests/test_compat.lua
 | Shim | Line | Question it answers | API absent |
 |---|---|---|---|
 | `AddOnFolders` | `:27` | Which addon folders are installed | `nil` ("cannot tell") |
-| `GetScreenSize` | `:56` | The screen size in UI units | `nil` |
-| `GetUIScale` | `:65` | The effective UI scale | `1` |
-| `InCombat` | `:86` | Is the player fighting | `false` |
-| `RegisterMedia` | `:115` | Contribute the addon's own LSM entries | `false` (no-op) |
-| `FetchMedia` | `:136` | LSM name to texture path | the built-in flat texture |
-| `MediaList` | `:151` | LSM names for a settings dropdown | `None` and `Solid` only |
-| `MouseIsOver` | `:176` | Is the cursor over this frame | `false` |
+| `GetScreenSize` | `:54` | The screen size in UI units | `nil` |
+| `GetUIScale` | `:63` | The effective UI scale | `1` |
+| `InCombat` | `:84` | Is the player fighting | `false` |
+| `RegisterMedia` | `:113` | Contribute the addon's own LSM entries | `false` (no-op) |
+| `FetchMedia` | `:134` | LSM name to texture path | the built-in flat texture |
+| `MediaList` | `:155` | LSM names for a settings dropdown | `None` and `Solid` only |
+| `MouseIsOver` | `:180` | Is the cursor over this frame | `false` |
 
 ## `AddOnFolders` — `core/Compat.lua:27`
 
 **What varies.** The installed-addon roster. It reads `C_AddOns.GetNumAddOns` / `C_AddOns.GetAddOnInfo`
-first. When either member is missing it drops to the global `GetNumAddOns` / `GetAddOnInfo` pair, and
-that rung is presence-guarded as well. It answers the INSTALLED list, not the loaded one, because the
+and nothing else: the bare `GetNumAddOns` / `GetAddOnInfo` globals went in the 11.0 AddOns purge and
+exist on no Interface 120100 client, so there is no fallback rung. It answers the INSTALLED list, not the loaded one, because the
 Sunn adapter needs to know whether a pack folder exists on disk even when the pack's own Lua never ran.
 
-**When the API is absent.** `nil` when neither rung exists or the count is not a number. It never
+**When the API is absent.** `nil` when either `C_AddOns` member is missing or the count is not a number. It never
 answers an empty table, because "cannot tell" and "nothing installed" must stay distinguishable: an
 empty table would drop every known pack.
 
 **Who calls it.** `modules/SunnArt.lua:236` (`addonFolders`), whose `folderInstalled` gate reads `nil`
 as "offer the theme".
 
-## `GetScreenSize` — `core/Compat.lua:56`
+## `GetScreenSize` — `core/Compat.lua:54`
 
 **What varies.** Whether `UIParent` can report its size at all. It is a real frame in-game and a stub
 headlessly, and the stub reports 0×0.
@@ -69,7 +69,7 @@ Otherwise the recovery pass would drag every panel to the origin.
 `modules/Diagnostics.lua:114` and `:200` (the diagnostics report's screen section and its per-panel
 position line).
 
-## `GetUIScale` — `core/Compat.lua:65`
+## `GetUIScale` — `core/Compat.lua:63`
 
 **What varies.** Whether `UIParent:GetEffectiveScale` exists and answers a positive number.
 
@@ -77,7 +77,7 @@ position line).
 
 **Who calls it.** `modules/Diagnostics.lua:115` (the diagnostics report's screen section).
 
-## `InCombat` — `core/Compat.lua:86`
+## `InCombat` — `core/Compat.lua:84`
 
 **What varies.** Which combat API the client offers. The ladder reads the combat flag,
 `UnitAffectingCombat("player")`, first, then falls back to `InCombatLockdown()`, then answers `false`.
@@ -95,7 +95,7 @@ session with nothing said.
 unlock deferral in `modules/Unlock.lua` deliberately asks `InCombatLockdown` directly instead, because
 lockdown is the question an unlock has to ask.
 
-## `RegisterMedia` — `core/Compat.lua:115`
+## `RegisterMedia` — `core/Compat.lua:113`
 
 **What varies.** Whether LibSharedMedia-3.0 is loaded. It is an optional dependency. When it is there,
 this registers the addon's `Solid` texture as a `border`, a `background` and a `statusbar`, because LSM
@@ -106,7 +106,7 @@ ships no solid border and a plain 1px outline is the addon's default look.
 **Who calls it.** `core/PanelMaster.lua:32` (`OnInitialize`), before the first render, so the shipped
 default resolves on the first frame.
 
-## `FetchMedia` — `core/Compat.lua:136`
+## `FetchMedia` — `core/Compat.lua:134`
 
 **What varies.** Whether LSM is loaded, and whether a stored media name still belongs to an installed
 addon.
@@ -119,7 +119,7 @@ draw nothing.
 **Who calls it.** `modules/Canvas.lua:351`, `:409`, `:433` and `:461` (border, accent bar, background
 and border again, at render time).
 
-## `MediaList` — `core/Compat.lua:157`
+## `MediaList` — `core/Compat.lua:155`
 
 **What varies.** Whether LSM is loaded, and which names other addons have registered so far this
 session. It is queried at click time rather than cached for that reason.
@@ -130,7 +130,7 @@ not LSM ships it, because "draw no border" is a choice this addon's UI must alwa
 **Who calls it.** `settings/PanelEditor.lua:285` and `settings/PanelEditorTabs.lua:243` (the media dropdowns) and
 `settings/PanelSchema.lua:96` (`COERCE.media`, matching a name typed on the command line against the live list).
 
-## `MouseIsOver` — `core/Compat.lua:182`
+## `MouseIsOver` — `core/Compat.lua:180`
 
 **What varies.** Whether the global `MouseIsOver` exists, and whether it accepts the frame in hand.
 The call is wrapped in `pcall`.
