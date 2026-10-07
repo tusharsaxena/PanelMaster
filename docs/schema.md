@@ -234,8 +234,9 @@ carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a 
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
 the array's order is the strip a player sees on the General page — `Master controls` (7),
 `Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
-through their own `get`/`set` and are never persisted; the global reset (`Sl:DoResetAll`) puts them
-back to their defaults after the profile reset, by their `sessionOnly` flag (`options-ui-§12`).
+through their own `get`/`set` and are never persisted; both resets — `Sl:DoResetAll` and the Profiles
+page's Reset Profile — put them back to their defaults after the profile reset, by their
+`sessionOnly` flag, from the `OnProfileReset` handler in `core/Database.lua` (`options-ui-§12`).
 
 #### The Master controls composition
 

@@ -27,44 +27,32 @@ Sl.RESET_ALL_TEXT = "this profile reset to defaults"
 --- closure NS:RegisterProfileCallbacks installed (core/Database.lua), which sweeps preview orphans
 --- and calls Registry:ReloadProfile -- the reset's ONE `PanelsChanged`.
 ---
---- THE SESSION-ONLY ROWS ARE SWEPT TOO (options-ui-§12). AceDB never stores `state.locked` or
---- `state.debugConsole`, so `db:ResetProfile()` cannot reach them, and a reset that left the screen
---- unlocked and the console open would not be the fresh profile the rule promises. After a reset
---- that succeeded, every session-only row is driven to its default through its own `set` (the
---- runtime's ApplyDefault): Lock frame relocks, which also drops held and per-panel unlocks, and the
---- console closes. The rows are found by their flag, not by name, so a session-only row added later
---- is swept without touching this function. Nothing reaches the DB (a session row's write is its
---- `set`), and the bracket keeps the writes out of the log (their `[Set]` lines go to its tally).
---- Locking is never combat-deferred (modules/Unlock.lua), so nothing here waits for combat to end.
+--- THE SESSION-ONLY ROWS ARE SWEPT TOO (options-ui-§12), and not here. AceDB never stores
+--- `state.locked` or `state.debugConsole`, so `db:ResetProfile()` cannot reach them; the sweep that
+--- puts them back (Lock frame relocks, the console closes) runs in the OnProfileReset handler in
+--- core/Database.lua, which is the one place both this reset and the Profiles page's own Reset
+--- Profile arrive. Sweeping only here would make Reset all settings do more than Reset Profile,
+--- which the rule forbids. Inside this bracket the sweep's writes are tallied, never logged.
 ---
 --- Shared by the popup's OnAccept and by the headless fallback, so the two cannot diverge.
 ---
 --- It is logged ONCE, by that same handler: `[Set] reset profile 'X' to defaults (N rows)`
 --- (debug-logging-§10). The snapshot taken here is what lets the handler count the rows the reset
 --- CHANGED, and the bracket, reporting `profileReset`, keeps anything the reset runs from adding a
---- line of its own. A reset that raised never reached the handler, so the bracket logs instead.
-local function sweepSessionRows(S)
-  local apply = NS.SchemaRuntime and NS.SchemaRuntime.ApplyDefault
-  if type(apply) ~= "function" then return end
-  for _, row in ipairs(S.ProfileRows()) do
-    if row.sessionOnly or row.path == "state.debugConsole" then apply(row) end
-  end
-end
-
+--- line of its own. The handler consumes the snapshot when it logs, so a consumed snapshot means the
+--- reset landed and was logged: anything that raises after that (the reload, the sweep) marks the
+--- bracket and reaches the caller without a second line. A reset that raised before the handler
+--- never logged, so the bracket logs instead.
 function Sl:DoResetAll()
   local db, S = NS.db, NS.Schema
   if db and db.ResetProfile then
     S.BulkBegin("reset", "all")
     S.resetSnapshot = S:SnapshotPersisted()
     local ok, err = pcall(db.ResetProfile, db)
+    local logged = S.resetSnapshot == nil   -- the handler consumes it as it logs the reset
     S.resetSnapshot = nil
-    -- The handler has logged a reset that landed, so a sweep that raised is still a profile reset:
-    -- its error marks the bracket and reaches the caller, but adds no second line for the act.
-    local swept, why = true, nil
-    if ok then swept, why = pcall(sweepSessionRows, S) end
-    S.BulkEnd("reset", "all", nil, err or why, { profileReset = ok })
+    S.BulkEnd("reset", "all", nil, err, { profileReset = logged })
     if not ok then error(err, 0) end
-    if not swept then error(why, 0) end
   end
   print(Sl.RESET_ALL_TEXT)
 end

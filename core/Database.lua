@@ -115,6 +115,32 @@ function NS:RegisterProfileCallbacks()
     NS.Debug("Set", "copied profile '%s' \226\134\146 '%s'", tostring(source), current())
     reload()
   end)
+  -- THE SESSION-ONLY ROWS (options-ui-§12). AceDB never stores `state.locked` or
+  -- `state.debugConsole`, so the profile reset itself cannot reach them, and a reset that left the
+  -- screen unlocked and the console open would not be the fresh profile the rule promises. Every
+  -- row flagged `sessionOnly` is driven to its default through its own `set` (the runtime's
+  -- ApplyDefault): Lock frame relocks, which also drops held and per-panel unlocks, and the console
+  -- closes. Found by flag, so a session-only row added later is swept with no change here.
+  --
+  -- HERE, in the reset handler, because this is the one place BOTH resets arrive: Sl:DoResetAll and
+  -- the Profiles page's own Reset Profile, which calls db:ResetProfile() straight. The rule makes
+  -- them the same act, so neither may sweep more than the other. Nothing reaches the DB (a session
+  -- row's write is its `set`), and the bracket reports `profileReset`, so the reset keeps its one
+  -- `[Set] reset profile ...` line above: nested in DoResetAll's own bracket it is silent, and alone
+  -- (the Profiles page) it is silent too. Locking is never combat-deferred (modules/Unlock.lua).
+  local function sweepSessionRows(S)
+    local R = NS.SchemaRuntime
+    if not (S and R and type(R.ApplyDefault) == "function") then return end
+    S.BulkBegin("reset", "session")
+    local ok, err = pcall(function()
+      for _, row in ipairs(S.ProfileRows()) do
+        -- The composed console row is wired by path and carries no flag of its own.
+        if row.sessionOnly or row.path == "state.debugConsole" then R.ApplyDefault(row) end
+      end
+    end)
+    S.BulkEnd("reset", "session", nil, err, { profileReset = true })
+    if not ok then error(err, 0) end
+  end
   NS.db.RegisterCallback(NS, "OnProfileReset", function()
     local S = NS.Schema
     local snap = S and S.resetSnapshot
@@ -125,6 +151,7 @@ function NS:RegisterProfileCallbacks()
       NS.Debug("Set", "reset profile '%s' to defaults", current())
     end
     reload()
+    sweepSessionRows(S)
   end)
 end
 

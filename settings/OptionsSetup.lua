@@ -283,13 +283,15 @@ NS.Helpers = lib:New({
   --                there is nothing for either hook to shape.
   --
   --                The session-only rows -- `state.locked` and `state.debugConsole` -- are swept
-  --                by `Sl:DoResetAll` itself (options-ui-§12 restores them row by row). They store
-  --                nothing in the DB (settings/Schema.lua's `S:Set` sends a sessionOnly row to its
-  --                own `set` and never to WritePath), so `db:ResetProfile()` cannot reach them;
-  --                after a reset that landed, DoResetAll walks the rows flagged `sessionOnly` and
-  --                drives each through the runtime's `applyDefault`, inside the reset's bracket.
-  --                Lock frame relocks (dropping held and per-panel unlocks with it) and the debug
-  --                console closes. The durable half is the profile reset's own: `OnProfileReset`
+  --                by the OnProfileReset handler in core/Database.lua (options-ui-§12 restores
+  --                them row by row). They store nothing in the DB (settings/Schema.lua's `S:Set`
+  --                sends a sessionOnly row to its own `set` and never to WritePath), so
+  --                `db:ResetProfile()` cannot reach them; the handler walks the rows flagged
+  --                `sessionOnly` and drives each through the runtime's `applyDefault`, inside a
+  --                bracket. It is the handler and not `Sl:DoResetAll` because both resets reach
+  --                it -- this one and the Profiles page's Reset Profile -- and the rule makes them
+  --                the same act. Lock frame relocks (dropping held and per-panel unlocks with it)
+  --                and the debug console closes. The durable half is the profile reset's own: `OnProfileReset`
   --                reaches the `reload` closure in core/Database.lua, which sweeps leftover
   --                sample-panel RECORDS (an older build's test mode) out of the profile and
   --                reloads the registry.

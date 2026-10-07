@@ -449,10 +449,10 @@ test("Slash: the reset's blast radius -- every panel, this profile only, session
   -- red under: a reset that deletes or switches profiles rather than resetting the active one.
   assertEqual(profiles(), before, "the reset changed the profile list")
   assertEqual(db:GetCurrentProfile(), home, "the reset changed the active profile")
-  -- red under: DoResetAll without the session-only sweep (PM-A-01).
+  -- red under: the reset handler without the session-only sweep (PM-A-01).
   assertFalse(NS.State.unlocked, "the reset left the screen unlocked")
   assertTrue(S:Get("state.locked"), "Lock frame does not read locked after the reset")
-  -- red under: DoResetAll without the session-only sweep (PM-A-01).
+  -- red under: the reset handler without the session-only sweep (PM-A-01).
   assertFalse(NS.DebugLog:IsShown(), "the reset left the debug console open")
   -- red under: the sweep or the reload publishing its own PanelsChanged beside the profile reload's.
   assertEqual(panels, 1, "a reset published PanelsChanged " .. panels .. " times")

@@ -438,6 +438,29 @@ test("bulk log: the global reset is ONE line in total, counting the rows it chan
   bulkFresh()
 end)
 
+-- options-ui-§12: Reset all settings and Profiles -> Reset Profile MUST be the same act. The Profiles
+-- page calls db:ResetProfile() straight, with no DoResetAll around it, so the session-only sweep has
+-- to live where both resets arrive: the OnProfileReset handler.
+test("bulk log: Profiles' own Reset Profile sweeps the session rows too, in its one line", function()
+  bulkFresh()
+  local name = NS.db:GetCurrentProfile()
+  NS.Unlock:SetUnlocked(true)
+  NS.DebugLog:Show()
+  assertTrue(NS.State.unlocked and NS.DebugLog:IsShown(), "the preconditions did not take")
+  D:Clear()
+  NS.State.debug = true
+  NS.db:ResetProfile()
+  -- red under: the sweep living only in Sl:DoResetAll (the two resets doing different things).
+  assertFalse(NS.State.unlocked, "Profiles -> Reset Profile left the screen unlocked")
+  assertTrue(NS.Schema:Get("state.locked"), "Lock frame does not read locked after Reset Profile")
+  assertFalse(NS.DebugLog:IsShown(), "Profiles -> Reset Profile left the debug console open")
+  -- red under: the sweep running unbracketed, so each session row adds a [Set] line of its own.
+  assertEqual(#tagged("Set"), 1, "Reset Profile logged:\n" .. table.concat(D.buffer, "\n"))
+  assertEqual(tagged("Set")[1], ("reset profile '%s' to defaults"):format(name))
+  assertFalse(NS.SchemaRuntime.InBulk(), "the sweep left its bracket open")
+  bulkFresh()
+end)
+
 test("bulk log: a profile copy and a profile switch are each worded by their event", function()
   bulkFresh()
   local name = NS.db:GetCurrentProfile()

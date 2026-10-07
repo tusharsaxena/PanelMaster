@@ -526,7 +526,7 @@ Total.
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
 
-### test_debuglog.lua (51)
+### test_debuglog.lua (52)
 
 - DebugLog.FormatPlain: '<ts> | [<tag>] <msg>' with no color codes
 - DebugLog.FormatPlain: a nil tag renders as empty brackets, not 'nil'
@@ -559,6 +559,7 @@ Total.
 - bulk log: a reset-all that raises logs one marked line, unmutes and re-raises
 - bulk log: a page Defaults that raises logs one marked line, unmutes and re-raises
 - bulk log: the global reset is ONE line in total, counting the rows it changed
+- bulk log: Profiles' own Reset Profile sweeps the session rows too, in its one line
 - bulk log: a profile copy and a profile switch are each worded by their event
 - bulk log: an act inside another logs once, the outermost, with the total
 - bulk log: the Options page reset is one [Set] line, N the rows it changed
@@ -1179,7 +1180,7 @@ Total.
 | test_artwork.lua | 46 |
 | test_artwork_geometry.lua | 52 |
 | test_database.lua | 24 |
-| test_debuglog.lua | 51 |
+| test_debuglog.lua | 52 |
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
@@ -1204,4 +1205,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1038** |
+| **Total** | **1039** |
