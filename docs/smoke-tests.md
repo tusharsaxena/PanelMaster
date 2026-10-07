@@ -704,6 +704,9 @@ and at least one art pack; skip those without it.
   unlocked". Result:
 - **COMBAT-3. Lock clears the queue.** In combat, `/pm unlock`, then `/pm lock`, then leave combat →
   the panels stay **locked**. Result:
+- **COMBAT-3b. A stand-down drops the queue.** On a target dummy, untick **Lock frame** (the gray
+  "unlock queued" notice), then `/pm disable`, `/pm enable`, and leave combat → the panels stay
+  **locked**. Repeat without disabling → they unlock on leaving combat, as COMBAT-2. Result:
 - **COMBAT-4. No settings in combat.** `/pm config` in combat → `cannot open settings during combat
   — Blizzard's category-switch is protected`, word for word, in light gray, and no panel opens. Leave
   combat → the options panel does not open by itself; `/pm config` then opens it. Result:

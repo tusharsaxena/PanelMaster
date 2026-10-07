@@ -202,7 +202,11 @@ Two things are gated, in the two different shapes the standard defines:
   it would be the one case where the gate made things worse. An explicit lock also clears a queued
   unlock, or the queue would undo the user's own decision the moment combat ended. Per-panel unlocks
   queue and replay the same way, and a panel deleted mid-combat is dropped from the queue rather
-  than resurrecting an unlock entry for a record that has gone. Nothing bypasses the gate.
+  than resurrecting an unlock entry for a record that has gone. Nothing bypasses the gate. **A
+  stand-down drops the queue** (`NS.StandDown` calls `Unlock:DropPending("stood down")`):
+  `PLAYER_REGEN_ENABLED` goes down with the rest, so a held request could only fire at some later
+  combat exit after a re-enable. While the addon is down the gate stands aside and an unlock applies
+  at once, since there are no frames to hand the player and nothing to replay it.
 - **The options panel refuses** (`options-ui-§2`). `Settings.OpenToCategory` is protected, so
   `/pm config` in combat prints a gray notice and returns. It does **not** replay: a panel that pops
   itself open the instant combat drops steals focus during recovery. A page that is already on

@@ -249,7 +249,9 @@ fourth registration reddens the suite rather than joining the exemption quietly.
 `PLAYER_REGEN_ENABLED` so that secure-attribute and state-driver work refused under lockdown can
 finish. This addon has none to hold: every panel is a plain non-secure `CreateFrame("Frame")`, it
 calls no `SetAttribute`, registers no state or attribute driver and installs no secure hook. The
-stand-down therefore completes in the same turn as the write, every time.
+stand-down therefore completes in the same turn as the write, every time. The unlock module's
+combat queue is a UX deferral, not secure work: the stand-down drops it
+(`NS.Unlock:DropPending`), and while the addon is down an unlock applies at once instead of queueing.
 
 **Restoration is from current state, never from a snapshot** (`performance-§6`): `NS.StandUp`
 re-registers and repaints from the registry and the settings *as they are now*, so a panel created

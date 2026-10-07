@@ -411,7 +411,9 @@ NS.COMMANDS = {
   -- (slash-commands-§5, §8's confirmation SHOULD). That read-back is load-bearing rather than
   -- decorative here: `NS.Unlock:SetUnlocked` DEFERS an unlock requested in combat, so the echo
   -- reports `state.locked = true` and tells the player the truth, where a line formatted from the
-  -- argument would have claimed the panels were unlocked.
+  -- argument would have claimed the panels were unlocked. (On a stood-down addon nothing is
+  -- deferred -- the unlock applies at once and the echo reads `false` -- and the stand-down itself
+  -- drops anything held, so the read-back is the truth in that state too.)
   --
   -- Calling `NS.Unlock:SetUnlocked` directly is what these used to do, and it was the one surface
   -- that bypassed the seam -- no validation, no single `[Set]` line, and a second wording for the

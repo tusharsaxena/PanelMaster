@@ -665,6 +665,60 @@ test("Disabled 10b: the hold keys are the library's exported constants, not loca
     assertEqual(NS.Lifecycle.name, "PanelMaster", "the latch is not named for the addon folder")
   end)
 
+-- ── 11. the combat unlock queue does not outlive a stand-down ───────────────────
+
+test("Disabled 11: a combat-held unlock is dropped by the stand-down, not replayed at a later combat exit",
+  function()
+    -- PLAYER_REGEN_ENABLED goes down with the rest, so a request held across the stand-down could
+    -- never flush at the combat exit it was queued for. Left in the queue it would fire at the NEXT
+    -- combat exit after a re-enable -- possibly a different fight entirely -- and unlock every panel
+    -- the player had long since stopped asking for.
+    --
+    -- red under: remove the `NS.Unlock:DropPending("stood down")` call from NS.StandDown
+    -- (core/LifecycleSetup.lua)
+    local a = seed()
+    NS.Unlock:SetUnlocked(false)
+    mocks.__inCombat = true
+    assertEqual(NS.Unlock:SetUnlocked(true), nil, "the global unlock was not held in combat")
+    assertEqual(NS.Unlock:SetPanelUnlocked(a, true), nil, "the panel unlock was not held in combat")
+
+    Sl:OnSlash("disable")
+    local snap = NS.Unlock:PendingSnapshot()
+    assertFalse(snap.unlock, "the global held unlock survived the stand-down")
+    assertEqual(#snap.panels, 0, "a held panel unlock survived the stand-down")
+
+    Sl:OnSlash("enable")
+    mocks.__inCombat = false
+    mocks.__fire("PLAYER_REGEN_ENABLED")
+    assertFalse(NS.State.unlocked, "a later combat exit unlocked every panel")
+    assertFalse(NS.Unlock:IsPanelUnlocked(a), "a later combat exit unlocked the held panel")
+    cleanup()
+  end)
+
+test("Disabled 11b: while stood down an unlock applies at once rather than queueing", function()
+  -- There are no frames to hand the player and no PLAYER_REGEN_ENABLED to replay a hold, so the
+  -- combat gate has nothing to protect; the session state is simply written, and the stand-up draws
+  -- it from state as it is then.
+  --
+  -- red under: drop the `not addonDown()` term from U:SetUnlocked's combat branch
+  -- (modules/Unlock.lua)
+  local a = seed()
+  NS.Unlock:SetUnlocked(false)
+  Sl:OnSlash("disable")
+  mocks.__inCombat = true
+  assertEqual(NS.Unlock:SetUnlocked(true), true, "the unlock was deferred on a stood-down addon")
+  assertTrue(NS.State.unlocked, "the unlock state was not written while stood down")
+  assertEqual(NS.Unlock:SetPanelUnlocked(a, true), true,
+    "the panel unlock was deferred on a stood-down addon")
+  local snap = NS.Unlock:PendingSnapshot()
+  assertFalse(snap.unlock, "an unlock was queued on a stood-down addon")
+  assertEqual(#snap.panels, 0, "a panel unlock was queued on a stood-down addon")
+  assertEqual(#shownPanels(), 0, "an unlock while stood down drew a panel")
+  mocks.__inCombat = false
+  NS.Unlock:SetUnlocked(false)
+  cleanup()
+end)
+
 -- ── the seam itself ────────────────────────────────────────────────────────────
 
 test("Disabled: a profile switch that flips the enable path re-evaluates the latch", function()

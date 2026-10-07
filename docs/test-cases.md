@@ -905,7 +905,7 @@ Total.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
-### test_disabled.lua (21)
+### test_disabled.lua (23)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
 - Disabled 3: every registration the addon owns is UNREGISTERED, not gated
@@ -922,6 +922,8 @@ Total.
 - Disabled 9b: the boot stand-up leaves the painting to PLAYER_ENTERING_WORLD
 - Disabled 10: releasing one hold does not resurrect an addon the other still holds down
 - Disabled 10b: the hold keys are the library's exported constants, not local literals
+- Disabled 11: a combat-held unlock is dropped by the stand-down, not replayed at a later combat exit
+- Disabled 11b: while stood down an unlock applies at once rather than queueing
 - Disabled: a profile switch that flips the enable path re-evaluates the latch
 - Disabled: `/pm disable` and the checkbox are one write, and the latch is its only reader
 - Events: a rejected event name is recorded and the rest still register
@@ -1193,7 +1195,7 @@ Total.
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_launcher.lua | 37 |
-| test_disabled.lua | 21 |
+| test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 53 |
 | test_surface_parity.lua | 8 |
@@ -1209,4 +1211,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1043** |
+| **Total** | **1045** |

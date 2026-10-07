@@ -63,7 +63,8 @@ local addonName, NS = ...
 -- stand-down completes in the same turn as the write in every case, PLAYER_REGEN_ENABLED goes with
 -- the rest, and this addon never exercises the carve-out. The unlock module's own combat deferral
 -- (modules/Unlock.lua) is a UX rule about handing the player draggable frames mid-pull, not a taint
--- rule, and it has nothing to defer while the addon is down.
+-- rule. With PLAYER_REGEN_ENABLED gone it could never flush, so NS.StandDown DROPS anything it holds
+-- (NS.Unlock:DropPending), and while the addon is down an unlock applies at once instead of queueing.
 
 local Lifecycle = LibStub and LibStub("LibKa0s-Lifecycle-1.0", true)
 
@@ -103,6 +104,9 @@ function NS.StandDown()
     NS.Canvas:RenderAll()
     NS.Canvas:Disable()
   end
+  -- Before PLAYER_REGEN_ENABLED goes: a combat-held unlock has no replay without it, and kept it
+  -- would fire at the next combat exit after a re-enable, in a fight nobody asked about.
+  if NS.Unlock and NS.Unlock.DropPending then NS.Unlock:DropPending("stood down") end
   if NS.addon and NS.addon.UnregisterEvent then
     NS.addon:UnregisterEvent("PLAYER_ENTERING_WORLD")
     NS.addon:UnregisterEvent("PLAYER_REGEN_ENABLED")
