@@ -185,8 +185,9 @@ function Sl:BuildPanelLines()
   local lines = { ("|cff33ff99Panels|r (%d)"):format(#records) }
   for _, rec in ipairs(records) do
     -- A disabled panel is dimmed rather than hidden from the list: it still exists, and the listing
-    -- is how you find it again to re-enable it.
-    local name = rec.enabled and ("|cffffff00%s|r"):format(rec.name)
+    -- is how you find it again to re-enable it. `~= false`, as REPAIR.enabled and the renderer read
+    -- it: an unsanitized nil is drawn, so it must not list as disabled.
+    local name = rec.enabled ~= false and ("|cffffff00%s|r"):format(rec.name)
       or ("|cff808080%s|r"):format(rec.name)
     lines[#lines + 1] = ("  %s |cffffffff%dx%d @ %s %d,%d|r"):format(
       name, rec.width, rec.height, rec.point, rec.x, rec.y)

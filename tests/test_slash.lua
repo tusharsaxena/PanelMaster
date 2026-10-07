@@ -538,6 +538,15 @@ test("Slash.BuildPanelLines: a disabled panel is dimmed, not hidden", function()
   assertTrue(lines[2]:find("|cff808080", 1, true) ~= nil, "a disabled panel was not dimmed")
 end)
 
+test("Slash.BuildPanelLines: a record with enabled = nil lists as enabled (PM-R-07)", function()
+  -- red under: `rec.enabled and ...`, which dims a nil the renderer and REPAIR.enabled both draw
+  fresh()
+  local rec = R:New("Unsanitized")
+  R:Get(rec.id).enabled = nil   -- a hand-edited or imported record, before its first write
+  local lines = Sl:BuildPanelLines()
+  assertTrue(lines[2]:find("|cffffff00", 1, true) ~= nil, "an enabled = nil panel was dimmed")
+end)
+
 test("Slash.CliPanel: with no field, dumps every field in the declared order", function()
   fresh()
   R:New("Dumped")

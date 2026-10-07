@@ -152,8 +152,8 @@ the whole `/pm panel` surface pick them up with no per-field work.
 | `artCustomPath` | `""` | `string` | Texture path, read only when `artTexture == "Custom"` |
 | `artColor` | `{1,1,1,1}` | `color` | Tint |
 | `artClassColor` | `false` | `boolean` | Class-color override for `artColor` |
-| `artDesaturate` | `false` | `boolean` | Collapse the art to grayscale **before** the tint multiplies against it |
-| `artBlend` | `"BLEND"` | `enum` | `BLEND` / `ADD` — the texture's blend mode; `ADD` is the "Glow" look |
+| `artDesaturate` | `false` | `boolean` | Collapse the art to grayscale **before** the tint multiplies against it; `Sanitize` coerces it to a real boolean |
+| `artBlend` | `"BLEND"` | `enum` | `BLEND` / `ADD` — the texture's blend mode; `ADD` is the "Glow" look. `Sanitize` snaps a non-member back to `BLEND` |
 | `artAlpha` | `1.0` | `number` | Art opacity, multiplied onto the resolved tint's alpha |
 | `artFill` | `"FIT"` | `enum` | `STATIC` / `STRETCH` / `FILL` / `FIT` / `TILE` |
 | `artPoint` | `"CENTER"` | `point` | Anchor within the art frame |
@@ -192,13 +192,12 @@ Two deliberate asymmetries in `Sanitize`:
 
 An **empty** `artCustomPath` is a legitimate state — Custom is picked and the path is not typed yet
 — so only a non-string falls back to the template, the same distinction the accent edge set makes.
-Four of the closed lists — `artFill`, `artRotation`, `artLayer` and `artPoint` — do snap back to
-their template default when what is stored is not a member, because an unknown `artFill` would
-otherwise produce a nil size that lands in `SetSize` and aborts the rest of that panel's paint.
-`artBlend` is the one that does **not** get snapped in `Sanitize`: it is defended a step later, in
-`BuildArtSpec`, which falls back to the template value for anything outside `C.ART_BLEND_SET`. An
-unknown blend mode cannot produce a nil geometry the way the other four can — the worst it reaches is
-`SetBlendMode`, which the spec never lets it reach.
+All five closed lists — `artFill`, `artRotation`, `artLayer`, `artBlend` and `artPoint` — snap back
+to their template default when what is stored is not a member (case-normalized, so `add` is repaired
+to `ADD`), because an unknown `artFill` would otherwise produce a nil size that lands in `SetSize` and
+aborts the rest of that panel's paint. `artBlend` is also defended a step later, in `BuildArtSpec`,
+which falls back to the template value for anything outside `C.ART_BLEND_SET`; it is repaired in
+`Sanitize` as well so that a junk value is not stored and carried on by `CopyFrom`.
 
 #### Sanitizing
 
@@ -209,6 +208,13 @@ write (the Registry's `announce`). The stored file is therefore always already v
 missing a field added in a later build is repaired the first time it is touched, and a hand-edited
 SavedVariables file cannot feed a string width into `SetWidth`. Both halves read one `REPAIR` table,
 so they cannot disagree.
+
+Every `PANEL_TEMPLATE` key has a rule in that table, the five colors (`bgColor`, `borderColor`,
+`accentColor`, `accentBorderColor`, `artColor`) included: a junk color falls back to the template's,
+so a bad `accentBorderColor` repairs to black rather than white, and the editor's swatches read with
+the same fallback. The keys stored as given are declared in `R.UNREPAIRED_FIELDS` (`name`,
+`frameName`, `id` — identity, cleaned or stamped by their own verbs), and a headless property case
+proves every other template key has a rule, so a field added later without one fails the suite.
 
 One deliberate exception: **offsets are not clamped to the screen.** A legitimate multi-monitor
 layout carries offsets far outside the current `UIParent`, and clamping on every write would quietly

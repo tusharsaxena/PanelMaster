@@ -220,7 +220,7 @@ local function buildPanelEditor(ctx, parent, rec)
     get = function(field, row)
       local v = (NS.Registry:Get(rec.id) or rec)[field]
       if row.type ~= "color" then return v end
-      local c = NS.Util.Color(v)
+      local c = NS.Util.Color(v, C.PANEL_TEMPLATE[field])   -- junk shows the default, not white
       return { r = c[1], g = c[2], b = c[3], a = c[4] }
     end,
     set = function(field, v, row)

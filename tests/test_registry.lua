@@ -234,6 +234,44 @@ test("Registry.Sanitize: enabled defaults to true, and only explicit false disab
   assertFalse(R.Sanitize({ enabled = false }).enabled)
 end)
 
+-- PM-R-04: the REPAIR table claims the whole-record and per-field repairs "cannot diverge", which
+-- only holds if every template field has a rule. A sentinel table is junk to every rule, and no
+-- rule hands the identical table back, so a field whose repair returns it has no rule at all.
+test("Registry.SanitizeField: every template field has a repair rule or is declared unrepaired", function()
+  -- red under: no rule for accentColor, accentBorderColor, artBlend or artDesaturate; and no
+  -- R.UNREPAIRED_FIELDS to declare the exempt keys
+  local exempt = {}
+  for _, field in ipairs(R.UNREPAIRED_FIELDS) do exempt[field] = true end
+  for field in pairs(C.PANEL_TEMPLATE) do
+    local sentinel = {}
+    local repaired = R.SanitizeField(field, sentinel)
+    if exempt[field] then
+      assertTrue(repaired == sentinel, "'" .. field .. "' is declared unrepaired but has a rule")
+    else
+      assertTrue(repaired ~= sentinel, "'" .. field .. "' has no repair rule")
+    end
+  end
+end)
+
+test("Registry.Sanitize: fills and repairs the accent colors, artBlend and artDesaturate", function()
+  -- red under: the four fields missing from the REPAIR lists, so absent keys stay absent and junk
+  -- survives
+  local t = C.PANEL_TEMPLATE
+  local filled = R.Sanitize({})
+  assertEqual(filled.accentColor[4], t.accentColor[4])
+  assertEqual(filled.accentBorderColor[1], t.accentBorderColor[1])
+  assertEqual(filled.artBlend, t.artBlend)
+  assertEqual(filled.artDesaturate, false)
+  local junk = R.Sanitize({ accentColor = "x", accentBorderColor = 42, artBlend = "MULTIPLY",
+    artDesaturate = "yes" })
+  assertEqual(type(junk.accentColor), "table")
+  assertEqual(junk.accentBorderColor[1], 0, "a junk accentBorderColor must fall back to black")
+  assertEqual(junk.artBlend, t.artBlend)
+  assertEqual(junk.artDesaturate, true)
+  assertEqual(R.Sanitize({ artBlend = "add" }).artBlend, "ADD")
+  assertEqual(R.Sanitize({ artBlend = 42 }).artBlend, t.artBlend)
+end)
+
 test("Registry.Set: writes a number field", function()
   fresh()
   local rec = R:New("Sized")

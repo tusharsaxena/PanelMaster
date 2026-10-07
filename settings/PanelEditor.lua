@@ -357,7 +357,9 @@ local function makeColorPair(ctx, row, rec, field, label)
   picker:SetLabel(label)
   picker:SetRelativeWidth(0.5)
   picker:SetHasAlpha(true)
-  local col = NS.Util.Color(rec[field])
+  -- The template value as the fallback, so junk shows the default (black for accentBorderColor)
+  -- rather than white.
+  local col = NS.Util.Color(rec[field], C.PANEL_TEMPLATE[field])
   picker:SetColor(col[1], col[2], col[3], col[4])
 
   local function store(_, _, r, g, b, a)
@@ -389,7 +391,7 @@ local function makeColorPair(ctx, row, rec, field, label)
   -- SetValue would re-enter `store` and turn a refresh into a write — a MSG.PANEL handler writing
   -- back through Registry:Set is a loop, not a repaint.
   addRefresher(ctx, rec, function(live)
-    local c = NS.Util.Color(live[field])
+    local c = NS.Util.Color(live[field], C.PANEL_TEMPLATE[field])
     picker:SetColor(c[1], c[2], c[3], c[4])
     if classCheck then classCheck:SetValue(live[flag] and true or false) end
   end)
@@ -623,8 +625,9 @@ local function refreshPicker(ctx, records)
   local list, order = {}, {}
   for i, rec in ipairs(records) do
     -- A disabled panel is marked in the list, so it is obvious why editing it changes nothing
-    -- on screen.
-    list[rec.id] = rec.enabled and rec.name or (rec.name .. " |cff808080(disabled)|r")
+    -- on screen. `~= false` matches REPAIR.enabled and the renderer: nil is drawn, so it is
+    -- enabled.
+    list[rec.id] = rec.enabled ~= false and rec.name or (rec.name .. " |cff808080(disabled)|r")
     order[i] = rec.id
   end
   picker:SetList(list, order)

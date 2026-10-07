@@ -220,12 +220,13 @@ local POINT_FIELDS = { "point", "relPoint", "artPoint" }
 -- corrupt file is artwork that looks wrong, which the user can see and re-pick.
 --
 -- enumMatch also normalizes case, so a lower-case token typed straight into the file is repaired
--- rather than discarded.
-local ENUM_FIELDS = { "artFill", "artRotation", "artLayer" }
+-- rather than discarded. artBlend is one of them: BuildArtSpec also guards it, but the stored value
+-- must be a member too, or CopyFrom carries the junk on to the next panel.
+local ENUM_FIELDS = { "artFill", "artRotation", "artLayer", "artBlend" }
 
 -- Flags coerced to a real boolean. `enabled` is NOT one of them — nil means enabled there, which is
 -- the opposite default and is written out as REPAIR.enabled below.
-local BOOL_FIELDS = { "mouseover", "accentEnabled", "artFlipH", "artFlipV" }
+local BOOL_FIELDS = { "mouseover", "accentEnabled", "artFlipH", "artFlipV", "artDesaturate" }
 
 -- field -> repair(value, templateValue) -> the value to store. Built ONCE from the rule lists above,
 -- plus the handful of fields whose repair is a decision of its own, so the whole-record repair
@@ -275,6 +276,7 @@ function REPAIR.strata(v, t)
 end
 
 REPAIR.bgColor, REPAIR.borderColor, REPAIR.artColor = color, color, color
+REPAIR.accentColor, REPAIR.accentBorderColor = color, color
 
 -- The accent edge set is normalized rather than defaulted: an EMPTY set is a legitimate state
 -- (the user unticked every edge) and must not be quietly repopulated with TOP, so only a
@@ -287,6 +289,11 @@ function REPAIR.artCustomPath(v, t)
   if type(v) ~= "string" then return t end
   return v
 end
+
+--- The record keys with NO rule, stored as given: identity, not preferences. `name` is cleaned by
+--- R.Sanitize and the rename verb, `frameName` and `id` are stamped once at create. Read-only; the
+--- headless property case proves every other C.PANEL_TEMPLATE key has a rule.
+R.UNREPAIRED_FIELDS = { "name", "frameName", "id" }
 
 --- One field's repair: the value a stored `field` must hold, given `value`. A field with no rule is
 --- stored as given. PURE, and the per-field half of R.Sanitize below.

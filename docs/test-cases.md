@@ -108,7 +108,7 @@ Total.
 - EnvSetup: NS.Version falls back to this addon's own constant
 - EnvSetup: the deleted shim is gone from Compat
 
-### test_registry.lua (52)
+### test_registry.lua (54)
 
 - Registry.New: creates a panel with the template's shape
 - Registry.New: rejects an empty name
@@ -134,6 +134,8 @@ Total.
 - Registry.Sanitize: a string size from a hand-edited SV becomes a number
 - Registry.Sanitize: does NOT clamp offsets to the screen
 - Registry.Sanitize: enabled defaults to true, and only explicit false disables
+- Registry.SanitizeField: every template field has a repair rule or is declared unrepaired
+- Registry.Sanitize: fills and repairs the accent colors, artBlend and artDesaturate
 - Registry.Set: writes a number field
 - Registry.Set: coerces a CLI string to the field's type
 - Registry.Set: an unreadable boolean is refused, not stored as false (F-023)
@@ -686,7 +688,7 @@ Total.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (84)
+### test_slash.lua (85)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -733,6 +735,7 @@ Total.
 - Slash.BuildPanelLines: an empty registry says so and suggests the next step
 - Slash.BuildPanelLines: one row per panel, plus a header
 - Slash.BuildPanelLines: a disabled panel is dimmed, not hidden
+- Slash.BuildPanelLines: a record with enabled = nil lists as enabled (PM-R-07)
 - Slash.CliPanel: with no field, dumps every field in the declared order
 - Slash.CliPanel: with a field, prints just that field
 - Slash.CliPanel: with a value, sets it and echoes the stored result
@@ -1190,7 +1193,7 @@ Total.
 | test_constants.lua | 20 |
 | test_mediasetup.lua | 10 |
 | test_envsetup.lua | 4 |
-| test_registry.lua | 52 |
+| test_registry.lua | 54 |
 | test_panel_schema.lua | 21 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
@@ -1203,7 +1206,7 @@ Total.
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 84 |
+| test_slash.lua | 85 |
 | test_panel.lua | 52 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
@@ -1224,4 +1227,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1058** |
+| **Total** | **1061** |
