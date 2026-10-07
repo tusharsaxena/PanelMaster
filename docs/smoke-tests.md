@@ -22,10 +22,10 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 32 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam |
+| PANEL-1 to 33 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows |
 | PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
-| COMBAT-1 to 6 | Combat | Queued unlocks, the settings lockout, General visibility |
+| COMBAT-1 to 7 | Combat | Queued unlocks, a stand-down dropping them, the settings lockout, General visibility |
 | DIAG-1 to 30 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on, the library's own refusal, edge and at-enable lines |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
@@ -487,14 +487,6 @@ and at least one art pack; skip those without it.
   discarded — your other profiles are not affected."* **No** → nothing changes. **Yes** → every setting
   is back to shipped **and the panels are gone**, and chat says `this profile reset to defaults` (not
   `All settings reset to defaults`, and not *"your panels are untouched"*). Result:
-- **PANEL-8a. Both resets sweep the session-only rows.** Untick **Lock frame**, open the debug console
-  (**Debug console** ticked), make sure a second profile exists under **Profiles**, then **Reset all
-  settings** → **Yes**. The panels lock (no drag handles or name labels), **Lock frame** reads ticked,
-  the console closes, the **Profiles** list is unchanged with the same profile active, and a panel
-  created afterwards is locked. Then unlock and open the console again and use **Profiles → Reset
-  Profile** instead: the same thing happens (the two resets are the same act). **Fail:** panels still
-  draggable or the console still open after either reset (that reset skipped its session-only
-  sweep). Result:
 - **PANEL-9. Defaults button tooltips.** Hover **Defaults** on **General** → *Reset this profile to
   the addon's defaults. Your panels go with it.* On **Panels** → *Delete every panel. This cannot be
   undone.* Result:
@@ -600,6 +592,14 @@ and at least one art pack; skip those without it.
   render exactly as before. No list on these pages carries help marks, so there is no art to check:
   `settings/OptionsSetup.lua` now passes `addonName = addonName,` to the Options descriptor
   (LibKa0s#42), which is latent until a list here gains a help line. Result:
+- **PANEL-33. Both resets sweep the session-only rows.** Untick **Lock frame**, open the debug console
+  (**Debug console** ticked), make sure a second profile exists under **Profiles**, then **Reset all
+  settings** → **Yes**. The panels lock (no drag handles or name labels), **Lock frame** reads ticked,
+  the console closes, the **Profiles** list is unchanged with the same profile active, and a panel
+  created afterwards is locked. Then unlock and open the console again and use **Profiles → Reset
+  Profile** instead: the same thing happens (the two resets are the same act). **Fail:** panels still
+  draggable or the console still open after either reset (that reset skipped its session-only
+  sweep). Result:
 
 ## PROFILE
 
@@ -705,9 +705,6 @@ and at least one art pack; skip those without it.
   unlocked". Result:
 - **COMBAT-3. Lock clears the queue.** In combat, `/pm unlock`, then `/pm lock`, then leave combat →
   the panels stay **locked**. Result:
-- **COMBAT-3b. A stand-down drops the queue.** On a target dummy, untick **Lock frame** (the gray
-  "unlock queued" notice), then `/pm disable`, `/pm enable`, and leave combat → the panels stay
-  **locked**. Repeat without disabling → they unlock on leaving combat, as COMBAT-2. Result:
 - **COMBAT-4. No settings in combat.** `/pm config` in combat → `cannot open settings during combat
   — Blizzard's category-switch is protected`, word for word, in light gray, and no panel opens. Leave
   combat → the options panel does not open by itself; `/pm config` then opens it. Result:
@@ -720,6 +717,9 @@ and at least one art pack; skip those without it.
   panels hidden out of combat; pull → they appear on the first swing; leave → they hide. `Only out of
   combat` → the reverse, the instant combat starts and ends. `Never` → nothing draws at all. Back to
   `Always`. Result:
+- **COMBAT-7. A stand-down drops the queue.** On a target dummy, untick **Lock frame** (the gray
+  "unlock queued" notice), then `/pm disable`, `/pm enable`, and leave combat → the panels stay
+  **locked**. Repeat without disabling → they unlock on leaving combat, as COMBAT-2. Result:
 
 ## DIAG
 
@@ -1071,4 +1071,9 @@ corrected in it against the code.
 | DEGRADED-12 | none | New with the `/pm profile` verb |
 | DEGRADED-13 | § 14 step 14 | No result recorded; corrected: it compares DEGRADED-3, 4, 7 and 11, the four lines that carry the cause clause |
 | LOC-1 to LOC-5 | § 22 steps 1-5 (`M5-08`) | No deDE or frFR client has run them yet; LOC-1 (where **Panel name** is) and LOC-3 (the lookup comparison and the refusal to read) are also corrected |
-| NUM-1 to NUM-3 | none | New with the non-finite number guard (PanelMaster-R-03) |
+| NUM-1 to NUM-3 | none | New with the non-finite number guard (PM-06, finding PM-R-03) |
+| FRAME-29 | PM-01 (finding PM-R-02) | Corrected in the 2026-10-07 remediation: the delete-all confirm names the active profile and says every character on it loses its panels; owed again even where a run predates it |
+| FRAME-28, PANEL-16, PANEL-24 | PM-03 (finding PM-R-05) | Corrected in the 2026-10-07 remediation: the editor's **Delete** and **Reset** ask first, naming the panel |
+| PANEL-33 | none | New with PM-02 (findings PM-A-01, PM-A-02): both resets sweep the session-only rows |
+| COMBAT-7 | none | New with PM-04 (finding PM-R-06): a stand-down drops a combat-held unlock |
+| LOC-2, LOC-3 | PM-05 (finding PM-R-01, PanelMaster#26) | Corrected in the 2026-10-07 remediation: non-ASCII bytes are hex-encoded in the slug and lookup folds UTF-8 case; already owed under the LOC row above |

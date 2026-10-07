@@ -137,9 +137,9 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 | Site | Event | Work | Runs in combat? |
 |---|---|---|---|
 | `core/PanelMaster.lua:67` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
-| `core/LifecycleSetup.lua:73` (handler `core/PanelMaster.lua:112`) | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
-| `core/LifecycleSetup.lua:74` (handler `core/PanelMaster.lua:127`) | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
-| `core/LifecycleSetup.lua:75` (handler `core/PanelMaster.lua:140`) | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
+| `core/LifecycleSetup.lua:75` (handler `core/PanelMaster.lua:112`) | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
+| `core/LifecycleSetup.lua:76` (handler `core/PanelMaster.lua:127`) | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
+| `core/LifecycleSetup.lua:77` (handler `core/PanelMaster.lua:140`) | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
 
 ### `C_Timer` — 0 hits
 

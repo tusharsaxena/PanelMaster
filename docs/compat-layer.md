@@ -65,7 +65,7 @@ headlessly, and the stub reports 0×0.
 either reading is not a positive number. A zero reading is "cannot tell", not a tiny screen.
 Otherwise the recovery pass would drag every panel to the origin.
 
-**Who calls it.** `modules/Registry.lua:912` (`R:Recover`, which on `nil` moves nothing and refuses with the reason `cannot measure the screen`) and
+**Who calls it.** `modules/Registry.lua:929` (`R:Recover`, which on `nil` moves nothing and refuses with the reason `cannot measure the screen`) and
 `modules/Diagnostics.lua:114` and `:200` (the diagnostics report's screen section and its per-panel
 position line).
 
@@ -127,8 +127,8 @@ session. It is queried at click time rather than cached for that reason.
 **When the API is absent.** `None` and `Solid`, in that order. `None` always comes first, whether or
 not LSM ships it, because "draw no border" is a choice this addon's UI must always be able to offer.
 
-**Who calls it.** `settings/PanelEditor.lua:285` and `settings/PanelEditorTabs.lua:243` (the media dropdowns) and
-`settings/PanelSchema.lua:96` (`COERCE.media`, matching a name typed on the command line against the live list).
+**Who calls it.** `settings/PanelEditor.lua:311` and `settings/PanelEditorTabs.lua:243` (the media dropdowns) and
+`settings/PanelSchema.lua:98` (`COERCE.media`, matching a name typed on the command line against the live list).
 
 ## `MouseIsOver` — `core/Compat.lua:180`
 

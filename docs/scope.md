@@ -58,5 +58,9 @@ Each of these is a decision that would still hold tomorrow, not a gap waiting to
   10Hz poll. An animated transition is a natural refinement.
 - **Class color is the player's own class only.** There is no "color by target's class" or
   per-panel class override; the flag resolves the player's class (LibKa0s-Core's `ResolveColor`).
+- **The Panels list sorts accented names by bytes.** The **Panel** picker orders names on
+  `string.lower`, which folds ASCII only, so `Ärger` and `ärger` sort apart and an accented initial
+  sorts after `z` (`docs/smoke-tests.md` LOC-4). Name lookup and the duplicate-name guard do fold
+  non-ASCII case (`Util.FoldName`); the sort was left out of that change (PM-05) as cosmetic.
 - **`/pm recover` is manual.** It never runs at login, because a panel deliberately parked mostly
   off-screen is a legitimate layout and a login-time sweep would silently rearrange it.

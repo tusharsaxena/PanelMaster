@@ -137,7 +137,7 @@ version enable disable debug perf diagnostics get set list reset resetall`, read
 so does `profile`, the one host verb this addon adds to its own live set so a player can switch to a
 profile where the addon is enabled without opening the panel.
 `perf` sits in that set as a **reservation**, not a command: this addon does not register it —
-`NS.COMMANDS` (`settings/Slash.lua:329`) holds 21 verbs and `perf` is not among them — so the
+`NS.COMMANDS` (`settings/Slash.lua:371`) holds 21 verbs and `perf` is not among them — so the
 twelve reserved verbs it does ship, `diagnostics` among them (`debug-logging-§14`), are the ones
 that behave normally. The only
 refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`, and that gate is **the library's**:
@@ -269,9 +269,9 @@ is refused under lockdown.
 
 ## Known Limitations
 
-Six, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
-reservation across renames, the hard-cut mouseover fade, player-class-only coloring, and manual
-`/pm recover`. All in **[scope.md](scope.md)**.
+Seven, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
+reservation across renames, the hard-cut mouseover fade, player-class-only coloring, the Panels
+list's ASCII-only sort, and manual `/pm recover`. All in **[scope.md](scope.md)**.
 
 ## Documentation map
 
