@@ -64,8 +64,8 @@ the same size whether you have two panels or twenty. The controls, in full:
 |---|---|
 | Enabled | Draw this panel at all. |
 | Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
-| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. |
-| Delete | Remove the panel. |
+| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. It asks first, naming the panel: *Reset the panel "<name>" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.* |
+| Delete | Remove the panel. It asks first, naming the panel: *Delete the panel "<name>"? This cannot be undone.* |
 | Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to — renaming does not change it. |
 | Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
 | Width, Height, X offset, Y offset | Size and position. |

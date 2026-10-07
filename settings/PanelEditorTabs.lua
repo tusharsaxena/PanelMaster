@@ -390,11 +390,11 @@ local function buildPanelEditor(ctx, parent, rec)
     local resetBtn = makePairButton("Reset", function() pageAction.reset(rec) end)
     attachTooltip(resetBtn, "Reset",
       "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors "
-      .. "and all. Its name is kept, so anything anchored to it stays anchored.")
+      .. "and all. Its name is kept, so anything anchored to it stays anchored. Asks first.")
     actionRow:AddChild(resetBtn)
 
     local deleteBtn = makePairButton("Delete", function() pageAction.delete(rec) end)
-    attachTooltip(deleteBtn, "Delete", "Remove this panel. This cannot be undone.")
+    attachTooltip(deleteBtn, "Delete", "Remove this panel. Asks first; this cannot be undone.")
     actionRow:AddChild(deleteBtn)
   end
 

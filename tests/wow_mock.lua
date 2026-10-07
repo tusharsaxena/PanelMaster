@@ -352,9 +352,14 @@ return function()
   -- __popupArgs runs parallel to __popupsShown: entry i is { text_arg1, text_arg2 } of show i, so a
   -- case can assert the formatted confirm text (dialog.text:format(arg1)) a player actually reads.
   M.__popupArgs = {}
-  M.StaticPopup_Show = function(name, arg1, arg2)
+  -- __popupData runs parallel too: entry i is the 4th argument of show i, the `data` the real client
+  -- stores on the popup and hands back as OnAccept(self, data) -- so a case can accept the confirm
+  -- exactly as the client would.
+  M.__popupData = {}
+  M.StaticPopup_Show = function(name, arg1, arg2, data)
     M.__popupsShown[#M.__popupsShown + 1] = name
     M.__popupArgs[#M.__popupsShown] = { arg1, arg2 }
+    M.__popupData[#M.__popupsShown] = data
   end
 
   -- Chat sink for NS.Print (core/Util.lua). Records every line, so the CLI's output shape is

@@ -760,7 +760,7 @@ Total.
 - Profile verb: surrounding quotes are stripped, inner spaces and case kept
 - Profile verb: a switch in combat is refused, and the list still answers
 
-### test_panel.lua (48)
+### test_panel.lua (52)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -796,6 +796,10 @@ Total.
 - Panel: creating from the page rebuilds once and lands on the NEW panel
 - Panel: a refused create leaves the typed name alone and does not rebuild
 - Panel: deleting the LAST panel reaches the empty-state branch cleanly
+- Panel: the editor's Delete asks first, naming the panel, and deletes nothing (PM-R-05)
+- Panel: the editor's Reset asks first, naming the panel, and changes nothing (PM-R-05)
+- Panel: accepting a confirm for a panel deleted meanwhile is a no-op (PM-R-05)
+- Panel: without StaticPopup the editor's Delete and Reset act at once (headless)
 - Panel: a field change on the SELECTED panel refreshes in place and never rebuilds
 - Panel: a field change on a DIFFERENT panel neither refreshes nor rebuilds
 - Panel: a hidden page is only marked dirty by a field change, never refreshed
@@ -1185,7 +1189,7 @@ Total.
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 84 |
-| test_panel.lua | 48 |
+| test_panel.lua | 52 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_launcher.lua | 37 |
@@ -1205,4 +1209,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1039** |
+| **Total** | **1043** |

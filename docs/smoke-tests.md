@@ -200,7 +200,8 @@ client and is run when one is available, not per release.
 - **FRAME-27. Copy with a lone panel.** Delete all but one panel → **Copy settings from panel** is
   disabled, with a tooltip saying to make another panel first. Result:
 - **FRAME-28. Reset one panel.** Resize, move, retexture, recolor and set a panel to mouseover, then
-  press **Reset** on its **General** tab → it returns to a new panel's look **and position** (the
+  press **Reset** on its **General** tab → a confirm popup naming the panel; **No** keeps every
+  change. Press **Reset** again and **Yes** → it returns to a new panel's look **and position** (the
   middle of the screen), every editor control re-reads, the name and frame name are unchanged, anything
   anchored to it stays anchored, and other panels are untouched. Result:
 - **FRAME-29. Delete-all asks first, from both entry points.** `/pm new GuardA`, `/pm new GuardB`.
@@ -530,7 +531,8 @@ and at least one art pack; skip those without it.
   **Panel name** and **Copy settings from panel**, **Enabled** and **Unlock**, **Reset** and
   **Delete**. Walk the other five tabs → none of the six follows you. Back on **General**, with a
   panel picked: tick and untick **Enabled** (the panel goes and returns), tick **Unlock** (only that
-  panel grows a handle), press **Reset**, then **Delete** → each acts on the panel the picker shows.
+  panel grows a handle), press **Reset**, then **Delete**, answering **Yes** to each confirm → each
+  acts on the panel the picker shows, and each confirm names it.
   Pick another panel → the six rebuild against it. **Fail:** an act landing on the previously picked
   panel. The frame name is only on the **Panel name** tooltip, not a label of its own. Result:
 - **PANEL-17. The rename box keeps what you type.** Pick a panel, type into **Panel name** without
@@ -552,8 +554,13 @@ and at least one art pack; skip those without it.
   outline and drag handle; drag it, untick. With a panel open on **Panels**, untick **General ▸ Lock
   frame** → back on **Panels**, **Unlock** shows ticked and grayed; tick **Lock frame** → unticked and
   enabled again. Result:
-- **PANEL-24. Delete in the editor.** Click **Delete** → the panel leaves the screen and the picker,
-  and the editor falls back to another panel rather than going blank. Result:
+- **PANEL-24. Delete and Reset in the editor ask first.** Click **Delete** → a popup reads
+  *Delete the panel "<name>"? This cannot be undone.*; **No** → the panel stays. Click **Delete**
+  again, **Yes** → the panel leaves the screen and the picker, and the editor falls back to another
+  panel rather than going blank. Widen and recolor a panel, click **Reset** → a popup naming it and
+  saying its size, position, textures and colors are lost and its name is kept; **No** → the size and
+  colors stay; **Yes** → it is back to a new panel's look with the same name and frame name. Hover
+  **Reset** and **Delete** → each tooltip says it asks first. Result:
 - **PANEL-25. The picker rebuilds on show.** Close the options window, `/pm new Offscreen`, reopen
   **Panels** → the new panel is in the picker. Result:
 - **PANEL-26. The tab strip survives pooling.** `/pm` → **Panels**, and cycle every tab three times,

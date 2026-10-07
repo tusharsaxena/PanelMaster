@@ -101,6 +101,26 @@ if type(StaticPopupDialogs) == "table" then
     timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
     preferredIndex = 3,
   }
+  -- The Panels editor's per-panel Delete and Reset (PM-R-05): the only other irreversible controls,
+  -- and they sit side by side, so a misclick on either used to cost a panel. %s is the panel's name;
+  -- the panel's ID travels as the popup's `data`, and the editor's accept path resolves it afresh,
+  -- so a panel deleted while the popup was up makes Yes a no-op rather than an act on another one.
+  StaticPopupDialogs["KA0S_PANELMASTER_DELETE"] = {
+    text = "Delete the panel \"%s\"? This cannot be undone.",
+    button1 = YES or "Yes",
+    button2 = NO or "No",
+    OnAccept = function(_, data) NS.PanelEditor.AcceptDelete(data) end,
+    timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
+    preferredIndex = 3,
+  }
+  StaticPopupDialogs["KA0S_PANELMASTER_RESET"] = {
+    text = "Reset the panel \"%s\" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.",
+    button1 = YES or "Yes",
+    button2 = NO or "No",
+    OnAccept = function(_, data) NS.PanelEditor.AcceptReset(data) end,
+    timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
+    preferredIndex = 3,
+  }
 end
 
 function Sl:Register()

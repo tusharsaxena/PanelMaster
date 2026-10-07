@@ -943,7 +943,8 @@ end
 -- artwork: a button labeled "Reset position" that also reset an evening's worth of sizing would be
 -- doing something its own label did not warn about, which is the failure options-ui-§12 spends its
 -- whole length preventing at the global scale. R:Reset is the per-panel verb that does take the
--- whole record, and it is confirmed on its own control.
+-- whole record, and the editor's Reset button asks before calling it (the KA0S_PANELMASTER_RESET
+-- popup, settings/Slash.lua).
 --
 -- Distinct from R:Recover, which is the other thing on this page that moves panels: recover clamps
 -- an anchor that has ended up beyond a screen edge and leaves everything already visible exactly

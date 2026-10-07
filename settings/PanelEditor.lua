@@ -151,16 +151,42 @@ function pageAction.rename(widget, rec, text)
   end
 end
 
-function pageAction.delete(rec)
-  selectedID = nil   -- cleared BEFORE the mutation: the rebuild must not look for a deleted panel
+-- Delete and Reset are irreversible and sit side by side, so a click only ASKS (PM-R-05): it shows
+-- KA0S_PANELMASTER_DELETE / _RESET (settings/Slash.lua) naming the panel, with the panel's id as the
+-- popup's data, and the act runs from the popup's OnAccept through E.AcceptDelete / E.AcceptReset.
+-- The accept resolves the id afresh, so a panel deleted while the popup was up is a no-op. Without
+-- StaticPopup_Show (the headless suite) the click acts at once, the bargain doDeleteAll strikes.
+local function confirmThen(popup, rec, accept)
+  if type(StaticPopup_Show) == "function" then
+    StaticPopup_Show(popup, rec.name, nil, rec.id)
+  else
+    accept(rec.id)
+  end
+end
+
+function E.AcceptDelete(id)
+  local rec = NS.Registry:Get(id)
+  if not rec then return end
+  -- Cleared BEFORE the mutation: the rebuild must not look for a deleted panel.
+  if selectedID == rec.id then selectedID = nil end
   NS.Registry:Delete(rec.id)
 end
 
 -- Reset and CopyFrom both broadcast MSG.PANEL, not MSG.PANELS: the set of panels is unchanged and
 -- only this editor's values are stale, so they refresh in place instead of rebuilding.
-function pageAction.reset(rec)
+function E.AcceptReset(id)
+  local rec = NS.Registry:Get(id)
+  if not rec then return end
   local ok, err = NS.Registry:Reset(rec.id)
   if not ok then print("error: " .. tostring(err)) end
+end
+
+function pageAction.delete(rec)
+  confirmThen("KA0S_PANELMASTER_DELETE", rec, E.AcceptDelete)
+end
+
+function pageAction.reset(rec)
+  confirmThen("KA0S_PANELMASTER_RESET", rec, E.AcceptReset)
 end
 
 function pageAction.copyFrom(widget, rec, sourceID)
