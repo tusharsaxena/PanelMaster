@@ -545,11 +545,13 @@ if not lib then
   -- the PANEL verbs call directly (`Sl:CliPanel`, `/pm panel <name> fitart`, and the
   -- field read and write echoes), and those verbs are exactly the ones this branch exists to keep
   -- working. Left unassigned it is nil, and `/pm panel <name>` raises "attempt to call field
-  -- 'FormatKV'" — a degraded install that hard-errors on its own host-owned verb. The one line is
-  -- reproduced rather than routed, because there is no library here to route to; it is asserted
-  -- byte-for-byte against `lib.FormatKV` by the degradation suite so the two cannot drift.
+  -- 'FormatKV'" — a degraded install that hard-errors on its own host-owned verb. It is
+  -- deliberately NOT the library's format: slash-commands-§1 lets a stub carry only
+  -- DISABLED_LINE_FORMAT, so this arm prints a plain `path = value` with no color escapes, and there
+  -- is no copy of `lib.FormatKV` here to drift. The degradation suite asserts the path, the value
+  -- and the ` = ` are present and that no `|c` escape is.
   Sl.FormatKV       = function(path, valueStr)
-    return ("|cFFFFFF00%s|r = |cFFFFFFFF%s|r"):format(tostring(path), tostring(valueStr))
+    return tostring(path) .. " = " .. tostring(valueStr)
   end
   -- The degraded help index (docs/api/Slash/version-15-docs.md, "The degradation stub"): the
   -- notice once, then one `/pm <cmd>  <desc>` row per NS.COMMANDS entry -- two spaces, no color,
