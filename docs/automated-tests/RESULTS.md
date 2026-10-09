@@ -12,7 +12,7 @@ the analysis of a given run is its `ANALYSIS.md`.
 read and compared, not thresholded (`performance-§9`, `performance-§10`).
 
 **The tag is gated on all four suites at `pass`, plus zero functions above CCN 15**
-(`automated-tests-§3`, *The release gate*), evaluated by `/wow-addon:bump-version` from the
+(`automated-tests-§3`, *The release gate*), evaluated by `/dev-copilot:bump-version` from the
 `manifest.json` the release run writes — not by this script, whose exit code is unchanged.
 
 A `skip` is a suite that did not run at all. It is never a pass, and at the release gate it is
@@ -32,6 +32,7 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 | Run | Commit | Tree | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20261009-191730`](20261009-191730/) | `0fcb643` | clean | 1.2.0 → 1.3.0 | 0/0 | 71 | 1063/1/1064 | skip | 17849 | 2222 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260927-032003`](20260927-032003/) | `8cda106` | clean | 1.2.0 | 0/0 | 68 | 964/0/964 | skip | 16138 | 1917 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260927-030403`](20260927-030403/) | `83e958f` | clean | 1.1.1 → 1.2.0 | 0/0 | 66 | 964/0/964 | skip | 16108 | 1915 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260926-193106`](20260926-193106/) | `5119ae1` | clean | 1.1.1 | 0/0 | 66 | 964/0/964 | skip | 16108 | 1915 | 7.4 | 2.0 | 15 | 0 | **green** |
@@ -52,19 +53,18 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 ## Test suite
 
-**964 cases** — 964 passed, 0 failed, 0 skipped. The generated inventory
-[`20260927-032003/test-cases.md`](20260927-032003/test-cases.md) is the authority on which cases existed at this run;
+**1064 cases** — 1063 passed, 0 failed, 1 skipped. The generated inventory
+[`20261009-191730/test-cases.md`](20261009-191730/test-cases.md) is the authority on which cases existed at this run;
 `docs/test-cases.md` is that same list at HEAD.
 
-The count has been **flat at 964 across the last 4 runs**. A suite that stopped growing while
-the addon did is a coverage gap, and it is the one thing the table above cannot show.
+Moved **964 → 1064** since the previous run.
 
-No case reported a `skip`, so passed and total agree and nothing in this row claims coverage
-that was not exercised.
+**1 case(s) reported a `skip`.** A skip is counted in the total and never in `passed`, and at
+the release gate it is NOT EVALUATED rather than passed (`automated-tests-§3`).
 
 ## Lint
 
-**0 warnings / 0 errors over 68 files** (`luacheck .`).
+**0 warnings / 0 errors over 71 files** (`luacheck .`).
 
 Read that figure with its scope attached: `.luacheckrc` excludes 5 path(s) from it — `libs/`, `docs/audits/`, `docs/reviews/`, `_dev/`, `tests/_kit/` —
 so nothing under them is in the count above. A `0/0` that never moves is partly a statement about
@@ -81,8 +81,8 @@ never asked.
 
 ## Complexity watch list
 
-Current as of [`20260927-032003`](20260927-032003/) — **this run's measurement, not its diff.** Max CCN **15** across 1917
-functions, **0** of them warned on; 1 file(s) in the 1000–1500 band and 0 over the 1500 cap
+Current as of [`20261009-191730`](20261009-191730/) — **this run's measurement, not its diff.** Max CCN **15** across 2222
+functions, **0** of them warned on; 2 file(s) in the 1000–1500 band and 0 over the 1500 cap
 (`layout-§1`).
 
 Every row below is generated from this run's own `lizard` output. **The `Disposition` column is
@@ -101,7 +101,8 @@ None.
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1131 | **Accepted, and moving.** The LibKa0s adoption suite covers the seams, the degraded install and the `L` trap. It entered the band at `20260924-104311` (971 → 1086, from PM-09 and PM-12) and grew **1086 → 1131** at `20260926-160448` from the diagnostics rollout (`0371307` DR-PM-01 +34, `497cad1` DR-PM-03 +11 net). It has a seam of its own: its `Degraded …` cases already share `tests/degraded_env.lua` with `tests/test_surface_parity.lua` and can lift out whole into a sibling suite. The recorded re-check trigger is **1300, or the next major this addon adopts**. It has not fired: no new major was adopted, and the file is unchanged at 1131 at `20260927-032003`, as at the 1.2.0 release run `20260927-030403`, 169 lines short of 1300. Since the Artwork splits it is the only file in the band. 1.2.0 was the first release run to carry this entry, so its shelf-life clock stands at one release run. Peel along that seam when the trigger fires. |
+| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1184 | **Accepted, and moving.** Grew 1131 → 1184 since the 1.2.0 release: the `/pm profile` adoption cases (`9bceeab`, +29) and the Options `addonName` pin (`74429c7`, +24). 116 lines short of its 1300 re-check trigger. Second release run carried as Accepted (1.2.0, 1.3.0); a third makes it owed a split or a tracking issue (anti-pattern #53). Peel the `Degraded …` cases into a sibling suite. |
+| 1000–1500 (on notice) | `tests/test_slash.lua` | 1166 | **Newly crossed; Accepted.** 933 at the 1.2.0 release, 1166 now, from case growth rather than tangle (74 → 85 cases): the `/pm profile` verb (`9bceeab`, +150), the session-row sweep on Reset all (`3060ec4`, +54) and the delete-all profile name (`5c42c0d`, +19). Seam: the profile-verb cases lift out whole into a sibling suite. Re-check trigger 1300. First release run carrying it. |
 
 `lizard` counts every `and`/`or` short-circuit as a decision, so in Lua a run of
 `t.k = rec.k or D.k` defaulting lines scores high with no visible branching at all: a large CCN

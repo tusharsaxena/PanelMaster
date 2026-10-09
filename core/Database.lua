@@ -221,7 +221,7 @@ end
 
 -- Pure [Init] session summary for the SetEnabled seam (debug-logging-§5/§8): addon name + version,
 -- schema version, active profile, and panel count — e.g.
--- "PanelMaster v1.2.0, schema v2, profile 'Mock - Realm', 3 panels, LSM yes, LibDBIcon yes,
+-- "PanelMaster v1.3.0, schema v2, profile 'Mock - Realm', 3 panels, LSM yes, LibDBIcon yes,
 -- Sunn themes 0" (the last three from NS.DependencySummary below).
 -- Guarded so it can't error before the DB is ready. All values are plain constants, counts or the
 -- addon's own manifest strings, so a raw tostring is secret-safe here.

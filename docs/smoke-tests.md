@@ -54,7 +54,7 @@ client and is run when one is available, not per release.
 
 - **INSTALL-1. First login.** On a fresh install, log in → no Lua error, and nothing at all on screen:
   a fresh install draws no panels. Result:
-- **INSTALL-2. Version.** `/pm version` → `[PM] v1.2.0`, matching the TOC's `## Version`. Result:
+- **INSTALL-2. Version.** `/pm version` → `[PM] v1.3.0`, matching the TOC's `## Version`. Result:
 - **INSTALL-3. Empty panel list.** `/pm panels` on a fresh profile → "No panels yet", suggesting
   `/pm new`. Result:
 - **INSTALL-4. No raw string keys on any surface.** Walk `/pm config` (landing page, **General**,
@@ -75,11 +75,11 @@ client and is run when one is available, not per release.
   `[Preview]` line to look for. Result:
 - **INSTALL-8. The `[Init]` line reports the packaged version.** In the **installed** copy under
   `Interface/AddOns/PanelMaster/` (never the repo), set `PanelMaster.toc`'s `## Version:` to
-  `1.2.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in the console (it is not echoed
+  `1.3.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in the console (it is not echoed
   to chat), then `/pm version`; afterwards restore the TOC and `/reload` → the `[Init]` line reads
-  `PanelMaster v1.2.0-smoke, schema v2, profile '<yours>', N panels` and `/pm version` reads
-  `[PM] v1.2.0-smoke`. **Fail:** an `[Init]` line reading `v1.2.0` while `/pm version` reads
-  `v1.2.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
+  `PanelMaster v1.3.0-smoke, schema v2, profile '<yours>', N panels` and `/pm version` reads
+  `[PM] v1.3.0-smoke`. **Fail:** an `[Init]` line reading `v1.3.0` while `/pm version` reads
+  `v1.3.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
   one a user pastes into a bug report. `tests/test_database.lua` proves the line's content against a
   mock; only the client can witness the timing. Result:
 
@@ -87,7 +87,7 @@ client and is run when one is available, not per release.
 
 - **SLASH-1. Bare `/pm`.** `/pm` → the settings window opens on the **Ka0s Panel Master** landing
   page, not a sub-page, and nothing prints. Result:
-- **SLASH-2. Help index.** `/pm help` → a header `v1.2.0 — slash commands (/panelmaster is an alias
+- **SLASH-2. Help index.** `/pm help` → a header `v1.3.0 — slash commands (/panelmaster is an alias
   for /pm)`, then one row per command indented two spaces, every line prefixed with a cyan `[PM]`,
   no trailing colons, and a `profile` row reading *List profiles, or switch to one: profile
   <name>*. Result:
