@@ -151,7 +151,7 @@ end
 --
 -- HERE, AT FILE LOAD, is early enough. PanelMaster.toc pulls
 -- libs\AceGUI-3.0-SharedMediaWidgets\widget.xml in with the other libraries (:27), well before
--- settings\OptionsSetup.lua (:86), so the slot already holds AGSMW's own constructor when this
+-- settings\OptionsSetup.lua (:132), so the slot already holds AGSMW's own constructor when this
 -- line runs. A registration whose version is not strictly higher than the one already held is
 -- refused, so another addon's later copy of AGSMW cannot take the slot back at its own fixed
 -- version. (Worded around the AceGUI entry point on purpose: C02's acceptance is a grep for that

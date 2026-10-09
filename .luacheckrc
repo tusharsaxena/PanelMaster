@@ -57,7 +57,7 @@ globals = {
 -- read-only field. `globals` rather than `read_globals` for the same reason -- these are writes.
 files["tests/"] = {
   globals = {
-    -- The harness's exposed table, written at tests/run.lua:75 and read back by every suite file.
+    -- The harness's exposed table, written at tests/run.lua:87 and read back by every suite file.
     "_G.PM_TEST",
     -- SunnArt's own globals, and those of the art packs and the player's saved customizations.
     -- They belong to a foreign addon that may or may not be installed, which is why modules/
@@ -67,7 +67,7 @@ files["tests/"] = {
     "_G.SunnArt", "_G.SunnArtPack",
     "_G.SunnCustomTheme", "_G.SunnCustomPanels", "_G.SunnCustomOverlap",
     -- The client's default font face. It is read-only above because core/Constants.lua only ever
-    -- READS it; tests/wow_mock.lua:312 is the one writer, planting the client's own value into the
+    -- READS it; tests/wow_mock.lua:326 is the one writer, planting the client's own value into the
     -- real global table because a sandboxed chunk's _G never reaches the mock's __index.
     "_G.STANDARD_TEXT_FONT",
   },
@@ -97,30 +97,30 @@ files["tests/"] = {
 -- read -- is dead code, and `M4c-06` deleted nineteen of those rather than listing them here.
 
 -- The four database entry points publish onto `NS` itself and are reached by the name every other
--- file already holds: `NS:InitDB()` (core/PanelMaster.lua:32), and `NS:RunMigrations()`,
--- `NS:SweepPreviewPanels()`, `NS:RegisterProfileCallbacks()` from InitDB's own body (:19-:21) and
--- from the profile callback at :79. The receiver and the file's `NS` upvalue are the same table,
+-- file already holds: `NS:InitDB()` (core/PanelMaster.lua:33), and `NS:RunMigrations()`,
+-- `NS:SweepPreviewPanels()`, `NS:RegisterProfileCallbacks()` from InitDB's own body (:20-:22) and
+-- from the profile callback at :99. The receiver and the file's `NS` upvalue are the same table,
 -- so the bodies read the upvalue; the colon is what the call sites are written with.
 files["core/Database.lua"] = {
   ignore = { "212/self" },
 }
 
--- The degradation arm, plus one method attached to both arms. Fifteen stubs stand in for the
+-- The degradation arm. Fifteen stubs stand in for the
 -- LibKa0s-DebugLog-1.0 instance when the library is absent, and their member set is not this
 -- addon's to choose: tests/test_surface_parity compares it against the live instance as a SET,
 -- and every caller -- `NS.DebugLog:IsShown()` on settings/Schema.lua's console row,
 -- `NS.DebugLog:Show()` from the slash verb -- reaches whichever arm loaded through the same colon
 -- call. A stub that answers nothing still has to accept the receiver the live method accepts.
--- The sixteenth is `D:Diagnose` (:82), defined once and attached to BOTH arms (:155, :249)
--- because it reads the addon's own state rather than the window's, so it too is called on a
--- table it does not need to read.
+-- The diagnostics report's three members join them on this arm, because the live instance
+-- publishes the same three: `D:RunDiagnostics` (:75), `D:BuildDiagnostics` (:81) and
+-- `D:DebugVerb` (:86). The first two are called by colon on a table they do not need to read.
 files["core/DebugLogSetup.lua"] = {
   ignore = { "212/self" },
 }
 
 -- The launcher's degradation arm, for the same reason and in the same shape. Five stubs stand in
 -- for the LibKa0s-Launcher-1.0 instance when the library is absent, and their member set is not
--- this addon's to choose: `Register` (core/PanelMaster.lua:39), `SetShown` (the *Minimap button*
+-- this addon's to choose: `Register` (core/PanelMaster.lua:40), `SetShown` (the *Minimap button*
 -- row's set in settings/Schema.lua) and the three the live instance publishes beside them all
 -- reach whichever arm loaded through the same colon call. Only `L:IsShown` reads anything, and it
 -- reads the DB rather than its receiver, which is what makes it the right answer on a host where
@@ -130,18 +130,19 @@ files["core/LauncherSetup.lua"] = {
 }
 
 -- AceEvent-3.0 invokes a handler registered by NAME as `self[handler](self, event, ...)`, so the
--- three handlers registered at core/PanelMaster.lua:72-:76 receive the addon object they are
--- already defined on. The two colon methods in this file that DO read `self` -- OnInitialize and
--- OnEnable, which call `self:RegisterEvent` -- are why the entry is `212/self` and not a file-wide
--- switch: they prove the code is checked here, not waived.
+-- three handlers registered by name from core/LifecycleSetup.lua:75-:77 (NS.StandUp) receive the
+-- addon object they are already defined on. The one colon method in this file that DOES read
+-- `self` -- OnInitialize, which hands it to `NS.SafeRegisterEvent` (:67) -- is why the entry is
+-- `212/self` and not a file-wide switch: it proves the code is checked here, not waived.
 files["core/PanelMaster.lua"] = {
   ignore = { "212/self" },
 }
 
--- The renderer, reached through four probes in core/PanelMaster.lua alone (:61 Enable, :84
--- RenderAll, :94 and :102 RenderForCombat) because Canvas is the one module whose absence the boot
--- path is written to survive. The frame map and the pool are this file's own upvalues, not fields
--- of the published table, so no body has a use for the receiver.
+-- The renderer, reached through probes in core/PanelMaster.lua (:116 RenderAll, :129 and :141
+-- RenderForCombat) and in core/LifecycleSetup.lua's stand-up/stand-down (:153 Enable, :106
+-- Disable) because Canvas is the one module whose absence the boot path is written to survive.
+-- The frame map and the pool are this file's own upvalues, not fields of the published table,
+-- so no body has a use for the receiver.
 files["modules/Canvas.lua"] = {
   ignore = { "212/self" },
 }
@@ -149,14 +150,14 @@ files["modules/Canvas.lua"] = {
 -- The panel registry's one writer (architecture-§5, named in docs/ARCHITECTURE.md -> Settings
 -- Schema), and the most-called table in the addon. Records live in `NS.db.profile`, which every
 -- method reaches through the file's `NS` upvalue, so the receiver is spare in all nineteen; the
--- colon is what the call sites and the probe at core/Database.lua:99 are written with.
+-- colon is what the call sites and the probe at core/Database.lua:100 are written with.
 files["modules/Registry.lua"] = {
   ignore = { "212/self" },
 }
 
 -- The unlock overlay, probed from three files rather than one -- core/PanelMaster.lua:128
 -- (ResumePending, the deferred combat replay), modules/Canvas.lua:758 and :837-839 (StripOverlay and
--- Decorate, on every frame release and every render) and modules/Registry.lua:530 (ForgetPending).
+-- Decorate, on every frame release and every render) and modules/Registry.lua:635 (ForgetPending).
 -- Overlay state is a file-scope table here, which is why no body reads the receiver.
 files["modules/Unlock.lua"] = {
   ignore = { "212/self" },
@@ -169,9 +170,9 @@ files["settings/Panel.lua"] = {
   ignore = { "212/self" },
 }
 
--- The Panels page's four published verbs. Three are called from settings/Panel.lua (:448 WireBus,
--- :472 BuildPage, :474 Rebuild) with the page context as the argument, and ForgetSelection is
--- probed from modules/Registry.lua:533 so a delete can clear the editor's selection without
+-- The Panels page's four published verbs. Three are called from settings/Panel.lua (:449 WireBus,
+-- :474 BuildPage, :476 Rebuild) with the page context as the argument, and ForgetSelection is
+-- probed from modules/Registry.lua:638 so a delete can clear the editor's selection without
 -- depending on the editor having loaded. The selection itself is this file's upvalue.
 files["settings/PanelEditor.lua"] = {
   ignore = { "212/self" },
@@ -180,7 +181,7 @@ files["settings/PanelEditor.lua"] = {
 -- The schema seam's kept names. `NS.Schema:Set`, `:Get`, `:SetMany`, `:FindRow`, `:Default`, `:ReadPath`,
 -- `:Register`, `:SnapshotPersisted` and `:CountChangedSince` are colon methods because every caller
 -- in this addon reaches them by colon -- core/LifecycleSetup.lua's switch read, core/LauncherSetup.lua's
--- lock accessor, core/PanelMaster.lua:33's `Register` probe and the suite -- while each body delegates
+-- lock accessor, core/PanelMaster.lua:34's `Register` probe and the suite -- while each body delegates
 -- to the LibKa0s-Schema-1.0 instance, whose members are dot-called and take no receiver. The
 -- receiver is the addon's own convention around the instance.
 files["settings/Schema.lua"] = {
@@ -191,7 +192,7 @@ files["settings/Schema.lua"] = {
 -- DebugLog stubs -- except that here BOTH arms are this addon's, because `NS.Slash` republishes the
 -- LibKa0s-Slash dispatcher's verbs beside host-owned ones rather than being the dispatcher. Twenty
 -- seven methods across the two arms, every one reached by colon: `NS.Slash:Register()` behind the
--- probe at core/PanelMaster.lua:34, `NS.Slash:ConfirmResetAll()` behind the one at
+-- probe at core/PanelMaster.lua:35, `NS.Slash:ConfirmResetAll()` behind the one at
 -- settings/Panel.lua:344, and the verbs themselves through the COMMANDS table.
 files["settings/Slash.lua"] = {
   ignore = { "212/self" },

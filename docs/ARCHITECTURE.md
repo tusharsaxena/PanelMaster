@@ -104,7 +104,8 @@ repaint every panel on each tick of the Grid size slider for no visible differen
 The split between the two panel messages is what lets a drag repaint one frame instead of all of
 them. A test asserts that no other file sends any of the three.
 
-`Canvas:Enable()` — which installs those subscriptions — is called from **`OnEnable`**. This is not
+`Canvas:Enable()`, which installs those subscriptions, is called from **`NS.StandUp`**
+(`core/LifecycleSetup.lua`). `OnEnable` runs that stand-up whenever nothing holds the addon down. This is not
 incidental: an early build omitted it, so every message broadcast into a bus with no listener and
 nothing was live. The only repaints left were the two paths that call `Canvas:RenderAll()` directly
 (lock/unlock and test mode), which is why panels appeared frozen until test mode was toggled. The
