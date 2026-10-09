@@ -182,6 +182,31 @@ test("Panel: the landing page is the parent category, not a subcategory", functi
   assertTrue(T.mocks.__settingsPanels["Ka0s Panel Master"] ~= P.general.panel)
 end)
 
+test("Panel: the landing page is drawn by the library's BuildLandingPage, logo and commands", function()
+  -- Owner report: the landing page showed the logo twice, the second under the Slash Commands
+  -- heading. A private body drew it on a pooled AceGUI frame and never took it off; the library's
+  -- BuildLandingPage hides it on release. The page body must go through the library's builder.
+  local O = NS.Helpers
+  local main
+  for _, ctx in ipairs(O.__panels()) do
+    if ctx.panel == T.mocks.__settingsPanels["Ka0s Panel Master"] then main = ctx end
+  end
+  assertTrue(main ~= nil and type(main._renderFn) == "function", "the landing page has no renderer")
+  local seen
+  local real = O.BuildLandingPage
+  O.BuildLandingPage = function(ctx, spec) seen = spec; return real(ctx, spec) end
+  local ok, err = pcall(main._renderFn, main)
+  O.BuildLandingPage = real
+  assertTrue(ok, tostring(err))
+  -- red under: the private logoGroup.frame:CreateTexture body in settings/Panel.lua
+  assertTrue(seen ~= nil, "the landing body does not delegate to the library")
+  assertEqual(seen.logo, NS.Constants.LOGO_PATH)
+  assertEqual(seen.logoSize, 300)
+  assertEqual(#seen.sections, 1)
+  assertEqual(seen.sections[1].heading, "Slash Commands")
+  assertEqual(#seen.sections[1].rows(), #NS.COMMANDS)
+end)
+
 test("Panel.Open: refuses during combat and does NOT open (options-ui-§2)", function()
   T.mocks.__openedCategory = nil
   T.mocks.__inCombat = true

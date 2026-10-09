@@ -267,48 +267,28 @@ P.__ui = {
 }
 
 -- ── Landing page: logo + tagline + slash-command list (options-ui-§5) ───────────
+-- Through the library's builder, O.BuildLandingPage. This used to be a private body that drew the
+-- logo as a texture straight on a pooled AceGUI SimpleGroup frame and never took it off: AceGUI
+-- recycles frames, so after a re-render that frame came back as another SimpleGroup (the spacer
+-- under the "Slash Commands" heading) still carrying the logo, and the page showed it twice. The
+-- builder keeps one texture per frame, hides it in the group's OnRelease, and owns the ClearScroll.
 local function buildMainContent(ctx)
-  local scroll = ensureScroll(ctx)
-
-  local logoGroup = AceGUI:Create("SimpleGroup")
-  logoGroup:SetLayout(nil); logoGroup:SetFullWidth(true); logoGroup:SetHeight(LOGO_SIZE)
-  local tex = logoGroup.frame:CreateTexture(nil, "ARTWORK")
-  tex:SetTexture(C.LOGO_PATH)
-  tex:SetSize(LOGO_SIZE, LOGO_SIZE)
-  tex:SetPoint("TOPLEFT", logoGroup.frame, "TOPLEFT", 0, 0)
-  scroll:AddChild(logoGroup)
-  O.AddSpacer(scroll, 8)
-
-  local desc = AceGUI:Create("Label")
-  desc:SetFullWidth(true); desc:SetText(ADDON_TAGLINE)
-  if desc.label and desc.label.SetFontObject and _G.GameFontHighlight then
-    desc.label:SetFontObject(_G.GameFontHighlight)
-  end
-  scroll:AddChild(desc)
-  O.AddSpacer(scroll, 12)
-
-  local heading = AceGUI:Create("Heading")
-  heading:SetFullWidth(true); heading:SetHeight(SECTION_HEADING_H); heading:SetText("Slash Commands")
-  if heading.label and heading.label.SetFontObject and _G.GameFontNormalLarge then
-    heading.label:SetFontObject(_G.GameFontNormalLarge)
-  end
-  scroll:AddChild(heading)
-  O.AddSpacer(scroll, 6)
-
-  -- Rendered through the ONE command-row formatter, LibKa0s-Slash-1.0's, rather than this file's own
-  -- (options-ui-§5). This page used to carry a SECOND formatter for the same NS.COMMANDS data — a
-  -- chat one in settings/Slash.lua and this one here — which had already drifted apart: this one put
-  -- double spaces either side of the em dash, wrapped the dash itself in white and left the
-  -- description bare. `Sl:LandingRows()` returns exactly the rows `Sl:HelpRows()` does, minus the
-  -- two-space chat indent, so the two surfaces can no longer disagree. The collapse to single
-  -- spaces, the dash losing its color span and the description gaining one are the accepted cost.
-  local rows = (NS.Slash and NS.Slash.LandingRows) and NS.Slash:LandingRows() or {}
-  for _, row in ipairs(rows) do
-    local labelRow = AceGUI:Create("Label")
-    labelRow:SetFullWidth(true)
-    labelRow:SetText(row)
-    scroll:AddChild(labelRow)
-  end
+  O.BuildLandingPage(ctx, {
+    logo     = C.LOGO_PATH,
+    logoSize = LOGO_SIZE,
+    notes    = ADDON_TAGLINE,
+    sections = { {
+      heading = "Slash Commands",
+      -- Rendered through the ONE command-row formatter, LibKa0s-Slash-1.0's, rather than this
+      -- file's own (options-ui-§5). This page used to carry a SECOND formatter for the same
+      -- NS.COMMANDS data, which had already drifted from the chat one. `Sl:LandingRows()` returns
+      -- exactly the rows `Sl:HelpRows()` does, minus the two-space chat indent, so the two surfaces
+      -- can no longer disagree. A function, so a re-render picks up a command added since.
+      rows = function()
+        return (NS.Slash and NS.Slash.LandingRows) and NS.Slash:LandingRows() or {}
+      end,
+    } },
+  })
 end
 
 -- ── Refresh / Defaults ─────────────────────────────────────────────────────────

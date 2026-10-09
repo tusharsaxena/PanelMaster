@@ -26,7 +26,7 @@ game's own Settings ▸ AddOns list.
 
 | Page | Covers |
 |---|---|
-| Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. |
+| Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. Drawn by LibKa0s-Options' `O.BuildLandingPage`, which hides the logo when AceGUI recycles its frame. |
 | General | Every addon-wide setting, under three tabs: **Master controls**, **Editing** and **New panels**. |
 | Panels | The panels themselves — make one and choose which to edit from the band at the top, then rename, copy, reset, delete and style the selected one under six tabs: **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
 | Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
