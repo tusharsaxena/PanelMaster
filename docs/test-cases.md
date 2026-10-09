@@ -778,7 +778,7 @@ Total.
 - Profile verb: surrounding quotes are stripped, inner spaces and case kept
 - Profile verb: a switch in combat is refused, and the list still answers
 
-### test_panel.lua (52)
+### test_panel.lua (53)
 
 - PanelEditor: the editor is its own module (architecture-§3)
 - PanelEditor: the bus is wired at registration, not at first paint
@@ -795,6 +795,7 @@ Total.
 - Panel: the pages that want a Defaults button declare the intent and park a callback
 - Panel: the header Defaults action and Blizzard's OnDefault reach ONE implementation
 - Panel: the landing page is the parent category, not a subcategory
+- Panel: the landing page is drawn by the library's BuildLandingPage, logo and commands
 - Panel.Open: refuses during combat and does NOT open (options-ui-§2)
 - Panel.Open: the combat refusal is gray
 - Panel.Open: does NOT defer-and-replay on leaving combat
@@ -1209,7 +1210,7 @@ Total.
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
 | test_slash.lua | 85 |
-| test_panel.lua | 52 |
+| test_panel.lua | 53 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_launcher.lua | 37 |
@@ -1229,4 +1230,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1063** |
+| **Total** | **1064** |
