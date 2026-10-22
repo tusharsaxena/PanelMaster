@@ -40,20 +40,29 @@ Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus
 never bump the version without an explicit instruction.
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Ten of the fifteen majors are adopted
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Ten of the seventeen majors are adopted
 (`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`, and
-`Bus` for its `Catalog` alone); `Perf` is declined. **Never edit anything
+`Bus` for its `Catalog` alone); `Perf` is declined, and `Widgets`, `Pool`, `Item`, `Compat`, `Glow`
+and `Sim` are vendored but not consumed. **Never edit anything
 under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.71.0 (MIT). That line is the
-**provenance line**, and it is an input rather than a note: `tests/test_vendor_sync.lua` greps this
-file for it and compares both vendored payloads — `libs/LibKa0s/` and `tests/_kit/` — against that
-tag in the sibling checkout. So it moves in the **same commit** as the vendored bytes; a line and a
-payload that disagree is the drift the gate exists to catch. It used to live in `README.md`, which
-is written for players; kit revision 9 moved it here, where the build facts already are, and there
-is no fallback to the old location.
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.75.0 (MIT).
+LibKa0s icons: clear, close, copy.
+
+The first of those two lines is the **provenance line**, and it is an input rather than a note:
+`tests/test_vendor_sync.lua` greps this file for it and compares both vendored payloads —
+`libs/LibKa0s/` and `tests/_kit/` — against that tag in the sibling checkout. So it moves in the
+**same commit** as the vendored bytes; a line and a payload that disagree is the drift the gate
+exists to catch. It used to live in `README.md`, which is written for players; kit revision 9 moved
+it here, where the build facts already are, and there is no fallback to the old location. The
+second line is the **icon declaration** (kit revision 40, `library-stack-§7`): the same gate holds
+`libs/LibKa0s/media/icons/` to exactly the declared names plus Open Iconic's
+`LICENSE-open-iconic.txt`, the re-vendor prunes the folder to it with the tag's
+`tools/prune-icons.lua`, and both lines move in the same commit as the bytes. The three names are
+the marks the library draws for this addon: the debug console's copy and clear buttons and its
+close button. No code here passes a catalog name of its own (`NS.Icon` has no caller).
 
 The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/ARCHITECTURE.md`
 ▸ *Documented deviations* citing `performance-§1` directly, on the bounded-cost argument reasoned in

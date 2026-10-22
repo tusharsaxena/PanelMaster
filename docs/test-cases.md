@@ -98,7 +98,7 @@ Total.
 - MediaSetup: the font this addon names is the face the library registers
 - MediaSetup: the console's font is the payload's, not a copy of it
 - MediaSetup: every mark this addon's console draws is one the library ships
-- MediaSetup: every name the library ships has a file in the vendored copy
+- MediaSetup: the CLAUDE.md icon declaration names exactly the marks the console draws
 - MediaSetup: the face the seam names exists in the vendored copy
 - MediaSetup: the TOC loads it before the file that resolves the font path
 - MediaSetup: with no library there is no art and no face, and that is not an error
@@ -1020,7 +1020,7 @@ Total.
 - DebugLog seam: the console's title bar is three marks, at the icon pitch
 - DebugLog seam: the library is told the FOLDER name, not just the frame name
 - Options seam: the descriptor is told the FOLDER name, so IdList help art can resolve
-- Options seam: the info art the descriptor's addonName points at is on disk
+- Options seam: info is declared exactly when a page builds an IdList
 - Core seam: MakeCloseButton is wrapped to say which addon folder is asking
 - L trap (DebugLog): every rendered console string resolves to prose, not to its own key
 - Slash seam: the dispatcher is the library's, not a host re-implementation

@@ -32,7 +32,8 @@ libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 # LibKa0s AFTER LibStub and after Ace3: Core resolves LibStub, and DebugLog/Slash/Options each
-# resolve LibKa0s-Core-1.0 before calling NewLibrary. Vendored whole-folder from ../LibKa0s.
+# resolve LibKa0s-Core-1.0 before calling NewLibrary. Vendored whole-folder from ../LibKa0s,
+# with media/icons/ pruned to the CLAUDE.md declaration.
 libs\LibKa0s\LibKa0s.xml
 
 # Locales

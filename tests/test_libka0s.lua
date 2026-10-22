@@ -196,12 +196,31 @@ test("Options seam: the descriptor is told the FOLDER name, so IdList help art c
     "the Options descriptor does not pass addonName, so IdList help marks draw the client glyph")
 end)
 
-test("Options seam: the info art the descriptor's addonName points at is on disk", function()
-  -- The library's loaded-addon guard cannot see a missing file: a right folder name with no art
-  -- under it builds a dead texture path. Pin the file the path resolves to.
-  local f = io.open("libs/LibKa0s/media/icons/info.tga", "rb")
-  assertTrue(f ~= nil, "libs/LibKa0s/media/icons/info.tga is missing from the vendored payload")
-  if f then f:close() end
+test("Options seam: info is declared exactly when a page builds an IdList", function()
+  -- The vendored media/icons/ is pruned to the CLAUDE.md `LibKa0s icons:` line (kit revision 40),
+  -- and OptionsIdList's help mark is the only thing that would draw `info` here. No page builds an
+  -- IdList (the degraded stub's `IdList = noop` is the only mention), so `info` is NOT declared and
+  -- its file is not shipped. The first page that builds one must declare it in the same commit, or
+  -- its help mark resolves to a path the prune removed and draws blank.
+  -- red under: a live `IdList(` call in settings/ with no `info` on the declaration, or `info`
+  -- declared while nothing builds a list.
+  local VendorSync = dofile("tests/_kit/vendor_sync.lua")
+  local decl, why = VendorSync.iconDeclaration(readFile("CLAUDE.md"))
+  assertTrue(decl ~= nil, "CLAUDE.md carries no valid `LibKa0s icons:` line: " .. tostring(why))
+  local declaresInfo = false
+  for _, name in ipairs(decl.names or {}) do
+    if name == "info" then declaresInfo = true end
+  end
+  local builders, scanned = {}, 0
+  for path in readFile("PanelMaster.toc"):gmatch("\n(settings\\[%w_]+%.lua)") do
+    path = path:gsub("\\", "/")
+    scanned = scanned + 1
+    local src = readFile(path):gsub("%-%-[^\r\n]*", "")
+    if src:find("IdList%s*%(") then builders[#builders + 1] = path end
+  end
+  assertTrue(scanned >= 7, "read only " .. scanned .. " settings/ files off the TOC")
+  assertEqual(table.concat(builders, ", "), "")
+  assertFalse(declaresInfo, "`info` is declared, but no page in settings/ builds an IdList")
 end)
 
 test("Core seam: MakeCloseButton is wrapped to say which addon folder is asking", function()
