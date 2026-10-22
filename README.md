@@ -283,3 +283,6 @@ the sizes the client wants and redistributed under
 
 The debug console uses [JetBrains Mono](https://www.jetbrains.com/lp/mono/), licensed under the SIL
 Open Font License 1.1. It ships inside the bundled LibKa0s payload, with its license text beside it.
+
+The debug console's copy, clear and close marks are from [Open Iconic](https://github.com/iconic/open-iconic)
+by Waybury, MIT-licensed; the license ships beside the art.

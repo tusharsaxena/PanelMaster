@@ -103,13 +103,16 @@ this addon?* That is release planning, not a gate.
 |---|---|---|
 | Both empty | The vendored copies are exactly what the library ships. | Nothing. |
 | Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see closed issue [`LIBKA0S-09`](https://github.com/tusharsaxena/PanelMaster/issues/33)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
-| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time. Fourteen of the fifteen majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
+| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time, **then** `lua ../LibKa0s/tools/prune-icons.lua .` to cut `media/icons/` back to the `CLAUDE.md` declaration. Sixteen of the seventeen majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
 
 A fifth check answers "which LibKa0s is this?" without grepping minors out of source: the
 `Bundles [LibKa0s] vX.Y.Z (MIT).` provenance line in the root **`CLAUDE.md`**, which moves with every
 re-vendor. It lived in `README.md` until test kit revision 9 (LibKa0s v1.8.1) moved it to the page
 that carries the build facts; `tests/test_vendor_sync.lua` reads it from `CLAUDE.md` only, with no
-fallback, so a repo that re-vendors without moving its line goes red naming that file.
+fallback, so a repo that re-vendors without moving its line goes red naming that file. The gate's
+second input is the `LibKa0s icons:` line directly under it (test kit revision 40): the vendored
+`media/icons/` must hold exactly the declared names plus `LICENSE-open-iconic.txt`, so an icon left
+behind by a copy without the prune, or one the declaration names and the folder lacks, is red.
 
 ## The artwork gate
 
@@ -239,7 +242,7 @@ the table names both. A single "Gates?" column could only ever describe one of t
 | `lint` | `luacheck .` | **yes** | **yes** |
 | `tests` | `lua tests/run.lua` | **yes** | **yes** |
 | `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
-| `complexity` | `bash tests/_kit/run-automated-tests.sh --suite complexity` (`lizard -l lua -L 1500` over the kit's sighted shadow, at the kit revision the `CLAUDE.md` provenance line pins; a function-count parity mismatch is a fail) | no — recorded only | **yes** |
+| `complexity` | `bash tests/_kit/run-automated-tests.sh --suite complexity` (`lizard -l lua -L 1500` over the kit's sighted shadow, at the kit revision the `CLAUDE.md` provenance line pins; a function-count parity mismatch, or a crashed or bounded lizard run (reported in the kit-41 `crashed` bucket with the file named), is a fail; a crash is never a pass) | no — recorded only | **yes** |
 
 **`perf` and `complexity` never fail a run and never block a commit** (`testing-§4`). They are
 measured, recorded and diffed — a threshold on every commit teaches everyone to reach for
@@ -473,8 +476,11 @@ own test — an early return is precisely what a draw gate does — so a suite w
 certifies the thing it exists to catch.
 
 Two shapes it also avoids. `__fire` over an empty registry dispatches nothing whether the addon
-stood down or the harness lost the ability to dispatch at all, so step 6 fires at the dropped bus
-target with `__fireUnconditional` and calls the addon's own handler methods directly beside it.
+stood down or the harness lost the ability to dispatch at all, so step 6 checks the bus half
+against the message registry (the renderer's target holds no entry for either message) and drives
+the game-event half through `__fireUnconditional`, asserting each count is 1 (kit revision 39
+reaches the method-name handlers after unregister) before it asserts nothing was written, printed
+or shown. It also calls the addon's own handler methods directly beside them.
 And the SETUP survivors §7 exempts are asserted **by name and by count**, so a feature that joins the
 exemption reddens the suite instead of passing quietly.
 

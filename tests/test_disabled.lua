@@ -310,7 +310,9 @@ test("Disabled 6: firing the events anyway writes nothing, prints nothing, shows
   -- the addon stood down or the harness lost the ability to dispatch at all.
   --
   -- red under: put the registrations back in NS.StandUp's list but not in NS.StandDown's, so the
-  -- events stay live -- __fire then reaches a handler and the counts below stop being zero.
+  -- events stay live -- __fire then reaches a handler and the counts below stop being zero; or
+  -- leave the renderer subscribed, so (b)'s registry read finds its target; or drop the master
+  -- switch's guard from a handler method, so (b2)'s reached handlers write, print or show.
   seed()
   local canvasEv = NS.Canvas.__ev
   assertTrue(canvasEv ~= nil, "the renderer was never subscribed, so there is nothing to lose")
@@ -326,12 +328,26 @@ test("Disabled 6: firing the events anyway writes nothing, prints nothing, shows
   end
   assertEqual(fired, 0, "a game event still reached a handler on a disabled addon")
 
-  -- (b) the bus, at the target the renderer used to hold. Nothing answers, because the
-  -- subscriptions were unregistered rather than gated.
-  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Registry.MSG.PANELS), 0,
-    "the renderer's PanelsChanged subscription survived the stand-down")
-  assertEqual(mocks.__fireUnconditional(canvasEv, NS.Schema.MSG.SETTINGS), 0,
-    "the renderer's SettingsChanged subscription survived the stand-down")
+  -- (b) the bus, read where a broadcast is dispatched from: the message registry. The renderer's
+  -- target holds no entry for either message, because the subscriptions were unregistered rather
+  -- than gated. (This used to fire the message names at the target through __fireUnconditional and
+  -- assert 0, which was vacuous: that helper reads the target's game-event records, never the
+  -- message registry, so it answered 0 whether or not the subscription survived. Kit revision 39
+  -- names that shape, a case asserting on its own silence.)
+  for _, message in ipairs({ NS.Registry.MSG.PANELS, NS.Schema.MSG.SETTINGS }) do
+    local targets = mocks.__msgRegistry[message] or {}
+    assertTrue(targets[canvasEv] == nil,
+      "the renderer's " .. message .. " subscription survived the stand-down")
+  end
+
+  -- (b2) the game events again, fired UNCONDITIONALLY at the addon: past the live registration set,
+  -- to the method each one was last registered under (kit revision 39 keeps that handler after
+  -- unregister). Each must REACH its handler -- a count of 1 -- so the no-effect assertions below
+  -- are about the addon's guard and not about a harness that dispatched nothing.
+  for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED", COMBAT_ENTRY }) do
+    assertEqual(mocks.__fireUnconditional(NS.addon, event), 1,
+      "__fireUnconditional did not reach the handler registered for " .. event)
+  end
 
   -- (c) the handler methods themselves, reached past the registration set entirely. Combat entry is
   -- named explicitly: an addon writing to its store or printing a line on entering combat while it

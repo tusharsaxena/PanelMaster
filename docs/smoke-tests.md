@@ -16,13 +16,13 @@ client and is run when one is available, not per release.
 
 | IDs | Theme | What it covers |
 |---|---|---|
-| INSTALL-1 to 8 | Install and load | First login, version, standalone, raw string keys, the old test-mode sweep, the `[Init]` version |
+| INSTALL-1 to 9 | Install and load | First login, version, standalone, raw string keys, the old test-mode sweep, the `[Init]` version, a clean load with the LibKa0s v1.75.0 majors |
 | SLASH-1 to 7 | Slash commands | Bare `/pm`, help and the landing list, unknown verbs, `set` clamps and refusals, `/pm list` |
 | FRAME-1 to 29 | Panels | Create, drag, lock, click-through, snapping, default sizes, master scale, recovery, frame names, rename, copy, reset, delete |
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 33 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows |
+| PANEL-1 to 34 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows, the scroll offset kept across a re-render |
 | PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 7 | Combat | Queued unlocks, a stand-down dropping them, the settings lockout, General visibility |
@@ -82,6 +82,12 @@ client and is run when one is available, not per release.
   `v1.3.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
   one a user pastes into a bug report. `tests/test_database.lua` proves the line's content against a
   mock; only the client can witness the timing. Result: pass (owner-marked 2026-10-10)
+- **INSTALL-9. A clean load with the LibKa0s v1.75.0 payload.** Enable only PanelMaster and its
+  libraries, log in, then type `/pm` → no Lua error at load or on the first `/pm`. Repeat with every
+  Ka0s addon enabled. The re-vendor added two majors this addon never calls,
+  `LibKa0s-Glow-1.0` and `LibKa0s-Sim-1.0` (with `SimTimeline.lua` and `SimPanel.lua`), and they
+  load through `libs/LibKa0s/LibKa0s.xml` all the same. **Fail:** any error naming `Glow.lua`,
+  `Sim.lua`, `SimTimeline.lua`, `SimPanel.lua` or another LibKa0s file. Result:
 
 ## SLASH
 
@@ -600,6 +606,12 @@ and at least one art pack; skip those without it.
   Profile** instead: the same thing happens (the two resets are the same act). **Fail:** panels still
   draggable or the console still open after either reset (that reset skipped its session-only
   sweep). Result: pass (owner-marked 2026-10-10)
+- **PANEL-34. A re-render keeps the scroll offset.** `/pm config` → **Panels**, pick a panel, scroll
+  the page down until the edge checkboxes are near the bottom of the view, then tick or untick one
+  → the page re-renders where it was and does not jump to the top (LibKa0s Options minor 29). Then
+  click another editor tab → that page starts at the top, because a tab click is a change of
+  subject. **Fail:** the page snaps to the top after the checkbox, or a tab click opens part-way down.
+  Result:
 
 ## PROFILE
 
@@ -732,8 +744,9 @@ and at least one art pack; skip those without it.
   one size, evenly spaced: a copy mark, a clear mark and a close mark, gray, each turning white (the
   close mark red) under the pointer. No words and no tooltips. **Fail:** the words *Copy* and *Clear*
   and a multiplication sign instead of the close mark, with a wider strip: the addon folder name
-  stopped reaching `core/DebugLogSetup.lua`'s descriptor, or `libs/LibKa0s/media/icons/` did not
-  survive a re-vendor. Result: pass (owner-marked 2026-10-10)
+  stopped reaching `core/DebugLogSetup.lua`'s descriptor. **Fail:** blank squares where the marks
+  should be: `libs/LibKa0s/media/icons/` did not survive a re-vendor, or the `LibKa0s icons:`
+  declaration lost close/copy/clear and the prune removed them. Result: pass (owner-marked 2026-10-10)
 - **DIAG-3. Monospace columns.** The `<HH:MM:SS> | [Tag]` prefixes line up down the window.
   **Fail:** proportional text with ragged columns on a complete install (`NS.MediaFont` answered
   nil). Result: pass (owner-marked 2026-10-10)
@@ -1009,7 +1022,12 @@ what the client writes to SavedVariables for such a value, which is why NUM-3 pl
 
 ## Pending sign-off
 
-None. On 2026-10-10 the owner marked every check in this file as passed, recorded on its
-`Result:` line as `pass (owner-marked 2026-10-10)`; a check that already carried a dated owner pass
-keeps it. A check added or rewritten after that date is listed here until its `Result:` line records
-a pass.
+On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
+as `pass (owner-marked 2026-10-10)`; a check that already carried a dated owner pass keeps it. A
+check added or rewritten after that date is listed here until its `Result:` line records a pass.
+
+| ID | Origin | Why it is owed |
+|---|---|---|
+| DIAG-2 | The LibKa0s v1.75.0 re-vendor (2026-10-22) | Rewritten: `media/icons/` is now pruned to the `LibKa0s icons:` declaration, so a lost mark draws blank rather than as words; re-run against the pruned folder. Its `Result:` line still holds the 2026-10-10 pass of the earlier wording |
+| INSTALL-9 | The LibKa0s v1.75.0 re-vendor (2026-10-22) | New: the payload adds `LibKa0s-Glow-1.0` and `LibKa0s-Sim-1.0` |
+| PANEL-34 | The LibKa0s v1.75.0 re-vendor (2026-10-22) | New: Options minor 29 keeps a page's scroll offset across a structural refresh |

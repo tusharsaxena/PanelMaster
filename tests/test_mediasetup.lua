@@ -8,11 +8,13 @@ local C = NS.Constants
 --
 -- THE CASE THAT EARNS THIS FILE is the cross-repo one. Every mark on this addon's console is named
 -- as a plain string — three of them, inside the library, on this addon's behalf — and resolved
--- against a catalog that lives in ANOTHER repo. If the library renames a mark, or a re-vendor drops
--- a file, the answer is nil, the library falls back to words and a multiplication sign, and the
--- console quietly stops being what the screenshots show. With every suite green, because a texture
--- that does not load draws nothing and raises nothing. That is the one class of art bug the client
--- gives you no signal for, and this is the first version of it that can be caught out of game.
+-- against a catalog that lives in ANOTHER repo, then drawn from a vendored copy whose media/icons/
+-- is pruned to the `LibKa0s icons:` declaration in CLAUDE.md (kit revision 40). If the library
+-- renames a mark, the answer is nil; if the declaration drops one, the prune removes its file and
+-- the path still resolves, so the control draws BLANK. Either way the console quietly stops being
+-- what the screenshots show, with every suite green, because a texture that does not load draws
+-- nothing and raises nothing. That is the one class of art bug the client gives you no signal
+-- for, so this file pins the drawn set against the catalog AND against the declaration.
 
 local Loader = dofile("tests/_kit/loader.lua")
 local buildMocks = dofile("tests/wow_mock.lua")
@@ -81,17 +83,29 @@ test("MediaSetup: every mark this addon's console draws is one the library ships
   end
 end)
 
-test("MediaSetup: every name the library ships has a file in the vendored copy", function()
-  -- The library's own suite checks its catalog against its own directory. This checks the COPY: a
-  -- re-vendor that dropped a file, or a packaging step that filtered one out, leaves a catalog
-  -- naming art this build does not carry.
-  local Media = mocks.LibStub("LibKa0s-Media-1.0", true)
-  local missing = {}
-  for _, name in ipairs(Media.ICONS) do
-    local fh = io.open("libs/LibKa0s/media/icons/" .. name .. ".tga", "rb")
-    if fh then fh:close() else missing[#missing + 1] = name end
+test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the console draws", function()
+  -- red under: dropping copy from the `LibKa0s icons:` line (a drawn mark the prune would remove,
+  -- so the button draws blank), or adding info to it (a declared mark nothing here draws). The
+  -- kit's vendor gate holds the folder to the declaration; this holds the declaration to DRAWN.
+  -- The parser is the kit's own, never a second one written here.
+  local VendorSync = dofile("tests/_kit/vendor_sync.lua")
+  local fh = assert(io.open("CLAUDE.md", "rb"))
+  local text = fh:read("*a")
+  fh:close()
+  local decl, why = VendorSync.iconDeclaration(text)
+  assertTrue(decl ~= nil, "CLAUDE.md carries no valid `LibKa0s icons:` line: " .. tostring(why))
+  assertEqual(decl.mode, "list")
+  local declared, drawn = {}, {}
+  for _, name in ipairs(decl.names) do declared[#declared + 1] = name end
+  for _, name in ipairs(DRAWN) do drawn[#drawn + 1] = name end
+  table.sort(declared)
+  table.sort(drawn)
+  assertEqual(table.concat(declared, ", "), table.concat(drawn, ", "))
+  for _, name in ipairs(DRAWN) do
+    local art = io.open("libs/LibKa0s/media/icons/" .. name .. ".tga", "rb")
+    assertTrue(art ~= nil, "the console draws '" .. name .. "', which the vendored copy does not ship")
+    if art then art:close() end
   end
-  assertEqual(table.concat(missing, ", "), "")
 end)
 
 test("MediaSetup: the face the seam names exists in the vendored copy", function()

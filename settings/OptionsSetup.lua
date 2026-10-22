@@ -98,6 +98,9 @@ if not lib then
     -- NavRail, new at LibKa0s v1.61.0 (OptionsNav minor 1): drawn only by a page render, and no
     -- page here draws a rail (PanelMaster#55, will-not-do), so the same inert answer applies.
     NavRail = noop,
+    -- Drawer, new at LibKa0s v1.73.0 (OptionsDrawer minor 1): drawn only by a page render, and no
+    -- page here draws one, so the same inert answer applies.
+    Drawer = noop,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
