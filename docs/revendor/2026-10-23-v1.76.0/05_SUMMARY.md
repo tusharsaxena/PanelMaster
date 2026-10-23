@@ -55,3 +55,25 @@ removed. Nothing needed changing:
 - **3g:** `.gitattributes` present, pin `* text=auto eol=crlf` (client-bound), `*.sh` and `*.py`
   carve-outs and binary markings present; the worktree straggler count is 0. Renormalization was
   not performed (nothing to do).
+
+## Addendum: the tag moved (PM-RV2, LK-91)
+
+The local tag `v1.76.0` was moved before publication to carry LK-91 (a step-panel row's label is
+bounded before the command column, so a long label truncates with an ellipsis instead of running
+under the slash command; BankLedger's `/bl sim` step "Deposit 1 x Flask ..." was the report).
+Tag object `546e284` -> `2949c78`, commit `9949368` -> `7e81ff7`. Both payloads were replaced whole
+again from the moved tag (`git -C ../LibKa0s archive v1.76.0 LibKa0s testkit tools/prune-icons.lua`
+into a scratch directory, no checkout) and `media/icons/` pruned to the unchanged
+`LibKa0s icons: clear, close, copy.` declaration with the tag's `tools/prune-icons.lua`. The
+provenance line already read v1.76.0 and is kept; this addendum, not a new bundle, records the move.
+
+- **Files that changed:** `libs/LibKa0s/PerfPanel.lua` (panel minor 7 -> 8, `LibKa0s-Perf-1.0`
+  key 15.1.1.8) and `libs/LibKa0s/SimPanel.lua` (minor stays 5, already bumped in the unpublished
+  v1.76.0). `tests/_kit/` is byte-identical; kit revision 41 unchanged.
+- **Consumer impact:** none in code. PanelMaster consumes neither `Perf` (ratified decline) nor
+  `Sim`, so nothing is adopted, declined or filed.
+- **Verify:** `diff -r` of the tag copy against `libs/LibKa0s/` shows only the `Only in` lines of
+  the pruned icons; `diff -rq` against `tests/_kit/` is empty.
+- **Gate, through `ka0s-bounded`:** `lua tests/run.lua` 1064 passed, 0 failed, 1 skipped
+  (`tests/test_vendor_sync.lua` green against the moved tag); `luacheck .` 0 / 0 in 71 files; no
+  authored `.lua` above 1500 lines (largest `tests/test_libka0s.lua`, 1203).
