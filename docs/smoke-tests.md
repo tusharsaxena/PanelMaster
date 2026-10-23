@@ -87,7 +87,7 @@ client and is run when one is available, not per release.
   Ka0s addon enabled. The re-vendor added two majors this addon never calls,
   `LibKa0s-Glow-1.0` and `LibKa0s-Sim-1.0` (with `SimTimeline.lua` and `SimPanel.lua`), and they
   load through `libs/LibKa0s/LibKa0s.xml` all the same. **Fail:** any error naming `Glow.lua`,
-  `Sim.lua`, `SimTimeline.lua`, `SimPanel.lua` or another LibKa0s file. Result:
+  `Sim.lua`, `SimTimeline.lua`, `SimPanel.lua` or another LibKa0s file. Result: pass (owner-marked 2026-10-23)
 
 ## SLASH
 
@@ -611,7 +611,7 @@ and at least one art pack; skip those without it.
   → the page re-renders where it was and does not jump to the top (LibKa0s Options minor 29). Then
   click another editor tab → that page starts at the top, because a tab click is a change of
   subject. **Fail:** the page snaps to the top after the checkbox, or a tab click opens part-way down.
-  Result:
+  Result: pass (owner-marked 2026-10-23)
 
 ## PROFILE
 
@@ -746,7 +746,7 @@ and at least one art pack; skip those without it.
   and a multiplication sign instead of the close mark, with a wider strip: the addon folder name
   stopped reaching `core/DebugLogSetup.lua`'s descriptor. **Fail:** blank squares where the marks
   should be: `libs/LibKa0s/media/icons/` did not survive a re-vendor, or the `LibKa0s icons:`
-  declaration lost close/copy/clear and the prune removed them. Result: pass (owner-marked 2026-10-10)
+  declaration lost close/copy/clear and the prune removed them. Result: pass (owner-marked 2026-10-23)
 - **DIAG-3. Monospace columns.** The `<HH:MM:SS> | [Tag]` prefixes line up down the window.
   **Fail:** proportional text with ragged columns on a complete install (`NS.MediaFont` answered
   nil). Result: pass (owner-marked 2026-10-10)
@@ -1022,12 +1022,6 @@ what the client writes to SavedVariables for such a value, which is why NUM-3 pl
 
 ## Pending sign-off
 
-On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
+None. On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
 as `pass (owner-marked 2026-10-10)`; a check that already carried a dated owner pass keeps it. A
 check added or rewritten after that date is listed here until its `Result:` line records a pass.
-
-| ID | Origin | Why it is owed |
-|---|---|---|
-| DIAG-2 | The LibKa0s v1.75.0 re-vendor (2026-10-22) | Rewritten: `media/icons/` is now pruned to the `LibKa0s icons:` declaration, so a lost mark draws blank rather than as words; re-run against the pruned folder. Its `Result:` line still holds the 2026-10-10 pass of the earlier wording |
-| INSTALL-9 | The LibKa0s v1.75.0 re-vendor (2026-10-22) | New: the payload adds `LibKa0s-Glow-1.0` and `LibKa0s-Sim-1.0` |
-| PANEL-34 | The LibKa0s v1.75.0 re-vendor (2026-10-22) | New: Options minor 29 keeps a page's scroll offset across a structural refresh |
