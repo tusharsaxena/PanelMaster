@@ -311,7 +311,7 @@ C.ART_FRAME_LEVEL = {
 }
 
 -- The per-panel `level` setting's range. Named once, because three places read it: the Registry's
--- clamp, Canvas's BuildSpec and the Frame level slider on the Position and size tab (options-ui-§8).
+-- clamp, Canvas's BuildSpec and the Frame level slider on the Size and position tab (options-ui-§8).
 C.MIN_PANEL_LEVEL = 0
 C.MAX_PANEL_LEVEL = 100
 
