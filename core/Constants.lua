@@ -31,6 +31,11 @@ end
 C.STRATA_SET = {}
 for _, s in ipairs(C.STRATA) do C.STRATA_SET[s] = true end
 
+-- Each strata's place in the draw order, 1 = BACKGROUND. C.STRATA is the client's order, so this is
+-- what "at or above DIALOG" and "never below the panel" compare (modules/Unlock.lua).
+C.STRATA_RANK = {}
+for i, s in ipairs(C.STRATA) do C.STRATA_RANK[s] = i end
+
 -- ── Anchor points ───────────────────────────────────────────────────────────────
 -- The nine anchor points a panel can be pinned by. Stored values; also the dropdown order, read
 -- top-left to bottom-right so the list reads like the screen it describes.
@@ -220,46 +225,93 @@ C.ART_BLEND_SET, C.ART_BLEND_OPTIONS = enumTables(C.ART_BLEND, {
 C.MIN_ART_SCALE = 0.1
 C.MAX_ART_SCALE = 4.0
 
--- The panel's frame ladder, as offsets from the panel frame's OWN GetFrameLevel(). The three
--- artwork levels are spread apart rather than consecutive because artwork has to INTERLEAVE with
--- the background, the border and the accent bars — each of the six things below needs a level of
--- its own, in this exact order, or "behind the background" and "above the accent" cannot both be
--- expressible at once. There is still only one art frame; its level is reassigned per render.
+-- ── Frame layering (frame-layering-§5) ─────────────────────────────────────────
+-- THE ONE LAYERS TABLE. Every SetFrameStrata and SetFrameLevel in the addon reads it; nothing else
+-- names a strata or a level. The addon's whole stack, bottom to top:
 --
--- BELOW_BG is why the background fill lives on its own child frame rather than on the panel: a
--- child frame always draws above its parent's own textures whatever draw layer they use, so with
--- the fill on the panel itself there is no level a child could take to get underneath it.
-C.ART_FRAME_LEVEL = { BELOW_BG = 1, ABOVE_BG = 3, ABOVE_ALL = 6 }
-C.BG_FRAME_LEVEL     = 2
-C.BORDER_FRAME_LEVEL = 4
-C.ACCENT_FRAME_LEVEL = 5
-
--- The unlock overlay, above EVERY rung above — including ABOVE_ALL artwork. It has to be the top of
--- the stack by definition: its whole job is to be findable on a panel you would otherwise not be
--- able to see, so anything that could cover it defeats it. This is also the ceiling of a panel's
--- frame-level footprint, and C.PANEL_LEVEL_STRIDE is derived from it.
-C.UNLOCK_FRAME_LEVEL = 7
+--   T1b  panels (player-layered backdrops)   the record's `strata` (any of C.STRATA, a documented
+--        deviation) and level `level x PANEL_STRIDE`. A new frame states STRATA.BACKDROP at
+--        creation, before its first paint, so it never exists at UIParent's inherited strata.
+--        Inside one panel, offsets from the panel's OWN GetFrameLevel() (LEVEL below):
+--          +1 artwork BELOW_BG   +4 border            +7 accent bar border   (lazy, built at size>0)
+--          +2 background fill    +5 accent container  +8 artwork ABOVE_ALL
+--          +3 artwork ABOVE_BG   +6 accent bars       +9 unlock overlay (modules/Unlock.lua)
+--   T2   unlock overlay (edit chrome)        its own strata while unlocked: max(panel, CHROME).
+--        The floor is HIGH ONLY BECAUSE the overlay takes no mouse (the panel takes the drag);
+--        frame-layering-§2 floors mouse-enabled chrome at MEDIUM, so an overlay that is ever made
+--        mouse-enabled drops its floor to max(panel, MEDIUM). Never below its panel.
+--   T6   Blizzard StaticPopups (the four confirmations, settings/Slash.lua) and the LibKa0s debug
+--        console: DIALOG (library- and Blizzard-owned). MODAL is the threshold an unlocked panel
+--        at or above which yields the mouse while one of this addon's popups is shown (PAN-Z05).
+--   T7   LibKa0s CopyWindow (the console's Copy): FULLSCREEN, library-owned.
+--   T8   AceGUI pullouts, the color picker: FULLSCREEN_DIALOG; LSM30 media pullouts: TOOLTIP.
+--   T9   GameTooltip: TOOLTIP.
+--   outside: the Blizzard Settings panel (HIGH, toplevel) hosts the settings canvases; the library
+--        chrome inside it (tab strip, combat cover) sets relative levels of its own; the LibDBIcon
+--        minimap button is MEDIUM, fixed. The library's resize grip (+10) is on the console only.
+--
+-- A panel may be raised by the player into T6..T9: a high-strata backdrop is a legitimate choice,
+-- and the strata tooltip (O.StrataTooltip) says what such a panel covers. Panels on the same strata
+-- and level can interleave rung by rung; the Frame level tooltip says so (frame-layering-§3).
+--
+-- The three artwork rungs are spread apart rather than consecutive because artwork has to
+-- INTERLEAVE with the background, the border and the accent: "behind the background" and "above the
+-- accent" must both be expressible. There is still only one art frame; its level is reassigned per
+-- render. BELOW_BG is why the fill lives on its own child frame rather than on the panel: a child
+-- frame always draws above its parent's own textures whatever draw layer they use.
+--
+-- The accent bars and the bar's own border are NESTED one level deeper than the other children
+-- (bar under the container, border under the bar). They carry explicit rungs of their own, because a
+-- container at +5 does not reserve +6 for its children: left implicit, the bars tied with ABOVE_ALL
+-- artwork and the bar border tied with the unlock overlay (PAN-Z01).
+C.LAYERS = {
+  STRATA = {
+    BACKDROP = "LOW",      -- T1b: a panel's strata at creation, and the template's default
+    CHROME   = "HIGH",     -- T2: the unlock overlay's floor (mouse-off chrome, see above)
+    MODAL    = "DIALOG",   -- T6: Blizzard's StaticPopups and the library console live here
+  },
+  LEVEL = {
+    ART_BELOW_BG      = 1,
+    BG                = 2,
+    ART_ABOVE_BG      = 3,
+    BORDER            = 4,
+    ACCENT            = 5,
+    ACCENT_BAR        = 6,
+    ACCENT_BAR_BORDER = 7,
+    ART_ABOVE_ALL     = 8,
+    -- The top of the stack by definition: its whole job is to be findable on a panel you would
+    -- otherwise not be able to see, so anything that could cover it defeats it.
+    UNLOCK            = 9,
+  },
+}
 
 -- How far apart two panels' frame levels are placed, so one panel's whole stack clears the next
--- one's. A panel occupies base .. base + C.UNLOCK_FRAME_LEVEL, so the stride is that plus one.
+-- one's. A panel occupies base .. base + LEVEL.UNLOCK, so the stride is that plus one, and it is
+-- DERIVED, so a rung added to the ladder grows it.
 --
 -- Without it the user's `level` is used as a raw frame level and the stacks INTERLEAVE: a panel at
--- level 0 puts its accent bar at base+5 while a panel at level 3 puts its background fill at the
--- same 5, and which one wins falls back to frame creation order — which, because Canvas pools
--- frames by name, is not even panel order. The level setting says "higher draws in front"; without
--- a stride that is only true when the numbers happen to differ by more than the footprint.
+-- level 0 puts its accent container at base+5 while a panel at level 3 puts its background fill on
+-- a nearby number, and which one wins falls back to frame creation order — which, because Canvas
+-- pools frames by name, is not even panel order. Multiplying makes every DISTINCT level separate
+-- cleanly, which is what the setting has always claimed. EQUAL levels still interleave, and the
+-- Frame level tooltip says so (PAN-Z03b).
 --
--- This was always partly broken (the old three-rung footprint made levels 1 and 2 apart collide
--- too) and artwork widened the footprint enough to matter. Multiplying is the fix for both: every
--- DISTINCT level now separates cleanly, which is what the setting has always claimed.
---
--- Bounded safely: a panel's level is clamped to C.MIN_PANEL_LEVEL .. C.MAX_PANEL_LEVEL
--- (Registry.Sanitize, Canvas.BuildSpec, the editor's Frame level slider), so the highest frame level
--- this can produce is 800 — far under the client's per-strata ceiling.
-C.PANEL_LEVEL_STRIDE = C.UNLOCK_FRAME_LEVEL + 1
+-- The player's level is a BASE (frame-layering-§3), not an absolute level the addon picks. Bounded
+-- safely: a panel's level is clamped to C.MIN_PANEL_LEVEL .. C.MAX_PANEL_LEVEL (Registry.Sanitize,
+-- Canvas.BuildSpec, the editor's Frame level slider), so the highest frame level this can produce is
+-- 1 000 + 9 — far under the client's per-strata ceiling of 10 000.
+C.LAYERS.PANEL_STRIDE = C.LAYERS.LEVEL.UNLOCK + 1
+
+-- The stored `artLayer` token → its rung. A token, not a number, is what a record stores, so the
+-- ladder can be renumbered without moving a saved value. A view of LAYERS, not a second ladder.
+C.ART_FRAME_LEVEL = {
+  BELOW_BG  = C.LAYERS.LEVEL.ART_BELOW_BG,
+  ABOVE_BG  = C.LAYERS.LEVEL.ART_ABOVE_BG,
+  ABOVE_ALL = C.LAYERS.LEVEL.ART_ABOVE_ALL,
+}
 
 -- The per-panel `level` setting's range. Named once, because three places read it: the Registry's
--- clamp, Canvas's BuildSpec and the Frame level slider on the Position and size tab (options-ui-§8).
+-- clamp, Canvas's BuildSpec and the Frame level slider on the Size and position tab (options-ui-§8).
 C.MIN_PANEL_LEVEL = 0
 C.MAX_PANEL_LEVEL = 100
 
@@ -286,7 +338,7 @@ C.PANEL_TEMPLATE = {
   -- LOW, not BACKGROUND: one step up puts a panel above the world and Blizzard's parchment/backdrop
   -- art while staying under essentially every interface frame — which is what a backdrop wants in
   -- practice. BACKGROUND is still offered for a panel that must sit under absolutely everything.
-  strata      = "LOW",
+  strata      = C.LAYERS.STRATA.BACKDROP,
   level       = 0,
   -- 1.0 is the identity, so every panel that already exists is unaffected and SetScale is a no-op
   -- until someone asks for one.
@@ -354,9 +406,9 @@ C.PANEL_TEMPLATE = {
   -- fades the whole frame -- background, border and bars together -- and cannot fade the bar alone.
   accentAlpha      = 1.00,
 
-  -- The accent bar's OWN border, mirroring the panel's. Size 0 by default: the bar is already a
-  -- decoration, and outlining it unasked would change the look of every accent bar the moment the
-  -- feature shipped. Shares the panel border's bounds, so the two sliders read alike.
+  -- The accent bar's OWN border, mirroring the panel's. Shares the panel border's bounds, so the two
+  -- sliders read alike. It ships at size 1 (below), so every accent bar builds one and the border
+  -- has a rung of its own on the panel ladder (C.LAYERS.LEVEL.ACCENT_BAR_BORDER).
   accentBorderTexture   = "Solid",
   -- A 1px black outline around the bar. Black rather than the panel border's gray because its job is
   -- to SEPARATE the bar from whatever is behind it — against a bright background a bare class color

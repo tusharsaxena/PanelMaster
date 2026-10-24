@@ -314,7 +314,7 @@ end)
 
 test("Canvas: each panel level gets a frame-level band of its own", function()
   -- The level setting means "higher draws in front". Used as a RAW frame level that was only true
-  -- while a panel occupied one rung — and a panel occupies eight. Two panels three levels apart put
+  -- while a panel occupied one rung — and a panel occupies ten. Two panels three levels apart put
   -- one's accent bar and the other's background fill on the same number, leaving the winner to
   -- frame creation order, which the name-keyed pool does not even keep in panel order.
   fresh()
@@ -325,7 +325,7 @@ test("Canvas: each panel level gets a frame-level band of its own", function()
   R:Set(hi.id, "level", 3)
 
   local lf, hf = Canvas:FrameFor(lo.id), Canvas:FrameFor(hi.id)
-  local loTop = lf:GetFrameLevel() + C.UNLOCK_FRAME_LEVEL
+  local loTop = lf:GetFrameLevel() + C.LAYERS.LEVEL.UNLOCK
   local hiBottom = hf:GetFrameLevel()
   assertTrue(hiBottom > loTop,
     ("the higher panel's stack starts at %d, inside the lower panel's %d..%d")
@@ -340,7 +340,7 @@ test("Canvas: one level apart is enough to separate two panels completely", func
   R:Set(a.id, "level", 4)
   R:Set(b.id, "level", 5)
   local af, bf = Canvas:FrameFor(a.id), Canvas:FrameFor(b.id)
-  assertTrue(bf:GetFrameLevel() > af:GetFrameLevel() + C.UNLOCK_FRAME_LEVEL,
+  assertTrue(bf:GetFrameLevel() > af:GetFrameLevel() + C.LAYERS.LEVEL.UNLOCK,
     "adjacent panel levels still interleave")
 end)
 

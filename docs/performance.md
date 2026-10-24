@@ -49,8 +49,8 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:647-652` is the
-tick and `:662` installs it on a single shared driver, the first time any panel is tracked for
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:654-659` is the
+tick and `:670` installs it on a single shared driver, the first time any panel is tracked for
 mouseover:
 
 ```lua
@@ -66,8 +66,8 @@ end
 setting alpha. There is no `InCombatLockdown` gate and none is wanted — the whole point of the fade
 is that it keeps working while the player is busy.
 
-The driver exists only once a panel has **Show on mouseover only** ticked (`mouseover` defaults to
-`false`, `core/Constants.lua:317`), and the frame is never destroyed afterwards — only its script,
+The driver exists only once a panel has **Fade unless hovered** ticked (`mouseover` defaults to
+`false`, `core/Constants.lua:369`), and the frame is never destroyed afterwards — only its script,
 which `Canvas.SetMouseoverTracked` removes when the tracked set empties and re-installs when it
 refills. That makes it a user-reachable hot path, not dead code, so:
 
@@ -91,8 +91,8 @@ The reason is the shape of the one path, not a claim that the path does not exis
 - **The body is two calls per tracked panel.** `updateMouseover` does one
   `NS.Compat.MouseIsOver(f)` and one `SetAlpha(...)` for each panel in the tracked set. There is no
   per-record work, no allocation, no string building, and no scan that grows with saved data.
-- **The set is bounded by a number the player sets.** A panel joins it only with *Show on mouseover
-  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:317`). With none ticked
+- **The set is bounded by a number the player sets.** A panel joins it only with *Fade unless
+  hovered* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:369`). With none ticked
   `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the frame
   survives but its `OnUpdate` does not — `SetMouseoverTracked` clears the script on the untrack that
   empties the set, so the dormant cost is a bare frame and no per-frame callback at all.
@@ -130,7 +130,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:647-652` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:654-659` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Fade unless hovered* ticked |
 
 ### `RegisterEvent` — 4 hits
 
@@ -143,7 +143,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 ### `C_Timer` — 0 hits
 
-None. The one scheduling seam is `settings/OptionsSetup.lua:259`, which forwards to the addon's
+None. The one scheduling seam is `settings/OptionsSetup.lua:273`, which forwards to the addon's
 AceTimer embed for a **one-shot** panel-refresh delay — not a repeating ticker.
 
 ### `ScheduleRepeatingTimer` — 0 hits

@@ -195,9 +195,11 @@ test("Unlock: the overlay outranks every rung of the panel's own ladder", functi
   local base = f:GetFrameLevel()
   local overlay = o.frame:GetFrameLevel()
   for name, lvl in pairs({
-    bg     = C.BG_FRAME_LEVEL,
-    border = C.BORDER_FRAME_LEVEL,
-    accent = C.ACCENT_FRAME_LEVEL,
+    bg     = C.LAYERS.LEVEL.BG,
+    border = C.LAYERS.LEVEL.BORDER,
+    accent = C.LAYERS.LEVEL.ACCENT,
+    bar    = C.LAYERS.LEVEL.ACCENT_BAR,
+    barBorder = C.LAYERS.LEVEL.ACCENT_BAR_BORDER,
     art    = C.ART_FRAME_LEVEL.ABOVE_ALL,
   }) do
     assertTrue(overlay > base + lvl,
@@ -218,7 +220,7 @@ test("Unlock: the overlay follows the panel's level when the panel's level chang
   -- proves nothing the assertion below does not.
   local f = Canvas:FrameFor(rec.id)
   assertEqual(f.overlay.frame:GetFrameLevel(),
-    f:GetFrameLevel() + NS.Constants.UNLOCK_FRAME_LEVEL)
+    f:GetFrameLevel() + NS.Constants.LAYERS.LEVEL.UNLOCK)
   U:SetUnlocked(false)
 end)
 

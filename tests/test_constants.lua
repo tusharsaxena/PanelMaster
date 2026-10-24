@@ -118,7 +118,7 @@ test("Constants: the panel level bounds are named, and the highest stack fits th
   -- BuildSpec; the editor slider made a third reader, so they are named once (options-ui-§8).
   assertEqual(C.MIN_PANEL_LEVEL, 0)
   assertEqual(C.MAX_PANEL_LEVEL, 100)
-  assertTrue(C.MAX_PANEL_LEVEL * C.PANEL_LEVEL_STRIDE + C.UNLOCK_FRAME_LEVEL
+  assertTrue(C.MAX_PANEL_LEVEL * C.LAYERS.PANEL_STRIDE + C.LAYERS.LEVEL.UNLOCK
     < CLIENT_FRAME_LEVEL_CEILING, "the highest panel level's stack exceeds the client's ceiling")
   for path, needle in pairs({
     ["modules/Registry.lua"] = '{ "level",              C.MIN_PANEL_LEVEL,      C.MAX_PANEL_LEVEL },',

@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-1064%2F1064_passing-green)
+![Tests](https://img.shields.io/badge/Tests-1091%2F1091_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -43,25 +43,25 @@ unlocking already outlines and names every panel you have.
 
 Setting up a panel takes four steps, in this order.
 
-- Make it. Type `/pm new ChatBG`, or type a name into **Create new panel** at the top of the
+- Make it. Type `/pm new ChatBG`, or type a name into **New panel** at the top of the
    Panels page and press Enter. The panel turns up in the middle of the screen as a dark block with
    a class-colored strip along its top. The **Panel** picker beside that box chooses which panel the
    page is editing.
 - Move it into place. `/pm unlock` gives every panel a gold outline and its name, and you drag
    each one where it belongs. Dragging snaps to a four-pixel grid, which keeps a row of panels
-   level. General → Editing is where you make the grid finer or turn snapping off. To move just one
-   panel, tick **Unlock** on its General tab instead. Type `/pm lock` when you're done.
-- Style it. The Panels page shows one panel at a time, under six tabs. Position and size takes
+   level. The General page > Moving panels is where you make the grid finer or turn snapping off.
+   To move just one panel, tick **Unlock this panel** on its General tab instead. Type `/pm lock` when you're done.
+- Style it. The Panels page shows one panel at a time, under six tabs. Size and position takes
    exact numbers, the frame strata and the frame level, while Background and border, Accent bar, and Opacity and
    fade cover the look. Any of the colors can follow your class color. Small changes are quicker
    from chat: `/pm panel ChatBG width 420`.
 - Add artwork, if you want it. The Artwork tab puts a picture inside the panel: one of the bundled
-   pieces, a Sunn art pack you already have, or a texture of your own. **Fit to artwork** resizes
-   the panel to match the picture. [Panel artwork](#panel-artwork) below goes through every
+   pieces, a Sunn art pack you already have, or a texture of your own. **Fit to artwork** overwrites
+   the panel's width and height to match the picture. [Panel artwork](#panel-artwork) below goes through every
    setting.
 
 Your second panel doesn't have to start from nothing. **Copy settings from panel**, on the General
-tab, gives it another panel's whole look and leaves its position alone. Every character shares one
+tab, copies everything from another panel except its name and its position. Every character shares one
 set of panels unless you give one its own profile on the Profiles page. `/pm profile Raid` switches
 to a profile called Raid from chat, and `/pm profile` on its own lists them. The minimap button
 opens the settings on a left-click, and its right-click menu turns the addon on or off and locks or
@@ -76,12 +76,18 @@ WoW draws every frame in one of eight layers, called frame strata, and a frame i
 always covers one in a lower layer. Strata is what makes a panel a backdrop rather than an
 obstruction. New panels start in `LOW`, which sits above the game world and Blizzard's parchment art
 but under almost every interface frame. You can move a panel to any of the eight. `BACKGROUND` puts
-it under absolutely everything, while `DIALOG` and above will cover normal UI, which is occasionally
-what you want and usually not. Within one layer, **Frame level** on the Position and size tab
-decides which of two overlapping panels draws in front: the higher level wins.
+it under absolutely everything, while `DIALOG` and above also cover confirmation popups, the debug
+console and the Settings window, which is occasionally what you want and usually not. Within one
+layer, **Frame level** on the Size and position tab decides which of two overlapping panels draws in
+front: the higher level wins. Two overlapping panels on the same layer and level can show through
+each other, so give them different levels.
 
-A locked panel never takes your mouse, whatever layer it is in. That holds with **Show on mouseover
-only** turned on too, because the panel watches where your cursor is without claiming the click.
+While panels are unlocked, the gold outline and name draw above the action bars even for a panel
+that sits behind them, and a panel you have put at `DIALOG` or above stops taking the mouse while one
+of Panel Master's confirmation popups is open, so the popup's buttons always take your click.
+
+A locked panel never takes your mouse, whatever layer it is in. That holds with **Fade unless
+hovered** turned on too, because the panel watches where your cursor is without claiming the click.
 
 Then there is the **accent bar**, a thin colored strip running the full length of an edge. It is the
 look BenikUI's panels are known for, and it is on out of the box. Tick whichever edges you want and

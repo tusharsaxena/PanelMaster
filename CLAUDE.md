@@ -48,7 +48,7 @@ under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.76.0 (MIT).
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.77.0 (MIT).
 LibKa0s icons: clear, close, copy.
 
 The first of those two lines is the **provenance line**, and it is an input rather than a note:
@@ -70,7 +70,7 @@ The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/
 [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and
 [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). It is a deviation from `§1` itself and
 **not** a `performance-§12` exemption — `§12` is neither claimed nor claimable here, because its
-no-combat-path criterion (a) fails: `modules/Canvas.lua:647-652` runs a shared 10Hz `OnUpdate`.
+no-combat-path criterion (a) fails: `modules/Canvas.lua:654-659` runs a shared 10Hz `OnUpdate`.
 `docs/performance.md` carries the sweep and the cost argument.
 
 At **release** — the same change that bumps the version and rolls the README forward, before the tag

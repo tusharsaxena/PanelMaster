@@ -27,8 +27,8 @@ game's own Settings ▸ AddOns list.
 | Page | Covers |
 |---|---|
 | Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. Drawn by LibKa0s-Options' `O.BuildLandingPage`, which hides the logo when AceGUI recycles its frame. |
-| General | Every addon-wide setting, under three tabs: **Master controls**, **Editing** and **New panels**. |
-| Panels | The panels themselves — make one and choose which to edit from the band at the top, then rename, copy, reset, delete and style the selected one under six tabs: **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
+| General | Every addon-wide setting, under three tabs: **Master controls**, **Moving panels** and **New panels**. |
+| Panels | The panels themselves — make one and choose which to edit from the band at the top, then rename, copy, reset, delete and style the selected one under six tabs: **General**, **Size and position**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
 | Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
 
 **General** carries these, a tab at a time:
@@ -38,20 +38,29 @@ game's own Settings ▸ AddOns list.
 | Master controls | Enable Ka0s Panel Master | Master switch. Off **stands the addon down** (`slash-commands-§7`): every panel hidden, every event and message unregistered, the mouseover ticker stopped. No panel is deleted, and the slash commands and this page keep working. |
 | Master controls | General visibility | When your panels are drawn at all: always, only in combat, only out of combat, or never. |
 | Master controls | Master scale | Magnifies every panel at once, on top of each panel's own scale. |
-| Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
+| Master controls | Master opacity | Fades every panel at once, on top of each panel's own opacity. |
 | Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload, and by **Reset all settings** (or **Profiles → Reset Profile**, the same act). |
 | Master controls | Debug console | Show the debug window. Resets when you reload, and **Reset all settings** (or **Profiles → Reset Profile**) closes it. |
 | Master controls | Minimap button | Show this addon's button on the minimap. Unlike the two rows above it, this one is **remembered** — a button you hide stays hidden across a reload, across a profile switch, and across **both** resets on this page — the **Defaults** button in the header and **Reset all settings** below. Where the button sits is a per-installation display preference, like the angle you dragged it to, and no reset touches either (`launcher-§3`). Untick it and the button goes at once, and it comes back at the angle you left it. The button itself is drawn by `LibKa0s-Launcher-1.0` (`launcher-§2`, standard v2.67.0): **left-click opens this settings page**, in either state; **right-click opens the options menu**, whose entries here are **Enabled** (the *Enable Ka0s Panel Master* row above, through `/pm enable` / `disable`'s handler) and **Locked** (the *Lock frame* row, through `/pm lock` / `unlock`'s handler) — no *Test mode* (unlocking is the preview) and no *Show window* (no primary window). While the addon is disabled, **Locked** is grayed with the note *enable the addon first*. Hovering shows the status tooltip (`launcher-§1`), disabled included: `Ka0s Panel Master  v<version>`, **Enabled** and **Locked** (Yes/No, green/red), `Left-click: Open settings` and `Right-click: Options menu`. |
+| Master controls | Recover panels | A button under the tab rather than a setting, on its own row above the two resets: brings any panel whose anchor has ended up beyond a screen edge back into view. Unlike **Reset position** below it, panels that are on screen stay where they are. The same thing `/pm recover` does. |
 | Master controls | Reset position | A button under the tab rather than a setting: puts every panel back in the middle of the screen. Sizes, colors and artwork are left alone. |
 | Master controls | Reset all settings | The other button: resets this profile to the addon's defaults — settings **and** panels. It asks first. The same thing `/pm resetall`, the header **Defaults** button and **Profiles → Reset Profile** do, and its tooltip says so: *"Reset the current profile to its defaults — the same thing Profiles -> Reset Profile does. Your other profiles are not affected."* |
-| Editing | Show names while unlocked | Print each panel's name across it while unlocked. |
-| Editing | Snap to grid | Round a dragged panel's position to the grid size below. |
-| Editing | Grid size | How coarse that grid is, in screen units. |
-| Editing | Unlock outline thickness | How thick the gold outline around an unlocked panel is. Raise it if you are hunting for a small panel on a busy screen. |
-| Editing | Recover panels | A button under the tab rather than a setting: brings any panel whose anchor has ended up beyond a screen edge back into view. The same thing `/pm recover` does. |
+| Moving panels | Show names while unlocked | Print each panel's name across it while unlocked. Beside it on the same line, because both set how an unlocked panel looks. |
+| Moving panels | Unlock outline thickness | How thick the gold outline around an unlocked panel is, in UI units. Raise it if you are hunting for a small panel on a busy screen. |
+| Moving panels | Snap to grid | Round a dragged panel's position to the grid size beside it. |
+| Moving panels | Grid size | How coarse that grid is, in UI units. |
 | New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
-| New panels | Default frame strata | The layer new panels start in. |
+| New panels | Default frame strata | The layer new panels start in. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`, after the row's own sentences, so it says what `DIALOG` and above cover (`frame-layering-§1`). |
 | New panels | Default opacity | How see-through new panels start out. |
+
+Every **Moving panels** tooltip ends on the same sentence, because the switch those rows depend on is
+a fixed element of another tab (`options-ui-§15`): *"These only matter while panels are unlocked:
+untick Lock frame on the General page > Master controls, or tick Unlock this panel on Panels >
+General."* Every **New panels** tooltip ends on *"Panels are made on the Panels page."*, and the
+Panels page's **New panel** box and **Reset panel…** button point back: *"New panels start at the
+size, layer and opacity set on the General page > New panels."* Location strings are written
+`<Page> > <Tab>` with an ASCII `>`, and say *the General page* because the Panels page has a General
+tab (`options-ui-§21`).
 
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
 your panels immediately.
@@ -62,16 +71,18 @@ the same size whether you have two panels or twenty. The controls, in full:
 
 | Control | What it does |
 |---|---|
-| Enabled | Draw this panel at all. |
-| Unlock | Give **just this panel** a drag handle, without unlocking the rest. |
-| Reset | Put the panel back to how a new one starts. Its name and frame name are kept, so anything anchored to it stays anchored. It asks first, naming the panel: *Reset the panel "<name>" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.* |
-| Delete | Remove the panel. It asks first, naming the panel: *Delete the panel "<name>"? This cannot be undone.* |
+| New panel (the band) | Type a name and press Enter, or click Okay, to make a panel. It starts at the size, layer and opacity set on **the General page > New panels**. |
+| Enable this panel | Draw this panel at all. |
+| Unlock this panel | Give **just this panel** a drag handle, without unlocking the rest. |
+| Reset panel… | Put the panel back to how a new one starts (the **General page > New panels** defaults). Its name and frame name are kept, so anything anchored to it stays anchored. It asks first, naming the panel: *Reset the panel "<name>" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.* |
+| Delete panel… | Remove the panel. It asks first, naming the panel: *Delete the panel "<name>"? This cannot be undone.* |
 | Panel name | Rename the panel. Press Enter, or click Okay. Its tooltip shows the frame name other addons can anchor to — renaming does not change it. |
-| Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
-| Width, Height, X offset, Y offset | Size and position. |
-| Anchor | Which corner or edge of the screen the offsets are measured from. |
-| Frame strata | Which layer the panel sits in. |
-| Frame level | Orders panels that share a frame strata, 0 to 100: a higher level draws entirely in front of a lower one (*Panel levels are strided* in [data-flow.md](data-flow.md)). Strata decides first. Two panels on the same strata **and** level have no guaranteed order: they fall back to frame creation order, which the name-keyed pool does not keep in panel order. Same field as `/pm panel <name> level <n>`. |
+| Copy settings from panel | Copy everything from another panel except its name and its position (anchor and offsets): size and scale, layer, opacity and fade, background, border, accent bar, artwork, and whether it is enabled. This panel stays where it is. |
+| Width, Height | The panel's size, under the *Size and position* tab's **Size** heading. |
+| Screen anchor point | Which corner or edge of the screen the offsets are measured from. Alone on its line under **Position**, above the offsets it is the origin of. |
+| X offset, Y offset | Where the panel sits, measured from the screen anchor point. |
+| Frame strata | Which layer the panel sits in, beside **Frame level** under the **Layer** heading. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`: the tiers, and what `DIALOG` and above cover (confirmation popups, the debug console, the Settings window) and what `FULLSCREEN_DIALOG` and `TOOLTIP` cover (dropdowns and tooltips). |
+| Frame level | Orders panels that share a frame strata, 0 to 100: a higher level draws entirely in front of a lower one (*Panel levels are strided* in [data-flow.md](data-flow.md)). Strata decides first. Panels on the same strata **and** level can **interleave**: parts of one may show through the other, because both get the same base and their rungs alternate. Give overlapping panels different levels. Same field as `/pm panel <name> level <n>`. |
 | Panel scale | Magnifies the whole panel — its size, its border, its accent bars and its artwork — as one piece, the way the game's own UI scale does. Not the same as changing Width and Height: those resize the panel and leave the border and bars at the thickness you set. Width and Height keep showing the numbers you typed; what changes is how big they turn out on screen. A scaled panel is anchored in its own scaled units, so it also shifts relative to its anchor — nudge the offsets afterwards if it matters. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
 | Background color / Use class color | The fill color, or your class color. Its opacity controls the fill alone. |
@@ -79,17 +90,17 @@ the same size whether you have two panels or twenty. The controls, in full:
 | Border thickness (px) | Thickness. Starts at 0 — the accent bar defines the edge instead. |
 | Border color / Use class color | The border color, or your class color. The opacity you set applies either way. |
 | Border offset | How far the border sits from the panel's edge. Positive pushes it out, negative pulls it in. |
-| Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. |
+| Enable accent bar | Draw a thin strip along the panel's edges. **On** by default. It leads the tab with no heading of its own, and its tooltip says that everything below on the tab applies only while it is ticked. |
 | Bar texture | Any status-bar texture LibSharedMedia knows about. |
 | Bar opacity | How solid the bar's own fill is, on top of the opacity in the bar color. |
 | Bar color / Use class color | The bar color. Class color is **on** by default. |
-| Bar thickness | How thick the bar is. |
+| Bar thickness | How thick the bar is, in UI units. |
 | Bar offset | How far the bar sits from the panel. 0 sits flush (the default), positive detaches it, negative overlaps the panel. |
 | Edges | Which edges get a bar — Top, Bottom, Left, Right, in any combination. Left and right bars turn the texture a quarter turn, so a bar reads the same way round whichever edge it is on. |
 | Border style, Border thickness (px), Border color / Use class color, Border offset (under the *Accent bar* tab's **Border** heading) | The bar's own outline, with the same four controls the panel's border has. Defaults to a 1px black hairline. |
-| Panel opacity | How visible the whole panel is — background, border and accent bar together. Multiplies with the opacity in each color. |
+| Panel opacity | How visible the whole panel is: background, border, accent bars and artwork together. Multiplies with the opacity in each color. |
 | Faded opacity | How visible it is the rest of the time. 0 hides it completely. Sits beside *Panel opacity*, because you choose one against the other. |
-| Show on mouseover only | Keep the panel faded until your cursor is over it. |
+| Fade unless hovered | Keep the panel faded until your cursor is over it. |
 | Defaults (the page's own button, not the editor's) | On the **Panels** page this means *delete every panel* — your settings are left alone. It asks first, and nothing goes until you say yes. |
 
 **Two opacities, and they do different things.** Each color carries its own opacity, which affects
@@ -115,8 +126,8 @@ The two pages get there by different routes, because their content is not the sa
 
 **Nothing that acts on the panel as a whole is in the scroll, and only one row of it is in the
 band.** Creating a panel and choosing which one to edit are the band's two controls, in a single
-`H.PageHeader` block; naming it, copying another's look onto it and the four acts — Enabled,
-Unlock, Reset, Delete — are the strip's **`General` first tab** (`options-ui-§14`). Every one of them
+`H.PageHeader` block; naming it, copying another's look onto it and the four acts — Enable this
+panel, Unlock this panel, Reset panel…, Delete panel… — are the strip's **`General` first tab** (`options-ui-§14`). Every one of them
 applies to the panel whole rather than to one aspect of it, and a page-wide control drawn under a
 *subject* tab reads as belonging to that tab and vanishes the moment the player clicks another —
 which is exactly why `General` has to be **first**: the tab the page opens on is where the player
@@ -139,7 +150,7 @@ frame, and a later `Create` of the same type hands it back **hidden** — only a
 layout shows a child. This block is parented by hand to the header frame and is no AceGUI container's
 child, so it calls `block.frame:Show()` after `SetParent`. Without it, once any addon had released a
 `SimpleGroup` earlier in the session (any settings page with a row, any re-render), the band kept its
-height and its divider and lost the **Panel** picker and the **Create new panel** box inside it.
+height and its divider and lost the **Panel** picker and the **New panel** box inside it.
 
 **Built once is also why the block re-lays itself out on `OnSizeChanged`, and passes the width on.**
 AceGUI's `List` layout reads `content.width` before it asks the frame, and a `SimpleGroup` starts at
@@ -157,8 +168,8 @@ hidden.)
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Editing**, **New panels** | 7, 4, 4 — 15 schema rows |
-| Panels | **General**, **Position and size**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 7, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
+| General | **Master controls**, **Moving panels**, **New panels** | 7, 4, 4 — 15 schema rows |
+| Panels | **General**, **Size and position**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 8, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 
 A **color** is one control in those counts even though it emits two widgets (the swatch and its
@@ -174,9 +185,17 @@ library's, so nine addons cannot drift into nine versions of the same tab.
 | | |
 |---|---|
 | Enable Ka0s Panel Master | General visibility |
-| Master scale | Master alpha |
+| Master scale | Master opacity |
 | Lock frame | Debug console |
+| Minimap button | |
+| *Recover panels* | |
 | *Reset position* | *Reset all settings* |
+
+*Recover panels* is the composer's `leadButton`, this addon's one act on the tab: a framed addon's
+lead takes a row of its own **above** the reset pair, which the composer never splits. It moved here
+from the old *Editing* tab, so both "where did my panel go?" acts sit together on the tab a lost
+player opens first, and its tooltip says how it differs from the confirm-free *Reset position*:
+*"Unlike Reset position below, panels that are on screen stay where they are."*
 
 The last row is the group's closing **button pair**, drawn by the `afterGroup` hook the composer
 returns beside the rows. The group name *is* the hook's key, so `settings/Panel.lua` reads it off
@@ -189,7 +208,7 @@ Four of these are new, and each is honored by drawing code rather than merely de
   `Canvas.VisibilityShows` and folded into `spec.shown`. There was no *show only in combat* boolean
   here to migrate: the addon never shipped one, so `always` is both the default and what every
   existing profile already meant.
-- **Master scale** and **Master alpha** — addon-wide **multipliers** over each panel's own scale and
+- **Master scale** and **Master opacity** — addon-wide **multipliers** over each panel's own scale and
   opacity, applied in `Canvas.BuildSpec`. They are deliberately not the same settings as the
   per-panel ones on the Panels page: the editor's sliders keep showing what the player typed for
   that panel, and these two move all of them together. Both ship at 1, the identity.
@@ -237,16 +256,36 @@ Defaults button behind `KA0S_PANELMASTER_DELETEALL`.
 
 ### Subsection headings
 
-Three of the Panels page's tabs mix more than one kind of control, and each says where one stops and
-the next starts (`options-ui-§7`) — the same AceGUI `Heading` widget every other header in the
+Four of the Panels page's tabs cover more than one subject, and each says where one stops and the
+next starts (`options-ui-§7`) — the same AceGUI `Heading` widget every other header in the
 collection uses, drawn into the editor's own container because the library's `O.Section` emits into
 the page's scroll:
 
 | Tab | Headings |
 |---|---|
+| Size and position | **Size**, **Position**, **Layer** |
 | Background and border | **Background**, **Border** |
-| Accent bar | **Bar**, **Edges**, **Border** |
-| Artwork | **Image**, **Layout**, **Appearance** |
+| Accent bar | *Enable accent bar* unheaded, then **Edges**, **Fill**, **Border** |
+| Artwork | **Image**, **Layout**, **Orientation**, **Color and blending** |
+
+What sits under each, line by line:
+
+- **Size and position.** *Size*: [Width][Height], then *Panel scale* full width directly below the
+  two it is contrasted with. *Position*: *Screen anchor point* alone on its line, then [X offset][Y
+  offset] — the origin first, then the nudge from it. *Layer*: [Frame strata][Frame level] on one
+  line, because they are one subject.
+- **Accent bar.** *Enable accent bar* leads the tab with no heading: it is the one master switch
+  everything below depends on, which `options-ui-§7` lets sit above the first subsection. *Edges*
+  comes next, because "is there a bar, and along which edges" is the first decision; then *Fill* (the
+  composed bar group, unchanged inside) and *Border* (the composed border group). No heading restates
+  the tab's own *Accent bar* stem, which is why the old *Bar* heading went.
+- **Artwork.** *Image*: the art picker, then [Custom texture path][Fit to artwork]. *Layout*:
+  [Fill][Artwork scale] / [Artwork position][Draw layer] / [Artwork X offset][Artwork Y offset] — the
+  sizing pair together, the position directly above the offsets it anchors, and the draw layer (a
+  stacking choice) with the placement. *Orientation*: *Rotation* alone, then [Flip horizontal][Flip
+  vertical] — the flips apply before the turn. *Color and blending*: [Artwork opacity][Blend mode] /
+  [Artwork color][Use class color] / *Desaturate*, under the color it pre-conditions. It was
+  *Appearance*, which named nothing on a tab that is all appearance.
 
 The **Edges** one replaces a hand-rolled gold `|cffffd100Edges|r` Label that stood in for a heading,
 which is anti-pattern #71. The *Background and border* merge is not undone by the rule — it is
@@ -305,12 +344,17 @@ partition cases in `tests/test_schema.lua` — which are written out as the *des
 than derived from the schema, because an expectation derived from the schema agrees with any
 arrangement of rows, including one where a row has drifted into the wrong tab.
 
-Three names changed with the strip, and all three for the same rule — a tab is named for its
-subject, not for its drawer:
+Names that changed with the strip, all for the same rule — a tab is named for its subject, not for
+its drawer:
 
 - **New Panel Defaults → New panels.** Every row on it already says "Default".
 - **Background + Border → Background and border.** Two subsections of two and four controls; the
   fill and the edge are two halves of one question, and a two-control tab is not a subject.
+- **Editing → Moving panels** (item 020). Every row on it matters only while panels are unlocked
+  and being dragged, and *Editing* also described the whole Panels page, where a player edits a
+  panel.
+- **Position and size → Size and position** (item 020), size first, the order its three headings
+  run in and the name every such tab in the collection uses.
 - **Visibility → Opacity and fade.** Its three controls are two opacity sliders and a mouseover
   switch. The old name promised the where/when rules of a visibility engine this addon has not got.
 
@@ -321,7 +365,7 @@ subject, not for its drawer:
   on its own line it governs the line above, which is what it does. It was the other way round:
   *Panel opacity* alone, then *Faded opacity* paired with the checkbox.
 
-**Unlock panels** left the Editing tab in the settings-revamp pass and is `Lock frame` on Master
+**Unlock panels** left the Editing (now *Moving panels*) tab in the settings-revamp pass and is `Lock frame` on Master
 controls now. The four rows it used to lead still only mean anything while the panels are unlocked,
 which was the argument for putting it there — what changed is that the canonical set is not a menu
 to take the convenient half of.
@@ -390,7 +434,7 @@ The band above the strip is **one row** of two controls, and both stay put on ev
 
 | Row | Controls |
 |---|---|
-| 1 | **Panel** (the picker), **Create new panel** |
+| 1 | **Panel** (the picker), **New panel** |
 
 Everything else that acts on the panel whole is the strip's first tab, **General**, in three rows
 of two:
@@ -398,8 +442,8 @@ of two:
 | Row | Controls |
 |---|---|
 | 1 | **Panel name**, **Copy settings from panel** |
-| 2 | **Enabled**, **Unlock** |
-| 3 | **Reset**, **Delete** |
+| 2 | **Enable this panel**, **Unlock this panel** |
+| 3 | **Reset panel…**, **Delete panel…** |
 
 **That tab existed, was deleted, and is back — and the standard moved first both times.** Under the
 v2.38.0 wording of `options-ui-§14`, every control applying to all of a page's tabs had to sit above
@@ -432,8 +476,8 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:682` — because the page
-rebuilder still needs it; it is the two band-only helpers that went. **Enabled** keeps a refresher, and it is
+`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:685` — because the page
+rebuilder still needs it; it is the two band-only helpers that went. **Enable this panel** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
 
@@ -444,13 +488,15 @@ including an empty registry — releasing them would take the only control that 
 the screen at the moment the player needs it most. The picker is **disabled rather than removed**
 when there is nothing to pick, so it does not take its label with it and leave a hole in the band.
 
-`Registry:CopyFrom` copies every field except `id`, `name` and the four geometry fields. Position is
+`Registry:CopyFrom` copies every field except `id`, `name`, `frameName` and the four geometry fields
+(`point`, `relPoint`, `x`, `y`), and the *Copy settings from panel* tooltip says exactly that. Position is
 excluded because the point of copying is to make a panel *match* another while staying where it is —
 copying position too would land the two exactly on top of each other. Size **is** copied: matching
 dimensions is usually what was wanted, and unlike position it cannot make a panel disappear. Values
 are deep-copied, or the two panels would share a color array and editing one would change the other.
 
-`Reset` and `Delete` close the `General` tab's third row, under `Enabled` and `Unlock`, because the
+*Reset panel…* and *Delete panel…* close the `General` tab's third row, under *Enable this panel*
+and *Unlock this panel*, because the
 two irreversible acts belong together and because "am I done with this panel" is not a question
 about how it looks. A Delete parked at the foot of a long scrolling form is one the user only
 reaches after scrolling past everything they might have wanted to change instead — and a Delete
@@ -583,7 +629,7 @@ the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the foot
 button are one implementation and the confirmation cannot be reached round.
 
 **The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
-panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:376`,
-`:383-388`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:355`,
+`:362-367`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
 `options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
 tooltip and the contract agree again.

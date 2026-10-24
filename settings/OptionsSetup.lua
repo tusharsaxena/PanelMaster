@@ -101,6 +101,17 @@ if not lib then
     -- Drawer, new at LibKa0s v1.73.0 (OptionsDrawer minor 1): drawn only by a page render, and no
     -- page here draws one, so the same inert answer applies.
     Drawer = noop,
+    -- The Keybindings tab (OptionsKeybinds, LibKa0s v1.77.0, options-ui-§20) and the one strata
+    -- tooltip (OptionsCompose minor 8, frame-layering-§1). Inert for the reason ID_NAME_HINT is:
+    -- KeybindRows answers nil, as the live member does when it cannot draw; KeybindingsTab answers
+    -- a tab entry that renders nothing; KEYBINDS_UNCHANGED and StrataTooltip answer an empty string,
+    -- because a copy of the library's sentences here would be the one that goes stale.
+    KeybindRows = function() return nil end,
+    KeybindingsTab = function() return { key = "Keybindings", label = "", render = noop } end,
+    KEYBINDS_UNCHANGED = "", StrataTooltip = function() return "" end,
+    -- ResetAllTooltip (OptionsCompose minor 11, LibKa0s v1.77.0 after LK-95), the General page's
+    -- Reset all settings tooltip: an empty string, for the same reason StrataTooltip answers one.
+    ResetAllTooltip = function() return "" end,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
@@ -317,6 +328,8 @@ NS.Helpers = lib:New({
 -- design. Run this any later and the rows are simply not in the array yet — nothing is reported
 -- because nothing is checked.
 NS.Schema:InstallMaster(NS.Helpers)
+-- The Default frame strata row's tooltip is the library's (frame-layering-§1); see the function.
+NS.Schema:InstallStrataTooltip(NS.Helpers)
 
 --- Let settings/Panel.lua install the landing page's body after this file has loaded.
 function NS.SetBuildMain(fn) buildMainBody = fn end

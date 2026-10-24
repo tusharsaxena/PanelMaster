@@ -394,8 +394,8 @@ test("Canvas: the accent bar draws ABOVE the border", function()
   -- whenever a new layer is slotted in. Naming the constants means such a change fails in the ONE
   -- place that defines the ladder instead of here.
   local base = f:GetFrameLevel()
-  assertEqual(f.borderFrame:GetFrameLevel(), base + C.BORDER_FRAME_LEVEL)
-  assertEqual(f.accentFrame:GetFrameLevel(), base + C.ACCENT_FRAME_LEVEL)
+  assertEqual(f.borderFrame:GetFrameLevel(), base + C.LAYERS.LEVEL.BORDER)
+  assertEqual(f.accentFrame:GetFrameLevel(), base + C.LAYERS.LEVEL.ACCENT)
   assertTrue(f.accentFrame:GetFrameLevel() > f.borderFrame:GetFrameLevel(),
     "the border would cover the accent bar")
 end)
@@ -404,10 +404,10 @@ test("Canvas: the accent/border stacking survives a frame-level change", functio
   fresh()
   local rec = R:New("Leveled", { accentEnabled = true, borderSize = 4, level = 5 })
   local f = Canvas:FrameFor(rec.id)
-  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.ACCENT_FRAME_LEVEL)
+  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.LAYERS.LEVEL.ACCENT)
   R:Set(rec.id, "level", 20)
   -- Re-derived from the panel's own level on every repaint, not set once at creation.
-  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.ACCENT_FRAME_LEVEL)
+  assertEqual(f.accentFrame:GetFrameLevel(), f:GetFrameLevel() + C.LAYERS.LEVEL.ACCENT)
   assertTrue(f.accentFrame:GetFrameLevel() > f.borderFrame:GetFrameLevel())
 end)
 

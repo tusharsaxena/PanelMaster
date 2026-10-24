@@ -15,9 +15,9 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
   -- path MUST report whether or not the row has a default of its own.
   local probes = {
     { path = "settings.snapToGird", default = true, type = "bool",
-      group = "Editing", label = "typo'd path, WITH a default" },
+      group = "Moving panels", label = "typo'd path, WITH a default" },
     { path = "settings.snapToGird", type = "bool",
-      group = "Editing", label = "typo'd path, no default" },
+      group = "Moving panels", label = "typo'd path, no default" },
   }
   for _, probe in ipairs(probes) do
     S.Schema[#S.Schema + 1] = probe
@@ -276,7 +276,7 @@ test("Schema: the General page's tabs are the designed partition, in strip order
   -- has quietly drifted into the wrong tab. Adding a row means adding it here too, deliberately.
   local EXPECTED = {
     { tab = "Master controls", count = 7 },
-    { tab = "Editing",         count = 4 },
+    { tab = "Moving panels",   count = 4 },
     { tab = "New panels",      count = 4 },
   }
 
@@ -327,7 +327,7 @@ test("Schema: the Panels page's tab strip is the designed one, in strip order", 
   -- Position matters more than membership here: the escape rests entirely on the page OPENING on
   -- this tab, so a `General` anywhere but first is the finding, not `General` existing.
   local EXPECTED = {
-    "General", "Position and size", "Background and border", "Accent bar", "Artwork",
+    "General", "Size and position", "Background and border", "Accent bar", "Artwork",
     "Opacity and fade",
   }
   local actual = NS.PanelEditor.TABS
@@ -356,7 +356,7 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
       { path = "settings.enabled",    label = "Enable Ka0s Panel Master" },
       { path = "settings.visibility", label = "General visibility" },
       { path = "settings.scale",      label = "Master scale" },
-      { path = "settings.alpha",      label = "Master alpha" },
+      { path = "settings.alpha",      label = "Master opacity" },
       { path = "state.locked",        label = "Lock frame" },
       { path = "state.debugConsole",  label = "Debug console" },
       { path = "global.minimap.shown", label = "Minimap button" },
@@ -422,7 +422,7 @@ test("Schema: the Master controls rows are the COMPOSER's, not eight literals he
   local f = assert(io.open("settings/Schema.lua", "r"))
   local body = f:read("*a")
   f:close()
-  for _, canonical in ipairs({ "Master scale", "Master alpha", "General visibility",
+  for _, canonical in ipairs({ "Master scale", "Master opacity", "General visibility",
                                "Reset all settings" }) do
     assertEqual(body:find('"' .. canonical .. '"', 1, true), nil,
       "settings/Schema.lua writes out the canonical label " .. canonical ..

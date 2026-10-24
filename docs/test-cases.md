@@ -257,6 +257,26 @@ Total.
 - Unlock: a hand-edited outline thickness is clamped, not drawn
 - Unlock.PendingSnapshot: reports the combat queue as a copy, and reading it changes nothing
 
+### test_layers.lua (17)
+
+- LAYERS names the strata this addon writes or compares against
+- LAYERS: the panel ladder is strictly increasing and ends under the stride (PAN-Z01, Z08)
+- LAYERS: the highest panel level's whole stack fits the client's level ceiling
+- a new panel frame states the backdrop strata at creation, then takes its own (PAN-Z07)
+- a panel root is not toplevel, not clamped, and sits at level x stride
+- every child frame takes an explicit rung of the ladder, accent bars and their border included (PAN-Z02, Z08)
+- the accent rungs follow the panel when its level changes
+- U.ChromeStrata lifts to HIGH and never below the panel (PAN-Z04)
+- an unlocked LOW panel's overlay floats at HIGH while the panel stays LOW (PAN-Z04)
+- the overlay of a FULLSCREEN panel stays FULLSCREEN, and follows a strata change (PAN-Z04)
+- locking puts the overlay back in the panel's strata, unfixed (PAN-Z04)
+- every confirmation popup yields the mouse from unlocked DIALOG-and-up panels while shown
+- two popups up at once: the panels re-arm only when the last one closes
+- a locked panel is not touched by a popup
+- the Default frame strata row's tooltip is the library's O.StrataTooltip over its values
+- the panel editor's Frame strata row reads O.StrataTooltip, and Frame level says panels interleave
+- every strata and level write in the addon reads LAYERS
+
 ### test_media.lua (84)
 
 - Util.Slugify: keeps alphanumerics and collapses everything else
@@ -1031,7 +1051,7 @@ Total.
 - Options seam: NS.Helpers IS the library instance, not a wrapper around one
 - Options seam: all four pages built, and each is registered with Blizzard
 - Options: the General page renders one widget per schema row, by type
-- Options: the Editing tab's afterGroup button is drawn, and only on that tab
+- Options: Recover panels is drawn on the Master controls tab, and only there
 - Options: a widget's OnValueChanged reaches the addon's single write seam
 - Options: a slider commits on release and snaps to the row's step
 - Options: the enum row's dropdown is populated from the schema's `values`
@@ -1144,6 +1164,22 @@ Total.
 - optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
 - optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
 
+### test_settings_guard.lua (2)
+
+- Settings guard: every stored profile path keeps its default, type and range
+- Settings guard: every panel record field keeps its template default
+
+### test_settings_layout.lua (8)
+
+- Layout: the Panels page's tabs draw their designed lines and headings
+- Layout: the band's create box is labeled New panel and says where new panels start
+- Layout: the General tab's reworded labels and tooltips
+- Layout: the copy tooltip's exclusions are exactly what Registry.CopyFrom skips
+- Layout: the Size and position, Accent bar, Artwork and fade tooltips
+- Layout: Moving panels pairs each switch with what it governs
+- Layout: each New panels default says where panels are made
+- Layout: Recover panels leads the Master controls tab's buttons, above the resets
+
 ### test_register.lua (1)
 
 - every deviation id the register cites is assigned by a bundle in docs/audits/
@@ -1200,6 +1236,7 @@ Total.
 | test_panel_schema.lua | 21 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
+| test_layers.lua | 17 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 46 |
@@ -1223,6 +1260,8 @@ Total.
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 13 |
 | test_options_groups.lua | 7 |
+| test_settings_guard.lua | 2 |
+| test_settings_layout.lua | 8 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
@@ -1230,4 +1269,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1064** |
+| **Total** | **1091** |

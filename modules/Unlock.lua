@@ -18,6 +18,10 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 local pendingUnlock = false
 local pendingPanels = {}
 
+-- How many of this addon's own confirmation popups are showing (settings/Slash.lua's four
+-- StaticPopupDialogs). A count, not a flag, because two can be up at once; see U:PopupShown.
+local popupsUp = 0
+
 -- The per-panel lock line's arguments, built only once NS.DebugBuild is past the gate. A plain
 -- function taking (id, on) rather than a closure over them: a closure would be created on every
 -- per-panel lock change whether or not logging is on, which is the scan this defers.
@@ -52,6 +56,29 @@ function U.SnapPosition(x, y, settings)
   end
   local grid = Util.Clamp(settings.gridSize, C.MIN_GRID, C.MAX_GRID, 1)
   return Util.Snap(x, grid), Util.Snap(y, grid)
+end
+
+-- ── Layering ────────────────────────────────────────────────────────────────────
+
+-- PURE: the strata the unlock overlay takes for a panel in `panelStrata` — max(panel, CHROME) by
+-- the client's draw order (C.STRATA_RANK). The lift makes a LOW panel's outline and name visible
+-- over action bars and unit frames while editing (PAN-Z04). It is never BELOW the panel: a flat HIGH
+-- would bury the outline under its own panel for any panel at DIALOG or above. The floor is HIGH
+-- and not MEDIUM only because the overlay takes no mouse (frame-layering-§2; core/Constants.lua's
+-- C.LAYERS header says the same).
+function U.ChromeStrata(panelStrata)
+  local floor = C.LAYERS.STRATA.CHROME
+  local rank = C.STRATA_RANK[panelStrata]
+  if rank and rank > C.STRATA_RANK[floor] then return panelStrata end
+  return floor
+end
+
+-- PURE: does a panel in `strata` draw at or over the addon's own confirmation popups (MODAL, the
+-- StaticPopups' DIALOG)? Such a panel, while unlocked, takes the mouse and would swallow the clicks
+-- meant for the popup's buttons.
+function U.CoversModals(strata)
+  local rank = C.STRATA_RANK[strata]
+  return rank ~= nil and rank >= C.STRATA_RANK[C.LAYERS.STRATA.MODAL]
 end
 
 -- ── Overlay ─────────────────────────────────────────────────────────────────────
@@ -171,7 +198,15 @@ function U:Decorate(f, rec)
   -- Re-asserted on every decorate rather than once at creation: the panel's own frame level is a
   -- user setting, so `base` moves whenever they change it, and a level set at creation time would
   -- silently stop being above the ladder the moment it did.
-  o.frame:SetFrameLevel((f:GetFrameLevel() or 0) + C.UNLOCK_FRAME_LEVEL)
+  --
+  -- The overlay gets a strata of its OWN while unlocked (U.ChromeStrata), fixed so the panel's next
+  -- SetFrameStrata does not take it back, and re-lifted here because Canvas calls Decorate after
+  -- every applySpec, the one place the panel's strata moves. Unfixed for the write itself, then fixed
+  -- again. The level is set after the strata, as a rung over the panel's own base.
+  o.frame:SetFixedFrameStrata(false)
+  o.frame:SetFrameStrata(U.ChromeStrata(f:GetFrameStrata()))
+  o.frame:SetFixedFrameStrata(true)
+  o.frame:SetFrameLevel((f:GetFrameLevel() or 0) + C.LAYERS.LEVEL.UNLOCK)
 
   local rgba = C.UNLOCK_OUTLINE_RGB
   layoutOutline(f, o, U.OutlineSize())
@@ -192,6 +227,9 @@ function U:Decorate(f, rec)
   if f.__spec then f:SetAlpha(f.__spec.alpha) end
   f:Show()
   U:ArmDrag(f)
+  -- While one of the addon's own popups is up, a panel that covers it stays mouse-off, so a repaint
+  -- under the popup (an accept that renders, a settings write) cannot re-arm it (PAN-Z05).
+  if popupsUp > 0 and U.CoversModals(f:GetFrameStrata()) then f:EnableMouse(false) end
 end
 
 -- Remove the unlock furniture and make the panel inert again.
@@ -200,10 +238,57 @@ function U:StripOverlay(f)
   if f.overlay then
     for _, tex in pairs(f.overlay.edges) do tex:Hide() end
     f.overlay.label:Hide()
+    -- Back into the panel's strata, unfixed, so a locked panel's overlay is an ordinary child again.
+    local o = f.overlay.frame
+    o:SetFixedFrameStrata(false)
+    o:SetFrameStrata(f:GetFrameStrata())
   end
   f:EnableMouse(false)
   f:SetMovable(false)
   f:RegisterForDrag()
+end
+
+-- ── The addon's own popups stay answerable (PAN-Z05, frame-layering-§1) ──────────
+
+-- Each unlocked panel that covers the popups (U.CoversModals), with its frame. A plain loop over the
+-- registry: the popups are rare and the panel count is the player's.
+local function coveringPanels(fn)
+  if not (NS.Registry and NS.Canvas) then return 0 end
+  local n = 0
+  for _, rec in ipairs(NS.Registry:All()) do
+    local f = NS.Canvas:FrameFor(rec.id)
+    if f and U:IsPanelUnlocked(rec.id) and U.CoversModals(f:GetFrameStrata()) then
+      n = n + 1
+      fn(rec, f)
+    end
+  end
+  return n
+end
+
+local function yieldMouse(_, f) f:EnableMouse(false) end
+local function rearm(rec) NS.Canvas:Render(rec.id) end
+
+-- A confirmation popup opened (its OnShow). A player may put a panel at DIALOG or above, and an
+-- UNLOCKED panel takes the mouse, so it would swallow the clicks meant for the popup's Yes and No.
+-- Every such panel goes mouse-off until the last popup closes. The popup's own strata is NOT
+-- touched: the StaticPopup frames are Blizzard's and shared with every other addon. The panel still
+-- DRAWS over the popup; the Frame strata tooltip says that DIALOG and above cover confirmations.
+-- Does not cover the debug console or the Settings window, whose escape is `/pm lock`.
+function U:PopupShown()
+  popupsUp = popupsUp + 1
+  local n = coveringPanels(yieldMouse)
+  if n > 0 then NS.Debug("Unlock", "popup shown: %d covering panels yield the mouse", n) end
+end
+
+-- A confirmation popup closed (its OnHide). When the last one goes, every covering panel is re-armed
+-- THROUGH A RENDER (Canvas:Render -> Decorate -> ArmDrag), not a bare EnableMouse(true): the render
+-- is the one place that decides what an unlocked panel is, so a panel locked while the popup was up
+-- stays inert. An unmatched hide never drives the count below zero.
+function U:PopupHidden()
+  if popupsUp > 0 then popupsUp = popupsUp - 1 end
+  if popupsUp > 0 then return end
+  local n = coveringPanels(rearm)
+  if n > 0 then NS.Debug("Unlock", "popup closed: %d covering panels re-armed", n) end
 end
 
 -- ── Drag ────────────────────────────────────────────────────────────────────────

@@ -374,15 +374,17 @@ test("Canvas: the artwork ladder interleaves with the fill, the border and the a
   local rec = R:New("Ladder", { artTexture = SEED_ID, borderSize = 4, accentEnabled = true })
   local f = Canvas:FrameFor(rec.id)
   local base = f:GetFrameLevel()
-  assertEqual(f.bgFrame:GetFrameLevel(), base + C.BG_FRAME_LEVEL)
-  assertEqual(f.borderFrame:GetFrameLevel(), base + C.BORDER_FRAME_LEVEL)
-  assertEqual(f.accentFrame:GetFrameLevel(), base + C.ACCENT_FRAME_LEVEL)
+  assertEqual(f.bgFrame:GetFrameLevel(), base + C.LAYERS.LEVEL.BG)
+  assertEqual(f.borderFrame:GetFrameLevel(), base + C.LAYERS.LEVEL.BORDER)
+  assertEqual(f.accentFrame:GetFrameLevel(), base + C.LAYERS.LEVEL.ACCENT)
   -- Bottom-up, the three artwork slots have to land on either side of each of the others, or
   -- "behind the background" and "above the accent bar" cannot both be expressible at once.
-  assertTrue(C.ART_FRAME_LEVEL.BELOW_BG < C.BG_FRAME_LEVEL)
-  assertTrue(C.ART_FRAME_LEVEL.ABOVE_BG > C.BG_FRAME_LEVEL)
-  assertTrue(C.ART_FRAME_LEVEL.ABOVE_BG < C.BORDER_FRAME_LEVEL)
-  assertTrue(C.ART_FRAME_LEVEL.ABOVE_ALL > C.ACCENT_FRAME_LEVEL)
+  assertTrue(C.ART_FRAME_LEVEL.BELOW_BG < C.LAYERS.LEVEL.BG)
+  assertTrue(C.ART_FRAME_LEVEL.ABOVE_BG > C.LAYERS.LEVEL.BG)
+  assertTrue(C.ART_FRAME_LEVEL.ABOVE_BG < C.LAYERS.LEVEL.BORDER)
+  assertTrue(C.ART_FRAME_LEVEL.ABOVE_ALL > C.LAYERS.LEVEL.ACCENT)
+  -- And above the accent bars and their own border, nested one level deeper (PAN-Z01).
+  assertTrue(C.ART_FRAME_LEVEL.ABOVE_ALL > C.LAYERS.LEVEL.ACCENT_BAR_BORDER)
 end)
 
 test("Canvas: the fill lives on its own child frame, so BELOW_BG is reachable", function()

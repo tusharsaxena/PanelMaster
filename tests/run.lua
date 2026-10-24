@@ -95,7 +95,7 @@ _G.PM_TEST = Kit.expose({ NS = NS, mocks = mocks })
 local SUITES = {
   "test_util", "test_compat", "test_constants",
   "test_mediasetup", "test_envsetup",
-  "test_registry", "test_panel_schema", "test_canvas", "test_unlock", "test_media",
+  "test_registry", "test_panel_schema", "test_canvas", "test_unlock", "test_layers", "test_media",
   "test_accent", "test_artwork", "test_artwork_geometry",
   "test_database", "test_debuglog", "test_library_debug", "test_diagnostics",
   "test_schema", "test_slash", "test_panel", "test_panels_page", "test_profiles",
@@ -114,7 +114,7 @@ local SUITES = {
   -- release watch list alone (automated-tests-§4), and a bare "test_layout_cap" beside a local
   -- file of that name would now read as a collision with the kit's copy.
   { name = "test_layout_cap", dir = "tests/_kit/" },
-  "test_options_groups",
+  "test_options_groups", "test_settings_guard", "test_settings_layout",
   "test_register", "test_docs", "test_lintconfig",
   -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
   -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives

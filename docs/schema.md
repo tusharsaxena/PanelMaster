@@ -239,7 +239,7 @@ is no longer dragged inward and at `s = 2` a genuinely lost one is no longer lef
 carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
 the array's order is the strip a player sees on the General page — `Master controls` (7),
-`Editing` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
+`Moving panels` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
 through their own `get`/`set` and are never persisted; both resets — `Sl:DoResetAll` and the Profiles
 page's Reset Profile — put them back to their defaults after the profile reset, by their
 `sessionOnly` flag, from the `OnProfileReset` handler in `core/Database.lua` (`options-ui-§12`).

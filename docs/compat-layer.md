@@ -90,7 +90,7 @@ render does not ask this shim at all: `Canvas:RenderForCombat` takes the REGEN e
 screen: `true` on a client that cannot answer would hide every "Only out of combat" backdrop for the
 session with nothing said.
 
-**Who calls it.** `modules/Canvas.lua:786` (`Canvas:RenderAll` when no `inCombat` is passed) and
+**Who calls it.** `modules/Canvas.lua:794` (`Canvas:RenderAll` when no `inCombat` is passed) and
 `modules/Diagnostics.lua:234` (the diagnostics report builds each panel's spec with it). The
 unlock deferral in `modules/Unlock.lua` deliberately asks `InCombatLockdown` directly instead, because
 lockdown is the question an unlock has to ask.
@@ -116,7 +116,7 @@ and for a name LSM cannot resolve, so a panel with a missing texture looks plain
 (library-stack-§6). It returns `nil` only for the explicit `None` entry, which is the user's choice to
 draw nothing.
 
-**Who calls it.** `modules/Canvas.lua:351`, `:409`, `:433` and `:461` (border, accent bar, background
+**Who calls it.** `modules/Canvas.lua:359`, `:419`, `:443` and `:471` (border, accent bar, background
 and border again, at render time).
 
 ## `MediaList` — `core/Compat.lua:155`
@@ -127,7 +127,7 @@ session. It is queried at click time rather than cached for that reason.
 **When the API is absent.** `None` and `Solid`, in that order. `None` always comes first, whether or
 not LSM ships it, because "draw no border" is a choice this addon's UI must always be able to offer.
 
-**Who calls it.** `settings/PanelEditor.lua:311` and `settings/PanelEditorTabs.lua:243` (the media dropdowns) and
+**Who calls it.** `settings/PanelEditor.lua:311` and `settings/PanelEditorTabs.lua:246` (the media dropdowns) and
 `settings/PanelSchema.lua:98` (`COERCE.media`, matching a name typed on the command line against the live list).
 
 ## `MouseIsOver` — `core/Compat.lua:180`
@@ -137,7 +137,7 @@ The call is wrapped in `pcall`.
 
 **When the API is absent.** `false` when the global is missing, the frame is `nil` or the call errors.
 
-**Who calls it.** `modules/Canvas.lua:638`, the mouseover fade. The panel never enables mouse input,
+**Who calls it.** `modules/Canvas.lua:646`, the mouseover fade. The panel never enables mouse input,
 because a backdrop that took the mouse would stop being click-through; this shim answers the question
 without claiming the input.
 
