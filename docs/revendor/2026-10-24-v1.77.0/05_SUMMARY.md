@@ -92,3 +92,31 @@ LK-95 moved the local annotated tag v1.77.0 in `../LibKa0s` to carry the setting
   1 skipped, 1082 total, including `tests/test_vendor_sync.lua` and the Options parity case.
   `luacheck .` 0 warnings / 0 errors in 72 files. No authored `.lua` above 1500 lines (largest
   `tests/test_libka0s.lua`, 1203).
+
+## Re-vendor after the tag moved again (one key button)
+
+LK-96 moved the local annotated tag v1.77.0 in `../LibKa0s` again, to carry the owner's 015
+follow-up: one key button and Clear per row on the in-addon Keybindings tab (LK-40). Old: tag object
+`b2b8ee25c5f9fa26db146254bf786b366dec986b`, commit `afae2f75cb7ff61c57156d9a3d8a6b2b9f4c5e10`. New:
+tag object `e9b126d961c2970e5b14d0566480f7c1d8b5e5e8`, commit
+`2f2b2e22b4c9219cd8a4101d7e894681c7aea16e` (`git -C ../LibKa0s rev-parse v1.77.0^{}`). Both payloads
+were copied whole again from `git -C ../LibKa0s archive v1.77.0 LibKa0s testkit`, per the installed
+`/dev-copilot:wow-revendor-libka0s`; no new bundle, as in PM-RV2.
+
+- **Minors moved:** OptionsKeybinds 3 -> 4 (one key button and Clear per row; the second key is set
+  on the client's Options -> Keybindings page and counted on the row). No other file in
+  `libs/LibKa0s/` changed. In `tests/_kit/`, `bindings_xml.lua` (`Kit.keybindThroughTab` slot 2 on a
+  one-button row) and `README.md` changed; the kit revision stays 42. The `CLAUDE.md` provenance line
+  stays `v1.77.0` and records no sha or kit revision, so it does not move.
+- **Icon declaration:** `LibKa0s icons: clear, close, copy.` kept; the tag's `tools/prune-icons.lua`
+  printed `3 icon(s) declared; kept 4 file(s), removed 5836`.
+- **Contract delta:** none reaches PanelMaster. It declares no bindings and draws no Keybindings tab,
+  so the one-button row has no host site here. The Options parity case stays green: minor 4 adds no
+  public Options member, so the degradation stub in `settings/OptionsSetup.lua` is unchanged.
+- **Adopted here:** nothing.
+- **Gate after the copy, through `ka0s-bounded`:** `lua tests/run.lua` 1091 passed, 0 failed,
+  1 skipped, 1092 total, including `tests/test_vendor_sync.lua` (the README badge and
+  `docs/test-cases.md` already read 1091, so neither moves). `luacheck .` 0 warnings / 0 errors in
+  74 files. No authored `.lua` above 1500 lines (largest `tests/test_libka0s.lua`, 1204).
+  `diff -r --strip-trailing-cr ../LibKa0s/LibKa0s libs/LibKa0s` is empty apart from the pruned
+  `media/icons/`.
