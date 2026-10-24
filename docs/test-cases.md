@@ -1164,6 +1164,11 @@ Total.
 - optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
 - optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
 
+### test_settings_guard.lua (2)
+
+- Settings guard: every stored profile path keeps its default, type and range
+- Settings guard: every panel record field keeps its template default
+
 ### test_register.lua (1)
 
 - every deviation id the register cites is assigned by a bundle in docs/audits/
@@ -1244,6 +1249,7 @@ Total.
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 13 |
 | test_options_groups.lua | 7 |
+| test_settings_guard.lua | 2 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
@@ -1251,4 +1257,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1081** |
+| **Total** | **1083** |
