@@ -238,6 +238,9 @@ end
 -- `bgFile` insets under the edge and a panel wants its fill to run to the frame's actual bounds.
 local function newFrame(globalName)
   local f = CreateFrame("Frame", globalName, UIParent)
+  -- Stated at creation (PAN-Z07), so the frame never exists at UIParent's inherited strata. Hygiene:
+  -- applySpec writes the record's own strata in the same Lua call, before the client draws a frame.
+  f:SetFrameStrata(C.LAYERS.STRATA.BACKDROP)
   f:SetClampedToScreen(false)   -- a panel may legitimately hang off the screen edge
   f:EnableMouse(false)          -- locked panels are mouse-transparent; Unlock flips this
 
@@ -334,9 +337,10 @@ end
 
 -- The accent bar's own border frame, built on first use.
 --
--- Lazy because most panels never give their bars a border (it ships at size 0), and this would
--- otherwise be four more frames per panel created for nothing. Same shape as the panel's border: a
--- separate frame, so the border can be OFFSET from the bar it outlines.
+-- Lazy because a player who sets the bar border's size to 0 never needs it (it ships at size 1, so
+-- most panels do build it), and this would otherwise be four frames per panel created for nothing.
+-- Same shape as the panel's border: a separate frame, so the border can be OFFSET from the bar it
+-- outlines.
 local function ensureAccentBorder(bar)
   if bar.borderFrame then return bar.borderFrame end
   bar.borderFrame = CreateFrame("Frame", nil, bar, "BackdropTemplate")
@@ -346,7 +350,11 @@ end
 
 -- Paint one accent bar's border. Mirrors applyBorder exactly — including that
 -- SetBackdropBorderColor MUST follow SetBackdrop, which resets it to white.
-local function applyAccentBorder(bar, spec)
+--
+-- `base` is the panel's own frame level. The border's rung is set HERE, right after
+-- ensureAccentBorder, because that call can build the frame mid-render: a level set earlier in
+-- applySpec would miss a border built on this very paint (PAN-Z02).
+local function applyAccentBorder(bar, spec, base)
   local a = spec.accent
   local wanted = a.borderSize > 0 and NS.Compat.FetchMedia("border", a.borderTexture) or nil
   if not wanted then
@@ -359,6 +367,7 @@ local function applyAccentBorder(bar, spec)
   end
 
   local b = ensureAccentBorder(bar)
+  b:SetFrameLevel(base + C.LAYERS.LEVEL.ACCENT_BAR_BORDER)
   if type(b.SetBackdrop) ~= "function" then return end
   b:ClearAllPoints()
   b:SetPoint("TOPLEFT", bar, "TOPLEFT", -a.borderOffset, a.borderOffset)
@@ -381,6 +390,7 @@ local function applyAccents(f, spec)
 
   local a = spec.accent
   local thickness, offset = a.thickness, a.offset
+  local base = f:GetFrameLevel() or 0
 
   for _, edge in ipairs(C.EDGES) do
     local bar = accents[edge]
@@ -421,7 +431,7 @@ local function applyAccents(f, spec)
         and C.ACCENT_TEXCOORD_ROT90 or C.ACCENT_TEXCOORD_FLAT
       bar.fill:SetTexCoord(coord[1], coord[2], coord[3], coord[4],
                            coord[5], coord[6], coord[7], coord[8])
-      applyAccentBorder(bar, spec)
+      applyAccentBorder(bar, spec, base)
       bar:Show()
     end
   end
@@ -563,37 +573,35 @@ local function applySpec(f, spec)
   f:SetSize(spec.width, spec.height)
   f:ClearAllPoints()
   f:SetPoint(spec.point, UIParent, spec.relPoint, spec.x, spec.y)
+  -- The player's strata (T1b in C.LAYERS' header): a stored, validated token, never a literal.
   f:SetFrameStrata(spec.strata)
   -- Multiplied by the stride, so each panel's whole stack gets a band of its own rather than
   -- interleaving with the next panel's. The user's `level` is a relative ordering ("higher draws in
-  -- front"), not a raw frame level — and used raw it stopped meaning that as soon as a panel
-  -- occupied more than one rung. See C.PANEL_LEVEL_STRIDE.
-  f:SetFrameLevel(spec.level * C.PANEL_LEVEL_STRIDE)
+  -- front") and a BASE (frame-layering-§3), not a raw frame level — used raw it stopped meaning that
+  -- as soon as a panel occupied more than one rung. See C.LAYERS.PANEL_STRIDE.
+  f:SetFrameLevel(spec.level * C.LAYERS.PANEL_STRIDE)
 
-  -- Explicit child levels, stacked bottom-up over seven slots:
-  --
-  --   +1  artwork, BELOW_BG          +4  border          +7  unlock overlay (modules/Unlock.lua)
-  --   +2  background fill            +5  accent bars
-  --   +3  artwork, ABOVE_BG          +6  artwork, ABOVE_ALL
-  --
-  -- The unlock overlay is not set here — Unlock owns it and builds it lazily — but it is part of
-  -- this ladder and is why the stride is 8 rather than 7.
-  --
-  -- Left to itself every child frame merely defaults to parent + 1, which would pile the fill, the
-  -- border and the accent onto one level and leave their order to creation sequence. The six numbers
-  -- are spread out — rather than the artwork taking one slot next to the others — because the art
-  -- has to INTERLEAVE with the rest: three of the six slots are the same single art frame, whose
-  -- level is reassigned per render from C.ART_FRAME_LEVEL. That is the only way "behind the
-  -- background" and "above the accent bar" can both be reachable without three art frames per panel.
-  -- The numbers live in Constants so this ladder is stated once; do not renumber without updating
-  -- both.
+  -- Explicit child levels, every rung of the ladder C.LAYERS.LEVEL states (core/Constants.lua has
+  -- the picture). Left to itself every child frame merely defaults to parent + 1, which would pile
+  -- the fill, the border and the accent onto one level and leave their order to creation sequence.
+  -- Three rungs are not set here: the art frame's (applyArtwork, per layer), the accent bar
+  -- border's (applyAccentBorder, which may build it on this paint) and the unlock overlay's
+  -- (modules/Unlock.lua, which builds it lazily). Re-asserted on every paint, because the base
+  -- moves whenever the player changes the level.
   --
   -- Read back with GetFrameLevel rather than reusing spec.level, because the client clamps a frame's
   -- level to a minimum and the value that landed may not be the value asked for.
   local base = f:GetFrameLevel() or 0
-  if f.bgFrame then f.bgFrame:SetFrameLevel(base + C.BG_FRAME_LEVEL) end
-  if f.borderFrame then f.borderFrame:SetFrameLevel(base + C.BORDER_FRAME_LEVEL) end
-  if f.accentFrame then f.accentFrame:SetFrameLevel(base + C.ACCENT_FRAME_LEVEL) end
+  if f.bgFrame then f.bgFrame:SetFrameLevel(base + C.LAYERS.LEVEL.BG) end
+  if f.borderFrame then f.borderFrame:SetFrameLevel(base + C.LAYERS.LEVEL.BORDER) end
+  if f.accentFrame then f.accentFrame:SetFrameLevel(base + C.LAYERS.LEVEL.ACCENT) end
+  -- The bars are the container's children, one level deeper; a container at +5 does not reserve +6
+  -- for them, so they get the rung explicitly (PAN-Z02). Hidden bars too: a pooled frame keeps them.
+  if f.accents then
+    for _, edge in ipairs(C.EDGES) do
+      f.accents[edge]:SetFrameLevel(base + C.LAYERS.LEVEL.ACCENT_BAR)
+    end
+  end
 
   applyBackground(f, spec)
   applyBorder(f, spec)

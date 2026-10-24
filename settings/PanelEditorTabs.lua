@@ -413,9 +413,8 @@ local function buildPanelEditor(ctx, parent, rec)
     local anchorRow = editorRow(group)
     tokenDropdown(anchorRow, "Anchor", "point", C.POINTS,
       "Which corner or edge of the screen the offsets are measured from.")
-    tokenDropdown(anchorRow, "Frame strata", "strata", C.STRATA,
-      "Which layer the panel sits in. LOW keeps it under essentially all interface frames, which is "
-      .. "what a backdrop usually wants. DIALOG and above will cover normal UI.")
+    -- The library's one strata tooltip over this row's own values (frame-layering-§1).
+    tokenDropdown(anchorRow, "Frame strata", "strata", C.STRATA, O.StrataTooltip(C.STRATA))
 
     editorSpacer(group, EDITOR_ROW_GAP)
     -- Directly under Frame strata, so the two layer controls read together; half width, alone on
@@ -423,8 +422,9 @@ local function buildPanelEditor(ctx, parent, rec)
     local layerRow = editorRow(group)
     numberField(layerRow, "Frame level", "level", C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL, 1,
       "Orders panels that share a frame strata: a higher level draws entirely in front of a lower "
-      .. "one. Panels on the same strata and level have no guaranteed order. Strata decides first; "
-      .. "level only orders panels within one strata.")
+      .. "one. Panels on the same strata and level can interleave: parts of one may show through "
+      .. "the other. Give overlapping panels different levels. Strata decides first; level only "
+      .. "orders panels within one strata.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     -- Full width, spanning both columns. Scale is the one control on this page that acts on

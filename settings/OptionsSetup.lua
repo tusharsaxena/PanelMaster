@@ -325,6 +325,8 @@ NS.Helpers = lib:New({
 -- design. Run this any later and the rows are simply not in the array yet — nothing is reported
 -- because nothing is checked.
 NS.Schema:InstallMaster(NS.Helpers)
+-- The Default frame strata row's tooltip is the library's (frame-layering-§1); see the function.
+NS.Schema:InstallStrataTooltip(NS.Helpers)
 
 --- Let settings/Panel.lua install the landing page's body after this file has loaded.
 function NS.SetBuildMain(fn) buildMainBody = fn end

@@ -18,11 +18,11 @@ client and is run when one is available, not per release.
 |---|---|---|
 | INSTALL-1 to 9 | Install and load | First login, version, standalone, raw string keys, the old test-mode sweep, the `[Init]` version, a clean load with the LibKa0s v1.75.0 majors |
 | SLASH-1 to 7 | Slash commands | Bare `/pm`, help and the landing list, unknown verbs, `set` clamps and refusals, `/pm list` |
-| FRAME-1 to 29 | Panels | Create, drag, lock, click-through, snapping, default sizes, master scale, recovery, frame names, rename, copy, reset, delete |
+| FRAME-1 to 33 | Panels | Create, drag, lock, click-through, snapping, default sizes, master scale, recovery, frame names, rename, copy, reset, delete, layering (unlock outline, popups over high panels, above-all art) |
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 34 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows, the scroll offset kept across a re-render |
+| PANEL-1 to 35 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows, the scroll offset kept across a re-render, the strata and level tooltips |
 | PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 7 | Combat | Queued unlocks, a stand-down dropping them, the settings lockout, General visibility |
@@ -216,6 +216,28 @@ client and is run when one is available, not per release.
   every character using it loses its panels, never "this character"; **No** → both survive. **Panels ▸ Defaults** → the same
   popup; **No** → both survive. **Yes** from either → both gone, and chat says `deleted 2 panels.`
   Result: pass (owner-marked 2026-10-10)
+- **FRAME-30. A low panel's outline shows over the HUD while unlocked.** Put a panel at strata `LOW`
+  (the default) behind an action bar, then `/pm unlock` → the gold outline and the name draw **over**
+  the action bar, while the panel's own fill stays behind it. `/fstack` over the outline names the
+  overlay frame at `HIGH`. `/pm lock` → the outline goes and the bar is untouched. **Fail:** the
+  outline is hidden under the bar, or the panel's fill jumps over the bar. Grabbing the panel where
+  the bar covers it is not expected to work (the drag target is the panel). Result:
+- **FRAME-31. A high panel's outline is never buried under itself.** `/pm panel <name> strata
+  FULLSCREEN`, `/pm unlock` → the outline and name draw over the panel's own fill and artwork. Change
+  **Frame strata** to `BACKGROUND` and back to `TOOLTIP` while unlocked → the outline follows every
+  change at once. **Fail:** at any strata the outline is missing or drawn under the fill. Result:
+- **FRAME-32. A confirmation stays answerable over a high unlocked panel.** Make a panel large enough
+  to cover the middle of the screen, set its strata to `FULLSCREEN`, `/pm unlock`. Open **Panels**,
+  pick another panel and click **Delete** → the popup may draw under the high panel, but **No** and
+  **Yes** both take the click (try **No** first). After the popup closes, the high panel drags again.
+  Repeat with `/pm panel deleteall` and **No**. **Fail:** a click on the popup lands on the panel (it
+  starts dragging), or the panel cannot be dragged after the popup closes. Result:
+- **FRAME-33. Above-all artwork covers the accent bar.** On a panel with an accent bar (its 1px
+  border on, the default), set **Bar offset** to a negative value so the bar sits over the panel,
+  pick an artwork and set its layer to **Above border and accent** → the art draws over the bar and
+  its border where they overlap, on every `/reload` and after a profile switch and back. Then
+  `/pm unlock` → the gold outline draws over the bar's black border. **Fail:** the bar shows through
+  the art, or the bar's border cuts across the outline. Result:
 
 ## LOOK
 
@@ -612,6 +634,15 @@ and at least one art pack; skip those without it.
   click another editor tab → that page starts at the top, because a tab click is a change of
   subject. **Fail:** the page snaps to the top after the checkbox, or a tab click opens part-way down.
   Result: pass (owner-marked 2026-10-23)
+- **PANEL-35. The strata and level tooltips.** Hover **General ▸ New panels ▸ Default frame strata**
+  → one sentence about new panels, then the library's strata text: Background and Low under most of
+  the interface, Medium the default for displays, High over other windows; then that Dialog and above
+  also cover confirmation dialogs, the debug console and the Settings window; then that Fullscreen
+  Dialog and Tooltip also cover dropdown menus and tooltips. On **Panels ▸ Position and size**, hover
+  **Frame strata** → the same library text. Hover **Frame level** → it says panels on the same strata
+  and level can interleave and to give overlapping panels different levels. **Fail:** either strata
+  tooltip still reads "DIALOG and above cover normal UI", or the level tooltip says "no guaranteed
+  order". Result:
 
 ## PROFILE
 
@@ -1022,6 +1053,9 @@ what the client writes to SavedVariables for such a value, which is why NUM-3 pl
 
 ## Pending sign-off
 
-None. On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
+On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
 as `pass (owner-marked 2026-10-10)`; a check that already carried a dated owner pass keeps it. A
 check added or rewritten after that date is listed here until its `Result:` line records a pass.
+
+Added 2026-10-24 by the frame-layering pass (`frame-layering`, standard v2.88.0), awaiting the owner:
+FRAME-30, FRAME-31, FRAME-32, FRAME-33 and PANEL-35.

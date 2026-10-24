@@ -257,6 +257,26 @@ Total.
 - Unlock: a hand-edited outline thickness is clamped, not drawn
 - Unlock.PendingSnapshot: reports the combat queue as a copy, and reading it changes nothing
 
+### test_layers.lua (17)
+
+- LAYERS names the strata this addon writes or compares against
+- LAYERS: the panel ladder is strictly increasing and ends under the stride (PAN-Z01, Z08)
+- LAYERS: the highest panel level's whole stack fits the client's level ceiling
+- a new panel frame states the backdrop strata at creation, then takes its own (PAN-Z07)
+- a panel root is not toplevel, not clamped, and sits at level x stride
+- every child frame takes an explicit rung of the ladder, accent bars and their border included (PAN-Z02, Z08)
+- the accent rungs follow the panel when its level changes
+- U.ChromeStrata lifts to HIGH and never below the panel (PAN-Z04)
+- an unlocked LOW panel's overlay floats at HIGH while the panel stays LOW (PAN-Z04)
+- the overlay of a FULLSCREEN panel stays FULLSCREEN, and follows a strata change (PAN-Z04)
+- locking puts the overlay back in the panel's strata, unfixed (PAN-Z04)
+- every confirmation popup yields the mouse from unlocked DIALOG-and-up panels while shown
+- two popups up at once: the panels re-arm only when the last one closes
+- a locked panel is not touched by a popup
+- the Default frame strata row's tooltip is the library's O.StrataTooltip over its values
+- the panel editor's Frame strata row reads O.StrataTooltip, and Frame level says panels interleave
+- every strata and level write in the addon reads LAYERS
+
 ### test_media.lua (84)
 
 - Util.Slugify: keeps alphanumerics and collapses everything else
@@ -1200,6 +1220,7 @@ Total.
 | test_panel_schema.lua | 21 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
+| test_layers.lua | 17 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 46 |
@@ -1230,4 +1251,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1064** |
+| **Total** | **1081** |

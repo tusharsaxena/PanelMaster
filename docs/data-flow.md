@@ -66,21 +66,34 @@ to white, so coloring first is silently undone. A test asserts the recorded colo
 
 #### The frame ladder
 
-Everything a panel draws sits on a child frame with an explicitly assigned level, seven slots deep,
-stated once in `core/Constants.lua` (`C.ART_FRAME_LEVEL`, `C.BG_FRAME_LEVEL`,
-`C.BORDER_FRAME_LEVEL`, `C.ACCENT_FRAME_LEVEL`, `C.UNLOCK_FRAME_LEVEL`) and applied in `applySpec`
-— except the last, which `modules/Unlock.lua` builds lazily and sets itself:
+Everything a panel draws sits on a child frame with an explicitly assigned level, nine slots deep,
+stated once in `core/Constants.lua` (`C.LAYERS.LEVEL`; `C.ART_FRAME_LEVEL` maps the stored
+`artLayer` token onto it) and applied in `applySpec` — except the accent bar border, set in
+`applyAccentBorder` because that call can build it mid-render, and the unlock overlay, which
+`modules/Unlock.lua` builds lazily and sets itself:
 
 ```
-f                       base          the panel frame
-  f.artFrame  BELOW_BG  base + 1
-  f.bgFrame             base + 2      background fill
-  f.artFrame  ABOVE_BG  base + 3      ← artLayer default
-  f.borderFrame         base + 4
-  f.accentFrame         base + 5
-  f.artFrame  ABOVE_ALL base + 6
-  f.overlay.frame       base + 7      unlock outline and name label
+f                             base          the panel frame
+  f.artFrame        BELOW_BG  base + 1
+  f.bgFrame                   base + 2      background fill
+  f.artFrame        ABOVE_BG  base + 3      ← artLayer default
+  f.borderFrame               base + 4
+  f.accentFrame               base + 5      the bars' container
+    accent bar ×4             base + 6
+      bar.borderFrame         base + 7      the bar's own border (ships at size 1)
+  f.artFrame        ABOVE_ALL base + 8
+  f.overlay.frame             base + 9      unlock outline and name label
 ```
+
+The accent bars and their border are nested one level deeper than the other children, and they have
+explicit rungs for that reason: a container at +5 does not reserve +6 for its children. Left
+implicit, the bars tied with above-all artwork and the bar border tied with the unlock overlay, which
+showed wherever a negative accent offset pulled a bar over the panel.
+
+While a panel is unlocked, the overlay also takes a **strata** of its own, `max(panel, HIGH)`
+(`NS.Unlock.ChromeStrata`), fixed and re-lifted after every `applySpec`, so a `LOW` panel's outline
+and name show over the action bars while you edit. It takes no mouse, which is what allows that floor;
+the panel itself takes the drag and keeps its own strata.
 
 The unlock overlay is on the ladder at all because of this change. It used to be textures on the
 panel frame itself, kept above the panel's art by *draw layer*; that works only while the art is
@@ -104,17 +117,19 @@ floor that exists to keep a panel findable and grabbable. One consequence worth 
 `SetPoint` offsets are in the frame's own scaled units, changing the scale also moves the panel
 relative to its anchor.
 
-A panel's own frame level is `level × C.PANEL_LEVEL_STRIDE`, not `level`. A panel occupies eight
+A panel's own frame level is `level × C.LAYERS.PANEL_STRIDE`, not `level`. A panel occupies ten
 rungs, so consecutive raw levels would *interleave* — one panel's accent bar landing on the same
 frame level as the next panel's background fill, with the winner decided by frame creation order,
 which the name-keyed pool does not keep in panel order. The `level` setting means "higher draws in
 front"; the stride is what makes that true for every distinct value rather than only for values far
 enough apart to clear the footprint. `level` is bounded by `C.MIN_PANEL_LEVEL`/`C.MAX_PANEL_LEVEL`
 (0–100), named once and read by the Registry's clamp, `BuildSpec` and the editor's **Frame level**
-slider, so the highest stack ends at frame level 807.
+slider, so the highest stack ends at frame level 1 009. Panels on the **same** strata and level
+still interleave rung by rung; the Frame level tooltip says so and tells the player to give
+overlapping panels different levels (`frame-layering-§3`).
 
 The levels are **spread out** rather than consecutive because the artwork has to *interleave* with
-the other three: three of the six slots are the same single `f.artFrame`, whose level is reassigned
+the other rungs: three of the nine slots are the same single `f.artFrame`, whose level is reassigned
 per render from `C.ART_FRAME_LEVEL[art.layer]`. Frame levels are mutable at any time, so one frame
 covers all three choices — three art frames per panel would be two created to sit hidden forever.
 This is also the only arrangement in which "behind the background" and "above the accent bar" are

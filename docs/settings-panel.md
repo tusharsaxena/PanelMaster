@@ -50,7 +50,7 @@ game's own Settings ▸ AddOns list.
 | Editing | Unlock outline thickness | How thick the gold outline around an unlocked panel is. Raise it if you are hunting for a small panel on a busy screen. |
 | Editing | Recover panels | A button under the tab rather than a setting: brings any panel whose anchor has ended up beyond a screen edge back into view. The same thing `/pm recover` does. |
 | New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
-| New panels | Default frame strata | The layer new panels start in. |
+| New panels | Default frame strata | The layer new panels start in. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`, after one sentence of its own, so it says what `DIALOG` and above cover (`frame-layering-§1`). |
 | New panels | Default opacity | How see-through new panels start out. |
 
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
@@ -70,8 +70,8 @@ the same size whether you have two panels or twenty. The controls, in full:
 | Copy settings from panel | Take on another panel's whole appearance. Its position is **not** copied, so this panel stays put. |
 | Width, Height, X offset, Y offset | Size and position. |
 | Anchor | Which corner or edge of the screen the offsets are measured from. |
-| Frame strata | Which layer the panel sits in. |
-| Frame level | Orders panels that share a frame strata, 0 to 100: a higher level draws entirely in front of a lower one (*Panel levels are strided* in [data-flow.md](data-flow.md)). Strata decides first. Two panels on the same strata **and** level have no guaranteed order: they fall back to frame creation order, which the name-keyed pool does not keep in panel order. Same field as `/pm panel <name> level <n>`. |
+| Frame strata | Which layer the panel sits in. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`: the tiers, and what `DIALOG` and above cover (confirmation popups, the debug console, the Settings window) and what `FULLSCREEN_DIALOG` and `TOOLTIP` cover (dropdowns and tooltips). |
+| Frame level | Orders panels that share a frame strata, 0 to 100: a higher level draws entirely in front of a lower one (*Panel levels are strided* in [data-flow.md](data-flow.md)). Strata decides first. Panels on the same strata **and** level can **interleave**: parts of one may show through the other, because both get the same base and their rungs alternate. Give overlapping panels different levels. Same field as `/pm panel <name> level <n>`. |
 | Panel scale | Magnifies the whole panel — its size, its border, its accent bars and its artwork — as one piece, the way the game's own UI scale does. Not the same as changing Width and Height: those resize the panel and leave the border and bars at the thickness you set. Width and Height keep showing the numbers you typed; what changes is how big they turn out on screen. A scaled panel is anchored in its own scaled units, so it also shifts relative to its anchor — nudge the offsets afterwards if it matters. |
 | Background texture | Any background texture LibSharedMedia knows about, or **None** for no fill. |
 | Background color / Use class color | The fill color, or your class color. Its opacity controls the fill alone. |

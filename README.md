@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-1064%2F1064_passing-green)
+![Tests](https://img.shields.io/badge/Tests-1081%2F1081_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -76,9 +76,15 @@ WoW draws every frame in one of eight layers, called frame strata, and a frame i
 always covers one in a lower layer. Strata is what makes a panel a backdrop rather than an
 obstruction. New panels start in `LOW`, which sits above the game world and Blizzard's parchment art
 but under almost every interface frame. You can move a panel to any of the eight. `BACKGROUND` puts
-it under absolutely everything, while `DIALOG` and above will cover normal UI, which is occasionally
-what you want and usually not. Within one layer, **Frame level** on the Position and size tab
-decides which of two overlapping panels draws in front: the higher level wins.
+it under absolutely everything, while `DIALOG` and above also cover confirmation popups, the debug
+console and the Settings window, which is occasionally what you want and usually not. Within one
+layer, **Frame level** on the Position and size tab decides which of two overlapping panels draws in
+front: the higher level wins. Two overlapping panels on the same layer and level can show through
+each other, so give them different levels.
+
+While panels are unlocked, the gold outline and name draw above the action bars even for a panel
+that sits behind them, and a panel you have put at `DIALOG` or above stops taking the mouse while one
+of Panel Master's confirmation popups is open, so the popup's buttons always take your click.
 
 A locked panel never takes your mouse, whatever layer it is in. That holds with **Show on mouseover
 only** turned on too, because the panel watches where your cursor is without claiming the click.

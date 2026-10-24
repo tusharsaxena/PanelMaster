@@ -121,8 +121,9 @@ S.Schema = {
 
   { path = "settings.defaultStrata", default = "LOW", type = "string",
     group = "New panels", label = "Default frame strata", values = C.STRATA_OPTIONS,
-    tooltip = "The layer a newly created panel sits in. LOW keeps it under essentially all "
-      .. "interface frames, which is what a backdrop usually wants. DIALOG and above cover normal UI.",
+    -- The row-specific sentence only. S:InstallStrataTooltip appends the library's one strata
+    -- tooltip (O.StrataTooltip, frame-layering-§1), which states the tiers for the collection.
+    tooltip = "A newly created panel starts in this layer; existing panels are not touched.",
     validate = function(v) return NS.Util.IsStrata(v) end },
 
   { path = "settings.defaultAlpha", default = 1.0, type = "number", min = 0, max = 1, step = 0.05,
@@ -559,6 +560,28 @@ local function wire(rows, path, fields)
   print("master controls: no composed row at " .. tostring(path) ..
     " — the canonical set has moved and settings/Schema.lua has not")
   return nil
+end
+
+--- Append the library's strata tooltip to the Default frame strata row (frame-layering-§1: every
+--- player strata row carries O.StrataTooltip(values), passed the row's own value set, and the host
+--- writes no tier sentence of its own). Called from settings/OptionsSetup.lua's live arm, the moment
+--- NS.Helpers exists; this file loads before it, so the row cannot call the member at file scope.
+--- Idempotent: the row's own sentence is kept aside and the tooltip rebuilt from it.
+---
+--- @param H table  the LibKa0s-Options-1.0 instance
+--- @return boolean true when the row now carries the library's text
+function S:InstallStrataTooltip(H)
+  if not (H and type(H.StrataTooltip) == "function") then return false end
+  local tip = H.StrataTooltip(C.STRATA)
+  if type(tip) ~= "string" or tip == "" then return false end
+  for _, row in ipairs(S.Schema) do
+    if row.path == "settings.defaultStrata" then
+      row.__ownTooltip = row.__ownTooltip or row.tooltip
+      row.tooltip = row.__ownTooltip .. " " .. tip
+      return true
+    end
+  end
+  return false
 end
 
 --- Compose the Master controls block and splice it at the HEAD of the schema.

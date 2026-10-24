@@ -74,6 +74,16 @@ function Sl:ConfirmResetAll()
 end
 
 -- Confirm dialogs for the destructive actions. Registered once; in-game only.
+--
+-- Every one of them is ANSWERABLE whatever strata the player gave a panel (frame-layering-§1,
+-- player-layered backdrops): OnShow and OnHide hand off to NS.Unlock, which takes the mouse off
+-- any unlocked panel at DIALOG or above while a popup is up and re-arms it through a render when
+-- the last one closes (PAN-Z05). The popup frames themselves are Blizzard's, shared with every
+-- other addon, so their strata is never touched. Resolved at call time: Unlock loads first, but a
+-- closure costs nothing and cannot be wrong.
+local function popupShown() if NS.Unlock and NS.Unlock.PopupShown then NS.Unlock:PopupShown() end end
+local function popupHidden() if NS.Unlock and NS.Unlock.PopupHidden then NS.Unlock:PopupHidden() end end
+
 if type(StaticPopupDialogs) == "table" then
   -- THE COLLECTION'S ONE WORDING (options-ui-§12), verbatim. Addon-agnostic on purpose -- no addon
   -- enumerates its own nouns -- and explicit about the destruction, which for this addon means the
@@ -86,7 +96,7 @@ if type(StaticPopupDialogs) == "table" then
     button2 = NO or "No",
     OnAccept = function() NS.Slash:DoResetAll() end,
     timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
-    preferredIndex = 3,
+    preferredIndex = 3, OnShow = popupShown, OnHide = popupHidden,
   }
   StaticPopupDialogs["KA0S_PANELMASTER_DELETEALL"] = {
     -- %s is the active profile (Sl.ActiveProfileName). Panels live in db.profile, and AceDB's
@@ -99,7 +109,7 @@ if type(StaticPopupDialogs) == "table" then
       print(("deleted %d %s."):format(n, n == 1 and "panel" or "panels"))
     end,
     timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
-    preferredIndex = 3,
+    preferredIndex = 3, OnShow = popupShown, OnHide = popupHidden,
   }
   -- The Panels editor's per-panel Delete and Reset (PM-R-05): the only other irreversible controls,
   -- and they sit side by side, so a misclick on either used to cost a panel. %s is the panel's name;
@@ -111,7 +121,7 @@ if type(StaticPopupDialogs) == "table" then
     button2 = NO or "No",
     OnAccept = function(_, data) NS.PanelEditor.AcceptDelete(data) end,
     timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
-    preferredIndex = 3,
+    preferredIndex = 3, OnShow = popupShown, OnHide = popupHidden,
   }
   StaticPopupDialogs["KA0S_PANELMASTER_RESET"] = {
     text = "Reset the panel \"%s\" to how a new panel starts? Its size, position, textures and colors are lost; its name is kept.",
@@ -119,7 +129,7 @@ if type(StaticPopupDialogs) == "table" then
     button2 = NO or "No",
     OnAccept = function(_, data) NS.PanelEditor.AcceptReset(data) end,
     timeout = 0, whileDead = true, hideOnEscape = true, showAlert = true,
-    preferredIndex = 3,
+    preferredIndex = 3, OnShow = popupShown, OnHide = popupHidden,
   }
 end
 
