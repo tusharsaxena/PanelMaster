@@ -48,7 +48,7 @@ under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.76.0 (MIT).
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.77.0 (MIT).
 LibKa0s icons: clear, close, copy.
 
 The first of those two lines is the **provenance line**, and it is an input rather than a note:

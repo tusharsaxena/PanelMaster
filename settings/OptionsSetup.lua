@@ -101,6 +101,14 @@ if not lib then
     -- Drawer, new at LibKa0s v1.73.0 (OptionsDrawer minor 1): drawn only by a page render, and no
     -- page here draws one, so the same inert answer applies.
     Drawer = noop,
+    -- The Keybindings tab (OptionsKeybinds, LibKa0s v1.77.0, options-ui-§20) and the one strata
+    -- tooltip (OptionsCompose minor 8, frame-layering-§1). Inert for the reason ID_NAME_HINT is:
+    -- KeybindRows answers nil, as the live member does when it cannot draw; KeybindingsTab answers
+    -- a tab entry that renders nothing; KEYBINDS_UNCHANGED and StrataTooltip answer an empty string,
+    -- because a copy of the library's sentences here would be the one that goes stale.
+    KeybindRows = function() return nil end,
+    KeybindingsTab = function() return { key = "Keybindings", label = "", render = noop } end,
+    KEYBINDS_UNCHANGED = "", StrataTooltip = function() return "" end,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
