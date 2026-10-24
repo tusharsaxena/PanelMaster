@@ -38,7 +38,7 @@ game's own Settings ▸ AddOns list.
 | Master controls | Enable Ka0s Panel Master | Master switch. Off **stands the addon down** (`slash-commands-§7`): every panel hidden, every event and message unregistered, the mouseover ticker stopped. No panel is deleted, and the slash commands and this page keep working. |
 | Master controls | General visibility | When your panels are drawn at all: always, only in combat, only out of combat, or never. |
 | Master controls | Master scale | Magnifies every panel at once, on top of each panel's own scale. |
-| Master controls | Master alpha | Fades every panel at once, on top of each panel's own opacity. |
+| Master controls | Master opacity | Fades every panel at once, on top of each panel's own opacity. |
 | Master controls | Lock frame | Ticked (the default) means locked. Unticking gives every panel a drag handle and a name label. Locked again when you reload, and by **Reset all settings** (or **Profiles → Reset Profile**, the same act). |
 | Master controls | Debug console | Show the debug window. Resets when you reload, and **Reset all settings** (or **Profiles → Reset Profile**) closes it. |
 | Master controls | Minimap button | Show this addon's button on the minimap. Unlike the two rows above it, this one is **remembered** — a button you hide stays hidden across a reload, across a profile switch, and across **both** resets on this page — the **Defaults** button in the header and **Reset all settings** below. Where the button sits is a per-installation display preference, like the angle you dragged it to, and no reset touches either (`launcher-§3`). Untick it and the button goes at once, and it comes back at the angle you left it. The button itself is drawn by `LibKa0s-Launcher-1.0` (`launcher-§2`, standard v2.67.0): **left-click opens this settings page**, in either state; **right-click opens the options menu**, whose entries here are **Enabled** (the *Enable Ka0s Panel Master* row above, through `/pm enable` / `disable`'s handler) and **Locked** (the *Lock frame* row, through `/pm lock` / `unlock`'s handler) — no *Test mode* (unlocking is the preview) and no *Show window* (no primary window). While the addon is disabled, **Locked** is grayed with the note *enable the addon first*. Hovering shows the status tooltip (`launcher-§1`), disabled included: `Ka0s Panel Master  v<version>`, **Enabled** and **Locked** (Yes/No, green/red), `Left-click: Open settings` and `Right-click: Options menu`. |
@@ -174,7 +174,7 @@ library's, so nine addons cannot drift into nine versions of the same tab.
 | | |
 |---|---|
 | Enable Ka0s Panel Master | General visibility |
-| Master scale | Master alpha |
+| Master scale | Master opacity |
 | Lock frame | Debug console |
 | *Reset position* | *Reset all settings* |
 
@@ -189,7 +189,7 @@ Four of these are new, and each is honored by drawing code rather than merely de
   `Canvas.VisibilityShows` and folded into `spec.shown`. There was no *show only in combat* boolean
   here to migrate: the addon never shipped one, so `always` is both the default and what every
   existing profile already meant.
-- **Master scale** and **Master alpha** — addon-wide **multipliers** over each panel's own scale and
+- **Master scale** and **Master opacity** — addon-wide **multipliers** over each panel's own scale and
   opacity, applied in `Canvas.BuildSpec`. They are deliberately not the same settings as the
   per-panel ones on the Panels page: the editor's sliders keep showing what the player typed for
   that panel, and these two move all of them together. Both ship at 1, the identity.

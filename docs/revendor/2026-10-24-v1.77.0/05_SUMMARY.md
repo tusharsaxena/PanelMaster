@@ -58,3 +58,37 @@ Between master and v2.88.0 one section file is added, `frame-layering.md`, and `
   performed (nothing to do).
 - **What v2.88.0 asks of PanelMaster beyond the reference** (frame-layering's one layers table and
   the shared strata tooltip) is PM-ZS's, not this sweep's.
+
+## Re-vendor after the tag moved (M3)
+
+LK-95 moved the local annotated tag v1.77.0 in `../LibKa0s` to carry the settings-layout surfaces
+(item 020). Old: tag object `7380d3662be0568acf9a0d224a6aef8ac6df93ce`, commit
+`78240f7b2d69df27b74fc9280cbfbf7b95dd4f1f`. New: tag object
+`b2b8ee25c5f9fa26db146254bf786b366dec986b`, commit `afae2f75cb7ff61c57156d9a3d8a6b2b9f4c5e10`
+(`git -C ../LibKa0s rev-parse v1.77.0^{}`). Both payloads were copied whole again from
+`git -C ../LibKa0s archive v1.77.0 LibKa0s testkit`, per the installed
+`/dev-copilot:wow-revendor-libka0s`; no new bundle, per PM-RV2.
+
+- **Minors moved:** OptionsCompose 8 -> 11 (minor 9 `MasterControls` notes, `resetPositionTooltip`,
+  `lockIsPreview`, the *Master opacity* label and the frameless packing; minor 10 `tooltips` on the
+  group composers; minor 11 `O.ResetAllTooltip`). No other file in `libs/LibKa0s/` changed, and
+  `tests/_kit/` is byte-identical (kit revision 42 both sides). The `CLAUDE.md` provenance line stays
+  `v1.77.0` and records no sha or kit revision, so it does not move.
+- **Icon declaration:** `LibKa0s icons: clear, close, copy.` kept; the tag's `tools/prune-icons.lua`
+  printed `3 icon(s) declared; kept 4 file(s), removed 5836`.
+- **Contract blocker:** `Kit.assertSurfaceParity` turned the Options parity case red
+  (`ResetAllTooltip is missing (live: function)`). `settings/OptionsSetup.lua`'s library-absent stub
+  now answers it inertly with an empty string, as `StrataTooltip` does.
+- **Contract change under an unmoved surface:** minor 9 relabels the composed alpha row *Master
+  alpha* -> *Master opacity* for every host (stored leaf `settings.alpha`, tooltip, range and default
+  unchanged, nothing migrates). `tests/test_schema.lua` pinned the old label and went red; its two
+  pins and `docs/settings-panel.md` now read *Master opacity*. The frameless packing does not reach
+  PanelMaster, which draws *Lock frame*. The owner-marked smoke records in `docs/smoke-tests.md`
+  (FRAME-13, PANEL-3) still name *Master alpha*; they are left as recorded, for PM-LY's smoke pass.
+- **Adopted here:** nothing (PM-LY adopts notes, tooltips and `O.ResetAllTooltip`).
+- **Standard reference:** WS-95 only adds `options-ui-§21` and edits text; no section file or range
+  shrinks, so the installed `/dev-copilot:wow-revendor-standards` checks find no drift.
+- **Gate after the copy, through `ka0s-bounded`:** `lua tests/run.lua` 1081 passed, 0 failed,
+  1 skipped, 1082 total, including `tests/test_vendor_sync.lua` and the Options parity case.
+  `luacheck .` 0 warnings / 0 errors in 72 files. No authored `.lua` above 1500 lines (largest
+  `tests/test_libka0s.lua`, 1203).

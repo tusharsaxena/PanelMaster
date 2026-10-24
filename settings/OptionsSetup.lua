@@ -109,6 +109,9 @@ if not lib then
     KeybindRows = function() return nil end,
     KeybindingsTab = function() return { key = "Keybindings", label = "", render = noop } end,
     KEYBINDS_UNCHANGED = "", StrataTooltip = function() return "" end,
+    -- ResetAllTooltip (OptionsCompose minor 11, LibKa0s v1.77.0 after LK-95), the General page's
+    -- Reset all settings tooltip: an empty string, for the same reason StrataTooltip answers one.
+    ResetAllTooltip = function() return "" end,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for

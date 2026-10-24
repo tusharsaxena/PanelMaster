@@ -356,7 +356,7 @@ test("Schema: Master controls is the FIRST tab, and holds exactly the rows it is
       { path = "settings.enabled",    label = "Enable Ka0s Panel Master" },
       { path = "settings.visibility", label = "General visibility" },
       { path = "settings.scale",      label = "Master scale" },
-      { path = "settings.alpha",      label = "Master alpha" },
+      { path = "settings.alpha",      label = "Master opacity" },
       { path = "state.locked",        label = "Lock frame" },
       { path = "state.debugConsole",  label = "Debug console" },
       { path = "global.minimap.shown", label = "Minimap button" },
@@ -422,7 +422,7 @@ test("Schema: the Master controls rows are the COMPOSER's, not eight literals he
   local f = assert(io.open("settings/Schema.lua", "r"))
   local body = f:read("*a")
   f:close()
-  for _, canonical in ipairs({ "Master scale", "Master alpha", "General visibility",
+  for _, canonical in ipairs({ "Master scale", "Master opacity", "General visibility",
                                "Reset all settings" }) do
     assertEqual(body:find('"' .. canonical .. '"', 1, true), nil,
       "settings/Schema.lua writes out the canonical label " .. canonical ..
