@@ -480,7 +480,7 @@ end
 
 -- ── The page-wide block, ABOVE the strip (options-ui-§14) ───────────────────────
 --
--- ONE ROW: the Panel picker and the Create new panel box, the two controls that stay put on every
+-- ONE ROW: the Panel picker and the New panel box, the two controls that stay put on every
 -- tab. The panel's other page-wide acts are on the `General` tab; the tab constants in
 -- settings/PanelEditorTabs.lua say why.
 --
@@ -548,16 +548,19 @@ local function drawPageHeader(ctx)
       -- registered. (An earlier version disabled the button and added a separate Create button on
       -- the mistaken assumption that tabbing away would create a panel.)
       local newBox = AceGUI:Create("EditBox")
-      -- "Create new panel", not "New panel name". The band holds three controls that name a panel,
-      -- and the reader's question at this one is which of them MAKES a panel — a label naming the
-      -- field's contents answered a question nobody had.
-      newBox:SetLabel("Create new panel")
+      -- "New panel", not "New panel name". The band holds three controls that name a panel, and
+      -- the reader's question at this one is which of them MAKES a panel — a label naming the
+      -- field's contents answered a question nobody had. It reads *New <noun>*, the collection's
+      -- form for the act that makes an instance (options-ui-§21); it was "Create new panel".
+      newBox:SetLabel("New panel")
       newBox:SetRelativeWidth(0.5)
       newBox:SetCallback("OnEnterPressed", function(widget, _, text)
         pageAction.create(ctx, widget, text)
       end)
-      attachTooltip(newBox, "Create new panel",
-        "Type a name and press Enter, or click Okay, to create the panel.")
+      -- The defaults it creates from are on another page, so the tooltip says where.
+      attachTooltip(newBox, "New panel",
+        "Type a name and press Enter, or click Okay, to create the panel. New panels start at the "
+        .. "size, layer and opacity set on the General page > New panels.")
       makeRow:AddChild(newBox)
 
 

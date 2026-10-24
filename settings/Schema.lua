@@ -37,45 +37,43 @@ local function announce(what)
   if NS.bus then NS.bus:SendMessage(S.MSG.SETTINGS, what) end
 end
 
+-- The sentence every Moving panels tooltip ends on (options-ui-§21: a location string reads
+-- "<Page> > <Tab>", ASCII " > ", and "the General page" because the Panels page has a General tab).
+local MOVING_NOTE = "These only matter while panels are unlocked: untick Lock frame on the General "
+  .. "page > Master controls, or tick Unlock this panel on Panels > General."
+
+-- The sentence every New panels tooltip ends on: the other half of the create box's pointer
+-- (settings/PanelEditor.lua), because the defaults and the act that uses them are on two pages.
+local MADE_NOTE = "Panels are made on the Panels page."
+
 S.Schema = {
-  -- ── Editing ──
-  -- Tab 2: everything about moving a panel around, in the order the flow engine pairs it —
-  -- [names] [snap], [grid size] [outline thickness].
+  -- ── Moving panels ──
+  -- Tab 2: everything about moving a panel around, in the order the flow engine pairs it --
+  -- [names] [outline thickness], [snap] [grid size]. The two unlock-overlay looks share a line, and
+  -- the snap switch shares one with the slider it governs. The flow engine pairs consecutive rows
+  -- (options-ui-§6), so this declaration order IS the two lines; none of the four carries
+  -- `startsLine`, `wide` or `solo`, and tests/test_settings_layout.lua pins both halves.
+  --
+  -- Named "Moving panels", not "Editing": every row here matters only while panels are unlocked
+  -- and being dragged, and "Editing" also described the whole Panels page, where a player edits a
+  -- panel. `group` is not a stored key and there is no `/pm reset <group>` form, so the rename
+  -- moves nothing (tests/test_libka0s.lua pins that form's absence).
   --
   -- "Unlock panels" used to lead this tab. It is `Lock frame` on the Master controls tab now
   -- (options-ui-§15), un-inverted: the canonical row says LOCKED and this addon's state says
   -- UNLOCKED, and one of the two had to give. The four rows below still only mean anything while
-  -- the panels are unlocked, which is the argument that put the switch here in the first place —
-  -- what changed is that the canonical set is not a menu to take the convenient half of.
+  -- the panels are unlocked, which is why each tooltip ends on MOVING_NOTE: the switch is a fixed
+  -- element of another tab, so the cross-reference is what bridges the split.
+  --
+  -- "Recover panels" is not on this tab any more. It is the Master controls tab's `leadButton`
+  -- (S:InstallMaster below), beside Reset position, so both "get my panels back" acts sit together.
 
   -- How dragging behaves while unlocked.
   { path = "settings.showLabels", default = true, type = "bool",
-    group = "Editing", label = "Show names while unlocked",
-    tooltip = "Print each panel's name across the middle of it while panels are unlocked.",
+    group = "Moving panels", label = "Show names while unlocked",
+    tooltip = "Print each panel's name across the middle of it while panels are unlocked. "
+      .. MOVING_NOTE,
     onChange = function() announce("showLabels") end },
-
-  -- No onChange on either grid row: neither can change how a panel LOOKS. U.SnapPosition reads
-  -- db.profile.settings live at drag-stop, so a new grid applies to the very next drag on its own —
-  -- announcing would repaint every panel per mouse-up on the slider for nothing. `showLabels` above
-  -- keeps its announce because U:Decorate reads it, and Decorate only ever runs from a render.
-  { path = "settings.snapToGrid", default = true, type = "bool",
-    group = "Editing", label = "Snap to grid",
-    tooltip = "Round a dragged panel's position to the grid size below." },
-
-  -- Declared immediately after the switch that modes it, so the flow engine puts the two on ONE
-  -- line and the reader sets the mode and its size without moving down a row.
-  --
-  -- "Recover panels" no longer rides this row's right half. It was there on the argument that it is
-  -- the other thing you reach for when a layout has gone wrong, which still holds — but pairing the
-  -- snap switch with its own slider is the stronger claim, and a button cannot be the right half of
-  -- a line whose left half is already taken. It is drawn as this tab's afterGroup footer instead
-  -- (settings/Panel.lua), which is where the flow engine puts a group's buttons.
-  { path = "settings.gridSize", default = 4, type = "number",
-    min = C.MIN_GRID, max = C.MAX_GRID, step = 1,
-    fmt = "%d px",   -- grid → "4 px" in the slash list/get output (slash-commands-§5)
-    group = "Editing", label = "Grid size",
-    tooltip = "The grid a dragged panel snaps to, in UI units. Ignored when snapping is off.",
-    validate = function(v) return type(v) == "number" and v >= C.MIN_GRID and v <= C.MAX_GRID end },
 
   -- Promoted from the hardcoded C.UNLOCK_OUTLINE_PX, which was 2 and still is: the default IS the
   -- literal it replaced, so every existing install draws its unlock outline exactly as it did.
@@ -84,16 +82,37 @@ S.Schema = {
   --
   -- Clamped on the way in as well as on the way out: this arrives from SavedVariables, and an
   -- outline of 0 (or of 400) is not an error, it is a panel that cannot be found in unlock mode.
+  --
+  -- Declared second, so it pairs beside Show names: the two rows that set how an unlocked panel
+  -- LOOKS read as one line.
   { path = "settings.unlockOutlineSize", default = 2, type = "number",
     min = C.MIN_UNLOCK_OUTLINE, max = C.MAX_UNLOCK_OUTLINE, step = 1,
     fmt = "%d px",
-    group = "Editing", label = "Unlock outline thickness",
+    group = "Moving panels", label = "Unlock outline thickness",
     tooltip = "How thick the gold outline around an unlocked panel is, in UI units. Raise it if "
-      .. "you are hunting for a small panel on a busy screen.",
+      .. "you are hunting for a small panel on a busy screen. " .. MOVING_NOTE,
     validate = function(v)
       return type(v) == "number" and v >= C.MIN_UNLOCK_OUTLINE and v <= C.MAX_UNLOCK_OUTLINE
     end,
     onChange = function() announce("unlockOutlineSize") end },
+
+  -- No onChange on either grid row: neither can change how a panel LOOKS. U.SnapPosition reads
+  -- db.profile.settings live at drag-stop, so a new grid applies to the very next drag on its own --
+  -- announcing would repaint every panel per mouse-up on the slider for nothing. `showLabels` above
+  -- keeps its announce because U:Decorate reads it, and Decorate only ever runs from a render.
+  { path = "settings.snapToGrid", default = true, type = "bool",
+    group = "Moving panels", label = "Snap to grid",
+    tooltip = "Round a dragged panel's position to the grid size beside this. " .. MOVING_NOTE },
+
+  -- Declared immediately after the switch that modes it, so the flow engine puts the two on ONE
+  -- line and the reader sets the mode and its size without moving down a row.
+  { path = "settings.gridSize", default = 4, type = "number",
+    min = C.MIN_GRID, max = C.MAX_GRID, step = 1,
+    fmt = "%d px",   -- grid → "4 px" in the slash list/get output (slash-commands-§5)
+    group = "Moving panels", label = "Grid size",
+    tooltip = "The grid a dragged panel snaps to, in UI units. Ignored when snapping is off. "
+      .. MOVING_NOTE,
+    validate = function(v) return type(v) == "number" and v >= C.MIN_GRID and v <= C.MAX_GRID end },
 
   -- ── New panels ──
   -- Tab 3, and last because it is the one you set once and leave: it changes nothing on screen
@@ -109,27 +128,30 @@ S.Schema = {
     min = C.MIN_SIZE, max = C.MAX_SIZE, step = 1,
     fmt = "%d px",
     group = "New panels", label = "Default width",
-    tooltip = "How wide a newly created panel starts. Existing panels are not touched.",
+    tooltip = "How wide a newly created panel starts. Existing panels are not touched. "
+      .. MADE_NOTE,
     validate = function(v) return type(v) == "number" and v >= C.MIN_SIZE and v <= C.MAX_SIZE end },
 
   { path = "settings.defaultHeight", default = 120, type = "number",
     min = C.MIN_SIZE, max = C.MAX_SIZE, step = 1,
     fmt = "%d px",
     group = "New panels", label = "Default height",
-    tooltip = "How tall a newly created panel starts. Existing panels are not touched.",
+    tooltip = "How tall a newly created panel starts. Existing panels are not touched. "
+      .. MADE_NOTE,
     validate = function(v) return type(v) == "number" and v >= C.MIN_SIZE and v <= C.MAX_SIZE end },
 
   { path = "settings.defaultStrata", default = "LOW", type = "string",
     group = "New panels", label = "Default frame strata", values = C.STRATA_OPTIONS,
     -- The row-specific sentence only. S:InstallStrataTooltip appends the library's one strata
     -- tooltip (O.StrataTooltip, frame-layering-§1), which states the tiers for the collection.
-    tooltip = "A newly created panel starts in this layer; existing panels are not touched.",
+    tooltip = "A newly created panel starts in this layer; existing panels are not touched. "
+      .. MADE_NOTE,
     validate = function(v) return NS.Util.IsStrata(v) end },
 
   { path = "settings.defaultAlpha", default = 1.0, type = "number", min = 0, max = 1, step = 0.05,
     fmt = "%.2f",
     group = "New panels", label = "Default opacity",
-    tooltip = "The opacity a newly created panel starts at.",
+    tooltip = "The opacity a newly created panel starts at. " .. MADE_NOTE,
     validate = function(v) return type(v) == "number" and v >= 0 and v <= 1 end },
 }
 -- NOTE: the debug LOGGING flag (NS.State.debug) is deliberately NOT a schema setting — it is
@@ -153,7 +175,7 @@ S.Schema = {
 -- rather than assumed: these seven rows, and nothing else — all seven are the composer's. The stub's
 -- composers answer an empty list (settings/OptionsSetup.lua explains why a hand-copied set there
 -- would be the copy that goes stale), so `/pm list|get|set` in a degraded install reaches the
--- Editing and New panels rows only. tests/test_schema.lua pins that count by name so it can never
+-- Moving panels and New panels rows only. tests/test_schema.lua pins that count by name so it can never
 -- widen silently.
 
 -- ── The addon-wide switch's stored path (slash-commands-§2) ────────────────────
@@ -638,6 +660,19 @@ function S:InstallMaster(H)
     -- options-ui-§12's global reset, verbatim and confirm-gated, and the SAME entry point the
     -- header Defaults button and `/pm resetall` use. Not a third door onto the same act.
     onResetAll = function() if NS.Slash then NS.Slash:ConfirmResetAll() end end,
+    -- *Recover panels* closes the tab above the reset pair (options-ui-§15's one host act): both
+    -- "where did my panel go?" acts sit together on the tab a lost player opens first, and the
+    -- tooltip says how they differ. A framed addon's leadButton takes its own row above the pair,
+    -- which the composer never splits. It moved here from the Moving panels tab's afterGroup, which
+    -- settings/Panel.lua no longer draws; the act is the same `/pm recover` entry point.
+    leadButton = {
+      text = "Recover panels",
+      -- The old second sentence ("Panels that are already on screen are left exactly where they
+      -- are.") said what the appended contrast now says, so it gave way to it rather than repeat it.
+      tooltip = "Bring any panel whose anchor has ended up beyond a screen edge back into view. "
+        .. "Unlike Reset position below, panels that are on screen stay where they are.",
+      onClick = function() if NS.Slash then NS.Slash:CliRecover() end end,
+    },
   }
   if #rows == 0 then return false end
 

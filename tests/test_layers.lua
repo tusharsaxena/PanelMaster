@@ -309,7 +309,7 @@ end)
 
 test("the panel editor's Frame strata row reads O.StrataTooltip, and Frame level says panels interleave", function()
   local src = readFile("settings/PanelEditorTabs.lua")
-  assertTrue(src:find('tokenDropdown%(anchorRow, "Frame strata", "strata", C%.STRATA,%s*O%.StrataTooltip%(C%.STRATA%)%)') ~= nil,
+  assertTrue(src:find('tokenDropdown%(layerRow, "Frame strata", "strata", C%.STRATA,%s*O%.StrataTooltip%(C%.STRATA%)%)') ~= nil,
     "the Frame strata dropdown does not take O.StrataTooltip(C.STRATA)")
   assertTrue(src:find("interleave", 1, true) ~= nil,
     "the Frame level tooltip does not say equal levels interleave (PAN-Z03b)")

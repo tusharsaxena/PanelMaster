@@ -1051,7 +1051,7 @@ Total.
 - Options seam: NS.Helpers IS the library instance, not a wrapper around one
 - Options seam: all four pages built, and each is registered with Blizzard
 - Options: the General page renders one widget per schema row, by type
-- Options: the Editing tab's afterGroup button is drawn, and only on that tab
+- Options: Recover panels is drawn on the Master controls tab, and only there
 - Options: a widget's OnValueChanged reaches the addon's single write seam
 - Options: a slider commits on release and snaps to the row's step
 - Options: the enum row's dropdown is populated from the schema's `values`
@@ -1169,6 +1169,17 @@ Total.
 - Settings guard: every stored profile path keeps its default, type and range
 - Settings guard: every panel record field keeps its template default
 
+### test_settings_layout.lua (8)
+
+- Layout: the Panels page's tabs draw their designed lines and headings
+- Layout: the band's create box is labeled New panel and says where new panels start
+- Layout: the General tab's reworded labels and tooltips
+- Layout: the copy tooltip's exclusions are exactly what Registry.CopyFrom skips
+- Layout: the Size and position, Accent bar, Artwork and fade tooltips
+- Layout: Moving panels pairs each switch with what it governs
+- Layout: each New panels default says where panels are made
+- Layout: Recover panels leads the Master controls tab's buttons, above the resets
+
 ### test_register.lua (1)
 
 - every deviation id the register cites is assigned by a bundle in docs/audits/
@@ -1250,6 +1261,7 @@ Total.
 | test_layout_cap.lua | 13 |
 | test_options_groups.lua | 7 |
 | test_settings_guard.lua | 2 |
+| test_settings_layout.lua | 8 |
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
@@ -1257,4 +1269,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1083** |
+| **Total** | **1091** |

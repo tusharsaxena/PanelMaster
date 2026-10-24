@@ -22,7 +22,7 @@ client and is run when one is available, not per release.
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
 | ART-1 to 30 | Artwork | The bundled catalog, fills, layers, color, custom paths, Sunn Viewport Art packs |
-| PANEL-1 to 35 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows, the scroll offset kept across a re-render, the strata and level tooltips |
+| PANEL-1 to 37 | Settings panel | General tabs, Master controls, resets, the Panels page band and editor, dropdowns, the tab strip, panel writes through the schema seam, both resets sweeping the session-only rows, the scroll offset kept across a re-render, the strata and level tooltips, the item 020 layout of both settings pages |
 | PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 7 | Combat | Queued unlocks, a stand-down dropping them, the settings lockout, General visibility |
@@ -37,6 +37,14 @@ client and is run when one is available, not per release.
 - `/console scriptErrors 1`, then `/reload`, then `/pm resetall` and confirm. That is a **profile
   reset**: the settings and the panels on the current profile both go, so no separate panel wipe is
   needed.
+- **Labels renamed on 2026-10-24 (settings layout, item 020).** A check written before that date may
+  quote an old label; read the new one in its place, because only the words moved and the behavior
+  did not: *Editing* → **Moving panels**, *Position and size* → **Size and position**, *Create new
+  panel* → **New panel**, *Enabled* → **Enable this panel**, *Unlock* (on a panel) → **Unlock this
+  panel**, *Reset* / *Delete* (in the editor) → **Reset panel…** / **Delete panel…**, *Anchor* →
+  **Screen anchor point**, *Show on mouseover only* → **Fade unless hovered**, the Artwork heading
+  *Appearance* → **Color and blending**, and the Accent bar heading *Bar* is gone. **Recover panels**
+  moved from the old *Editing* tab to **Master controls**.
 - `<name>` in a step means any panel you have made. `/pm panel <name> ...` reads only the first
   word as the name, so use a one-word panel for those steps (FRAME-1's `Chat BG` cannot be addressed
   there). Several themes need two or three panels; make them with `/pm new <name>`.
@@ -110,8 +118,9 @@ client and is run when one is available, not per release.
   `Invalid value for settings.snapToGrid`, then the reason indented beneath it. Nothing is
   written. Result: pass (owner-marked 2026-10-10)
 - **SLASH-7. `/pm list`.** `/pm list` → a green header, azure `[group]` headings in tab order
-  (`Master controls`, `Editing`, `New panels`), four-space-indented rows, and grid size reading
-  `4 px`. Result: pass (owner-marked 2026-10-10)
+  (`Master controls`, `Moving panels`, `New panels`), four-space-indented rows, and grid size reading
+  `4 px`. Under `Moving panels` the rows read in the tab's order: show names, unlock outline
+  thickness, snap to grid, grid size. Result:
 
 ## FRAME
 
@@ -484,21 +493,22 @@ and at least one art pack; skip those without it.
 ## PANEL
 
 - **PANEL-1. The General page.** `/pm config` → **General** → a tab strip pinned at the top reading
-  **Master controls | Editing | New panels**, the first tab active (drawn as a disabled button), a
-  two-column grid with no section headings under it, and a **Defaults** button top-right in the dark
-  and gold style, not Blizzard's red stone button (a red one was created too early;
-  `options-ui-§5`). Result: pass (owner-marked 2026-10-10)
+  **Master controls | Moving panels | New panels**, the first tab active (drawn as a disabled
+  button), a two-column grid with no section headings under it, and a **Defaults** button top-right
+  in the dark and gold style, not Blizzard's red stone button (a red one was created too early;
+  `options-ui-§5`). Result:
 - **PANEL-2. The General tabs.** Click each tab → only that tab's controls show, the strip stays put,
-  and clicking the active tab does nothing. **Master controls** has 7 rows plus a **Reset position |
-  Reset all settings** button pair; **Editing** has 4 rows, two per line (**Show names while
-  unlocked | Snap to grid**, then **Grid size | Unlock outline thickness**), plus a **Recover
-  panels** button under the last row; **New panels** has 4. Result: pass (owner-marked 2026-10-10)
+  and clicking the active tab does nothing. **Master controls** has 7 rows, then a **Recover panels**
+  button alone on its own line, then a **Reset position | Reset all settings** button pair; **Moving
+  panels** has 4 rows, two per line (**Show names while unlocked | Unlock outline thickness**, then
+  **Snap to grid | Grid size**), and no button; **New panels** has 4. Result:
 - **PANEL-3. Master controls in the canonical order.** Two per line: **Enable Ka0s Panel Master |
-  General visibility**, **Master scale | Master alpha**, **Lock frame | Debug console**, then
+  General visibility**, **Master scale | Master opacity**, **Lock frame | Debug console**, then
   **Minimap button** alone on a fourth line (PanelMaster has no **Test mode** to pair beside it), then
-  the button pair, with nothing else on the tab (`options-ui-§15`). Compare against another Ka0s
-  addon → the same rows in the same order, except that an addon with a Test mode pairs it beside
-  **Minimap button**. Result: pass (owner-marked 2026-10-10)
+  **Recover panels** alone on its own line, then the button pair, with nothing else on the tab
+  (`options-ui-§15`). Compare against another Ka0s addon → the same rows in the same order, except
+  that an addon with a Test mode pairs it beside **Minimap button** and an addon with no act of its
+  own has no lone button above the pair. Result:
 - **PANEL-4. General page chrome.** The row spacing, the header, the gold divider and the breadcrumb
   `Ka0s Panel Master ▸ General` match the other Ka0s addons' pages. Result: pass (owner-marked 2026-10-10)
 - **PANEL-5. The scrollbar.** On a page that fits, the scrollbar is **present but grayed out**, and
@@ -518,12 +528,12 @@ and at least one art pack; skip those without it.
 - **PANEL-9. Defaults button tooltips.** Hover **Defaults** on **General** → *Reset this profile to
   the addon's defaults. Your panels go with it.* On **Panels** → *Delete every panel. This cannot be
   undone.* Result: pass (owner-marked 2026-10-10)
-- **PANEL-10. The Panels page band.** Click **Panels** → a six-tab strip (**General | Position and
-  size | Background and border | Accent bar | Artwork | Opacity and fade**) with **General** active,
-  and above it, in the page's chrome band, a **single row**: the **Panel** picker on the left and
-  **Create new panel** on the right, separated from the strip by a hairline rule. Neither is a tab or
+- **PANEL-10. The Panels page band.** Click **Panels** → a six-tab strip (**General | Size and
+  position | Background and border | Accent bar | Artwork | Opacity and fade**) with **General**
+  active, and above it, in the page's chrome band, a **single row**: the **Panel** picker on the left
+  and **New panel** on the right, separated from the strip by a hairline rule. Neither is a tab or
   in the scroll area, they stay put on every tab, and no second box is drawn around them. **Fail:** a
-  band two or three rows deep (`options-ui-§14`). Result: pass (owner-marked 2026-10-10)
+  band two or three rows deep (`options-ui-§14`). Result:
 - **PANEL-11. Panels opened first.** On a fresh login, `/pm config` and click **Panels** before any
   other page → the band holds its one row, and the picker and the create box each take **half the
   band's width**, not a fixed 150 pixels. Resize the Settings window → both follow. Result: pass (owner-marked 2026-10-10)
@@ -538,24 +548,26 @@ and at least one art pack; skip those without it.
   or a page without its strip. Result: pass (owner-marked 2026-10-10)
 - **PANEL-14. Editor layout.** The picker carries its label and sits beside the create box, with no
   heading naming the selected panel. On **General**, the three rows keep to their own lines, each
-  control is half width, and **Delete**'s right border clears the page edge. No boxed border around
-  the editor, and no two unrelated controls share a line. Subsection headings (the landing page's
-  divider-flanked style): **Background / Border** on *Background and border*, **Bar / Edges /
-  Border** on *Accent bar*, **Image / Layout / Appearance** on *Artwork*. On **Opacity and fade**,
-  **Panel opacity** and **Faded opacity** share the first row and **Show on mouseover only** sits
-  alone on the next. Compare against KickCD's Icons page. Result: pass (owner-marked 2026-10-10)
+  control is half width, and **Delete panel…**'s right border clears the page edge. No boxed border
+  around the editor, and no two unrelated controls share a line. Subsection headings (the landing
+  page's divider-flanked style): **Size / Position / Layer** on *Size and position*, **Background /
+  Border** on *Background and border*, **Edges / Fill / Border** on *Accent bar* (with **Enable accent
+  bar** above the first, unheaded), **Image / Layout / Orientation / Color and blending** on
+  *Artwork*. On **Opacity and fade**, **Panel opacity** and **Faded opacity** share the first row and
+  **Fade unless hovered** sits alone on the next. Compare against KickCD's Icons page. Result:
 - **PANEL-15. An open dropdown closes when the page scrolls.** Open any dropdown (the panel picker,
   Anchor, Frame strata, a texture picker, or **General**'s **Default frame strata**) and, without
   closing it, scroll the page with the mouse wheel, then with the scrollbar drag → the list closes
   both times and never floats over or outside the window. Reopen it → one click opens it. Result: pass (owner-marked 2026-10-10)
 - **PANEL-16. The General tab's acts.** **Panels** opens on **General**, whose three rows of two are
-  **Panel name** and **Copy settings from panel**, **Enabled** and **Unlock**, **Reset** and
-  **Delete**. Walk the other five tabs → none of the six follows you. Back on **General**, with a
-  panel picked: tick and untick **Enabled** (the panel goes and returns), tick **Unlock** (only that
-  panel grows a handle), press **Reset**, then **Delete**, answering **Yes** to each confirm → each
-  acts on the panel the picker shows, and each confirm names it.
+  **Panel name** and **Copy settings from panel**, **Enable this panel** and **Unlock this panel**,
+  **Reset panel…** and **Delete panel…**. Walk the other five tabs → none of the six follows you. Back
+  on **General**, with a panel picked: tick and untick **Enable this panel** (the panel goes and
+  returns), tick **Unlock this panel** (only that panel grows a handle), press **Reset panel…**, then
+  **Delete panel…**, answering **Yes** to each confirm → each acts on the panel the picker shows, and
+  each confirm names it.
   Pick another panel → the six rebuild against it. **Fail:** an act landing on the previously picked
-  panel. The frame name is only on the **Panel name** tooltip, not a label of its own. Result: pass (owner-marked 2026-10-10)
+  panel. The frame name is only on the **Panel name** tooltip, not a label of its own. Result:
 - **PANEL-17. The rename box keeps what you type.** Pick a panel, type into **Panel name** without
   pressing Enter, then run `/pm new Interloper` from chat → the new panel appears in the picker and
   your text is still in the box. With nothing typed, `/pm rename <selected panel> Renamed` (a one-word
@@ -592,11 +604,12 @@ and at least one art pack; skip those without it.
   per-`ctx` pool handed back a frame it did not finish dressing. The headless mock answers
   `GetHeight` with 0, so no automated check sees this. Result: pass (owner-marked 2026-10-10)
 - **PANEL-27. The Frame level slider.** Two overlapping panels in the same strata, with one-word
-  names. `/pm panel <first> level 7`, then open **Panels**, select it and go to **Position and
-  size** → **Frame level** sits on its own half-width row directly under **Frame strata** and reads
-  **7**; its tooltip says strata decides first and level orders panels within one strata. Drag the
-  second panel's **Frame level** above 7 → it moves in front of the first live, as you release, and
-  back below 7 → behind again. `/pm panel <second> level 150` → the slider reads **100**. Result: pass (owner, 2026-10-02)
+  names. `/pm panel <first> level 7`, then open **Panels**, select it and go to **Size and
+  position** → under the **Layer** heading, **Frame level** sits beside **Frame strata** on one line
+  and reads **7**; its tooltip says strata decides first and level orders panels within one strata.
+  Drag the second panel's **Frame level** above 7 → it moves in front of the first live, as you
+  release, and back below 7 → behind again. `/pm panel <second> level 150` → the slider reads
+  **100**. Result:
 - **PANEL-28. Every editor control still repaints live.** Select a panel and visit each of the six
   editor tabs (**General**, **Position and size**, **Background and border**, **Accent bar**,
   **Artwork**, **Opacity and fade**). Change every control once: each slider on release, each
@@ -638,11 +651,44 @@ and at least one art pack; skip those without it.
   → one sentence about new panels, then the library's strata text: Background and Low under most of
   the interface, Medium the default for displays, High over other windows; then that Dialog and above
   also cover confirmation dialogs, the debug console and the Settings window; then that Fullscreen
-  Dialog and Tooltip also cover dropdown menus and tooltips. On **Panels ▸ Position and size**, hover
+  Dialog and Tooltip also cover dropdown menus and tooltips. On **Panels ▸ Size and position**, hover
   **Frame strata** → the same library text. Hover **Frame level** → it says panels on the same strata
   and level can interleave and to give overlapping panels different levels. **Fail:** either strata
   tooltip still reads "DIALOG and above cover normal UI", or the level tooltip says "no guaranteed
   order". Result:
+- **PANEL-36. The General page after item 020 (SM-PM-LY).** `/pm config` → **General**. On
+  **Master controls**, **Recover panels** sits alone on its own line directly above **Reset
+  position | Reset all settings**; hover it → the tooltip ends *"Unlike Reset position below, panels
+  that are on screen stay where they are."* On **Moving panels**, the lines read **Show names while
+  unlocked | Unlock outline thickness**, then **Snap to grid | Grid size**; hover each of the four →
+  each tooltip ends *"These only matter while panels are unlocked: untick Lock frame on the General
+  page > Master controls, or tick Unlock this panel on Panels > General."* On **New panels**, hover
+  each of the four → each tooltip says *"Panels are made on the Panels page."*, and **Default frame
+  strata** still ends on the library's strata tiers, stated once. Note every value on the page, then
+  `/reload` → every value is as you left it, and `/pm list` shows the same paths and values as
+  before the pass (no setting lost, no key moved, no default changed). Click **Recover panels** with a
+  panel dragged half off-screen → it comes back, and a panel on screen does not move. Result:
+- **PANEL-37. The Panels page after item 020 (SM-PM-LY).** `/pm config` → **Panels**, with two
+  panels. The band reads **Panel | New panel**; hover **New panel** → the tooltip ends *"New panels
+  start at the size, layer and opacity set on the General page > New panels."* Walk the six tabs
+  and compare, line by line: **General** — *Panel name | Copy settings from panel*, *Enable this
+  panel | Unlock this panel*, *Reset panel… | Delete panel…*; **Size and position** — **Size**:
+  *Width | Height*, *Panel scale* (full width); **Position**: *Screen anchor point* (alone), *X offset
+  | Y offset*; **Layer**: *Frame strata | Frame level*; **Background and border** — unchanged;
+  **Accent bar** — *Enable accent bar* (unheaded), **Edges**: the four edge ticks, **Fill**: *Bar
+  texture | Bar opacity*, *Bar color | Use class color*, *Bar thickness | Bar offset*, **Border**: the
+  bar's border block; **Artwork** — **Image**: *Artwork*, *Custom texture path | Fit to artwork*;
+  **Layout**: *Fill | Artwork scale*, *Artwork position | Draw layer*, *Artwork X offset | Artwork Y
+  offset*; **Orientation**: *Rotation*, *Flip horizontal | Flip vertical*; **Color and blending**:
+  *Artwork opacity | Blend mode*, *Artwork color | Use class color*, *Desaturate*; **Opacity and
+  fade** — *Panel opacity | Faded opacity*, *Fade unless hovered*. Hover these → **Copy settings from
+  panel** lists what is copied (everything but the name and the position); **Reset panel…** ends on
+  the General page > New panels pointer; **Enable accent bar** ends *"Everything below on this tab
+  applies only while this is ticked."*; **Bar thickness** says *UI units*; **Fit to artwork** opens
+  *"Overwrites this panel's Width and Height (Size and position tab) with …"*; **Panel opacity**
+  opens *"How visible the whole panel is: background, border, accent bars and artwork together."*;
+  **Faded opacity** quotes *'Fade unless hovered'*. Change one control on each tab, `/reload` → every
+  change is still there, and every other value is what it was before the pass. Result:
 
 ## PROFILE
 
@@ -1059,3 +1105,7 @@ check added or rewritten after that date is listed here until its `Result:` line
 
 Added 2026-10-24 by the frame-layering pass (`frame-layering`, standard v2.88.0), awaiting the owner:
 FRAME-30, FRAME-31, FRAME-32, FRAME-33 and PANEL-35.
+
+Added or rewritten 2026-10-24 by the settings-layout pass (item 020, `options-ui-§21`), awaiting the
+owner: SLASH-7, PANEL-1, PANEL-2, PANEL-3, PANEL-10, PANEL-14, PANEL-16, PANEL-27, PANEL-36 and
+PANEL-37.

@@ -15,9 +15,9 @@ test("Schema.Register: every path resolves against the defaults (architecture-§
   -- path MUST report whether or not the row has a default of its own.
   local probes = {
     { path = "settings.snapToGird", default = true, type = "bool",
-      group = "Editing", label = "typo'd path, WITH a default" },
+      group = "Moving panels", label = "typo'd path, WITH a default" },
     { path = "settings.snapToGird", type = "bool",
-      group = "Editing", label = "typo'd path, no default" },
+      group = "Moving panels", label = "typo'd path, no default" },
   }
   for _, probe in ipairs(probes) do
     S.Schema[#S.Schema + 1] = probe
@@ -276,7 +276,7 @@ test("Schema: the General page's tabs are the designed partition, in strip order
   -- has quietly drifted into the wrong tab. Adding a row means adding it here too, deliberately.
   local EXPECTED = {
     { tab = "Master controls", count = 7 },
-    { tab = "Editing",         count = 4 },
+    { tab = "Moving panels",   count = 4 },
     { tab = "New panels",      count = 4 },
   }
 
@@ -327,7 +327,7 @@ test("Schema: the Panels page's tab strip is the designed one, in strip order", 
   -- Position matters more than membership here: the escape rests entirely on the page OPENING on
   -- this tab, so a `General` anywhere but first is the finding, not `General` existing.
   local EXPECTED = {
-    "General", "Position and size", "Background and border", "Accent bar", "Artwork",
+    "General", "Size and position", "Background and border", "Accent bar", "Artwork",
     "Opacity and fade",
   }
   local actual = NS.PanelEditor.TABS

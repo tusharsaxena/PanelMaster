@@ -227,7 +227,7 @@ local BAR = {
   { label = "Use class color", type = "CheckBox", field = "accentClassColor",
     tip = companionTip("bar color") },
   { label = "Bar thickness", type = "Slider", field = "accentThickness", min = 1, max = 32, step = 1,
-    tip = "How thick the accent bar is, in screen units." },
+    tip = "How thick the accent bar is, in UI units." },
   { label = "Bar offset", type = "Slider", field = "accentOffset", min = -32, max = 32, step = 1,
     tip = "How far the bar sits from the panel's edge. Positive detaches it from the panel, "
       .. "which is the look this is modeled on; 0 sits flush; negative overlaps the panel." },
@@ -266,9 +266,10 @@ local TABS = {
   {
     name = "Accent bar",
     blocks = { BAR, BAR_BORDER },
-    order = concat({ { label = "Enable accent bar" } }, BAR,
-                   { { label = "Top" }, { label = "Bottom" }, { label = "Left" }, { label = "Right" } },
-                   BAR_BORDER),
+    -- The enable and the edges first, then the bar's fill and its border (item 020, PAN-L15).
+    order = concat({ { label = "Enable accent bar" },
+                     { label = "Top" }, { label = "Bottom" }, { label = "Left" }, { label = "Right" } },
+                   BAR, BAR_BORDER),
   },
 }
 

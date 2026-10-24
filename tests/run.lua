@@ -114,7 +114,7 @@ local SUITES = {
   -- release watch list alone (automated-tests-§4), and a bare "test_layout_cap" beside a local
   -- file of that name would now read as a collision with the kit's copy.
   { name = "test_layout_cap", dir = "tests/_kit/" },
-  "test_options_groups", "test_settings_guard",
+  "test_options_groups", "test_settings_guard", "test_settings_layout",
   "test_register", "test_docs", "test_lintconfig",
   -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
   -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives

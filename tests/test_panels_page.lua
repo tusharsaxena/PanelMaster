@@ -54,14 +54,14 @@ test("Panels page: only the active tab's controls are built", function()
   E.__setSelectedID(rec.id)
   local ctx = freshPanelsCtx()
 
-  local position = labelsOfTab(ctx, "Position and size")
-  assertTrue(position["Width"], "the Position and size tab did not build Width")
-  assertTrue(position["Panel scale"], "the Position and size tab did not build Panel scale")
+  local position = labelsOfTab(ctx, "Size and position")
+  assertTrue(position["Width"], "the Size and position tab did not build Width")
+  assertTrue(position["Panel scale"], "the Size and position tab did not build Panel scale")
   -- #15: the level was CLI-only; the slider sits under Frame strata so the two layer controls read
   -- together.
-  assertTrue(position["Frame level"], "the Position and size tab did not build Frame level")
+  assertTrue(position["Frame level"], "the Size and position tab did not build Frame level")
   assertFalse(position["Background texture"] == true,
-    "the Position and size tab built a surface control")
+    "the Size and position tab built a surface control")
   -- The name box is in the chrome band, built once for the session. A tab render that produced it
   -- would be the General tab coming back inside another one.
   assertFalse(position["Panel name"] == true, "a tab render rebuilt the band's name box")
@@ -75,7 +75,7 @@ test("Panels page: only the active tab's controls are built", function()
 
   local fade = labelsOfTab(ctx, "Opacity and fade")
   assertTrue(fade["Panel opacity"], "the Opacity and fade tab did not build Panel opacity")
-  assertTrue(fade["Show on mouseover only"], "the Opacity and fade tab lost the mouseover switch")
+  assertTrue(fade["Fade unless hovered"], "the Opacity and fade tab lost the mouseover switch")
 
   NS.Registry:DeleteAll()
   E.__setSelectedID(nil)
@@ -180,10 +180,10 @@ test("Panels page: the band's block is shown even when AceGUI hands it back from
   assertTrue(picker.frame:IsShown(), "the Panel picker is hidden")
   local box
   for w in pairs(inBlock) do
-    if w.type == "EditBox" and w.labelText == "Create new panel" then box = w end
+    if w.type == "EditBox" and w.labelText == "New panel" then box = w end
   end
-  assertTrue(box ~= nil, "the Create new panel box is not inside the band's block")
-  assertTrue(box.frame:IsShown(), "the Create new panel box is hidden")
+  assertTrue(box ~= nil, "the New panel box is not inside the band's block")
+  assertTrue(box.frame:IsShown(), "the New panel box is hidden")
 
   NS.Registry:DeleteAll()
 end)
@@ -233,7 +233,7 @@ end)
 test("Panels page: the create box is labeled for the act, not for its contents", function()
   NS.Registry:DeleteAll()
   local labels = labelsBuiltBy(function() freshPanelsCtx() end)
-  assertTrue(labels["Create new panel"], "the page header lost the create box's label")
+  assertTrue(labels["New panel"], "the page header lost the create box's label")
   assertFalse(labels["New panel name"] == true, "the old, contents-naming label came back")
   NS.Registry:DeleteAll()
 end)
@@ -275,7 +275,7 @@ test("Panels page: the two opacity sliders share a row, and the switch is below"
 
   local panelRow  = rowHolding("Panel opacity")
   local fadedRow  = rowHolding("Faded opacity")
-  local switchRow = rowHolding("Show on mouseover only")
+  local switchRow = rowHolding("Fade unless hovered")
   assertTrue(panelRow ~= nil, "the tab did not build Panel opacity")
   assertTrue(fadedRow ~= nil, "the tab did not build Faded opacity")
   assertTrue(switchRow ~= nil, "the tab lost the mouseover switch")
@@ -376,8 +376,8 @@ local function actsOnGeneral(ctx)
   E:Rebuild(ctx)
   local acts = {}
   local BY_LABEL = { ["Panel name"] = "name", ["Copy settings from panel"] = "copy",
-                     ["Enabled"] = "enabled", ["Unlock"] = "unlocked" }
-  local BY_TEXT  = { Reset = "reset", Delete = "delete" }
+                     ["Enable this panel"] = "enabled", ["Unlock this panel"] = "unlocked" }
+  local BY_TEXT  = { ["Reset panel\226\128\166"] = "reset", ["Delete panel\226\128\166"] = "delete" }
   for i = from, #created do
     local w = created[i]
     local key = (w.labelText and BY_LABEL[w.labelText])
@@ -422,7 +422,8 @@ test("Panels page: the panel-wide acts are on the General FIRST tab, and the ban
     "the band still reserves three rows of height for acts that are on a tab now")
 
   -- The six draw on `General`, by the caption a player reads.
-  local ACTS = { "Panel name", "Copy settings from panel", "Enabled", "Unlock", "Reset", "Delete" }
+  local ACTS = { "Panel name", "Copy settings from panel", "Enable this panel", "Unlock this panel",
+                 "Reset panel\226\128\166", "Delete panel\226\128\166" }
   local onGeneral = captionsBuiltBy(function()
     ctx.activeTab = "General"
     E:Rebuild(ctx)
@@ -576,7 +577,7 @@ test("Panels page: the strip is drawn with ZERO panels, and the empty state is c
     if w.labelText then bandCaps[w.labelText] = true end
   end
   assertTrue(bandCaps["Panel"], "the band lost its picker on an empty registry")
-  assertTrue(bandCaps["Create new panel"], "the band lost the only control that can make a panel")
+  assertTrue(bandCaps["New panel"], "the band lost the only control that can make a panel")
 
   E.__setSelectedID(nil)
 end)

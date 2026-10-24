@@ -51,10 +51,9 @@ local ADDON_TAGLINE =
 -- Layout constants. The Ka0s values (options-ui-§8) now live in ONE place — LibKa0s-Options-1.0's
 -- lib.LAYOUT, re-exported on the instance — rather than being restated here, so this page's spacing
 -- and the flow engine's cannot drift apart. HEADER_TOP, HEADER_HEIGHT and DEFAULTS_W are entirely the
--- library's; the three below are read by this file or by settings/PanelEditor.lua. PADDING_X is read
+-- library's; the two below are read by this file or by settings/PanelEditor.lua. PADDING_X is read
 -- off the instance where it is used, at the Profiles page's hand-anchored container, so that
 -- container moves with the header and divider the library draws at the same inset.
-local ROW_VSPACER       = O.ROW_VSPACER
 local SECTION_HEADING_H = O.SECTION_HEADING_H
 local BUTTON_PAIR_REL   = O.BUTTON_PAIR_REL
 local LOGO_SIZE         = 300  -- landing-page logo display size, this page's own
@@ -379,34 +378,16 @@ function P:Register()
       -- (options-ui-§13), partitioned out of the row array in declaration order. It still routes
       -- through the descriptor's `rowsForPage`, so that field stays load-bearing.
       --
-      -- "Recover panels" is drawn by the Editing tab's afterGroup hook rather than riding the right
-      -- half of the Grid size row. The old pairing's argument — it is the other thing you reach for
-      -- when a layout has gone wrong — has not expired, and is why the button is still ON the
-      -- Editing tab; what changed is that `Snap to grid` now sits beside `Grid size`, pairing the
-      -- mode with the thing it modes, and a two-column line has no third cell. `afterGroup` fires
-      -- after the group's last row with the pending line already flushed, which is where the flow
-      -- engine puts a group's buttons anyway.
+      -- "Recover panels" is not drawn here any more. It is the Master controls tab's `leadButton`
+      -- (settings/Schema.lua, S:InstallMaster), so the composer draws it on its own row above the
+      -- reset pair and this page keys no afterGroup of its own (item 020, PAN-L03).
       --
       -- The Master controls tab's closing BUTTON PAIR -- Reset position and Reset all settings --
       -- is the composer's own `afterGroup`, handed back beside the rows and parked on NS.Schema
       -- (options-ui-§15). The GROUP NAME IS THE KEY, so it is read from the composed rows rather
       -- than written out here: a literal that disagreed with the composer would detach the hook
-      -- and nothing would error -- the tab would simply lose both buttons.
-      local afterGroup = {
-        ["Editing"] = function(cc)
-          -- Through EnsureScroll rather than off `cc.scroll`, which is the library's own field and
-          -- not a contract this file is entitled to read: the hook fires inside the render, and
-          -- asking for the scroll is how a host is meant to reach it.
-          local scroll = O.EnsureScroll(cc)
-          if scroll then O.AddSpacer(scroll, ROW_VSPACER) end
-          O.InlineButtonPair(cc, {
-            text = "Recover panels",
-            tooltip = "Bring any panel whose anchor has ended up beyond a screen edge back into "
-              .. "view. Panels that are already on screen are left exactly where they are.",
-            onClick = function() if NS.Slash then NS.Slash:CliRecover() end end,
-          })
-        end,
-      }
+      -- and nothing would error -- the tab would simply lose its buttons.
+      local afterGroup = {}
       if NS.Schema.MasterGroup and NS.Schema.MasterAfterGroup then
         afterGroup[NS.Schema.MasterGroup] = NS.Schema.MasterAfterGroup
       end

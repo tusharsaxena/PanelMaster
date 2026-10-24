@@ -66,7 +66,7 @@ end
 setting alpha. There is no `InCombatLockdown` gate and none is wanted — the whole point of the fade
 is that it keeps working while the player is busy.
 
-The driver exists only once a panel has **Show on mouseover only** ticked (`mouseover` defaults to
+The driver exists only once a panel has **Fade unless hovered** ticked (`mouseover` defaults to
 `false`, `core/Constants.lua:317`), and the frame is never destroyed afterwards — only its script,
 which `Canvas.SetMouseoverTracked` removes when the tracked set empties and re-installs when it
 refills. That makes it a user-reachable hot path, not dead code, so:
@@ -91,8 +91,8 @@ The reason is the shape of the one path, not a claim that the path does not exis
 - **The body is two calls per tracked panel.** `updateMouseover` does one
   `NS.Compat.MouseIsOver(f)` and one `SetAlpha(...)` for each panel in the tracked set. There is no
   per-record work, no allocation, no string building, and no scan that grows with saved data.
-- **The set is bounded by a number the player sets.** A panel joins it only with *Show on mouseover
-  only* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:317`). With none ticked
+- **The set is bounded by a number the player sets.** A panel joins it only with *Fade unless
+  hovered* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:317`). With none ticked
   `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the frame
   survives but its `OnUpdate` does not — `SetMouseoverTracked` clears the script on the untrack that
   empties the set, so the dormant cost is a bare frame and no per-frame callback at all.
@@ -130,7 +130,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:647-652` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Show on mouseover only* ticked |
+| `modules/Canvas.lua:647-652` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Fade unless hovered* ticked |
 
 ### `RegisterEvent` — 4 hits
 

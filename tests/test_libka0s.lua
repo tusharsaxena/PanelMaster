@@ -344,7 +344,7 @@ test("Convergence #1: /pm reset takes a PATH and /pm resetall is the global form
   assertEqual(NS.Schema:Get("settings.gridSize"), 4, "path-scoped reset did not restore the default")
   -- There is deliberately no page-shaped form: a page is a property of a settings panel, not of the
   -- data, and the panel's own Defaults button is where page-scoped reset lives.
-  local lines = capture(function() NS.Slash:CliReset("Editing") end)
+  local lines = capture(function() NS.Slash:CliReset("Moving panels") end)
   assertTrue(lines[1]:find("Setting not found", 1, true) ~= nil,
     "`/pm reset <page>` resolved something — the page-shaped form is supposed to be gone")
 end)
@@ -505,7 +505,7 @@ test("Options: the General page renders one widget per schema row, by type", fun
 
   -- PER TAB, not per page, since the strip arrived. The page-wide totals below still have to add
   -- up, but they add up for the wrong reason if a row lands on the wrong tab -- a row that drifted
-  -- from Editing to New panels moves no total at all. So each tab is asserted against the rows
+  -- from Moving panels to New panels moves no total at all. So each tab is asserted against the rows
   -- ITS OWN group declares, which is the assertion that actually pins the partition.
   --
   -- `bool` -> CheckBox, a `number` with min/max -> Slider, a `string` with `values` -> Dropdown.
@@ -544,11 +544,12 @@ test("Options: the General page renders one widget per schema row, by type", fun
   assertEqual(#widgetsOfType(P_general(), "Dropdown"), totals.Dropdown)
 end)
 
-test("Options: the Editing tab's afterGroup button is drawn, and only on that tab", function()
-  -- "Recover panels" stopped being the right half of the Grid size row when Snap to grid took that
-  -- half. `afterGroup` fires after the group's LAST row, so on a tabbed page it lands under the tab
-  -- it is keyed to and nowhere else -- which is the property worth pinning, because a hook keyed to
-  -- a group that no longer exists simply never fires and nothing says so.
+test("Options: Recover panels is drawn on the Master controls tab, and only there", function()
+  -- "Recover panels" is the composer's `leadButton` (item 020, PAN-L03), drawn by the Master
+  -- controls tab's afterGroup hook above the reset pair. `afterGroup` fires after the group's LAST
+  -- row, so on a tabbed page it lands under the tab it is keyed to and nowhere else -- which is the
+  -- property worth pinning, because a hook keyed to a group that no longer exists simply never
+  -- fires and nothing says so.
   local function hasRecover(tab)
     for _, w in ipairs(tabWidgets(tab)) do
       if w.type == "Button" and w.text == "Recover panels" then return true end
@@ -556,10 +557,10 @@ test("Options: the Editing tab's afterGroup button is drawn, and only on that ta
     return false
   end
 
-  assertTrue(hasRecover(tabOf("settings.gridSize")),
-    "the Editing tab drew no Recover panels button — check the afterGroup key in settings/Panel.lua")
-  assertFalse(hasRecover(tabOf("settings.enabled")),
-    "Recover panels was drawn under a tab it is not keyed to")
+  assertTrue(hasRecover(tabOf("settings.enabled")),
+    "the Master controls tab drew no Recover panels button — check its leadButton in settings/Schema.lua")
+  assertFalse(hasRecover(tabOf("settings.gridSize")),
+    "Recover panels is still drawn on the Moving panels tab")
 end)
 
 test("Options: a widget's OnValueChanged reaches the addon's single write seam", function()
@@ -1175,7 +1176,7 @@ test("Degraded install: the schema loses the composed Master controls rows and N
     -- library's canonical row data -- the order, the labels, the ranges, the defaults -- and a
     -- hand-copied set in the stub would be the copy that goes stale (anti-pattern #47).
     --
-    -- So a library-less install reaches the Editing and New panels rows through `/pm list|get|set`
+    -- So a library-less install reaches the Moving panels and New panels rows through `/pm list|get|set`
     -- and not the Master controls ones. That is the whole difference, and this case exists so it
     -- can never widen without somebody deciding to widen it.
     local degradedNS = loadPartial({ Options = true, OptionsWidgets = true, OptionsScroll = true,

@@ -6,6 +6,9 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 
+-- U+2026, the ending options-ui-§21 gives a button that opens a confirmation.
+local ELLIPSIS = "\226\128\166"
+
 -- ── The Panels page's editor tabs ───────────────────────────────────────────────
 -- What is ON each of the editor's six tabs, for one panel: the tab names and their strip order,
 -- the editor's vertical rhythm, and buildPanelEditor, which draws the active tab's controls.
@@ -55,14 +58,14 @@ end
 -- two-control tab is not a subject. "Opacity and fade" is what its three controls are; the old
 -- name, "Visibility", promised the where/when rules of a visibility engine this addon lacks.
 --
--- `General` holds the acts on the panel WHOLE: the name box, copy-from, Enabled, Unlock, Reset and
--- Delete. It is FIRST, and that is what makes it legal. options-ui-§14 (v2.40.0) bounds the chrome
+-- `General` holds the acts on the panel WHOLE: the name box, copy-from, Enable this panel, Unlock
+-- this panel, Reset panel and Delete panel. It is FIRST, and that is what makes it legal. options-ui-§14 (v2.40.0) bounds the chrome
 -- band at one row -- the picker and the create box -- and lets a page's other page-wide acts sit
 -- on the tab the page OPENS on, where nothing is hidden behind a click. The tab was deleted in
 -- v2.38.0 under the older wording of §14 and is back because six acts stacked into the band made
 -- a second page above the page.
 local TAB_GENERAL  = "General"
-local TAB_POSITION = "Position and size"
+local TAB_POSITION = "Size and position"
 local TAB_SURFACE  = "Background and border"
 local TAB_ACCENT   = "Accent bar"
 local TAB_ARTWORK  = "Artwork"
@@ -90,8 +93,8 @@ for _, name in ipairs(EDITOR_TABS) do IS_EDITOR_TAB[name] = true end
 -- the page", a small one "still the same thought".
 --
 -- The middle size came back, and with it a heading. The editor's five SUBJECTS are tabs and are
--- announced by the strip -- that has not changed -- but a tab that mixes two kinds of control has
--- to say where one stops and the next starts (options-ui-§7), and three of the five do.
+-- announced by the strip -- that has not changed -- but a tab that covers more than one subject has
+-- to say where one stops and the next starts (options-ui-§7), and four of the six do.
 local EDITOR_ROW_GAP     = 6    -- between rows within one subsection
 local EDITOR_HEADING_GAP = 10   -- above a subsection heading; below it the heading's own art reads
                                 -- as the separation, so nothing is added there
@@ -316,8 +319,11 @@ local function buildPanelEditor(ctx, parent, rec)
         :format(NS.Registry.FrameName(rec)))
     identityRow:AddChild(nameBox)
 
-    -- Copy every appearance setting from another panel. Position is deliberately not copied -- see
-    -- Registry.CopyFrom -- so the panel takes on the other's look without moving on top of it.
+    -- Copy every setting from another panel but its identity and its position -- see
+    -- Registry.CopyFrom, whose COPY_EXCLUDED is exactly id, name, frameName, point, relPoint, x and
+    -- y -- so the panel takes on the other's look without moving on top of it. The tooltip names
+    -- what that includes (layer, scale, fade and the enabled state as well as the look), because a
+    -- copy that changes more than its words promise is the surprise options-ui-§21 forbids.
     --
     -- Deliberately VALUELESS: this is an ACTION, not a stored setting. Showing a "current" entry
     -- would imply an ongoing link between the two panels, when the copy is a one-off.
@@ -341,21 +347,23 @@ local function buildPanelEditor(ctx, parent, rec)
     attachTooltip(copyFrom, "Copy settings from panel",
       #order == 0
         and "Make another panel first, then you can copy its settings onto this one."
-        or ("Take on another panel's appearance \226\128\148 size, textures, colors, border and "
-            .. "accent bar. Its POSITION is not copied, so this panel stays where it is."))
+        or ("Copy everything from another panel except its name and its position (anchor and "
+            .. "offsets): size and scale, layer, opacity and fade, background, border, accent bar, "
+            .. "artwork, and whether it is enabled. This panel stays where it is."))
     identityRow:AddChild(copyFrom)
 
     local toggleRow = editorRow(group)
 
     local enabled = AceGUI:Create("CheckBox")
-    enabled:SetLabel("Enabled")
+    enabled:SetLabel("Enable this panel")
     enabled:SetRelativeWidth(0.5)
     -- `~= false`, not truthiness: a record that predates the field is enabled.
     enabled:SetValue(rec.enabled ~= false)
     enabled:SetCallback("OnValueChanged", function(_, _, v)
       NS.Registry:Set(rec.id, "enabled", v and true or false)
     end)
-    attachTooltip(enabled, "Enabled", "Draw this panel. Unticking hides it without deleting it.")
+    attachTooltip(enabled, "Enable this panel",
+      "Draw this panel. Unticking hides it without deleting it.")
     toggleRow:AddChild(enabled)
     -- The one control here that wants the scalar tier: `/pm panel <name> enabled false`, a Reset
     -- and a CopyFrom all broadcast MSG.PANEL without rebuilding, and the checkbox has to follow.
@@ -365,7 +373,7 @@ local function buildPanelEditor(ctx, parent, rec)
     -- the panel being edited, which is what you want with a dozen of them on screen.
     -- Session state no MSG.PANEL describes: its refresher is driven by NS.PanelEditor:RefreshUnlock.
     local unlocked = AceGUI:Create("CheckBox")
-    unlocked:SetLabel("Unlock")
+    unlocked:SetLabel("Unlock this panel")
     unlocked:SetRelativeWidth(0.5)
     unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
     unlocked:SetDisabled(NS.State.unlocked == true)
@@ -379,7 +387,7 @@ local function buildPanelEditor(ctx, parent, rec)
       -- rather than claiming a state the panel is not in.
       if result == nil then widget:SetValue(false) end
     end)
-    attachTooltip(unlocked, "Unlock",
+    attachTooltip(unlocked, "Unlock this panel",
       "Give just this panel a drag handle and a name label, so it can be moved. "
       .. "Session-only \226\128\148 always locked again after a reload. Grayed out while Lock "
       .. "frame is unticked \226\128\148 every panel is already unlocked.")
@@ -387,50 +395,36 @@ local function buildPanelEditor(ctx, parent, rec)
 
     local actionRow = editorRow(group)
 
-    local resetBtn = makePairButton("Reset", function() pageAction.reset(rec) end)
-    attachTooltip(resetBtn, "Reset",
+    -- The acts name their object (options-ui-§21: *Reset <noun>*, *Delete <noun>*), and both end
+    -- in "…" because both open a confirmation first. Delete stays last on its line.
+    local RESET_LABEL, DELETE_LABEL = "Reset panel" .. ELLIPSIS, "Delete panel" .. ELLIPSIS
+    local resetBtn = makePairButton(RESET_LABEL, function() pageAction.reset(rec) end)
+    attachTooltip(resetBtn, RESET_LABEL,
       "Put this panel back to how a new one starts \226\128\148 size, position, textures, colors "
-      .. "and all. Its name is kept, so anything anchored to it stays anchored. Asks first.")
+      .. "and all. Its name is kept, so anything anchored to it stays anchored. Asks first. "
+      .. "New panels start at the size, layer and opacity set on the General page > New panels.")
     actionRow:AddChild(resetBtn)
 
-    local deleteBtn = makePairButton("Delete", function() pageAction.delete(rec) end)
-    attachTooltip(deleteBtn, "Delete", "Remove this panel. Asks first; this cannot be undone.")
+    local deleteBtn = makePairButton(DELETE_LABEL, function() pageAction.delete(rec) end)
+    attachTooltip(deleteBtn, DELETE_LABEL, "Remove this panel. Asks first; this cannot be undone.")
     actionRow:AddChild(deleteBtn)
   end
 
-  -- Where the panel is and how big it is, ending on the scale that acts on all of it at once.
+  -- How big the panel is, where it sits, and which layer it draws in: three subjects, so three
+  -- headings (options-ui-§7), in the order every Size and position tab in the collection uses.
   sections[TAB_POSITION] = function()
+    editorHeading(group, "Size")
+
     local sizeRow = editorRow(group)
     numberField(sizeRow, "Width", "width", C.MIN_SIZE, C.MAX_SIZE)
     numberField(sizeRow, "Height", "height", C.MIN_SIZE, C.MAX_SIZE)
 
     editorSpacer(group, EDITOR_ROW_GAP)
-    local offsetRow = editorRow(group)
-    numberField(offsetRow, "X offset", "x", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
-    numberField(offsetRow, "Y offset", "y", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local anchorRow = editorRow(group)
-    tokenDropdown(anchorRow, "Anchor", "point", C.POINTS,
-      "Which corner or edge of the screen the offsets are measured from.")
-    -- The library's one strata tooltip over this row's own values (frame-layering-§1).
-    tokenDropdown(anchorRow, "Frame strata", "strata", C.STRATA, O.StrataTooltip(C.STRATA))
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    -- Directly under Frame strata, so the two layer controls read together; half width, alone on
-    -- its row. The write goes through NS.Registry:Set, the seam `/pm panel <name> level <n>` uses.
-    local layerRow = editorRow(group)
-    numberField(layerRow, "Frame level", "level", C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL, 1,
-      "Orders panels that share a frame strata: a higher level draws entirely in front of a lower "
-      .. "one. Panels on the same strata and level can interleave: parts of one may show through "
-      .. "the other. Give overlapping panels different levels. Strata decides first; level only "
-      .. "orders panels within one strata.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    -- Full width, spanning both columns. Scale is the one control on this page that acts on
-    -- EVERYTHING above it at once — width, height, border, accent bars and artwork together — so it
-    -- reads as a footer to the section rather than as one of a pair, and pairing it with any single
-    -- neighbor would imply a relationship it does not have.
+    -- Full width, spanning both columns, directly under the Width and Height its tooltip contrasts
+    -- it with. Scale is the one control on this tab that acts on everything the panel draws at once
+    -- -- width, height, border, accent bars and artwork together -- so pairing it with any single
+    -- neighbor would imply a relationship it does not have. It still sits directly above the
+    -- Position block its "nudge the offsets afterwards" advice points to.
     local scaleRow = editorRow(group)
     numberField(scaleRow, "Panel scale", "scale",
       C.MIN_PANEL_SCALE, C.MAX_PANEL_SCALE, 0.05,
@@ -441,6 +435,35 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "keep reading the numbers you typed; what changes is how big those turn out on screen. The "
       .. "panel is anchored in its own scaled units, so a scaled panel also moves relative to its "
       .. "anchor \226\128\148 nudge the offsets afterwards if it matters.", 1.0)
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Position")
+
+    -- The origin first, then the nudge from it: the anchor alone on its line above the offsets it
+    -- is the origin of. "Screen anchor point" names what it anchors to (one screen point, the
+    -- collection's form for a single anchor); the stored `point` and its values are unchanged.
+    local anchorRow = editorRow(group)
+    tokenDropdown(anchorRow, "Screen anchor point", "point", C.POINTS,
+      "Which corner or edge of the screen the offsets are measured from.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local offsetRow = editorRow(group)
+    numberField(offsetRow, "X offset", "x", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
+    numberField(offsetRow, "Y offset", "y", -C.EDITOR_OFFSET_RANGE, C.EDITOR_OFFSET_RANGE)
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Layer")
+
+    -- Frame strata and Frame level on ONE line: one subject, read together. The level's write goes
+    -- through NS.Registry:Set, the seam `/pm panel <name> level <n>` uses.
+    local layerRow = editorRow(group)
+    -- The library's one strata tooltip over this row's own values (frame-layering-§1).
+    tokenDropdown(layerRow, "Frame strata", "strata", C.STRATA, O.StrataTooltip(C.STRATA))
+    numberField(layerRow, "Frame level", "level", C.MIN_PANEL_LEVEL, C.MAX_PANEL_LEVEL, 1,
+      "Orders panels that share a frame strata: a higher level draws entirely in front of a lower "
+      .. "one. Panels on the same strata and level can interleave: parts of one may show through "
+      .. "the other. Give overlapping panels different levels. Strata decides first; level only "
+      .. "orders panels within one strata.")
   end
 
   -- The panel's own surface: the fill inside it and the edge around it.
@@ -486,21 +509,35 @@ local function buildPanelEditor(ctx, parent, rec)
       "Border thickness. 0 removes the border entirely.")))
   end
 
-  -- The BenikUI-style strip along a panel's edges, which edges it runs along, and the strip's own
-  -- border. Three kinds of control on one tab, so three headings (options-ui-§7) — and the middle
-  -- one replaces the collection's last hand-rolled heading, a gold |cffffd100Edges|r Label standing
-  -- in for a Heading widget (anti-pattern #71).
+  -- The BenikUI-style strip along a panel's edges: whether there is one and along which edges
+  -- first, then how its fill looks, then its own border.
   --
-  -- The controls are named for what they are within their own subsection — `Bar texture`, not
-  -- `Accent bar texture` — because the tab already says "Accent bar" and the heading already says
-  -- which of the three parts you are in. That is also what lets the bar and border blocks carry the
-  -- canonical names options-ui-§16 gives them.
+  -- *Enable accent bar* leads the tab UNHEADED: it is the one master switch everything below it
+  -- depends on, and options-ui-§7 lets exactly one such row sit above the first subsection. Then
+  -- three subjects under three headings -- Edges, Fill (the composed bar group) and Border (the
+  -- composed border group) -- none restating the tab's own "Accent bar" stem. Edges keeps its
+  -- heading: without it "Top / Bottom / Left / Right" have no caption, and a hand-rolled caption is
+  -- anti-pattern #71.
+  --
+  -- The controls are named for what they are within their own subsection -- `Bar texture`, not
+  -- `Accent bar texture` -- which is also what lets the bar and border blocks carry the canonical
+  -- names options-ui-§16 gives them.
   sections[TAB_ACCENT] = function()
-    editorHeading(group, "Bar")
-
     local accentRow = editorRow(group)
+    -- The dependency stated in words only: the rows below stay enabled while this is off, and
+    -- graying them would be a behavior change, not a layout one.
     boolField(accentRow, "Enable accent bar", "accentEnabled",
-      "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels.")
+      "Draw a thin colored strip along the panel's edges, in the style of BenikUI's panels. "
+      .. "Everything below on this tab applies only while this is ticked.")
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Edges")
+
+    local edgeRow = editorRow(group)
+    makeEdgeChecks(ctx, edgeRow, rec)
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Fill")
 
     -- The canonical bar block (options-ui-§16), composed: texture, opacity, color, companion, and
     -- this addon's own thickness and offset AFTER the mandated four rather than among them.
@@ -510,7 +547,6 @@ local function buildPanelEditor(ctx, parent, rec)
     -- frame — background, border and bars together — so it could not be this row without the
     -- mandated control meaning something different on this page from every other page in the
     -- collection. It multiplies the bar color's own alpha; modules/Canvas.lua does the composition.
-    editorSpacer(group, EDITOR_ROW_GAP)
     renderBlock(retune(O.BarGroup({
       bind = bind,
       keys = { barTexture = "accentTexture", barAlpha = "accentAlpha", barColor = "accentColor",
@@ -519,7 +555,7 @@ local function buildPanelEditor(ctx, parent, rec)
       extra = {
         { field = "accentThickness", type = "number", label = "Bar thickness",
           min = C.MIN_ACCENT_THICKNESS, max = C.MAX_ACCENT_THICKNESS, step = 1,
-          tooltip = "How thick the accent bar is, in screen units." },
+          tooltip = "How thick the accent bar is, in UI units." },
         { field = "accentOffset", type = "number", label = "Bar offset",
           min = C.MIN_ACCENT_OFFSET, max = C.MAX_ACCENT_OFFSET, step = 1,
           tooltip = "How far the bar sits from the panel's edge. Positive detaches it from the "
@@ -537,12 +573,6 @@ local function buildPanelEditor(ctx, parent, rec)
       accentColor      = { tooltip = SWATCH_TIP },
       accentClassColor = { tooltip = companionTip("bar color") },
     }))
-
-    editorSpacer(group, EDITOR_HEADING_GAP)
-    editorHeading(group, "Edges")
-
-    local edgeRow = editorRow(group)
-    makeEdgeChecks(ctx, edgeRow, rec)
 
     editorSpacer(group, EDITOR_HEADING_GAP)
     editorHeading(group, "Border")
@@ -569,10 +599,11 @@ local function buildPanelEditor(ctx, parent, rec)
   sections[TAB_ARTWORK] = function()
     -- The dropdowns are all label-carrying option lists rather than raw tokens — see optionDropdown.
     --
-    -- The longest tab on the page, and three kinds of control deep: which image, where it sits, and
-    -- what it looks like. options-ui-§7 wants a heading between each pair of those, and the runs
-    -- were already in that order — the only row that moved is the artwork offset pair, which sat at
-    -- the very bottom under the color controls and belongs with the rest of the placement.
+    -- The longest tab on the page, and four subjects deep: which image, where it sits, which way
+    -- it faces, and how its color blends. options-ui-§7 wants a heading per subject: Image, Layout,
+    -- Orientation, then Color and blending (item 020: the old "Appearance" named nothing on a tab
+    -- that is all appearance, and Draw layer moved up beside Artwork position, where stacking
+    -- belongs with placement).
     editorHeading(group, "Image")
 
     -- Full width. Catalog labels carry their whole derived category, so a row reads
@@ -644,7 +675,8 @@ local function buildPanelEditor(ctx, parent, rec)
       end
     end)
     attachTooltip(fitBtn, "Fit to artwork",
-      "Resizes this panel to the artwork's |cffffff00exact pixel size|r.\n\nA bundled piece is "
+      "Overwrites this panel's Width and Height (Size and position tab) with the artwork's "
+      .. "|cffffff00exact pixel size|r.\n\nA bundled piece is "
       .. "1024x1024 and gives a square panel that big; a three-section Sunn bar is 1536x256 and gives "
       .. "a long thin one. A composed bar uses the size of the WHOLE bar, not one section.\n\nOnly "
       .. "when you press this \226\128\148 nothing resizes on its own. Very large art gives a very "
@@ -655,6 +687,9 @@ local function buildPanelEditor(ctx, parent, rec)
     editorSpacer(group, EDITOR_HEADING_GAP)
     editorHeading(group, "Layout")
 
+    -- Sizing pair first (each one's tooltip names the other), then where the art sits with the
+    -- draw layer beside it -- a stacking choice, so it belongs with placement -- and then the
+    -- offsets, directly under the position they are measured from.
     local artFillRow = editorRow(group)
     optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
       "How the image is sized inside the panel.\n\n"
@@ -666,30 +701,26 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "two sides.\n"
       .. "|cffffff00Tile|r repeats it at native size across the panel.\n\n"
       .. "Stretch ignores Scale \226\128\148 a scaled stretch is really Fill or Native size.")
-    tokenDropdown(artFillRow, "Artwork position", "artPoint", C.POINTS,
-      "Which part of the panel the artwork is anchored to, and what the offsets below are measured "
-      .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
-      .. "is nowhere for the art to move to.")
-
-    editorSpacer(group, EDITOR_ROW_GAP)
-    local artScaleRow = editorRow(group)
-    numberField(artScaleRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
+    numberField(artFillRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
       "Size multiplier for the artwork.\n\nIgnored entirely by Stretch, which always matches the "
       .. "panel exactly. Under Fill and Tile the art still covers the panel, so this changes what you "
       .. "SEE rather than how big the art is drawn: above 1 Fill crops tighter (it zooms in) and Tile "
       .. "lays down fewer, larger copies.")
-    optionDropdown(artScaleRow, "Rotation", "artRotation", C.ART_ROTATION_OPTIONS,
-      "Turn the artwork. Quarter turns only: those are an exact swap of the texture's corners, with "
-      .. "no blurring and no smeared edges. An arbitrary angle cannot be drawn that cleanly on a "
-      .. "cropped image, so it is not offered.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
-    local artFlipRow = editorRow(group)
-    boolField(artFlipRow, "Flip horizontal", "artFlipH",
-      "Mirror the artwork left to right. Applied BEFORE the rotation, so flipping and then turning "
-      .. "is not the same result as turning and then flipping.")
-    boolField(artFlipRow, "Flip vertical", "artFlipV",
-      "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
+    local artPointRow = editorRow(group)
+    tokenDropdown(artPointRow, "Artwork position", "artPoint", C.POINTS,
+      "Which part of the panel the artwork is anchored to, and what the offsets below are measured "
+      .. "from.\n\nIgnored by Stretch, Fill and Tile: those three cover the panel exactly, so there "
+      .. "is nowhere for the art to move to.")
+    optionDropdown(artPointRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
+      "Where the artwork sits in the panel's stack.\n\n"
+      .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
+      .. "background that is transparent or partly so \226\128\148 with a solid background it is "
+      .. "invisible.\n"
+      .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
+      .. "bar.\n"
+      .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     local artOffsetRow = editorRow(group)
@@ -705,20 +736,36 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "have no room to move in.")
 
     editorSpacer(group, EDITOR_HEADING_GAP)
-    editorHeading(group, "Appearance")
+    editorHeading(group, "Orientation")
+
+    -- Rotation and the two flips are one subject: the flips apply before the turn, so the three
+    -- are read together. Rotation alone on its line, the flips paired below it.
+    local artRotationRow = editorRow(group)
+    optionDropdown(artRotationRow, "Rotation", "artRotation", C.ART_ROTATION_OPTIONS,
+      "Turn the artwork. Quarter turns only: those are an exact swap of the texture's corners, with "
+      .. "no blurring and no smeared edges. An arbitrary angle cannot be drawn that cleanly on a "
+      .. "cropped image, so it is not offered.")
+
+    editorSpacer(group, EDITOR_ROW_GAP)
+    local artFlipRow = editorRow(group)
+    boolField(artFlipRow, "Flip horizontal", "artFlipH",
+      "Mirror the artwork left to right. Applied BEFORE the rotation, so flipping and then turning "
+      .. "is not the same result as turning and then flipping.")
+    boolField(artFlipRow, "Flip vertical", "artFlipV",
+      "Mirror the artwork top to bottom. Applied before the rotation, like the horizontal flip.")
+
+    editorSpacer(group, EDITOR_HEADING_GAP)
+    editorHeading(group, "Color and blending")
 
     local artOpacityRow = editorRow(group)
     numberField(artOpacityRow, "Artwork opacity", "artAlpha", 0, 1, 0.05,
       "How visible the artwork is. Multiplies with the opacity in the artwork color AND with the "
       .. "panel's own opacity, so a faded panel fades its art with it.")
-    optionDropdown(artOpacityRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
-      "Where the artwork sits in the panel's stack.\n\n"
-      .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
-      .. "background that is transparent or partly so \226\128\148 with a solid background it is "
-      .. "invisible.\n"
-      .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
-      .. "bar.\n"
-      .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
+    optionDropdown(artOpacityRow, "Blend mode", "artBlend", C.ART_BLEND_OPTIONS,
+      "How the artwork's pixels combine with what is behind them.\n\n"
+      .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
+      .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
+      .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     -- The color pair gets a row to ITSELF, because makeColorPair emits TWO half-width widgets — the
@@ -732,17 +779,13 @@ local function buildPanelEditor(ctx, parent, rec)
     makeColorPair(ctx, artColorRow, rec, "artColor", "Artwork color")
 
     editorSpacer(group, EDITOR_ROW_GAP)
+    -- Desaturate directly under the color it pre-conditions (its tooltip says why).
     local artToneRow = editorRow(group)
     boolField(artToneRow, "Desaturate", "artDesaturate",
       "Drains the color out of the artwork before the tint is applied.\n\nThis is what makes "
       .. "|cffffff00Artwork color|r work properly on full-color art: tinting a gold-and-crimson crest "
       .. "blue only drags every hue toward blue and muddies it, but draining it to grayscale first "
       .. "means the tint comes back as a clean blue.")
-    optionDropdown(artToneRow, "Blend mode", "artBlend", C.ART_BLEND_OPTIONS,
-      "How the artwork's pixels combine with what is behind them.\n\n"
-      .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
-      .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
-      .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
   end
@@ -760,26 +803,27 @@ local function buildPanelEditor(ctx, parent, rec)
     -- one governs whether the second number is consulted at all. On its own line it governs the
     -- line above it, which is what it does.
     --
-    -- "Panel opacity", not "Background opacity". It is the FRAME's alpha, so it fades the border as
-    -- well as the fill, and it multiplies with the alpha already carried by each color. It is also
+    -- "Panel opacity", not "Background opacity". It is the FRAME's alpha, so it fades the border,
+    -- the accent bars and the artwork as well as the fill, and it multiplies with the alpha already
+    -- carried by each color. It is also
     -- the value the mouseover fade rises to — which is why it cannot simply be folded into the
     -- background color's alpha, however much the two look alike.
     local opacityRow = editorRow(group)
     numberField(opacityRow, "Panel opacity", "alpha", 0, 1, 0.05,
-      "How visible the whole panel is \226\128\148 background and border together. Multiplies with "
-      .. "the opacity set in each color. This is also the opacity a mouseover panel fades up to.")
+      "How visible the whole panel is: background, border, accent bars and artwork together. "
+      .. "Multiplies with the opacity set in each color. This is also the opacity a mouseover panel "
+      .. "fades up to.")
     numberField(opacityRow, "Faded opacity", "mouseoverAlpha", 0, 1, 0.05,
       "How visible the panel is while the cursor is elsewhere. 0 hides it completely. "
-      .. "Only used when 'Show on mouseover only' is ticked.")
+      .. "Only used when 'Fade unless hovered' is ticked.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     local mouseoverRow = editorRow(group)
-    boolField(mouseoverRow, "Show on mouseover only", "mouseover",
+    boolField(mouseoverRow, "Fade unless hovered", "mouseover",
       "Keep the panel faded until the cursor is over it. The panel still never takes your clicks.")
 
-    -- Delete and Reset are not repeated here: they are page-wide acts and live in the chrome band
-    -- above the strip, reachable from every tab at once rather than from the one that happened to
-    -- be about the panel's identity.
+    -- Delete panel and Reset panel are not repeated here: they are acts on the panel whole and live
+    -- on the General tab the page opens on (options-ui-§14).
     editorSpacer(group, EDITOR_ROW_GAP)
   end
 
