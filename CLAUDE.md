@@ -34,7 +34,9 @@ Start here, then read the docs:
   runtime / development / release-and-assets, with WSL2-Ubuntu commands.
 - Topic detail in `docs/` — **Tier 1 is always present**: `scope.md`, `module-map.md`, `schema.md`, `settings-panel.md`, `data-flow.md`, `common-tasks.md`. Conditional and addon-specific docs vary; `docs/ARCHITECTURE.md` → `## Documentation map` lists every page under `docs/` and says which conditional ones do not apply here (`documentation-§3`).
 
-Green gate before every commit: `lua tests/run.lua` and `luacheck .` (0/0). Plus, whenever
+Green gate before every commit: `lua tests/run.lua` and
+`~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` (0/0; the kit bounds the suite on load, and
+`luacheck` loads no kit, so it runs through the bounded runner, testing-§15). Plus, whenever
 `../LibKa0s` has moved, the **vendor gate** — neither of the other two can see a stale vendored copy;
 `docs/testing.md` has the four diffs and what each answer means. Never auto-stage/commit/push and
 never bump the version without an explicit instruction.
