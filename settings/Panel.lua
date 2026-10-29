@@ -324,6 +324,28 @@ function P:RestoreDefaults()
   P:Refresh()
 end
 
+-- ── The Skin tab (skinning-§3) ──────────────────────────────────────────────────
+--
+-- The General page's LAST tab, after New panels: there is no Keybindings tab here (no Bindings.xml),
+-- so skinning-§3 puts it last. The library's own entry (O.AppearanceTab): the skin source, the nine
+-- skins, the font and texture, the Scope, "Copy to every Ka0s addon..." and the note, drawn from
+-- LibKa0s-Skin-1.0 for the owner core/SkinSetup.lua registered. `get` and `set` are that file's read
+-- and write seams, so a pick lands through NS.Schema:Set like every other setting; the tab calls
+-- Skin:SetChoice first, so the live repaint is the library's and the rows' onChange finds nothing
+-- left to apply. Its key, "Appearance", is the group of the skipRender skin.* rows
+-- (settings/Schema.lua), so the entry takes that group's place on the strip; its label is "Skin".
+-- Four tabs, under the options-ui-§13 budget of eight. Built once, on the first render; on the
+-- degraded path the stub's entry draws nothing, and the tab is still there.
+local skinTabEntry
+local function skinTab()
+  if not skinTabEntry then
+    skinTabEntry = O.AppearanceTab({
+      owner = NS.Skin and NS.Skin.owner, get = NS.SkinChoice, set = NS.WriteSkinChoice,
+    })
+  end
+  return skinTabEntry
+end
+
 -- ── Registration ───────────────────────────────────────────────────────────────
 --
 -- Four canvas pages, registered through LibKa0s-Options-1.0's page registry rather than by calling
@@ -391,7 +413,13 @@ function P:Register()
       if NS.Schema.MasterGroup and NS.Schema.MasterAfterGroup then
         afterGroup[NS.Schema.MasterGroup] = NS.Schema.MasterAfterGroup
       end
-      O.RenderTabbedSchema(c, "general", afterGroup)
+      --
+      -- `untabbedSkipRender` (OptionsTabs minor 8): `rowsForPage` hands over the runtime's whole
+      -- array, which also holds the hidden, all-skipRender `panel.*` rows (settings/PanelSchema.lua,
+      -- group "Panel"). Without it that group drew an EMPTY "Panel" tab, as it did before this
+      -- change; with it the strip is the three groups and the Skin tab, which claims its own
+      -- all-skipRender group and so stays.
+      O.RenderTabbedSchema(c, "general", afterGroup, nil, { tabs = { skinTab() }, untabbedSkipRender = true })
     end)
     return Settings.RegisterCanvasLayoutSubcategory(mainCategory, ctx.panel, "General")
   end)
@@ -485,6 +513,11 @@ function P:Register()
       c._dirty = true
       if not (container and container.frame) then return end
       AceConfigDialog:Open("PanelMaster-Profiles", container)
+      -- AceConfigDialog acquires the manager's widgets from AceGUI itself, past the Options
+      -- instance's owner proxy, so the tree is painted for this addon's skin right after it is drawn
+      -- (skinning-§3; nothing while the settings panel is ignored). After EVERY Open: each widget
+      -- goes back to the shared pool stock when the next Open releases it.
+      NS.SkinPaintAceTree(container)
     end)
     return Settings.RegisterCanvasLayoutSubcategory(mainCategory, prctx.panel, "Profiles")
   end)

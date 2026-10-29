@@ -18,7 +18,7 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and seven of the ten LibKa0s
+`core/` holds the bootstrap, the Compat firewall, the AceDB layer and eight of the eleven LibKa0s
 seams; `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer
 and unlock mode; `settings/` holds the schema, the other three seams and the four panel pages. Load
 order is fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin
@@ -30,8 +30,9 @@ File-by-file table and the seam/load-order contract in **[module-map.md](module-
 
 Two SavedVariables scopes: `defaults/Profile.lua` (the panel registry, `nextID`, the settings block;
 profile-scoped) and `defaults/Global.lua` (`schemaVersion = 0` and LibDBIcon's `minimap` table).
-`settings/Schema.lua` holds **15 rows in 3 tabs** — `Master controls` (7, composed), `Moving panels` (4),
-`New panels` (4) — on a `LibKa0s-Schema-1.0` runtime behind this addon's own seam names, and is the
+`settings/Schema.lua` holds **22 rows in 4 tabs** — `Master controls` (7, composed), `Moving panels` (4),
+`New panels` (4) and the Skin tab's seven `skin.*` rows (all `skipRender`, drawn by the library's
+`O.AppearanceTab`; [§ Skins](#skins)) — on a `LibKa0s-Schema-1.0` runtime behind this addon's own seam names, and is the
 sole sender of `SettingsChanged`. The same runtime also holds the **50 per-panel `panel.<field>`
 rows** that `settings/PanelSchema.lua` generates (below); they are hidden from every profile
 surface. `global.minimap.shown` is the one `db.global` row, and it inverts.
@@ -193,7 +194,7 @@ rebinding turns the suite red instead of quietly un-hiding buttons.
 
 | Event | Handler | Why |
 |---|---|---|
-| `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()` | Panels are drawn here, not at `OnEnable`: every panel is anchored to `UIParent`, and `UIParent`'s final size and the frame anchors are settled by this event, not that early. (Off-screen recovery is on demand only, `/pm recover`.) |
+| `PLAYER_ENTERING_WORLD` | `Canvas:RenderAll()`, then `NS.ArmSkinPicker()` | Panels are drawn here, not at `OnEnable`: every panel is anchored to `UIParent`, and `UIParent`'s final size and the frame anchors are settled by this event, not that early. (Off-screen recovery is on demand only, `/pm recover`.) The first-run skin picker's login start is armed here, once per session, two seconds in (`core/SkinSetup.lua`). |
 | `PLAYER_REGEN_ENABLED` | `Unlock:ResumePending()`, then `Canvas:RenderForCombat(false)` | Replays a combat-deferred unlock, and repaints if `settings.visibility` is one of the two modes that depend on the combat state. |
 | `PLAYER_REGEN_DISABLED` | `Canvas:RenderForCombat(true)` | The other half of the general-visibility rule (`options-ui-§15`). Panels are non-secure, so showing or hiding one at the start of a pull needs no gate. |
 | `PLAYER_LOGIN` | `Panel:Register()` | A second **eager** attempt at settings-category registration. Subscribed from `OnInitialize`, not `OnEnable`: AceAddon runs `OnEnable` from inside its own `PLAYER_LOGIN` handler, and subscribing mid-dispatch misses that firing. |
@@ -208,7 +209,7 @@ The render pipeline these drive, and the combat gating around unlock and the opt
 `NS.SafeRegisterEvent` (`core/CoreSetup.lua`), so a name the client refuses is appended once to
 `NS.State.rejectedEvents` and costs only itself; the other registrations, `Canvas:Enable()` and the
 repaint still happen. The rejected list is surfaced as the `events` section, the last section of
-the `/pm diagnostics` report ([debug.md](debug.md)). `NS.StandDown` keeps its bare `UnregisterEvent` calls.
+the `/pm diagnostics` report ([debug.md](debug.md)). `NS.StandDown` keeps its bare `UnregisterEvent` calls. The first-run skin picker's combat hold is a fifth, separate registration: a one-shot `PLAYER_REGEN_ENABLED` on a private target of `core/SkinSetup.lua`'s, also through `NS.SafeRegisterEvent`, made only while a start waits out combat and dropped by the stand-down.
 
 ## The disabled state is total (`slash-commands-§7`)
 
@@ -240,7 +241,7 @@ second teardown path beside the first is the anti-pattern (#85), not an implemen
 |---|---|
 | The chat command, the dispatcher and `NS.COMMANDS` | Without them `/pm enable` does not exist and the switch goes one way. |
 | The settings-category registration and the panel body | Including the `PLAYER_LOGIN` bootstrap above, which is that registration's deferred half and reads nothing about panels, and the Panels page's own two bus subscriptions (`NS.PanelEditor.__evPanels`), which keep an **open** page in step with the store and are addon messages the client never dispatches. |
-| The AceDB handle, `NS.Schema:Set`, and AceDB's three profile callbacks | A profile switch can flip `settings.enabled` with no checkbox and no verb touched, so the addon must be able to re-evaluate the latch there (`core/Database.lua` calls `NS.RefreshEnabled` first, before anything repaints). |
+| The AceDB handle, `NS.Schema:Set`, and AceDB's three profile callbacks | A profile switch can flip `settings.enabled` with no checkbox and no verb touched, so the addon must be able to re-evaluate the latch there (`core/Database.lua` calls `NS.RefreshEnabled` before anything repaints a panel; only the skin picker's hide and the new profile's skin run ahead of it, because the settings pages a stood-down addon still shows wear the skin). |
 | The launcher's registration | The button stays on the minimap and the broker row stays in the display. Left-click still opens the settings panel (`launcher-§2`: the panel is setup). The right-click menu's *Enabled* entry stays live; *Locked* is grayed and reads `Locked (enable the addon first)`, and a grayed entry writes nothing. The hover tooltip still shows, reading **Enabled: No**. |
 
 **Those three survivors are the whole list, and `tests/test_disabled.lua` asserts it by name** — a
@@ -261,6 +262,47 @@ or a setting changed while the addon was off comes back correct.
 `tests/test_disabled.lua` is the conformance suite the standard MUSTs, asserting on the
 **registration set** rather than on any handler's return value.
 
+## Skins
+
+PanelMaster wears the collection's skins (skinning-§3) since the skinning rollout (Ka0sAddonsCommonTasks
+`docs/2026-10-29-SKINNING_ROLLOUT/`, items PM-RV to PM-05; Loot History's pattern, cut to what this
+addon draws).
+
+- **The seam.** `core/SkinSetup.lua` registers the owner `"PanelMaster"` at file load and publishes
+  `NS.Skin`, the read and write seams `NS.SkinChoice` / `NS.WriteSkinChoice` (both through
+  `NS.Schema`) and the apply helpers ([module-map.md](module-map.md)). The choice is seven
+  per-profile keys under `profile.skin` ([schema.md](schema.md)): `source`, `skin`, the Scope's
+  `ignorePanel` (**on** for a new profile, the collection's default) and `ignoreFonts`, the
+  overrides `font` and `texture`, and `pickerSeen`. `NS.ApplySkinChoice` runs right after
+  `NS:InitDB` and first on every profile event, so a switch, copy or reset re-applies the choice.
+- **The Skin tab.** The library's `O.AppearanceTab`, the General page's **last** tab (there is no
+  Keybindings tab here), keyed `Appearance` so it takes the `skin.*` rows' group
+  ([settings-panel.md](settings-panel.md)).
+- **What follows the skin.** The library's own surfaces for this owner: the landing, General and
+  Profiles chrome, the AceGUI widgets acquired through the Options proxy, the debug console and its
+  copy window. This addon's own: the unlock overlay (outline `list.dropLine`, label `S.Text`
+  `accent`, repainted on `OnLooksChanged`), the Panels picker's *(disabled)* marker
+  (`text.disabled`), and the AceGUI widgets the Panels editor and AceConfigDialog acquire past the
+  proxy (`NS.SkinPaintAce` / `NS.SkinPaintAceTree`; the kept band repainted in place). The settings
+  pages are painted only while **Ignore settings panel** is off.
+- **What does not.** The panels themselves — fill, border, accent bars, accent border, artwork and
+  class colors — are the player's content (decision D1): no `fromSkin` companions and **no one-time
+  HUD style reset**, so no skin and no upgrade restyles a saved layout. New panels start from the
+  template, not the skin (D2). StaticPopups, GameTooltip's frame, `ColorPickerFrame`, the
+  LibSharedMedia pull-outs and the minimap button stay stock (skinning-§7); chat lines keep their
+  colors (X7); the editor tooltips' inline yellow is content markup (X9); the console keeps its
+  monospace face.
+- **The first-run skin picker.** `NS.MaybeShowSkinPicker` shows the library's `O.SkinPicker` while
+  the profile's `skin.pickerSeen` is false and the latch is up: once per session two seconds after
+  the first `PLAYER_ENTERING_WORLD`, and after every profile event; in combat it waits for
+  `PLAYER_REGEN_ENABLED`. It has no eye (no window or test mode to preview in, X6), so `CLAUDE.md`
+  declares only the `settings` icon. Only the player's close marks it seen; the stand-down and a
+  profile event take it down unseen.
+- **EllesmereUI.** The library's provider (`skin.source = "eui"`); `EllesmereUI` is in the TOC's
+  `OptionalDeps`. PanelMaster has no bridge of its own.
+- **The color gate.** `tests/test_skin_literals.lua` fails on a color literal outside
+  `core/SkinSetup.lua` and its reasoned allow-list (anti-pattern #107).
+
 ## Frame layering
 
 The whole stack is stated once, in the header comment of `NS.Constants.LAYERS`
@@ -277,7 +319,8 @@ reads that table, and `tests/test_layers.lua` pins it. The addon's tiers:
 - **The addon's confirmations (T6).** Blizzard's StaticPopups at `DIALOG`, never re-strata'd. While
   one is shown, an unlocked panel at `DIALOG` or above goes mouse-off and is re-armed by a render
   when the last popup closes.
-- **Library and Blizzard tiers it relies on.** The debug console (`DIALOG`), its copy window
+- **Library and Blizzard tiers it relies on.** The debug console (`DIALOG`), the first-run skin
+  picker (`DIALOG`), its copy window
   (`FULLSCREEN`), AceGUI pullouts and the color picker (`FULLSCREEN_DIALOG`), LSM pullouts and
   tooltips (`TOOLTIP`), the Settings panel (`HIGH`) and the LibDBIcon button (`MEDIUM`).
 
@@ -306,7 +349,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 |---|---|
 | `scope.md` | What the addon draws, and what it deliberately refuses to become |
 | `module-map.md` | Every non-vendored file, what it publishes, and the load order the seams pin |
-| `schema.md` | The two SavedVariables scopes, the panel record, artwork fields, sanitizing, the schema runtime and its stub |
+| `schema.md` | The two SavedVariables scopes, the panel record, the skin keys, artwork fields, sanitizing, the schema runtime and its stub |
 | `settings-panel.md` | The four canvas pages and the three AceGUI widget workarounds |
 | `data-flow.md` | Record → spec → frame, the frame ladder and pool, the leftover-sample sweep, combat, events |
 | `common-tasks.md` | Add a setting, a verb, a panel field, an artwork entry, a migration |

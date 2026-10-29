@@ -904,6 +904,70 @@ Total.
 - Panel: the Profiles container is inset to the library's PADDING_X on both edges
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
+### test_skinsetup.lua (16)
+
+- Skin seam: the owner is the folder name, and NS.Skin is its facade
+- Skin seam: the read answers Ka0s Default before the profile store exists
+- Skin seam: the TOC loads the seam after Namespace and before the first file that reads it
+- Skin seam: the TOC lists EllesmereUI as an optional dependency
+- Skin seam: the skin.* keys default to Ka0s Default, as skipRender Appearance rows
+- Skin seam: the skin row's values are every registered skin, in the library's order
+- Skin seam: /pm set refuses a skin that is not registered and applies one that is
+- Skin seam: /pm set reaches an exception, and only its own half
+- Skin seam: the write seam stores media's halves, "" for the skin's own
+- Skin seam: the Skin tab is the General page's last tab, keyed Appearance
+- Skin seam: one tab pick is one effective SetChoice, one repaint and no reload
+- Skin seam: the tab's Ignore fonts reaches the library and the profile, one repaint
+- Skin seam: another addon's copy to every Ka0s addon repaints PanelMaster once
+- Skin seam: a profile switch applies the new profile's skin first, before the panels reload
+- Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
+- Skin seam: a profile's stored exceptions and overrides are applied with its skin
+
+### test_skin_literals.lua (8)
+
+- Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list
+- Skin literals: every allow-list entry carries its reason
+- Skin literals: the gate is falsifiable, a planted literal of each shape is reported
+- Skin literals: the host copy of Ka0s Default equals the library's Ka0s Default
+- Skin literals: NS.SkinColor keeps a call site's arity, NS.SkinEscape its bytes
+- Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
+- Skin literals: the picker's (disabled) marker follows the skin's text.disabled
+- Skin literals: the picker's (disabled) marker stays today's gray while the panel is ignored
+
+### test_skin_unlock.lua (5)
+
+- Skin unlock: the outline is today's gold on Ka0s Default
+- Skin unlock: the outline reads the skin's list.dropLine
+- Skin unlock: a skin switch repaints an unlocked panel's outline live
+- Skin unlock: the repaint touches unlocked panels only, and never the panel's own colors
+- Skin unlock: the label takes the skin's accent text role once, at creation
+
+### test_skin_picker.lua (13)
+
+- Skin picker: the spec names this owner, its seams, the General page's Skin tab, no eye
+- Skin picker: an unseen profile shows it; a seen one does not
+- Skin picker: it shows once after login, two seconds in, from OnEnterWorld
+- Skin picker: the stand-down cancels an unfired login start and gives it back
+- Skin picker: in combat a start waits for PLAYER_REGEN_ENABLED, once
+- Skin picker: a held start is dropped by the stand-down's HideSkinPicker
+- Skin picker: never while the addon is switched off
+- Skin picker: a new profile and a reset profile show it again
+- Skin picker: the player's close marks it seen; this addon's own hide does not
+- Skin picker: a profile that has seen it takes a shown picker down, unmarked
+- Skin picker: Apply saves the pick through the write seam and marks the picker seen
+- Skin picker: a profile event takes a shown picker down before the new profile's skin
+- Skin picker: the stand-down takes a shown picker down unseen
+
+### test_skin_settings.lua (7)
+
+- skin settings: with the panel painted, every editor widget is painted for this owner
+- skin settings: Ka0s Default paints the editor like every other skin once the panel is
+- skin settings: with the panel ignored (the default) the editor is left stock
+- skin settings: a release hands every painted editor widget back stock
+- skin settings: the band's picker and create box follow the Scope and a switch in place
+- skin settings: the Profiles page paints the tree AceConfigDialog drew, after every Open
+- skin settings: degraded, PaintAce and PaintAceTree paint nothing
+
 ### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
@@ -1250,6 +1314,11 @@ Total.
 | test_panel.lua | 53 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
+| test_skinsetup.lua | 16 |
+| test_skin_literals.lua | 8 |
+| test_skin_unlock.lua | 5 |
+| test_skin_picker.lua | 13 |
+| test_skin_settings.lua | 7 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -1269,4 +1338,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1091** |
+| **Total** | **1140** |

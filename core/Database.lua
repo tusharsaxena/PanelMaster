@@ -88,6 +88,17 @@ end
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
+    -- A shown first-run skin picker goes down FIRST, unseen (core/SkinSetup.lua): its pending
+    -- preview is put back before the new profile's skin is applied, so that profile's whole choice
+    -- is what ApplySkinChoice leaves worn. It shows again below when the new profile has not seen it.
+    if NS.HideSkinPicker then NS.HideSkinPicker() end
+    -- Then the new profile's skin (core/SkinSetup.lua), before anything rebuilds: Skin:SetChoice
+    -- repaints every frame recorded for this owner and fires OnLooksChanged whether or not a page
+    -- was ever built, and the settings pages re-render under it on the next frame. With it the
+    -- profile's stored exceptions and overrides (skinning-§2: a switch, copy or reset re-applies
+    -- the choice). Ahead of the latch because the latch can stand the addon down, and the skin is
+    -- worn by the settings pages a stood-down addon still shows.
+    if NS.ApplySkinChoice then NS.ApplySkinChoice() end
     -- THE LATCH FIRST, and before anything repaints (slash-commands-§7). `settings.enabled` is a
     -- stored setting like any other, so a profile switch can flip it with no checkbox and no verb
     -- being touched -- a player switching to a profile where the addon is enabled expects it to come
@@ -96,6 +107,10 @@ function NS:RegisterProfileCallbacks()
     -- switch at all. NS.RefreshEnabled re-reads the path and fires a callback only on an actual
     -- edge, so a switch between two profiles that agree is silent.
     NS.RefreshEnabled()
+    -- The first-run skin picker: a new or reset profile starts from the defaults, `pickerSeen`
+    -- false, so it shows over the new profile's skin; one that has seen it stays down. After the
+    -- latch, so a profile with the addon switched off shows nothing.
+    if NS.MaybeShowSkinPicker then NS.MaybeShowSkinPicker() end
     NS:SweepPreviewPanels()   -- a copied profile can carry someone else's preview orphans
     if NS.Registry and NS.Registry.ReloadProfile then NS.Registry:ReloadProfile() end
     -- An open General page re-reads its values in place (options-ui-§11). A switch from the

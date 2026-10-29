@@ -112,6 +112,14 @@ if not lib then
     -- ResetAllTooltip (OptionsCompose minor 11, LibKa0s v1.77.0 after LK-95), the General page's
     -- Reset all settings tooltip: an empty string, for the same reason StrataTooltip answers one.
     ResetAllTooltip = function() return "" end,
+    -- The Skin tab (OptionsAppearance, LibKa0s v1.78.0, skinning-§3) and the first-run skin
+    -- picker (OptionsSkinPicker, LibKa0s v1.79.0). Inert for the reason KeybindingsTab is:
+    -- AppearanceTab answers a tab entry that renders nothing, AppearanceRows answers nil, as the
+    -- live member does when it cannot draw, SkinPicker shows nothing and answers nil, and
+    -- HideSkinPicker has nothing to take down.
+    AppearanceTab = function() return { key = "Appearance", label = "Skin", render = noop } end,
+    AppearanceRows = function() return nil end,
+    SkinPicker = function() return nil end, HideSkinPicker = noop,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for

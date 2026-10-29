@@ -416,10 +416,17 @@ end
 -- Each tab is selected and the page re-rendered through the same door a tab click uses -- mark the
 -- ctx dirty, fire OnShow -- and the captures are concatenated. A test that wants one tab's widgets
 -- calls tabWidgets; a test that wants the page's whole vocabulary calls generalWidgets.
+-- The tabs whose rows the flow engine draws. A group whose rows are ALL skipRender is drawn by a
+-- host tab instead -- the Skin tab, O.AppearanceTab, keyed by the "Appearance" group -- in widgets
+-- of the library's own choosing, so a one-widget-per-row count does not describe it;
+-- tests/test_skinsetup.lua covers that tab.
 local function generalTabs()
-  local names, seen = {}, {}
+  local names, seen, drawn = {}, {}, {}
+  for _, row in ipairs(NS.Schema.ProfileRows()) do
+    if row.group and not row.skipRender then drawn[row.group] = true end
+  end
   for _, row in ipairs(NS.Schema.ProfileRows()) do   -- the General page's rows (allRows)
-    if row.group and not seen[row.group] then
+    if row.group and drawn[row.group] and not seen[row.group] then
       seen[row.group] = true
       names[#names + 1] = row.group
     end
@@ -1138,6 +1145,10 @@ local SEAM_FILES = {
   "core/DebugLogSetup.lua",
   "core/LauncherSetup.lua",
   "core/LifecycleSetup.lua",
+  -- LibKa0s-Skin-1.0: RegisterOwner takes an opts table, never an `L` (the reload line it prints is
+  -- read from NS.L by key, which is the locale table's proper use). Listed because it resolves a
+  -- LibKa0s major, which is the list's criterion.
+  "core/SkinSetup.lua",
   "settings/Slash.lua",
   "settings/OptionsSetup.lua",
   -- The schema runtime's seam (LibKa0s-Schema-1.0). Its descriptor DOES take an `L` -- a plain

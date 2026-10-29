@@ -153,6 +153,62 @@ S.Schema = {
     group = "New panels", label = "Default opacity",
     tooltip = "The opacity a newly created panel starts at. " .. MADE_NOTE,
     validate = function(v) return type(v) == "number" and v >= 0 and v <= 1 end },
+
+  -- ── Skin ──
+  -- The skin this addon wears (skinning-§2/§3: per addon, per profile). The tab is the library's
+  -- O.AppearanceTab (settings/Panel.lua), which draws every row below as its own choice grids,
+  -- check boxes and dropdowns, so all of them carry `skipRender`; they stay schema rows so the
+  -- defaults resolve, the profile reset reaches them, and `/pm get|set skin.skin` validates against
+  -- `values`. Declared LAST, so the group's tab is the strip's last (there is no Keybindings tab
+  -- here, skinning-§3). The group is "Appearance", the tab entry's key, so the entry takes the
+  -- group's place on the strip rather than adding a second tab; the strip shows its label, "Skin".
+  --
+  -- Each onChange applies ONLY its own half (core/SkinSetup.lua says why): the tab and another
+  -- addon's "Copy to every Ka0s addon" call Skin:SetChoice before they write, so the write is a
+  -- no-op, and a bare `/pm set` still repaints. Nothing here sends SETTINGS_CHANGED: no panel and
+  -- no renderer reads these keys.
+  { path = "skin.source", default = "ka0s", type = "string",
+    widget = "Dropdown", skipRender = true, values = NS.SKIN_SOURCE_OPTIONS,
+    group = "Appearance", label = "Skin source",
+    tooltip = "Where this addon's look comes from: the Ka0s skin chosen below, or EllesmereUI.",
+    onChange = function(v) NS.ApplySkinChoice(v, nil) end },
+  { path = "skin.skin", default = "ka0s", type = "string",
+    widget = "Dropdown", skipRender = true, values = NS.SKIN_OPTIONS,
+    group = "Appearance", label = "Skin",
+    tooltip = "The Ka0s skin this addon wears. Changes its settings pages and debug console right away.",
+    onChange = function(v) NS.ApplySkinChoice(nil, v) end },
+  -- The Scope's two exceptions, drawn by the same tab as check boxes; each onChange applies only
+  -- its own half, for the reason above.
+  { path = "skin.ignorePanel", default = true, type = "bool",
+    widget = "CheckBox", skipRender = true,
+    group = "Appearance", label = "Ignore settings panel",
+    tooltip = "Keep this addon's settings panel in the game's own look. Its other windows still wear the skin.",
+    onChange = function(v) NS.ApplySkinIgnore(v, nil) end },
+  { path = "skin.ignoreFonts", default = false, type = "bool",
+    widget = "CheckBox", skipRender = true,
+    group = "Appearance", label = "Ignore fonts",
+    tooltip = "Keep every font in this addon as the game draws it. The skin still colors the text.",
+    onChange = function(v) NS.ApplySkinIgnore(nil, v) end },
+  -- The Font and texture section's two overrides, drawn by the same tab as dropdowns of
+  -- LibSharedMedia keys; "" is the skin's own. Declared as free text, not a Dropdown with `values`:
+  -- a media pack may register its keys after this file loads, and `/pm set` takes any key.
+  { path = "skin.font", default = "", type = "string",
+    widget = "EditBox", skipRender = true,
+    group = "Appearance", label = "Font",
+    tooltip = "The font this addon's text uses, over the skin's own. Empty keeps the skin's.",
+    onChange = function(v) NS.ApplySkinOverride(v, nil) end },
+  { path = "skin.texture", default = "", type = "string",
+    widget = "EditBox", skipRender = true,
+    group = "Appearance", label = "Texture",
+    tooltip = "The texture this addon's bars use, over the skin's own. Empty keeps the skin's.",
+    onChange = function(v) NS.ApplySkinOverride(nil, v) end },
+  -- The first-run skin picker's memory: set when the picker closes, so it shows once per profile
+  -- (rollout ruling O3: false on every profile, old and new). Drawn by nothing; a reset puts it
+  -- back to false.
+  { path = "skin.pickerSeen", default = false, type = "bool",
+    widget = "CheckBox", skipRender = true,
+    group = "Appearance", label = "Skin picker seen",
+    tooltip = "Whether the first-run skin picker was closed on this profile." },
 }
 -- NOTE: the debug LOGGING flag (NS.State.debug) is deliberately NOT a schema setting — it is
 -- session-only, set via `/pm debug on|off`, and always off after a reload (debug-logging-§5). The

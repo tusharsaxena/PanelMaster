@@ -28,3 +28,8 @@ State.unlockedPanels = {}
 -- requires the player can reach. Session-only: a refusal is a fact about this client build, and the
 -- next login asks again.
 State.rejectedEvents = {}
+
+-- The first-run skin picker's login start was taken this session (core/SkinSetup.lua
+-- NS.ArmSkinPicker): once per session, from the first PLAYER_ENTERING_WORLD of an addon that stands
+-- up. A stand-down that cancels the start before it fires gives it back.
+State.skinPickerArmed = false

@@ -24,6 +24,7 @@ PanelMasterDB
   profile.panels          -- array of panel records, creation order
   profile.nextID          -- monotonic id source; ids are never reused
   profile.settings        -- the schema-backed settings
+  profile.skin            -- the skin this addon wears on this profile (skinning-§2)
 ```
 
 `profile.settings` gained three keys in the settings-revamp pass, all of them the stored half of the
@@ -35,6 +36,25 @@ profile renders differently:
   settings.scale          -- addon-wide multiplier over each panel's own scale
   settings.alpha          -- addon-wide multiplier over each panel's own opacity
 ```
+
+`profile.skin` arrived with the skinning rollout (2026-10-29). Its seven keys are new keys with
+defaults, so AceDB merges them into every existing profile and no migration was owed
+(`NS.SCHEMA_VERSION` did not move). A sibling of `settings`, not inside it, because the skin is
+not one of the General page's settings rows; the keys read as `/pm get skin.skin`:
+
+```
+  skin.source       -- "ka0s" (the Ka0s skins) | "eui" (EllesmereUI's)
+  skin.skin         -- which Ka0s skin; "ka0s" is Ka0s Default
+  skin.ignorePanel  -- the Scope: leave the settings panel the client's (true for a new profile)
+  skin.ignoreFonts  -- the Scope: leave every font the client's (false)
+  skin.font         -- an LSM font key over the skin's own; "" is the skin's own
+  skin.texture      -- an LSM statusbar key over the skin's own; "" is the skin's own
+  skin.pickerSeen   -- the first-run skin picker was closed on this profile (false: every profile shows it once)
+```
+
+There is **no one-time HUD style reset** and no `fromSkin` key: the look on screen is the panels',
+every value of it a per-panel choice the player made in `profile.panels`, and no skin repaints it
+(`docs/ARCHITECTURE.md` → *Skins*).
 
 `global.minimap` is the one stored thing here that is not this addon's own shape. It is the table
 **LibDBIcon-1.0** reads and writes, handed to it whole by `core/LauncherSetup.lua` (`launcher-§3`):
@@ -236,10 +256,15 @@ is no longer dragged inward and at `s = 2` a genuinely lost one is no longer lef
 ## The schema runtime
 
 `settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
-carries **15 rows in 3 groups**, and since the tabbed-panel pass a `group` is a **tab**
+carries **22 rows in 4 groups**, and since the tabbed-panel pass a `group` is a **tab**
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
 the array's order is the strip a player sees on the General page — `Master controls` (7),
-`Moving panels` (4), `New panels` (4). Two of the fifteen are session-only `state.*` rows that route
+`Moving panels` (4), `New panels` (4), `Appearance` (7). The seven `Appearance` rows are the
+`skin.*` keys: every one carries `skipRender`, because the library's Skin tab (`O.AppearanceTab`,
+keyed `Appearance`, labeled **Skin**) draws them as its own controls in that group's place on the
+strip; they stay rows so the defaults resolve, the profile reset reaches them and `/pm get|set`
+validates them, and each `onChange` applies only its own half (`core/SkinSetup.lua` says why).
+`skin.pickerSeen` is drawn by nothing. Two of the twenty-two are session-only `state.*` rows that route
 through their own `get`/`set` and are never persisted; both resets — `Sl:DoResetAll` and the Profiles
 page's Reset Profile — put them back to their defaults after the profile reset, by their
 `sessionOnly` flag, from the `OnProfileReset` handler in `core/Database.lua` (`options-ui-§12`).

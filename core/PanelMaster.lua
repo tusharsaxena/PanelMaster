@@ -31,6 +31,10 @@ function addon:OnInitialize()
   -- ("Solid") resolves on the very first render rather than falling back for one frame.
   NS.Compat.RegisterMedia()
   NS:InitDB()
+  -- The skin the active profile names (core/SkinSetup.lua), right after the store exists: the owner
+  -- registered at file load, before AceDB, and has worn Ka0s Default since. Before any page is
+  -- built, so the first paint is already the profile's skin.
+  NS.ApplySkinChoice()
   if NS.Schema and NS.Schema.Register then NS.Schema:Register() end
   if NS.Slash and NS.Slash.Register then NS.Slash:Register() end
   -- The launcher (launcher-§1), AFTER NS:InitDB() above and for one reason: the descriptor's
@@ -114,6 +118,10 @@ function addon:OnEnterWorld()
   -- pasted log says WHY a repaint ran, not only that it did.
   NS.Debug("Canvas", "entered world: repainting")
   if NS.Canvas and NS.Canvas.RenderAll then NS.Canvas:RenderAll() end
+  -- The first-run skin picker (core/SkinSetup.lua), once per session, on a profile that has not
+  -- closed it: two seconds in, off the login spike, on a timer the stand-down cancels. The stored
+  -- skin was applied in OnInitialize; in combat the start holds for PLAYER_REGEN_ENABLED.
+  if NS.ArmSkinPicker then NS.ArmSkinPicker() end
 end
 
 -- Panels are non-secure frames, so nothing here is combat-gated (standalone-windows) — but the

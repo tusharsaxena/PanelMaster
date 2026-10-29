@@ -278,6 +278,9 @@ test("Schema: the General page's tabs are the designed partition, in strip order
     { tab = "Master controls", count = 7 },
     { tab = "Moving panels",   count = 4 },
     { tab = "New panels",      count = 4 },
+    -- The Skin tab (skinning-§3): the seven skipRender skin.* rows, drawn by O.AppearanceTab, whose
+    -- key is this group's name, so the entry takes the group's place on the strip.
+    { tab = "Appearance",      count = 7 },
   }
 
   local order, counts = {}, {}

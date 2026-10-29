@@ -21,12 +21,14 @@ local buildMocks = dofile("tests/wow_mock.lua")
 
 local VENDORED = "Interface\\AddOns\\PanelMaster\\libs\\LibKa0s\\media\\"
 
--- The marks this addon puts on screen. They are drawn by LibKa0s-DebugLog-1.0 rather than by any
--- file in this repo — the descriptor in core/DebugLogSetup.lua hands over `addonName` and the
--- library resolves these three names with it — which is exactly why they are listed here: nothing
--- in core/, modules/ or settings/ mentions them, so nothing else in this suite would notice a
--- rename on either side of the seam.
-local DRAWN = { "close", "clear", "copy" }
+-- The marks this addon puts on screen. They are drawn by the library rather than by any file in
+-- this repo — the descriptor in core/DebugLogSetup.lua hands over `addonName` and LibKa0s-DebugLog-1.0
+-- resolves close, clear and copy with it, and the first-run skin picker (LibKa0s-Options-1.0's
+-- OptionsSkinPicker) draws the settings gear; its eye is not drawn, because no onPreview is passed
+-- (Ka0sAddonsCommonTasks docs/2026-10-29-SKINNING_ROLLOUT, X6) — which is exactly why they are
+-- listed here: nothing in core/, modules/ or settings/ mentions them, so nothing else in this suite
+-- would notice a rename on either side of the seam.
+local DRAWN = { "close", "clear", "copy", "settings" }
 
 -- ── the seam ────────────────────────────────────────────────────────────────────
 
