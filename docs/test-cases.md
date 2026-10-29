@@ -941,6 +941,32 @@ Total.
 - Skin unlock: the repaint touches unlocked panels only, and never the panel's own colors
 - Skin unlock: the label takes the skin's accent text role once, at creation
 
+### test_skin_picker.lua (13)
+
+- Skin picker: the spec names this owner, its seams, the General page's Skin tab, no eye
+- Skin picker: an unseen profile shows it; a seen one does not
+- Skin picker: it shows once after login, two seconds in, from OnEnterWorld
+- Skin picker: the stand-down cancels an unfired login start and gives it back
+- Skin picker: in combat a start waits for PLAYER_REGEN_ENABLED, once
+- Skin picker: a held start is dropped by the stand-down's HideSkinPicker
+- Skin picker: never while the addon is switched off
+- Skin picker: a new profile and a reset profile show it again
+- Skin picker: the player's close marks it seen; this addon's own hide does not
+- Skin picker: a profile that has seen it takes a shown picker down, unmarked
+- Skin picker: Apply saves the pick through the write seam and marks the picker seen
+- Skin picker: a profile event takes a shown picker down before the new profile's skin
+- Skin picker: the stand-down takes a shown picker down unseen
+
+### test_skin_settings.lua (7)
+
+- skin settings: with the panel painted, every editor widget is painted for this owner
+- skin settings: Ka0s Default paints the editor like every other skin once the panel is
+- skin settings: with the panel ignored (the default) the editor is left stock
+- skin settings: a release hands every painted editor widget back stock
+- skin settings: the band's picker and create box follow the Scope and a switch in place
+- skin settings: the Profiles page paints the tree AceConfigDialog drew, after every Open
+- skin settings: degraded, PaintAce and PaintAceTree paint nothing
+
 ### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
@@ -1290,6 +1316,8 @@ Total.
 | test_skinsetup.lua | 16 |
 | test_skin_literals.lua | 7 |
 | test_skin_unlock.lua | 5 |
+| test_skin_picker.lua | 13 |
+| test_skin_settings.lua | 7 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -1309,4 +1337,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1119** |
+| **Total** | **1139** |

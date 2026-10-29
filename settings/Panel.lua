@@ -513,6 +513,11 @@ function P:Register()
       c._dirty = true
       if not (container and container.frame) then return end
       AceConfigDialog:Open("PanelMaster-Profiles", container)
+      -- AceConfigDialog acquires the manager's widgets from AceGUI itself, past the Options
+      -- instance's owner proxy, so the tree is painted for this addon's skin right after it is drawn
+      -- (skinning-§3; nothing while the settings panel is ignored). After EVERY Open: each widget
+      -- goes back to the shared pool stock when the next Open releases it.
+      NS.SkinPaintAceTree(container)
     end)
     return Settings.RegisterCanvasLayoutSubcategory(mainCategory, prctx.panel, "Profiles")
   end)

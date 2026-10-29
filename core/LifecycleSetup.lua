@@ -108,6 +108,10 @@ function NS.StandDown()
   -- Before PLAYER_REGEN_ENABLED goes: a combat-held unlock has no replay without it, and kept it
   -- would fire at the next combat exit after a re-enable, in a fight nobody asked about.
   if NS.Unlock and NS.Unlock.DropPending then NS.Unlock:DropPending("stood down") end
+  -- The first-run skin picker goes down unseen (core/SkinSetup.lua): a shown one is dismissed with
+  -- its pending preview put back, a queued one leaves the queue, and an unfired login start or a
+  -- combat-held one is dropped, so nothing of it outlives the stand-down.
+  if NS.HideSkinPicker then NS.HideSkinPicker() end
   if NS.addon and NS.addon.UnregisterEvent then
     NS.addon:UnregisterEvent("PLAYER_ENTERING_WORLD")
     NS.addon:UnregisterEvent("PLAYER_REGEN_ENABLED")

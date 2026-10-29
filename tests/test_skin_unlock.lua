@@ -115,7 +115,7 @@ test("Skin unlock: the label takes the skin's accent text role once, at creation
   local real, calls = NS.Skin.Text, {}
   NS.Skin.Text = function(fs, role) calls[#calls + 1] = { fs = fs, role = role } end
   local ok, err = pcall(function()
-    local rec, f = unlockedPanel("Labelled")
+    local rec, f = unlockedPanel("Labeled")
     assertEqual(#calls, 1, "the label was not handed to S.Text exactly once")
     assertTrue(calls[1].fs == f.overlay.label, "S.Text painted something other than the label")
     assertEqual(calls[1].role, "accent")

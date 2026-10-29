@@ -6,6 +6,17 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 
+-- Every AceGUI widget this file acquires, painted for this addon's skin (skinning-§3). The handle
+-- above is AceGUI itself, not the Options instance's owner proxy, so nothing else paints them:
+-- NS.SkinPaintAce does (core/SkinSetup.lua), nothing while the Scope's Ignore settings panel is on
+-- (a new profile's default), and the release hands each back to AceGUI's shared pool stock. The
+-- LSM30 media pickers and the ColorPicker's Blizzard frame have no painter and stay stock.
+local function acquire(wtype)
+  local w = AceGUI:Create(wtype)
+  NS.SkinPaintAce(w)
+  return w
+end
+
 -- U+2026, the ending options-ui-§21 gives a button that opens a confirmation.
 local ELLIPSIS = "\226\128\166"
 
@@ -120,7 +131,7 @@ local function buildPanelEditor(ctx, parent, rec)
   -- page, and a second bounded box inside it was a border stating a boundary the page already
   -- states (options-ui-§14, anti-pattern #72). The InlineGroup was also titleless, so it was never
   -- naming anything -- it was drawing an edge and an inset and nothing else.
-  local group = AceGUI:Create("SimpleGroup")
+  local group = acquire("SimpleGroup")
   group:SetFullWidth(true)
   group:SetLayout("List")
 
@@ -129,7 +140,7 @@ local function buildPanelEditor(ctx, parent, rec)
   -- `rel` overrides the half-row default for a slider that has no partner on its line. Passed
   -- rather than inferred, because "is this row full" is not something a widget maker can see.
   local function numberField(row, label, field, minV, maxV, step, tooltip, rel)
-    local s = AceGUI:Create("Slider")
+    local s = acquire("Slider")
     s:SetLabel(label)
     s:SetRelativeWidth(rel or 0.5)
     -- Bounds and value are set together, every time, because the span depends on the value: see
@@ -150,7 +161,7 @@ local function buildPanelEditor(ctx, parent, rec)
   end
 
   local function tokenDropdown(row, label, field, tokens, tooltip)
-    local dd = AceGUI:Create("Dropdown")
+    local dd = acquire("Dropdown")
     trackDropdown(ctx, dd)
     dd:SetLabel(label)
     dd:SetRelativeWidth(0.5)
@@ -177,7 +188,7 @@ local function buildPanelEditor(ctx, parent, rec)
   -- artwork picker asks for a full row, and it needs one: its labels carry the whole derived
   -- category ("Faction -> Expansion -> 12 Midnight: Harati") and truncate to nothing at half width.
   local function optionDropdown(row, label, field, options, tooltip, width)
-    local dd = AceGUI:Create("Dropdown")
+    local dd = acquire("Dropdown")
     trackDropdown(ctx, dd)
     dd:SetLabel(label)
     dd:SetRelativeWidth(width or 0.5)
@@ -195,7 +206,7 @@ local function buildPanelEditor(ctx, parent, rec)
   -- A boolean switch on the record. Same two halves as everything else here: the write goes through
   -- Registry:Set, and the refresher reads the live record back.
   local function boolField(row, label, field, tooltip)
-    local cb = AceGUI:Create("CheckBox")
+    local cb = acquire("CheckBox")
     cb:SetLabel(label)
     cb:SetRelativeWidth(0.5)
     cb:SetValue(rec[field] and true or false)
@@ -303,7 +314,7 @@ local function buildPanelEditor(ctx, parent, rec)
     -- structural (the frame name is NOT affected -- it is stamped at create) and R:Rename
     -- broadcasts MSG.PANELS, which rebuilds this tab. Nothing below the rename call may touch
     -- `widget` on the success path, because the rebuild releases it.
-    local nameBox = AceGUI:Create("EditBox")
+    local nameBox = acquire("EditBox")
     nameBox:SetLabel("Panel name")
     nameBox:SetRelativeWidth(0.5)
     nameBox:SetText(rec.name or "")
@@ -334,7 +345,7 @@ local function buildPanelEditor(ctx, parent, rec)
         order[#order + 1] = other.id
       end
     end
-    local copyFrom = AceGUI:Create("Dropdown")
+    local copyFrom = acquire("Dropdown")
     copyFrom:SetLabel("Copy settings from panel")
     copyFrom:SetRelativeWidth(0.5)
     copyFrom:SetList(others, order)
@@ -354,7 +365,7 @@ local function buildPanelEditor(ctx, parent, rec)
 
     local toggleRow = editorRow(group)
 
-    local enabled = AceGUI:Create("CheckBox")
+    local enabled = acquire("CheckBox")
     enabled:SetLabel("Enable this panel")
     enabled:SetRelativeWidth(0.5)
     -- `~= false`, not truthiness: a record that predates the field is enabled.
@@ -372,7 +383,7 @@ local function buildPanelEditor(ctx, parent, rec)
     -- Per-panel unlock. The global unlock is all-or-nothing; this one puts a drag handle on just
     -- the panel being edited, which is what you want with a dozen of them on screen.
     -- Session state no MSG.PANEL describes: its refresher is driven by NS.PanelEditor:RefreshUnlock.
-    local unlocked = AceGUI:Create("CheckBox")
+    local unlocked = acquire("CheckBox")
     unlocked:SetLabel("Unlock this panel")
     unlocked:SetRelativeWidth(0.5)
     unlocked:SetValue(NS.Unlock:IsPanelUnlocked(rec.id) and true or false)
@@ -629,7 +640,7 @@ local function buildPanelEditor(ctx, parent, rec)
     -- has to. Pairing them costs the box some visible characters and buys the button a home beside the
     -- other artwork controls rather than a row of its own with empty space next to it.
     local artPathRow = editorRow(group)
-    local pathBox = AceGUI:Create("EditBox")
+    local pathBox = acquire("EditBox")
     pathBox:SetLabel("Custom texture path")
     pathBox:SetRelativeWidth(BUTTON_PAIR_REL)
     local function applyArtPath(live)

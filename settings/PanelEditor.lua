@@ -6,6 +6,17 @@ local print = NS.Print   -- secret-safe, [PM]-prefixed shared printer (events-fr
 
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 
+-- Every AceGUI widget this file acquires, painted for this addon's skin (skinning-§3). The handle
+-- above is AceGUI itself, not the Options instance's owner proxy, so nothing else paints them:
+-- NS.SkinPaintAce does (core/SkinSetup.lua), nothing while the Scope's Ignore settings panel is on
+-- (a new profile's default), and the release hands each back to AceGUI's shared pool stock. The
+-- LSM30 media pickers and the ColorPicker's Blizzard frame have no painter and stay stock.
+local function acquire(wtype)
+  local w = AceGUI:Create(wtype)
+  NS.SkinPaintAce(w)
+  return w
+end
+
 -- ── The Panels subcategory's body ───────────────────────────────────────────────
 -- The chrome band's two controls — the panel picker and the create box, one row — and one panel's
 -- appearance editor under a six-tab strip. The six page-wide acts live on the editor's own General
@@ -230,7 +241,7 @@ end
 E.__panelsByName = panelsByName
 
 local function editorRow(parent)
-  local row = AceGUI:Create("SimpleGroup")
+  local row = acquire("SimpleGroup")
   row:SetLayout("Flow")
   row:SetFullWidth(true)
   parent:AddChild(row)
@@ -238,7 +249,7 @@ local function editorRow(parent)
 end
 
 local function editorSpacer(parent, height)
-  local sp = AceGUI:Create("SimpleGroup")
+  local sp = acquire("SimpleGroup")
   sp:SetLayout(nil)
   sp:SetFullWidth(true)
   sp:SetHeight(height)
@@ -253,7 +264,7 @@ end
 -- that function adds to the PAGE's scroll, and the editor emits into its own container so that a
 -- rebuild can release the editor without taking the rest of the page with it.
 local function editorHeading(parent, text)
-  local h = AceGUI:Create("Heading")
+  local h = acquire("Heading")
   h:SetText(text)
   h:SetFullWidth(true)
   h:SetHeight(SECTION_HEADING_H)
@@ -299,7 +310,7 @@ end
 -- A LibSharedMedia picker for one of a panel's media fields.
 local function makeMediaDropdown(ctx, row, rec, field, label, tooltip)
   local mediaType = C.PANEL_FIELD_MEDIA[field]
-  local dd = AceGUI:Create(LSM_WIDGET[mediaType] or "Dropdown")
+  local dd = acquire(LSM_WIDGET[mediaType] or "Dropdown")
   trackDropdown(ctx, dd)
   dd:SetLabel(label)
   dd:SetRelativeWidth(0.5)
@@ -353,7 +364,7 @@ local function makeColorPair(ctx, row, rec, field, label)
   local usingClass = flag and rec[flag] and true or false
   local classCheck   -- the companion checkbox, built below when the field has a class-color flag
 
-  local picker = AceGUI:Create("ColorPicker")
+  local picker = acquire("ColorPicker")
   picker:SetLabel(label)
   picker:SetRelativeWidth(0.5)
   picker:SetHasAlpha(true)
@@ -398,7 +409,7 @@ local function makeColorPair(ctx, row, rec, field, label)
 
   if not flag then return end
 
-  local cb = AceGUI:Create("CheckBox")
+  local cb = acquire("CheckBox")
   classCheck = cb
   -- `Use class color`, verbatim: options-ui-§17 names the control, and it was "Class color" here.
   cb:SetLabel("Use class color")
@@ -421,7 +432,7 @@ end
 -- sees one complete value rather than four partial ones.
 local function makeEdgeChecks(ctx, row, rec)
   for _, edge in ipairs(C.EDGES) do
-    local cb = AceGUI:Create("CheckBox")
+    local cb = acquire("CheckBox")
     cb:SetLabel(C.EDGE_LABEL[edge])
     cb:SetRelativeWidth(0.25)
     cb:SetValue(NS.Util.EdgeSet(rec.accentEdges)[edge] and true or false)
@@ -495,6 +506,8 @@ end
 -- create broadcasts MSG.PANELS from inside R:New, so the rebuild lands while the user's own
 -- callback is still on the stack, and releasing the box would hand the widget they are typing into
 -- back to AceGUI's pool. The picker is refreshed in place instead, through ctx.__pmPicker.
+local bandCtx   -- the Panels page's ctx once its band is built (one per session)
+
 local function drawPageHeader(ctx)
   local H = NS.Helpers
   if not (H and H.PageHeader) then return end
@@ -509,7 +522,7 @@ local function drawPageHeader(ctx)
     -- when there is no panel -- running the other way.
     height = H.BANNER_H,
     build = function(_, frame)
-      local block = AceGUI:Create("SimpleGroup")
+      local block = acquire("SimpleGroup")
       if not (block and block.frame) then return end
       block:SetLayout("List")
       block.frame:SetParent(frame)
@@ -528,7 +541,7 @@ local function drawPageHeader(ctx)
       -- The picker carries a LABEL. It did not when it lived under an "Edit" section heading that
       -- said what it was for; in the band there is no heading above it, and an unlabeled dropdown
       -- beside a labeled edit box reads as a control that lost its caption.
-      local picker = AceGUI:Create("Dropdown")
+      local picker = acquire("Dropdown")
       picker:SetLabel("Panel")
       picker:SetRelativeWidth(0.5)
       picker:SetCallback("OnValueChanged", function(_, _, id)
@@ -547,7 +560,7 @@ local function drawPageHeader(ctx)
       -- by the Enter key, the Okay button and a drag-receive. `OnEditFocusLost` is not even
       -- registered. (An earlier version disabled the button and added a separate Create button on
       -- the mistaken assumption that tabbing away would create a panel.)
-      local newBox = AceGUI:Create("EditBox")
+      local newBox = acquire("EditBox")
       -- "New panel", not "New panel name". The band holds three controls that name a panel, and
       -- the reader's question at this one is which of them MAKES a panel — a label naming the
       -- field's contents answered a question nobody had. It reads *New <noun>*, the collection's
@@ -571,6 +584,8 @@ local function drawPageHeader(ctx)
       end
       if block.DoLayout then block:DoLayout() end
       ctx.__pmPicker = picker
+      ctx.__pmNewBox = newBox
+      bandCtx = ctx
       -- The picker is the only band control left to park. The six acts moved to the `General`
       -- tab (options-ui-§14, v2.40.0): three band rows for controls touched once a session was
       -- a second page above the page, and the tab the editor OPENS on is not a tab anything is
@@ -615,6 +630,19 @@ local function drawPageHeader(ctx)
   })
 end
 
+-- The band follows a skin switch IN PLACE (NS.Skin.OnLooksChanged, which also fires on a Scope
+-- change). The library's re-render of an open page releases and re-acquires every row it drew, which
+-- repaints the editor below, but the band is built once for the session and never released (above),
+-- so nothing re-acquires its picker and create box: PaintAce repaints each for the new skin, or hands
+-- it back stock while the settings panel is ignored.
+local function repaintBand()
+  local ctx = bandCtx
+  if not ctx then return end
+  if ctx.__pmPicker then NS.SkinPaintAce(ctx.__pmPicker) end
+  if ctx.__pmNewBox then NS.SkinPaintAce(ctx.__pmNewBox) end
+end
+if NS.Skin and NS.Skin.OnLooksChanged then NS.Skin.OnLooksChanged(repaintBand) end
+
 -- Re-point the picker at the current panel list, without releasing it.
 --
 -- Re-registered for scroll-close on every rebuild because `forgetDropdowns` empties that registry
@@ -652,7 +680,7 @@ local function buildPanelsPage(ctx)
 
   -- Everything a rebuild repaints lives in here, so a rebuild releases exactly the editor and
   -- nothing in the band above it.
-  local listGroup = AceGUI:Create("SimpleGroup")
+  local listGroup = acquire("SimpleGroup")
   listGroup:SetLayout("List"); listGroup:SetFullWidth(true)
   scroll:AddChild(listGroup)
 
@@ -689,7 +717,7 @@ local function buildPanelsPage(ctx)
 
     if not rec then
       -- The empty state is CONTENT, under the same strip every other state draws.
-      local empty = AceGUI:Create("Label")
+      local empty = acquire("Label")
       empty:SetFullWidth(true)
       empty:SetText("No panels yet. Type a name in the box above and press Enter to make one.")
       listGroup:AddChild(empty)

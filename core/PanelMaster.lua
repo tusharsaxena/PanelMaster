@@ -118,6 +118,10 @@ function addon:OnEnterWorld()
   -- pasted log says WHY a repaint ran, not only that it did.
   NS.Debug("Canvas", "entered world: repainting")
   if NS.Canvas and NS.Canvas.RenderAll then NS.Canvas:RenderAll() end
+  -- The first-run skin picker (core/SkinSetup.lua), once per session, on a profile that has not
+  -- closed it: two seconds in, off the login spike, on a timer the stand-down cancels. The stored
+  -- skin was applied in OnInitialize; in combat the start holds for PLAYER_REGEN_ENABLED.
+  if NS.ArmSkinPicker then NS.ArmSkinPicker() end
 end
 
 -- Panels are non-secure frames, so nothing here is combat-gated (standalone-windows) — but the
