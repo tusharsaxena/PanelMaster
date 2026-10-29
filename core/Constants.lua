@@ -632,10 +632,10 @@ C.PREVIEW_FIELD = "preview"
 C.FRAME_NAME_PREFIX = "PanelMaster_Panel_"
 
 -- ── Unlock-mode styling ─────────────────────────────────────────────────────────
--- The overlay a panel wears while unlocked: a gold outline and a centered name label, so a panel that
--- is otherwise near-invisible (low alpha, dark color) can still be found and grabbed.
-C.UNLOCK_OUTLINE_RGB = { 1.00, 0.82, 0.00, 0.90 }
-C.UNLOCK_LABEL_RGB   = { 1.00, 0.82, 0.00 }
+-- The overlay a panel wears while unlocked: an outline and a centered name label, so a panel that
+-- is otherwise near-invisible (low alpha, dark color) can still be found and grabbed. Their colors
+-- are the skin's (modules/Unlock.lua): the outline `list.dropLine` and the label the `accent` text
+-- role, both the gold {1, 0.82, 0} on Ka0s Default, the outline at 0.9 alpha.
 -- The SHIPPED outline thickness, and the fallback modules/Unlock.lua reads when the db is not up
 -- yet. It is no longer the only answer: `settings.unlockOutlineSize` is the setting a player sets,
 -- and it ships at this exact number, so an install that touches nothing is drawn as it always was.

@@ -83,9 +83,9 @@ end
 
 -- ── Overlay ─────────────────────────────────────────────────────────────────────
 
--- Give a panel frame its unlock-mode furniture: a gold outline and a centered name label. Built
--- lazily on first unlock — a user who never unlocks never pays for four textures and a FontString
--- per panel.
+-- Give a panel frame its unlock-mode furniture: an outline and a centered name label, in the skin's
+-- colors (gold on Ka0s Default; see paintOutline below). Built lazily on first unlock — a user who
+-- never unlocks never pays for four textures and a FontString per panel.
 local function ensureOverlay(f)
   if f.overlay then return f.overlay end
   local o = { edges = {} }
@@ -109,10 +109,25 @@ local function ensureOverlay(f)
     -- OVERLAY within that frame, so the outline still beats the label if they ever intersect.
     o.edges[side] = o.frame:CreateTexture(nil, "OVERLAY")
   end
+  -- GameFontNormal stays as the string's base font: it is what the label draws without the
+  -- library (the degraded facade's Text is a no-op), and its gold is Ka0s Default's text.accent.
   o.label = o.frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   o.label:SetPoint("CENTER")
+  -- The skin's accent text role, once: the library records the string and repaints it on a skin
+  -- switch by itself, so the label needs no OnLooksChanged of its own (inventory S7).
+  NS.Skin.Text(o.label, "accent")
   f.overlay = o
   return o
+end
+
+-- The outline's color: the skin's `list.dropLine`, the drag target's marker (rollout D3). Ka0s
+-- Default's is the {1, 0.82, 0, 0.9} gold the outline was typed as; every other skin draws its own
+-- accent at 0.9. Raw SetColorTexture from a token read, which the facade does not record, so a skin
+-- switch repaints it through U:Reskin below. Read here, on a decorate, and never on the 10Hz
+-- mouseover path (modules/Canvas.lua).
+local function paintOutline(o)
+  local r, g, b, a = NS.Skin.Color("list.dropLine")
+  for _, tex in pairs(o.edges) do tex:SetColorTexture(r, g, b, a) end
 end
 
 -- The outline's thickness, in UI units: the player's `settings.unlockOutlineSize`, clamped, with
@@ -208,16 +223,12 @@ function U:Decorate(f, rec)
   o.frame:SetFixedFrameStrata(true)
   o.frame:SetFrameLevel((f:GetFrameLevel() or 0) + C.LAYERS.LEVEL.UNLOCK)
 
-  local rgba = C.UNLOCK_OUTLINE_RGB
   layoutOutline(f, o, U.OutlineSize())
-  for _, tex in pairs(o.edges) do
-    tex:SetColorTexture(rgba[1], rgba[2], rgba[3], rgba[4])
-    tex:Show()
-  end
+  paintOutline(o)
+  for _, tex in pairs(o.edges) do tex:Show() end
 
   local labels = (NS.db and NS.db.profile and NS.db.profile.settings.showLabels) ~= false
   o.label:SetText(labels and tostring(rec.name) or "")
-  o.label:SetTextColor(C.UNLOCK_LABEL_RGB[1], C.UNLOCK_LABEL_RGB[2], C.UNLOCK_LABEL_RGB[3])
   o.label:SetShown(labels)
 
   -- An unlocked panel is always shown regardless of its own enabled flag: you cannot move a panel
@@ -247,6 +258,26 @@ function U:StripOverlay(f)
   f:SetMovable(false)
   f:RegisterForDrag()
 end
+
+-- Repaint the outline of every unlocked panel in the current skin, and answer how many it painted.
+-- NS.Skin.OnLooksChanged runs it after a skin switch, once the new skin is resolved: the label is
+-- the library's to repaint (S.Text recorded it), the edges are this file's. A locked panel is left
+-- alone, because its next unlock decorates it, and so is the rest of the panel: the fill, border,
+-- accent and artwork are the player's (rollout E8, D1) and no skin repaints them.
+function U:Reskin()
+  if not (NS.Registry and NS.Canvas) then return 0 end
+  local n = 0
+  for _, rec in ipairs(NS.Registry:All()) do
+    local f = NS.Canvas:FrameFor(rec.id)
+    if f and f.overlay and U:IsPanelUnlocked(rec.id) then
+      paintOutline(f.overlay)
+      n = n + 1
+    end
+  end
+  return n
+end
+
+NS.Skin.OnLooksChanged(function() U:Reskin() end)
 
 -- ── The addon's own popups stay answerable (PAN-Z05, frame-layering-§1) ──────────
 

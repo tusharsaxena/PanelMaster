@@ -78,6 +78,10 @@ NS.SKIN_FALLBACK = {
   -- The Panels page picker's "(disabled)" marker (settings/PanelEditor.lua, PM-02): DIM, the
   -- |cff808080 it was typed as.
   ["text.disabled"] = { 0.5, 0.5, 0.5, 1 },
+  -- The unlock overlay's outline (modules/Unlock.lua, PM-03): the drag target's marker, the
+  -- {1, 0.82, 0, 0.9} gold it was typed as. Its label is S.Text's, which the degraded facade
+  -- leaves on GameFontNormal's own gold.
+  ["list.dropLine"] = { 1, 0.82, 0, 0.9 },
 }
 
 --- A color token's components AS A CALL SITE WRITES THEM: r, g, b for an opaque color and r, g, b,

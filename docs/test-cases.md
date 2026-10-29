@@ -933,6 +933,14 @@ Total.
 - Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
 - Skin literals: the picker's (disabled) marker follows the skin's text.disabled
 
+### test_skin_unlock.lua (5)
+
+- Skin unlock: the outline is today's gold on Ka0s Default
+- Skin unlock: the outline reads the skin's list.dropLine
+- Skin unlock: a skin switch repaints an unlocked panel's outline live
+- Skin unlock: the repaint touches unlocked panels only, and never the panel's own colors
+- Skin unlock: the label takes the skin's accent text role once, at creation
+
 ### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
@@ -1281,6 +1289,7 @@ Total.
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
 | test_skin_literals.lua | 7 |
+| test_skin_unlock.lua | 5 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -1300,4 +1309,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1114** |
+| **Total** | **1119** |
