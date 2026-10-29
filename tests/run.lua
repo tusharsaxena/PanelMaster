@@ -101,7 +101,7 @@ local SUITES = {
   "test_schema", "test_slash", "test_panel", "test_panels_page", "test_profiles",
   -- The LibKa0s-Skin-1.0 seam, after the page and profile suites: it renders the General page's
   -- Skin tab and switches and resets the profile, putting the skin back on Ka0s Default after each case.
-  "test_skinsetup",
+  "test_skinsetup", "test_skin_literals",
   "test_launcher",
   -- The stand-down conformance suite slash-commands-§7 MUSTs. Listed here like any other suite,
   -- inside the green gate, and placed AFTER test_launcher because step 8 drives the launcher's own

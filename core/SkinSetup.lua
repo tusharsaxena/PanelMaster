@@ -28,6 +28,10 @@ local addonName, NS = ...
 --   NS.SKIN_SOURCE_OPTIONS  the source row's values, and NS.SKIN_OPTIONS the skin row's (every
 --   NS.SKIN_OPTIONS         registered skin, in the library's order). settings/Schema.lua reads both.
 --   NS.SKIN_FALLBACK        the host copy of the Ka0s Default tokens the degraded facade answers.
+--   NS.SkinColor(name)      a color token as a call site writes it (three components when opaque),
+--                           so a literal that became a token keeps its arity on Ka0s Default.
+--   NS.SkinEscape(name)     a color token as a "|cffrrggbb" escape, rounded to the byte, so markup
+--                           written as a literal keeps its bytes on Ka0s Default (|cff808080).
 --
 -- This is LootHistory's seam (core/SkinSetup.lua there, the collection's first adopter), cut to what
 -- PanelMaster draws: no owner tokens (the one color the M0 inventory found with no exact library
@@ -68,9 +72,34 @@ local DEFAULT = "ka0s"
 -- The Ka0s Default tokens the DEGRADED facade answers, copied from the library and limited to the
 -- ones this addon reads. Both arms publish the table, so tests/test_skinsetup.lua can hold each
 -- entry to the live library's Ka0s Default value: a copy that drifts goes red there. A surface
--- converted to a token adds the token here in the same change. Empty until one does: the settings
--- pages and the debug console are the library's to paint, and the panels are the player's (E8).
-NS.SKIN_FALLBACK = {}
+-- converted to a token adds the token here in the same change. The settings pages and the debug
+-- console are the library's to paint, and the panels are the player's (E8), so the list is short.
+NS.SKIN_FALLBACK = {
+  -- The Panels page picker's "(disabled)" marker (settings/PanelEditor.lua, PM-02): DIM, the
+  -- |cff808080 it was typed as.
+  ["text.disabled"] = { 0.5, 0.5, 0.5, 1 },
+}
+
+--- A color token's components AS A CALL SITE WRITES THEM: r, g, b for an opaque color and r, g, b,
+--- a otherwise (the library's own text and vertex rule), so a site that passed three components
+--- before it read a token still passes three on Ka0s Default. nil for a token the skin leaves alone.
+--- Read through NS.Skin at call time, so it answers the live skin, or the host copy degraded.
+function NS.SkinColor(name)
+  local r, g, b, a = NS.Skin.Color(name)
+  if r == nil then return nil end
+  if a == nil or a == 1 then return r, g, b end
+  return r, g, b, a
+end
+
+--- A color token as a "|cffrrggbb" escape, each channel rounded to the nearest byte (.5 is 80), so
+--- markup a call site wrote as a literal keeps its bytes on Ka0s Default. nil for a token the skin
+--- leaves alone. Read at call time: markup is text, so a skin change reaches it at the next build.
+function NS.SkinEscape(name)
+  local r, g, b = NS.Skin.Color(name)
+  if r == nil then return nil end
+  local function byte(v) return math.floor(v * 255 + 0.5) end
+  return ("|cff%02x%02x%02x"):format(byte(r), byte(g), byte(b))
+end
 
 NS.SKIN_SOURCE_OPTIONS = {
   { value = "ka0s", text = "Ka0s skins" },

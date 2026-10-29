@@ -923,6 +923,16 @@ Total.
 - Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
 - Skin seam: a profile's stored exceptions and overrides are applied with its skin
 
+### test_skin_literals.lua (7)
+
+- Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list
+- Skin literals: every allow-list entry carries its reason
+- Skin literals: the gate is falsifiable, a planted literal of each shape is reported
+- Skin literals: the host copy of Ka0s Default equals the library's Ka0s Default
+- Skin literals: NS.SkinColor keeps a call site's arity, NS.SkinEscape its bytes
+- Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
+- Skin literals: the picker's (disabled) marker follows the skin's text.disabled
+
 ### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
@@ -1270,6 +1280,7 @@ Total.
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
+| test_skin_literals.lua | 7 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -1289,4 +1300,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1107** |
+| **Total** | **1114** |
