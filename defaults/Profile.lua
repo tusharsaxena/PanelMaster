@@ -65,6 +65,26 @@ NS.defaults.profile = {
     defaultStrata = "LOW",
     defaultAlpha  = 1.0,
   },
+
+  -- The skin this addon wears (skinning-§2, per addon and per profile): where its look comes from
+  -- ("ka0s", the Ka0s skins, or "eui", EllesmereUI's) and which Ka0s skin. "ka0s"/"ka0s" is Ka0s
+  -- Default. The Scope's two exceptions: leave the settings panel the client's (on, the collection's
+  -- default for a new profile since LootHistory's owner call of 2026-10-27), leave every font the
+  -- client's (off). The font and texture overrides: an LSM key each, "" for the skin's own.
+  -- `pickerSeen`: the first-run skin picker was closed on this profile, so every profile, old and
+  -- new, shows it once (rollout ruling O3). New keys with defaults, so AceDB merges them into every
+  -- existing profile and no migration is owed. A sibling of `settings` rather than inside it: the
+  -- skin is not one of the General page's settings rows, and the keys read as `/pm set skin.skin`.
+  -- Applied through core/SkinSetup.lua.
+  skin = {
+    source      = "ka0s",
+    skin        = "ka0s",
+    ignorePanel = true,
+    ignoreFonts = false,
+    font        = "",
+    texture     = "",
+    pickerSeen  = false,
+  },
   -- debug is session-only (NS.State.debug), never persisted here (debug-logging-§5). So is unlock
   -- state (NS.State.unlocked) — see core/State.lua for why.
 }

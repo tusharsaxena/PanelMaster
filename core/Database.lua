@@ -88,6 +88,13 @@ end
 function NS:RegisterProfileCallbacks()
   if not (NS.db and NS.db.RegisterCallback) then return end
   local function reload()
+    -- The new profile's skin FIRST (core/SkinSetup.lua), before anything rebuilds: Skin:SetChoice
+    -- repaints every frame recorded for this owner and fires OnLooksChanged whether or not a page
+    -- was ever built, and the settings pages re-render under it on the next frame. With it the
+    -- profile's stored exceptions and overrides (skinning-§2: a switch, copy or reset re-applies
+    -- the choice). Ahead of the latch because the latch can stand the addon down, and the skin is
+    -- worn by the settings pages a stood-down addon still shows.
+    if NS.ApplySkinChoice then NS.ApplySkinChoice() end
     -- THE LATCH FIRST, and before anything repaints (slash-commands-§7). `settings.enabled` is a
     -- stored setting like any other, so a profile switch can flip it with no checkbox and no verb
     -- being touched -- a player switching to a profile where the addon is enabled expects it to come

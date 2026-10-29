@@ -904,6 +904,25 @@ Total.
 - Panel: the Profiles container is inset to the library's PADDING_X on both edges
 - AceDB fake: OnProfileReset fires with (event, db) and no key, as AceDB-3.0 does
 
+### test_skinsetup.lua (16)
+
+- Skin seam: the owner is the folder name, and NS.Skin is its facade
+- Skin seam: the read answers Ka0s Default before the profile store exists
+- Skin seam: the TOC loads the seam after Namespace and before the first file that reads it
+- Skin seam: the TOC lists EllesmereUI as an optional dependency
+- Skin seam: the skin.* keys default to Ka0s Default, as skipRender Appearance rows
+- Skin seam: the skin row's values are every registered skin, in the library's order
+- Skin seam: /pm set refuses a skin that is not registered and applies one that is
+- Skin seam: /pm set reaches an exception, and only its own half
+- Skin seam: the write seam stores media's halves, "" for the skin's own
+- Skin seam: the Skin tab is the General page's last tab, keyed Appearance
+- Skin seam: one tab pick is one effective SetChoice, one repaint and no reload
+- Skin seam: the tab's Ignore fonts reaches the library and the profile, one repaint
+- Skin seam: another addon's copy to every Ka0s addon repaints PanelMaster once
+- Skin seam: a profile switch applies the new profile's skin first, before the panels reload
+- Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
+- Skin seam: a profile's stored exceptions and overrides are applied with its skin
+
 ### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
@@ -1250,6 +1269,7 @@ Total.
 | test_panel.lua | 53 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
+| test_skinsetup.lua | 16 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -1269,4 +1289,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1091** |
+| **Total** | **1107** |

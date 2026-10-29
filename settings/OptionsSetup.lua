@@ -117,7 +117,7 @@ if not lib then
     -- AppearanceTab answers a tab entry that renders nothing, AppearanceRows answers nil, as the
     -- live member does when it cannot draw, SkinPicker shows nothing and answers nil, and
     -- HideSkinPicker has nothing to take down.
-    AppearanceTab = function() return { key = "Appearance", label = "", render = noop } end,
+    AppearanceTab = function() return { key = "Appearance", label = "Skin", render = noop } end,
     AppearanceRows = function() return nil end,
     SkinPicker = function() return nil end, HideSkinPicker = noop,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an

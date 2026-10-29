@@ -95,6 +95,16 @@ local PROFILE_PIN = {
   ["settings.snapToGrid"] = "{default=true,type=\"bool\"}",
   ["settings.unlockOutlineSize"] = "{default=2,max=12,min=1,step=1,type=\"number\"}",
   ["settings.visibility"] = "{default=\"always\",type=\"string\",values=\"always|inCombat|never|outOfCombat\"}",
+  -- The skin.* keys (PM-01, the skinning rollout; skinning-§2): new keys with AceDB defaults, so
+  -- no existing profile's value moves and no migration is owed. Ka0s Default, the settings panel
+  -- left the client's, the fonts skinned, the skin's own font and texture, the picker unseen (O3).
+  ["skin.font"] = "{default=\"\",type=\"string\"}",
+  ["skin.ignoreFonts"] = "{default=false,type=\"bool\"}",
+  ["skin.ignorePanel"] = "{default=true,type=\"bool\"}",
+  ["skin.pickerSeen"] = "{default=false,type=\"bool\"}",
+  ["skin.skin"] = "{default=\"ka0s\",type=\"string\",values=\"azeroth|contrast|ember|forever|glass|ka0s|midnight|obsidian|wow\"}",
+  ["skin.source"] = "{default=\"ka0s\",type=\"string\",values=\"eui|ka0s\"}",
+  ["skin.texture"] = "{default=\"\",type=\"string\"}",
   ["state.debugConsole"] = "{default=false,sessionOnly=true,type=\"bool\"}",
   ["state.locked"] = "{default=true,sessionOnly=true,type=\"bool\"}",
 }

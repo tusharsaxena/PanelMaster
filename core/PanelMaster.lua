@@ -31,6 +31,10 @@ function addon:OnInitialize()
   -- ("Solid") resolves on the very first render rather than falling back for one frame.
   NS.Compat.RegisterMedia()
   NS:InitDB()
+  -- The skin the active profile names (core/SkinSetup.lua), right after the store exists: the owner
+  -- registered at file load, before AceDB, and has worn Ka0s Default since. Before any page is
+  -- built, so the first paint is already the profile's skin.
+  NS.ApplySkinChoice()
   if NS.Schema and NS.Schema.Register then NS.Schema:Register() end
   if NS.Slash and NS.Slash.Register then NS.Slash:Register() end
   -- The launcher (launcher-§1), AFTER NS:InitDB() above and for one reason: the descriptor's
