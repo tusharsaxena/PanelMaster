@@ -10,7 +10,8 @@ three subcategories:
   **two** pages `options-ui-§13` exempts from the strip, and it is exempt because the host draws it
   outside the flow engine: it declares no `group` and names no sections, so there is nothing for a
   strip to be a strip of.
-- **General** — the schema rows, in a two-column grid under a three-tab strip.
+- **General** — the schema rows, in a two-column grid under a four-tab strip, the last tab the
+  library's **Skin** tab.
 - **Panels** — create, edit and delete the panels themselves; the editor sits under a six-tab
   strip whose **General** first tab carries everything that acts on the panel as a whole, with the
   picker and the create box on the one row of band **above** it.
@@ -27,7 +28,7 @@ game's own Settings ▸ AddOns list.
 | Page | Covers |
 |---|---|
 | Ka0s Panel Master | The landing page — the logo, one line on what the addon does, and the same slash-command list `/pm help` prints. Drawn by LibKa0s-Options' `O.BuildLandingPage`, which hides the logo when AceGUI recycles its frame. |
-| General | Every addon-wide setting, under three tabs: **Master controls**, **Moving panels** and **New panels**. |
+| General | Every addon-wide setting, under four tabs: **Master controls**, **Moving panels**, **New panels** and **Skin**. |
 | Panels | The panels themselves — make one and choose which to edit from the band at the top, then rename, copy, reset, delete and style the selected one under six tabs: **General**, **Size and position**, **Background and border**, **Accent bar**, **Artwork** and **Opacity and fade**. |
 | Profiles | Ace's standard profile management: create, switch between, copy and reset profiles, or bind one per character, class, realm or faction. |
 
@@ -52,6 +53,7 @@ game's own Settings ▸ AddOns list.
 | New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
 | New panels | Default frame strata | The layer new panels start in. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`, after the row's own sentences, so it says what `DIALOG` and above cover (`frame-layering-§1`). |
 | New panels | Default opacity | How see-through new panels start out. |
+| Skin | Skin source, the skins, Font and texture, the Scope, Copy to every Ka0s addon… | The library's Skin tab (`O.AppearanceTab`), drawn for this addon's skin owner: where the look comes from (the Ka0s skins or EllesmereUI), which of the nine Ka0s skins, a font and a texture over the skin's own, **Ignore settings panel** (on for a new profile) and **Ignore fonts**, and the copy to every other loaded Ka0s addon that uses skins. It changes the settings pages (while the panel is not ignored), the debug console and the unlock overlay, never the panels themselves. |
 
 Every **Moving panels** tooltip ends on the same sentence, because the switch those rows depend on is
 a fixed element of another tab (`options-ui-§15`): *"These only matter while panels are unlocked:
@@ -61,6 +63,25 @@ Panels page's **New panel** box and **Reset panel…** button point back: *"New 
 size, layer and opacity set on the General page > New panels."* Location strings are written
 `<Page> > <Tab>` with an ASCII `>`, and say *the General page* because the Panels page has a General
 tab (`options-ui-§21`).
+
+**The Skin tab is the library's** (skinning-§3). `settings/Panel.lua` builds its entry once with
+`O.AppearanceTab({ owner, get = NS.SkinChoice, set = NS.WriteSkinChoice })` and hands it to
+`O.RenderTabbedSchema` as a host tab; its key, `Appearance`, is the group of the seven `skipRender`
+`skin.*` rows (`settings/Schema.lua`), so it takes that group's place on the strip, **last**, since
+there is no Keybindings tab here. The same call passes `untabbedSkipRender`, which keeps the hidden,
+all-`skipRender` `panel.*` rows' group from drawing an empty **Panel** tab. The first-run skin
+picker's gear opens this tab (`page = "general"`, `tab = "Appearance"`).
+
+**What the skin paints on these pages.** The landing, General and Profiles chrome and every widget
+acquired through the Options proxy are the library's to paint. Three sets are acquired past it, so
+this addon paints them: the Panels editor's AceGUI rows (both editor files acquire through one
+`acquire()` that calls `NS.SkinPaintAce`), the page band's **Panel** picker and **New panel** box,
+which are kept for the session and so repainted in place on `NS.Skin.OnLooksChanged` (or handed
+back stock when the Scope ignores the panel), and the Profiles tree, which `NS.SkinPaintAceTree`
+paints after every `AceConfigDialog:Open`. The picker's *(disabled)* marker reads `text.disabled`
+through `NS.SkinEscape`. While **Ignore settings panel** is on, the default, none of it is
+painted. The LibSharedMedia pull-outs, the color picker window and the confirmation popups stay
+stock under every skin.
 
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
 your panels immediately.
@@ -168,7 +189,7 @@ hidden.)
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Moving panels**, **New panels** | 7, 4, 4 — 15 schema rows |
+| General | **Master controls**, **Moving panels**, **New panels**, **Skin** | 7, 4, 4, 7 — 22 schema rows; the Skin tab's 7 are `skipRender` and drawn by the library's tab |
 | Panels | **General**, **Size and position**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 8, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 
