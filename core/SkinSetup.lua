@@ -32,6 +32,8 @@ local addonName, NS = ...
 --                           so a literal that became a token keeps its arity on Ka0s Default.
 --   NS.SkinEscape(name)     a color token as a "|cffrrggbb" escape, rounded to the byte, so markup
 --                           written as a literal keeps its bytes on Ka0s Default (|cff808080).
+--   NS.SkinPanelEscape(name) the same for markup on a settings page: Ka0s Default's escape while
+--                           the owner's applied "Ignore settings panel" is on, the worn skin's off.
 --   NS.SkinPaintAce(w)      an AceGUI widget this addon acquired itself, painted for this owner:
 --   NS.SkinPaintAceTree(c)  `Skin:PaintAce` / `Skin:PaintAceTree` with the owner bound (the facade
 --                           carries neither). The Panels editor acquires from AceGUI itself, past
@@ -116,11 +118,27 @@ end
 --- A color token as a "|cffrrggbb" escape, each channel rounded to the nearest byte (.5 is 80), so
 --- markup a call site wrote as a literal keeps its bytes on Ka0s Default. nil for a token the skin
 --- leaves alone. Read at call time: markup is text, so a skin change reaches it at the next build.
-function NS.SkinEscape(name)
-  local r, g, b = NS.Skin.Color(name)
+local function escape(r, g, b)
   if r == nil then return nil end
   local function byte(v) return math.floor(v * 255 + 0.5) end
   return ("|cff%02x%02x%02x"):format(byte(r), byte(g), byte(b))
+end
+
+function NS.SkinEscape(name)
+  return escape(NS.Skin.Color(name))
+end
+
+--- NS.SkinEscape for markup ON A SETTINGS PAGE: while the owner's applied "Ignore settings panel"
+--- is on (the default here) the page is the client's look, so the escape is the Ka0s Default value
+--- it was typed as (NS.SKIN_FALLBACK), not the worn skin's. Off, the worn skin's, as NS.SkinEscape.
+--- Asks the library's applied exceptions (Skin:GetIgnore), the same state its painters ask.
+function NS.SkinPanelEscape(name)
+  if Skin and type(Skin.GetIgnore) == "function" and Skin:GetIgnore(addonName) then
+    local c = NS.SKIN_FALLBACK[name]
+    if not c then return nil end
+    return escape(c[1], c[2], c[3])
+  end
+  return NS.SkinEscape(name)
 end
 
 NS.SKIN_SOURCE_OPTIONS = {

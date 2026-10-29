@@ -658,9 +658,10 @@ local function refreshPicker(ctx, records)
     -- A disabled panel is marked in the list, so it is obvious why editing it changes nothing
     -- on screen. `~= false` matches REPAIR.enabled and the renderer: nil is drawn, so it is
     -- enabled. The marker's gray is the skin's `text.disabled` (Ka0s Default |cff808080), read
-    -- here so every rebuild draws the skin of the moment.
+    -- here so every rebuild draws the skin of the moment, and Ka0s Default's while the Scope
+    -- ignores the settings panel (NS.SkinPanelEscape), so it does not leak past that.
     list[rec.id] = rec.enabled ~= false and rec.name
-      or (rec.name .. " " .. (NS.SkinEscape("text.disabled") or "") .. "(disabled)|r")
+      or (rec.name .. " " .. (NS.SkinPanelEscape("text.disabled") or "") .. "(disabled)|r")
     order[i] = rec.id
   end
   picker:SetList(list, order)

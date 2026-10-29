@@ -253,9 +253,32 @@ test("Skin literals: the picker's (disabled) marker is today's gray on Ka0s Defa
   assertEqual(disabledEntry("ka0s"), "Dimmed |cff808080(disabled)|r")
 end)
 
+--- Run `fn` with the owner's applied "Ignore settings panel" set to `panel`, then put back the
+--- exceptions it found, whatever `fn` raised.
+local function withPanelIgnored(panel, fn)
+  local was, fonts = Skin:GetIgnore(OWNER)
+  Skin:SetIgnore(OWNER, panel, fonts)
+  local ok, err = pcall(fn)
+  Skin:SetIgnore(OWNER, was, fonts)
+  if not ok then error(err, 0) end
+end
+
 test("Skin literals: the picker's (disabled) marker follows the skin's text.disabled", function()
-  local want
-  onSkin("obsidian", function() want = NS.SkinEscape("text.disabled") end)
-  assertTrue(want ~= nil, "the obsidian skin answers no text.disabled")
-  assertEqual(disabledEntry("obsidian"), "Dimmed " .. want .. "(disabled)|r")
+  withPanelIgnored(false, function()
+    local want
+    onSkin("obsidian", function() want = NS.SkinEscape("text.disabled") end)
+    assertTrue(want ~= nil and want ~= "|cff808080",
+      "the obsidian skin's text.disabled is Ka0s Default's, so this case could not see a miss")
+    assertEqual(disabledEntry("obsidian"), "Dimmed " .. want .. "(disabled)|r")
+  end)
 end)
+
+-- Change that turns this red: building the marker from NS.SkinEscape (the worn skin) instead of
+-- NS.SkinPanelEscape, so the one settings-page value leaks past Ignore settings panel (review PM-02).
+test("Skin literals: the picker's (disabled) marker stays today's gray while the panel is ignored",
+  function()
+    withPanelIgnored(true, function()
+      assertEqual(disabledEntry("obsidian"), "Dimmed |cff808080(disabled)|r",
+        "the ignored settings panel took the worn skin's disabled gray")
+    end)
+  end)

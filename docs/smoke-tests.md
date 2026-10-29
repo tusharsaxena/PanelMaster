@@ -1134,8 +1134,8 @@ a Lua error or a taint warning.
   control that keeps the old skin until `/reload`. Result:
 - **SKIN-4. The Scope's Ignore settings panel (PM-01, PM-04).** Under **Obsidian**, tick **Ignore
   settings panel** → every settings page goes back to the game's own look at once, the Panels band
-  and the editor included, while the debug console and the unlock overlay still wear Obsidian.
-  Untick it → the pages wear Obsidian again, live. Open another Ka0s addon's settings and another
+  and the editor included, while the debug console and the unlock overlay still wear Obsidian. The
+  **Panel** picker's *(disabled)* marker is the old mid gray, not Obsidian's. Untick it → the pages wear Obsidian again, live. Open another Ka0s addon's settings and another
   AceGUI addon's in between → neither takes PanelMaster's skin. Result:
 - **SKIN-5. The panels stay the player's (D1, D2).** Under every skin, look at the panels → no fill,
   border, accent bar, accent border, artwork or class color changes when the skin does. `/pm new
