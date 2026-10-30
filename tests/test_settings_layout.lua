@@ -41,6 +41,29 @@ local function caption(w)
   return w.labelText or ("<" .. tostring(w.type) .. ">")
 end
 
+local function isFlowRow(w)
+  return w.type == "SimpleGroup" and w.layout == "Flow"
+end
+
+-- The editor body: a List group holding at least one Flow row (the last such group wins).
+local function isEditorBody(w)
+  if w.type ~= "SimpleGroup" or w.layout ~= "List" then return false end
+  for _, c in ipairs(w.children or {}) do
+    if isFlowRow(c) then return true end
+  end
+  return false
+end
+
+-- One child of the editor body as a line: "# heading" for a Heading, "a | b" for a Flow row, nil
+-- for anything else.
+local function lineOf(c)
+  if c.type == "Heading" then return "# " .. tostring(c.text) end
+  if not isFlowRow(c) then return nil end
+  local caps = {}
+  for _, k in ipairs(c.children or {}) do caps[#caps + 1] = caption(k) end
+  return table.concat(caps, " | ")
+end
+
 -- Render one editor tab and answer (lines, widgets): the tab as "# heading" / "a | b" strings, and
 -- every widget it created, for the tooltip cases.
 local function renderTab(ctx, tab)
@@ -52,21 +75,12 @@ local function renderTab(ctx, tab)
   for i = from, #list do
     local w = list[i]
     widgets[#widgets + 1] = w
-    if w.type == "SimpleGroup" and w.layout == "List" then
-      for _, c in ipairs(w.children or {}) do
-        if c.type == "SimpleGroup" and c.layout == "Flow" then editor = w end
-      end
-    end
+    if isEditorBody(w) then editor = w end
   end
   local lines = {}
   for _, c in ipairs(editor and editor.children or {}) do
-    if c.type == "Heading" then
-      lines[#lines + 1] = "# " .. tostring(c.text)
-    elseif c.type == "SimpleGroup" and c.layout == "Flow" then
-      local caps = {}
-      for _, k in ipairs(c.children or {}) do caps[#caps + 1] = caption(k) end
-      lines[#lines + 1] = table.concat(caps, " | ")
-    end
+    local line = lineOf(c)
+    if line then lines[#lines + 1] = line end
   end
   return lines, widgets
 end
