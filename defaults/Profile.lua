@@ -70,7 +70,9 @@ NS.defaults.profile = {
   -- ("ka0s", the Ka0s skins, or "eui", EllesmereUI's) and which Ka0s skin. "ka0s"/"ka0s" is Ka0s
   -- Default. The Scope's two exceptions: leave the settings panel the client's (on, the collection's
   -- default for a new profile since LootHistory's owner call of 2026-10-27), leave every font the
-  -- client's (off). The font and texture overrides: an LSM key each, "" for the skin's own.
+  -- client's (off). The font and texture overrides: an LSM key each, "" for the skin's own. The
+  -- font outline (LibKa0s v1.82.0, ruling D-06): where the skin outlines this addon's text, "all"
+  -- (the default), "hud" (HUD text only) or "off".
   -- `pickerSeen`: the first-run skin picker was closed on this profile, so every profile, old and
   -- new, shows it once (rollout ruling O3). New keys with defaults, so AceDB merges them into every
   -- existing profile and no migration is owed. A sibling of `settings` rather than inside it: the
@@ -83,6 +85,7 @@ NS.defaults.profile = {
     ignoreFonts = false,
     font        = "",
     texture     = "",
+    outline     = "all",
     pickerSeen  = false,
   },
   -- debug is session-only (NS.State.debug), never persisted here (debug-logging-§5). So is unlock

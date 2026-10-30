@@ -37,7 +37,8 @@ profile renders differently:
   settings.alpha          -- addon-wide multiplier over each panel's own opacity
 ```
 
-`profile.skin` arrived with the skinning rollout (2026-10-29). Its seven keys are new keys with
+`profile.skin` arrived with the skinning rollout (2026-10-29), and `skin.outline` with LibKa0s
+v1.82.0 (2026-10-30). Its eight keys are new keys with
 defaults, so AceDB merges them into every existing profile and no migration was owed
 (`NS.SCHEMA_VERSION` did not move). A sibling of `settings`, not inside it, because the skin is
 not one of the General page's settings rows; the keys read as `/pm get skin.skin`:
@@ -49,6 +50,7 @@ not one of the General page's settings rows; the keys read as `/pm get skin.skin
   skin.ignoreFonts  -- the Scope: leave every font the client's (false)
   skin.font         -- an LSM font key over the skin's own; "" is the skin's own
   skin.texture      -- an LSM statusbar key over the skin's own; "" is the skin's own
+  skin.outline      -- the font outline: "all" (the default) | "hud" (HUD text only) | "off"
   skin.pickerSeen   -- the first-run skin picker was closed on this profile (false: every profile shows it once)
 ```
 
@@ -256,15 +258,15 @@ is no longer dragged inward and at `s = 2` a genuinely lost one is no longer lef
 ## The schema runtime
 
 `settings/Schema.lua` holds one row per setting and is the sole sender of `SettingsChanged`. It
-carries **22 rows in 4 groups**, and since the tabbed-panel pass a `group` is a **tab**
+carries **23 rows in 4 groups**, and since the tabbed-panel pass a `group` is a **tab**
 (`options-ui-§13`): `H.RenderTabbedSchema` partitions the rows by `group` in declaration order, so
 the array's order is the strip a player sees on the General page — `Master controls` (7),
-`Moving panels` (4), `New panels` (4), `Appearance` (7). The seven `Appearance` rows are the
+`Moving panels` (4), `New panels` (4), `Appearance` (8). The eight `Appearance` rows are the
 `skin.*` keys: every one carries `skipRender`, because the library's Skin tab (`O.AppearanceTab`,
 keyed `Appearance`, labeled **Skin**) draws them as its own controls in that group's place on the
 strip; they stay rows so the defaults resolve, the profile reset reaches them and `/pm get|set`
 validates them, and each `onChange` applies only its own half (`core/SkinSetup.lua` says why).
-`skin.pickerSeen` is drawn by nothing. Two of the twenty-two are session-only `state.*` rows that route
+`skin.pickerSeen` is drawn by nothing. Two of the twenty-three are session-only `state.*` rows that route
 through their own `get`/`set` and are never persisted; both resets — `Sl:DoResetAll` and the Profiles
 page's Reset Profile — put them back to their defaults after the profile reset, by their
 `sessionOnly` flag, from the `OnProfileReset` handler in `core/Database.lua` (`options-ui-§12`).

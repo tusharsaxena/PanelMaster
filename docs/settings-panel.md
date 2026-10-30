@@ -53,7 +53,7 @@ game's own Settings ▸ AddOns list.
 | New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
 | New panels | Default frame strata | The layer new panels start in. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`, after the row's own sentences, so it says what `DIALOG` and above cover (`frame-layering-§1`). |
 | New panels | Default opacity | How see-through new panels start out. |
-| Skin | Skin source, the skins, Font and texture, the Scope, Copy to every Ka0s addon… | The library's Skin tab (`O.AppearanceTab`), drawn for this addon's skin owner: where the look comes from (the Ka0s skins or EllesmereUI), which of the nine Ka0s skins, a font and a texture over the skin's own, **Ignore settings panel** (on for a new profile) and **Ignore fonts**, and the copy to every other loaded Ka0s addon that uses skins. It changes the settings pages (while the panel is not ignored), the debug console and the unlock overlay, never the panels themselves. |
+| Skin | Skin source, the skins, Font and texture, the Scope, Copy to every Ka0s addon… | The library's Skin tab (`O.AppearanceTab`), drawn for this addon's skin owner: where the look comes from (the Ka0s skins or EllesmereUI), which of the nine Ka0s skins, a font and a texture over the skin's own (each with its reset button), the **Font outline** (All text, HUD text only or Off), **Ignore settings panel** (on for a new profile) and **Ignore fonts**, and the copy to every other loaded Ka0s addon that uses skins. It changes the settings pages (while the panel is not ignored), the debug console and the unlock overlay, never the panels themselves. |
 
 Every **Moving panels** tooltip ends on the same sentence, because the switch those rows depend on is
 a fixed element of another tab (`options-ui-§15`): *"These only matter while panels are unlocked:
@@ -189,7 +189,7 @@ hidden.)
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Moving panels**, **New panels**, **Skin** | 7, 4, 4, 7 — 22 schema rows; the Skin tab's 7 are `skipRender` and drawn by the library's tab |
+| General | **Master controls**, **Moving panels**, **New panels**, **Skin** | 7, 4, 4, 8 — 23 schema rows; the Skin tab's 8 are `skipRender` and drawn by the library's tab |
 | Panels | **General**, **Size and position**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 8, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 

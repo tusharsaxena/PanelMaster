@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 20 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat |
+| SKIN-1 to 26 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change |
 
 ## Before you start
 
@@ -1211,6 +1211,58 @@ a Lua error or a taint warning.
   stock popups (cancel each); chat lines keep the cyan `[PM]` tag and their colors; the minimap
   button and its tooltip look as before. Result: pass (owner-marked 2026-10-30)
 
+### The skin fonts and feedback run (LibKa0s v1.82.0)
+
+Ka0sAddonsCommonTasks `docs/2026-10-30-SKIN_FONTS_AND_FEEDBACK/`, item PM-01 (the re-vendor, the
+outline setting and the `skin` verb; decisions D-06, D-07, D-08, D-10, D-11, D-16). Same start as
+above: a fresh client start, a few styled panels, the Skin tab at `/pm config` → General → **Skin**.
+
+- **SKIN-21. The Font outline setting (PM-01; D-06).** On a fresh profile, the Skin tab's Font and
+  texture section shows **Font outline** set to **All text**, under the Reset font / Reset texture
+  row, and `/pm get skin.outline` → `all`. With **Ignore settings panel** off, the settings pages'
+  text, the debug console's title and buttons, the skin picker's text and the unlock overlay's panel
+  names (`/pm unlock`) are outlined. Pick **HUD text only** → the settings pages and the console
+  lose the outline at once, with no reload. Pick **Off** → no outline anywhere. `/pm set
+  skin.outline all` → it comes back; `/pm set skin.outline thick` is refused. Switch profiles and
+  reset one → each profile's own mode is worn; the reset one is back on All text. Under **Ignore
+  fonts** the dropdown is grayed out and the client's fonts are drawn. The console's log lines (the
+  monospace face) are never outlined. Result:
+- **SKIN-22. No font settings of the addon's own, and From skin (PM-01; D-07).** Open every page of
+  `/pm config` (General's four tabs, Panels with a panel selected, Profiles) → no setting stores a
+  font face, size, color or font flags: the panels draw no text, so there is no flags dropdown and
+  no **From skin** value to see here. The text the addon draws through the skin (the unlock
+  overlay's names, the console chrome) follows SKIN-21's Font outline, which is what From skin
+  resolves to. Fail: a font flags control anywhere on the pages. Result:
+- **SKIN-23. `/pm skin` opens the picker on demand (PM-01; D-16).** On a profile that has already
+  closed the first-run picker, `/pm help` lists `skin` right after `config` as *Choose a skin: open
+  the skin picker*. `/pm skin` → the **Choose a skin** window opens, as on a fresh profile, with no
+  eye. Pick **Glass** and close it → Ka0s Default comes back and nothing is saved; `/pm skin` again,
+  pick **Glass** and **Apply** → `/pm get skin.skin` → `glass`. In combat (on a training dummy)
+  `/pm skin` → a gray *cannot open the skin picker during combat* line on every try, and no window.
+  `/pm disable`, then `/pm skin` → the one *is disabled — enable it with /pm enable* line and no
+  window; `/pm enable` after. With Loot History's picker open, `/pm skin` → PanelMaster's waits
+  until that one closes. Result:
+- **SKIN-24. The new faces (PM-01; D-02).** On **Ka0s Default** the settings pages (Ignore settings
+  panel off), the console chrome and the skin picker draw **Prototype**; on **Obsidian**
+  **Expressway**; on **WoW Forever** Fira Sans Medium for body text and Fira Sans SemiBold for
+  titles. The Skin tab's Font dropdown lists Ka0s Prototype, Ka0s Expressway and Ka0s Fira Sans
+  Medium, and no longer lists Ka0s Inter, Ka0s Oxanium or plain Ka0s Fira Sans. A profile whose
+  font override named a retired face falls back to the skin's own face, with no error. Result:
+- **SKIN-25. Equal widths across skins (PM-01; D-08).** With Ignore settings panel off and the
+  outline on, open the debug console, the General page's Master controls tab, the Skin tab and the
+  skin picker under each of the nine skins in turn → each window's text takes about the same width
+  as under Ka0s Default: no label is cut off or wraps where it did not under Ka0s Default, the
+  picker shows **Ka0s Panel Master** in full, and the console's title bar and buttons fit. With
+  `/pm unlock`, a panel's centered name label fits inside a narrow panel as it does under Ka0s
+  Default. Fail: truncated or overlapping text in any skin. Result:
+- **SKIN-26. The overrides reset on a skin change, and the Skin tab's layout (PM-01; D-10, D-11).**
+  Pick a font override and a texture override on the Skin tab → **Reset font** and **Reset
+  texture** sit side by side under the two dropdowns, each enabled only while its half is
+  overridden; each puts its half back to the skin's own. Pick the overrides again, then pick another
+  skin → both reset to the new skin's own (`/pm get skin.font` → empty). The Scope's two check boxes
+  line up with the dropdowns above, and **Copy to every Ka0s addon** sits under its own heading,
+  **Other Ka0s addons**. Result:
+
 ## Pending sign-off
 
 On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
@@ -1226,3 +1278,6 @@ and PM-02, Ka0sAddonsCommonTasks `docs/2026-10-30-SKIN_LIBRARY_FOLLOWUPS/`, LibK
 passed: PANEL-1 and SKIN-1 to SKIN-20, each recorded on its `Result:` line as
 `pass (owner-marked 2026-10-30)`. PanelMaster draws no HUD text, so Ignore fonts on the HUD and the
 skins' new HUD faces have no check here.
+
+Pending: SKIN-21 to SKIN-26, added by the skin fonts and feedback run (PM-01, Ka0sAddonsCommonTasks
+`docs/2026-10-30-SKIN_FONTS_AND_FEEDBACK/`, LibKa0s v1.82.0), each with an empty `Result:` line.

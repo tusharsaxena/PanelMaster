@@ -790,7 +790,7 @@ Total.
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 - COMMANDS: `profile` sits beside the settings verbs, described through NS.L
-- COMMANDS: the verb order is pinned, twenty-one verbs
+- COMMANDS: the verb order is pinned, twenty-two verbs
 - Profile verb: bare `/pm profile` lists the profiles, current marked, then the hint
 - Profile verb: an existing name switches, and the profile handler runs
 - Profile verb: the current profile answers 'already', and switches nothing
@@ -923,6 +923,18 @@ Total.
 - Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
 - Skin seam: a profile's stored exceptions and overrides are applied with its skin
 
+### test_skin_outline.lua (9)
+
+- Skin outline: a fresh profile stores All text, the library's default
+- Skin outline: the schema row offers the library's three modes, in its order
+- Skin outline: the write seam stores media.outline, and leaves it alone when it is nil
+- Skin outline: another addon's copy reaches the store through WriteChoice
+- Skin outline: the row's write applies the mode live
+- Skin outline: /pm set takes a known mode and refuses one the library does not know
+- Skin outline: the stored mode is applied with the stored pair (load, profile events)
+- Skin outline: a profile switch applies the incoming profile's mode
+- Skin outline: a profile reset puts the outline back to All text
+
 ### test_skin_literals.lua (8)
 
 - Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list
@@ -957,6 +969,15 @@ Total.
 - Skin picker: Apply saves the pick through the write seam and marks the picker seen
 - Skin picker: a profile event takes a shown picker down before the new profile's skin
 - Skin picker: the stand-down takes a shown picker down unseen
+
+### test_skin_verb.lua (6)
+
+- Skin verb: the row sits right after config, with the library's help words
+- Skin verb: /pm skin shows the picker on a profile that has closed it
+- Skin verb: NS.RunSkinVerb hands O.SkinVerb this addon's first-run spec
+- Skin verb: in combat every call prints the library's gray line and shows nothing
+- Skin verb: refused while the addon is disabled, and no picker shows
+- Skin verb: without LibKa0s the verb prints the library-absent line
 
 ### test_skin_settings.lua (7)
 
@@ -1146,7 +1167,7 @@ Total.
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (8)
+### test_surface_parity.lua (9)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
@@ -1156,6 +1177,7 @@ Total.
 - Parity: the Schema seam's degraded surface matches the live one, on both levels
 - Parity: the Bus seam's degraded surface matches the live one
 - Parity: the Lifecycle seam's degraded surface matches the live one
+- Parity: the Skin seam's degraded facade answers every name of the library's VOCAB
 
 ### test_harness.lua (18)
 
@@ -1315,15 +1337,17 @@ Total.
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
+| test_skin_outline.lua | 9 |
 | test_skin_literals.lua | 8 |
 | test_skin_unlock.lua | 5 |
 | test_skin_picker.lua | 13 |
+| test_skin_verb.lua | 6 |
 | test_skin_settings.lua | 7 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 53 |
-| test_surface_parity.lua | 8 |
+| test_surface_parity.lua | 9 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
@@ -1338,4 +1362,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1140** |
+| **Total** | **1156** |

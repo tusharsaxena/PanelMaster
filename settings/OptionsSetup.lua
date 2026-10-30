@@ -120,6 +120,9 @@ if not lib then
     AppearanceTab = function() return { key = "Appearance", label = "Skin", render = noop } end,
     AppearanceRows = function() return nil end,
     SkinPicker = function() return nil end, HideSkinPicker = noop,
+    -- SkinVerb, the act behind `/pm skin` (OptionsSkinPicker minor 3, LibKa0s v1.82.0): nothing to
+    -- show, and the reason "absent", on which NS.RunSkinVerb prints the library-absent line.
+    SkinVerb = function() return nil, "absent" end,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
