@@ -1130,13 +1130,12 @@ a Lua error or a taint warning.
   General page's rows and tab strip, the Panels page's band (the **Panel** picker and the **New
   panel** box), every editor tab's controls (check boxes, dropdowns, edit boxes, the slider, the
   color swatches, the heading) and the Profiles page's tree all repaint, and text stays readable.
-  Back on **Ka0s Default** (still with the panel not ignored) → the tab strip, its content box and the
-  paging arrows keep the **Ka0s look** and do not fall back to the game's own: since LibKa0s v1.81.0
-  Ka0s Default has no stock look anywhere, and the game's look is the **WoW Default** skin. Open the
+  Back on **Ka0s Default** (still with the panel not ignored) → the tab strip and its content box
+  keep the **Ka0s look**; the game's look is the **WoW Default** skin (R-2). Open the
   **Panel** picker with a disabled panel → its *(disabled)* marker is in the skin's
   disabled gray. The LibSharedMedia pull-outs and the color picker window stay stock. Fail: a
-  control that keeps the old skin until `/reload`, or any of those pieces in the game's look under Ka0s
-  Default. Result:
+  control that keeps the old skin until `/reload`, or the tab strip or its content box in the game's
+  look under Ka0s Default. Result:
 - **SKIN-4. The Scope's Ignore settings panel (PM-01, PM-04).** Under **Obsidian**, tick **Ignore
   settings panel** → every settings page goes back to the game's own look at once, the Panels band
   and the editor included, while the debug console and the unlock overlay still wear Obsidian. The
@@ -1230,8 +1229,8 @@ profile switch with a preview pending, and tooltips, popups, chat and the minima
 
 Owed from the skin library follow-ups (PM-RV and PM-02, Ka0sAddonsCommonTasks
 `docs/2026-10-30-SKIN_LIBRARY_FOLLOWUPS/`, 2026-10-30, LibKa0s v1.81.0), on top of the above:
-SKIN-1 (amended: the console's title-bar words in Oxanium), SKIN-3 (amended: no stock look under
-Ka0s Default on the unignored settings pages), SKIN-7 (amended: Ignore fonts reaches the console's
+SKIN-1 (amended: the console's title-bar words in Oxanium), SKIN-3 (reworded: it confirms the tab
+strip and content box keep the Ka0s look under Ka0s Default; nothing there changed), SKIN-7 (amended: Ignore fonts reaches the console's
 title-bar words), SKIN-8 (amended: the title-bar words in the skin's face, the resize grips tinted)
 and SKIN-15 (amended: the picker's title is **Choose a skin**, the addon's name on its own line above
 the dropdown, never cut off). PanelMaster draws no HUD text, so Ignore fonts on the HUD and the

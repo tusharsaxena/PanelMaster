@@ -285,9 +285,8 @@ addon draws).
   (`text.disabled`), and the AceGUI widgets the Panels editor and AceConfigDialog acquire past the
   proxy (`NS.SkinPaintAce` / `NS.SkinPaintAceTree`; the kept band repainted in place). The settings
   pages are painted only while **Ignore settings panel** is off. Ka0s Default is a skin like any
-  other: since LibKa0s v1.81.0 nothing keeps the game's look under it (the retired `stockDefault`),
-  so the unignored tab strip and paging arrows wear the Ka0s look, and the game's look is the WoW
-  Default skin. The debug console and its copy window are windows, not the settings panel: they wear
+  other: the unignored tab strip and its content box wear the Ka0s look under it, and the game's look
+  is the WoW Default skin. The debug console and its copy window are windows, not the settings panel: they wear
   the skin whatever **Ignore settings panel** says, and **Ignore fonts** reaches their title-bar
   words. This addon has no settings-page `S.Text` string and no owned Widgets control, so it passes
   no `panel` flag; the *(disabled)* marker is its one token read on a settings page, and
