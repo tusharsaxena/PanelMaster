@@ -224,7 +224,11 @@ end))
 test("Skin picker: the player's close marks it seen; this addon's own hide does not", clean(function()
   local f = NS.MaybeShowSkinPicker()
   assertTrue(f ~= nil and f:IsShown(), "the library's picker did not show")
-  assertEqual(f.title:GetText(), "Choose a skin for " .. NS.BRAND, "the title names this addon")
+  -- LibKa0s v1.81.0 (OptionsSkinPicker minor 2): the title is "Choose a skin" and the addon's
+  -- name has its own line above the dropdown. That the window widens so the name is never cut off
+  -- is the library's to pin (the mock measures every string 0 wide); the smoke check SKIN-15 sees it.
+  assertEqual(f.title:GetText(), "Choose a skin", "the title no longer carries the addon's name")
+  assertEqual(f.ownerLabel:GetText(), NS.BRAND, "the line above the dropdown names this addon")
   assertFalse(f.preview:IsShown(), "no eye on a picker with nothing to preview")
   NS.HideSkinPicker()
   assertEqual(NS.Schema:Get(PATH), false, "a stand-down hide is not the player's close")
