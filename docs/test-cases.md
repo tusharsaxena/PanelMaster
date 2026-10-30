@@ -989,6 +989,10 @@ Total.
 - skin settings: the Profiles page paints the tree AceConfigDialog drew, after every Open
 - skin settings: degraded, PaintAce and PaintAceTree paint nothing
 
+### test_glyphs.lua (1)
+
+- glyphs: display strings use only characters every shipped skin face draws
+
 ### test_launcher.lua (37)
 
 - Launcher: one object is registered with BOTH libraries, under the FOLDER name
@@ -1343,6 +1347,7 @@ Total.
 | test_skin_picker.lua | 13 |
 | test_skin_verb.lua | 6 |
 | test_skin_settings.lua | 7 |
+| test_glyphs.lua | 1 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
@@ -1362,4 +1367,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1156** |
+| **Total** | **1157** |

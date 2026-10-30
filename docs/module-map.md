@@ -153,6 +153,7 @@ The suites, one per subject:
 | `tests/test_disabled.lua` | The stand-down latch (a disabled addon unregisters, draws nothing, and stands back up from current state) and `NS.SafeRegisterEvent`'s rejected-event record. |
 | `tests/test_docs.lua` | `docs/smoke-tests.md` still carries its non-English-client section. |
 | `tests/test_envsetup.lua` | The Env seam: `NS.Meta` / `NS.Version` answer what the deleted shim answered. |
+| `tests/test_glyphs.lua` | The display-glyph guard (`Kit.assertDisplayGlyphs`, D-19): every string literal outside `libs/` and `tests/` carries only characters every shipped skin face draws. |
 | `tests/test_harness.lua` | The harness itself: suite inventory, TOC-derived load order, load-order pins. |
 | `tests/test_layers.lua` | Frame layering (`frame-layering-§1` to `§5`): where every frame this addon creates sits, read back through the kit's frame-layer recorder against `NS.Constants.LAYERS`. |
 | `tests/test_launcher.lua` | The Launcher seam: the broker object, the two clicks (left opens settings, right opens the options menu), the menu's Enabled and Locked entries and their slash handlers, the status tooltip (enabled and disabled), the minimap row, the degraded install. |
