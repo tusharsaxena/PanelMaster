@@ -1115,7 +1115,8 @@ a Lua error or a taint warning.
   them). The settings pages look as before too, because **Ignore settings panel** is on. `/pm
   unlock` → the outline and the name label keep their gold; the label now reads in **Oxanium**, the
   Ka0s Default face, instead of Friz Quadrata. The debug console (`/pm debug`) wears the Ka0s window
-  look it always did. Fail: any panel restyled, a changed color on the settings pages or the
+  look it always did; since LibKa0s v1.81.0 (PM-RV of the skin library follow-ups) the words on its
+  title bar, the debug toggle and **Diagnostics**, read in Oxanium too. Fail: any panel restyled, a changed color on the settings pages or the
   overlay, or the label clipped by the wider face. Result:
 - **SKIN-2. The Skin tab (PM-01).** Settings → General → the strip reads **Master controls | Moving
   panels | New panels | Skin**, **Skin** last (there is no Keybindings tab here), and no empty
@@ -1129,9 +1130,13 @@ a Lua error or a taint warning.
   General page's rows and tab strip, the Panels page's band (the **Panel** picker and the **New
   panel** box), every editor tab's controls (check boxes, dropdowns, edit boxes, the slider, the
   color swatches, the heading) and the Profiles page's tree all repaint, and text stays readable.
-  Open the **Panel** picker with a disabled panel → its *(disabled)* marker is in the skin's
+  Back on **Ka0s Default** (still with the panel not ignored) → the tab strip, its content box and the
+  paging arrows keep the **Ka0s look** and do not fall back to the game's own: since LibKa0s v1.81.0
+  Ka0s Default has no stock look anywhere, and the game's look is the **WoW Default** skin. Open the
+  **Panel** picker with a disabled panel → its *(disabled)* marker is in the skin's
   disabled gray. The LibSharedMedia pull-outs and the color picker window stay stock. Fail: a
-  control that keeps the old skin until `/reload`. Result:
+  control that keeps the old skin until `/reload`, or any of those pieces in the game's look under Ka0s
+  Default. Result:
 - **SKIN-4. The Scope's Ignore settings panel (PM-01, PM-04).** Under **Obsidian**, tick **Ignore
   settings panel** → every settings page goes back to the game's own look at once, the Panels band
   and the editor included, while the debug console and the unlock overlay still wear Obsidian. The
@@ -1147,13 +1152,16 @@ a Lua error or a taint warning.
   re-unlock. Lock one panel (untick **Unlock this panel**) and switch again → only the unlocked ones
   repaint. Back on **Ka0s Default** → gold outline and gold label. Result:
 - **SKIN-7. Fonts and the overrides (PM-01).** Under **Azeroth** the settings pages (with Ignore
-  settings panel off), the console and the unlock label read in Vollkorn. Tick **Ignore fonts** →
-  every string goes back to its own face and the colors stay the skin's. Untick it, then pick a
+  settings panel off), the console (its title-bar words included) and the unlock label read in
+  Vollkorn. Tick **Ignore fonts** → every string goes back to its own face, the console's title-bar
+  words to the game's, and the colors stay the skin's. Untick it, then pick a
   **Font** override → the same strings take that font, live; set it back to *Skin's own*. A
   **Texture** override changes no panel (the panels' textures are the player's). Result:
 - **SKIN-8. The debug console follows the skin (PM-04).** Under **Azeroth**, `/pm debug` and its
-  **Copy** window → both wear Azeroth: edge, title, log lines, scroll bar. Switch to **Ka0s Default**
-  with the console open → it recolors with no reload. The log lines keep their monospace face under
+  **Copy** window → both wear Azeroth: edge, title, log lines, scroll bar, the console's title-bar
+  words in Vollkorn, and both windows' resize grips (bottom right) tinted Azeroth's icon color. Switch
+  to **Ka0s Default** with the console open → it recolors with no reload, and the grips are the
+  game's own art again (Ka0s Default and WoW Default draw the client's grip). The log lines keep their monospace face under
   every skin. Result:
 - **SKIN-9. EllesmereUI on (library EUI).** With EllesmereUI loaded, its third-party skinning on and
   PanelMaster on in its Third-Party list → **Skin source** offers **EllesmereUI**; choosing it gives
@@ -1174,13 +1182,14 @@ a Lua error or a taint warning.
 - **SKIN-14. Combat (PM-01).** Change the skin in combat (on a training dummy) → no Lua error and no
   taint warning; the settings page behaves as it does for any other setting in combat. Result:
 - **SKIN-15. The skin picker on a fresh profile and at login (PM-04; O3, X6).** Create a new profile
-  on the Profiles page → a small window titled **Choose a skin for Ka0s Panel Master** opens about
-  three quarters of the way up the screen: a dropdown showing the skin worn now, a **gear** button
+  on the Profiles page → a small window titled **Choose a skin** opens about three quarters of the
+  way up the screen: **Ka0s Panel Master** on its own line, in full, above a dropdown showing the
+  skin worn now, a **gear** button
   beside it and **no eye** (the addon has no window or test mode to preview in), an **Apply** button
   and a close mark. Close it, then reset the profile → it opens again. For a profile that has never
   run this build: log in → it opens about two seconds after the world loads, already in the
-  profile's skin. Fail: a window on a profile that already closed it, an eye button, or none on a
-  new or reset profile. Result:
+  profile's skin. Fail: a window on a profile that already closed it, an eye button, none on a new
+  or reset profile, the addon's name in the title, or the name cut off. Result:
 - **SKIN-16. The picker's preview, Apply, close and gear (PM-04).** On a fresh profile pick
   **Obsidian** in the picker's dropdown → the console and (with Ignore settings panel off) the
   settings pages repaint, the picker included, and nothing is saved yet: `/pm get skin.skin` →
@@ -1218,3 +1227,12 @@ and no empty **Panel** tab) and SKIN-1 to SKIN-20 (new: Ka0s Default as before, 
 skin live, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the
 console, EllesmereUI on and off and the reload, the copy, profiles, combat, the first-run picker, a
 profile switch with a preview pending, and tooltips, popups, chat and the minimap button).
+
+Owed from the skin library follow-ups (PM-RV and PM-02, Ka0sAddonsCommonTasks
+`docs/2026-10-30-SKIN_LIBRARY_FOLLOWUPS/`, 2026-10-30, LibKa0s v1.81.0), on top of the above:
+SKIN-1 (amended: the console's title-bar words in Oxanium), SKIN-3 (amended: no stock look under
+Ka0s Default on the unignored settings pages), SKIN-7 (amended: Ignore fonts reaches the console's
+title-bar words), SKIN-8 (amended: the title-bar words in the skin's face, the resize grips tinted)
+and SKIN-15 (amended: the picker's title is **Choose a skin**, the addon's name on its own line above
+the dropdown, never cut off). PanelMaster draws no HUD text, so Ignore fonts on the HUD and the
+skins' new HUD faces have no check here.
