@@ -326,7 +326,8 @@ test("Parity: the Skin seam's degraded facade answers every name of the library'
   -- and this case is what holds that copy to the live list: a primitive the library adds (v1.82.0's
   -- FontFlags and HudFontSize, PM-01) and the copy misses is a nil call on a load without Skin.lua.
   -- Two of them must answer a VALUE, not the no-op's nil, because their answers reach SetFont:
-  -- FontFlags (a picked flag as is, "OUTLINE" for From skin or nil) and HudFontSize (a positive
+  -- FontFlags (a picked flag as is; From skin or nil "OUTLINE" for the HUD and "" for window text,
+  -- the live library's ignored-fonts answer) and HudFontSize (a positive
   -- stored size as is, else 12).
   local live = T.mocks.LibStub("LibKa0s-Skin-1.0")
   local degradedNS = loadPartial({ Skin = true })
@@ -339,6 +340,9 @@ test("Parity: the Skin seam's degraded facade answers every name of the library'
   assertEqual(table.concat(missing, ", "), "", "the degraded facade lacks VOCAB names")
   assertEqual(S.FontFlags(S.FROM_SKIN), "OUTLINE")
   assertEqual(S.FontFlags(nil), "OUTLINE")
+  assertEqual(S.FontFlags(S.FROM_SKIN, "window"), "", "From-skin window text keeps its stock flags")
+  assertEqual(S.FontFlags(nil, "window"), "")
+  assertEqual(S.FontFlags("OUTLINE", "window"), "OUTLINE", "a picked flag wins in a window too")
   assertEqual(S.FontFlags("THICKOUTLINE"), "THICKOUTLINE", "a picked flag is kept")
   assertEqual(S.FontFlags(""), "", "a picked 'no flags' is kept")
   assertEqual(S.HudFontSize(14), 14)

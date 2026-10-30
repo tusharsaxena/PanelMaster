@@ -388,7 +388,9 @@ if not Skin then
   -- Every vocabulary name answers, and a primitive with no host meaning is a no-op that never
   -- raises: without the library nothing this addon draws has a skin to wear, and the client's
   -- own look is what it drew before skins. The list is LibKa0s-Skin-1.0's VOCAB;
-  -- tests/test_surface_parity.lua holds this table to the live facade key for key.
+  -- tests/test_surface_parity.lua holds this table to the live facade key for key. FontFlags and
+  -- HudFontSize stay listed so the copy matches VOCAB; both are overwritten with answering
+  -- functions below.
   for _, name in ipairs({
     "Shell", "Panel", "Inset", "FadeRegions", "FadeNineSlice", "Button", "WhiteButtonLabel",
     "StateButtonLabel", "EditBox", "Checkbox", "Dropdown", "ScrollBar", "Tab", "SetTabSelection",
@@ -412,12 +414,14 @@ if not Skin then
   S.ChartStyle = function() return {} end
   S.BarStyle = function() return {} end
   -- The two primitives whose answer reaches SetFont (LibKa0s v1.82.0), so a no-op's nil is not
-  -- enough: FontFlags answers a picked flag as is and "OUTLINE" for From skin (the outline's
-  -- default, D-06), and HudFontSize a positive stored size as is, else 12. Nothing in this addon
-  -- calls either today; they answer so a future caller degrades to a value rather than to nil.
-  S.FontFlags = function(v)
+  -- enough: FontFlags answers a picked flag as is, and for From skin "OUTLINE" on HUD text but ""
+  -- on window text (`where == "window"`), the live library's answer while fonts are ignored, the
+  -- closest live match for a stock-look load; HudFontSize a positive stored size as is, else 12.
+  -- Nothing in this addon calls either today; they answer so a future caller degrades to a value
+  -- rather than to nil.
+  S.FontFlags = function(v, where)
     if type(v) == "string" and v ~= S.FROM_SKIN then return v end
-    return "OUTLINE"
+    return where == "window" and "" or "OUTLINE"
   end
   S.HudFontSize = function(size)
     local n = tonumber(size)

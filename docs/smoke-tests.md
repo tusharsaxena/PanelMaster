@@ -1113,10 +1113,10 @@ a Lua error or a taint warning.
   border and artwork look exactly as before, because PanelMaster runs **no** one-time HUD style
   reset (D1: the panels are the player's, so O2's visible Ka0s Default change of X5 does not reach
   them). The settings pages look as before too, because **Ignore settings panel** is on. `/pm
-  unlock` → the outline and the name label keep their gold; the label now reads in **Oxanium**, the
-  Ka0s Default face, instead of Friz Quadrata. The debug console (`/pm debug`) wears the Ka0s window
+  unlock` → the outline and the name label keep their gold; the label now reads in the Ka0s Default
+  face (Oxanium until LibKa0s v1.82.0, Prototype since; see SKIN-24) instead of Friz Quadrata. The debug console (`/pm debug`) wears the Ka0s window
   look it always did; since LibKa0s v1.81.0 (PM-RV of the skin library follow-ups) the words on its
-  title bar, the debug toggle and **Diagnostics**, read in Oxanium too. Fail: any panel restyled, a changed color on the settings pages or the
+  title bar, the debug toggle and **Diagnostics**, read in that face too. Fail: any panel restyled, a changed color on the settings pages or the
   overlay, or the label clipped by the wider face. Result: pass (owner-marked 2026-10-30)
 - **SKIN-2. The Skin tab (PM-01).** Settings → General → the strip reads **Master controls | Moving
   panels | New panels | Skin**, **Skin** last (there is no Keybindings tab here), and no empty
