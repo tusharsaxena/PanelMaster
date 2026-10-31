@@ -204,7 +204,7 @@ end
 -- `field` is a control outside the three blocks, pinned by label only so the block's position on
 -- its tab is pinned too.
 local BORDER = {
-  { label = "Border style", type = "LSM30_Border", field = "borderTexture", media = "border",
+  { label = "Border style", type = "Ka0sMedia_Border", field = "borderTexture", media = "border",
     tip = "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it." },
   { label = "Border thickness (px)", type = "Slider", field = "borderSize", min = 0, max = 32, step = 1,
     tip = "Border thickness. 0 removes the border entirely." },
@@ -217,7 +217,7 @@ local BORDER = {
 }
 
 local BAR = {
-  { label = "Bar texture", type = "LSM30_Statusbar", field = "accentTexture", media = "statusbar",
+  { label = "Bar texture", type = "Ka0sMedia_Statusbar", field = "accentTexture", media = "statusbar",
     tip = "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
       .. "'Solid' is a flat color." },
   { label = "Bar opacity", type = "Slider", field = "accentAlpha", min = 0, max = 1, step = 0.05,
@@ -234,7 +234,7 @@ local BAR = {
 }
 
 local BAR_BORDER = {
-  { label = "Border style", type = "LSM30_Border", field = "accentBorderTexture", media = "border",
+  { label = "Border style", type = "Ka0sMedia_Border", field = "accentBorderTexture", media = "border",
     tip = "The edge style drawn around the accent bar. 'None' removes it, as does a thickness of 0." },
   { label = "Border thickness (px)", type = "Slider", field = "accentBorderSize", min = 0, max = 32,
     step = 1, tip = "Thickness of the accent bar's own border. 0 removes it entirely." },
@@ -274,13 +274,14 @@ local TABS = {
 }
 
 local CONTROL_TYPES = { CheckBox = true, Slider = true, ColorPicker = true, Dropdown = true,
-                        LSM30_Border = true, LSM30_Statusbar = true, LSM30_Background = true }
+                        Ka0sMedia_Border = true, Ka0sMedia_Statusbar = true,
+                        Ka0sMedia_Background = true, LSM30_Background = true }
 
 --- Register the LSM30_* widget types for the length of `fn`, then take them back out.
 local function withLSMWidgets(fn)
   local gui = T.mocks.LibStub("AceGUI-3.0", true)
   local added = {}
-  for _, wt in ipairs({ "LSM30_Border", "LSM30_Statusbar", "LSM30_Background" }) do
+  for _, wt in ipairs({ "Ka0sMedia_Border", "Ka0sMedia_Statusbar", "Ka0sMedia_Background" }) do
     if not gui.WidgetRegistry[wt] then
       added[#added + 1] = wt
       gui:RegisterWidgetType(wt, function() return T.mocks.__makeAceGUIWidget(wt) end, 1)

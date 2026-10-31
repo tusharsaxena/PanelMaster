@@ -1117,7 +1117,7 @@ Total.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (38)
+### test_libka0s.lua (37)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -1149,7 +1149,6 @@ Total.
 - Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry
 - Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
 - L trap (Options tripwire): Options reads no descriptor L
-- Options seam: the live wiring patches LSM30_Border through the library, not a private copy
 - L trap (Core tripwire): Core cannot express the trap
 - L trap (matcher): the guard catches every offending spelling, not one
 - Bus seam: a mistyped Registry message key raises at the read
@@ -1358,7 +1357,7 @@ Total.
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 38 |
+| test_libka0s.lua | 37 |
 | test_libka0s_degraded.lua | 15 |
 | test_surface_parity.lua | 9 |
 | test_harness.lua | 18 |
@@ -1375,4 +1374,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1161** |
+| **Total** | **1160** |
