@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 29 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal |
+| SKIN-1 to 30 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal |
 
 ## Before you start
 
@@ -1284,6 +1284,12 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   called. Log in with `/console scriptErrors 1`, `/pm unlock` under **Obsidian** and open the **Panel**
   picker with a disabled panel → the overlay wears the skin, the *(disabled)* marker is the skin's
   gray, and no Lua error names `SkinColor`. Result:
+- **SKIN-30. A clean load on LibKa0s v1.84.0 (XX-RV).** The library's files split and the settings pages
+  draw through the moved flow engine, with no change meant for this addon. Log in with
+  `/console scriptErrors 1`, open every Settings page and every Panels editor tab, then open the Skin
+  tab and switch to **Obsidian** and back → each draws as before and no Lua error appears. The
+  first-run skin picker (`/pm skin`) shows every skin row. The diagnostics report's library line
+  names Charts between Toast and Media. Result:
 
 ## Pending sign-off
 
@@ -1308,5 +1314,5 @@ pickers and skin faces run (PM-F01 and PM-F02, Ka0sAddonsCommonTasks
 SKIN-2, SKIN-3, SKIN-6, SKIN-7 and SKIN-8, which v1.83.0's new faces and "Skin's default" had
 re-opened. Each is recorded on its `Result:` line as `Owner reported pass, 2026-10-31`.
 
-Pending: SKIN-28 and SKIN-29, added by the findings remediation (Ka0sAddonsCommonTasks
+Pending: SKIN-28, SKIN-29 and SKIN-30, added by the findings remediation (Ka0sAddonsCommonTasks
 `docs/2026-10-31-FINDINGS_REMEDIATION/`), each with an empty `Result:` line.

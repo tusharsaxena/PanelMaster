@@ -132,7 +132,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 |---|---|---|
 | `modules/Canvas.lua:654-659` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Fade unless hovered* ticked |
 
-The sweep reads this addon's own code. The vendored `libs/LibKa0s/OptionsSkinPicker.lua` also sets a throttled `OnUpdate`, from v1.83.0, only while the skin picker's rows are drawn locked; it removes itself once the lock clears, and it does no per-panel work.
+The sweep reads this addon's own code. The vendored `libs/LibKa0s/OptionsSkinPickerRows.lua` also sets a throttled `OnUpdate`, from v1.83.0, only while the skin picker's rows are drawn locked; it removes itself once the lock clears, and it does no per-panel work.
 
 ### `RegisterEvent` — 5 hits
 
