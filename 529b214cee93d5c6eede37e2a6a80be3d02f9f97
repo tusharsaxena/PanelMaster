@@ -1,0 +1,6 @@
+Independent review of PanelMaster, PM-F01..PM-F02 (font pickers and skin faces run).
+Two low-severity findings, both verified and both fixed in this commit; none rejected.
+1. defaults/Profile.lua:74: schema comment called "all" the default while the value is "hud" (D-10). Comment corrected.
+2. core/SkinSetup.lua:490: ApplySkinOutline doc said the library reads an unknown mode as "all"; Skin:SetOutline uses OUTLINE_DEFAULT, "hud" (libs/LibKa0s/Skin.lua:692, 719). Comment corrected.
+Comment-only, so no test added and no smoke check changed. docs/ARCHITECTURE.md and docs/smoke-tests.md already state the "hud" default.
+Gate: lua tests/run.lua 1161 passed, 0 failed, 1 skipped (1162 total); luacheck 0 warnings / 0 errors in 83 files; files touched well under 1500 lines.
