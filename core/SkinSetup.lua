@@ -487,7 +487,7 @@ function NS.ApplySkinOverride(font, texture)
 end
 
 --- The applied font outline: Skin:SetOutline, live (LibKa0s v1.82.0, Skin minor 9). No argument
---- applies the stored mode; the library reads an unknown mode as "all". A copy without SetOutline
+--- applies the stored mode; the library reads an unknown mode as "hud". A copy without SetOutline
 --- (a Skin major before minor 9) moves nothing.
 function NS.ApplySkinOutline(mode)
   if type(Skin.SetOutline) ~= "function" then return false end
