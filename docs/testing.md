@@ -17,7 +17,7 @@ lua tests/run.lua     # all suites green; exits non-zero on any failure
 gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
 vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
 under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
-addon's code and are linted as such, which is why the figure below is 83 files and not the 26 it
+addon's code and are linted as such, which is why the figure below is 84 files and not the 26 it
 was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
@@ -33,7 +33,7 @@ spelling would slip past — and holds four rules.
 
 | Rule | What it refuses |
 | --- | --- |
-| No top-level `ignore` | An entry there reaches all 83 files, including every file with no business producing the code. |
+| No top-level `ignore` | An entry there reaches all 84 files, including every file with no business producing the code. |
 | No wholesale class switch | `unused_args = false` and eight relatives are the same blanket spelled as a switch. |
 | Every `files[...]` ignore is narrow | The stanza key names one `.lua` file, or the entry names the variable as well as the code (`212/self`). |
 | Every inline `-- luacheck: ignore` names a code | Bare, it silences everything in scope; with only a variable after it, every code for that name. |

@@ -531,7 +531,7 @@ return function()
   -- it is an OptionalDep with a shipped fallback. The launcher has no fallback: with no broker
   -- libraries there is no object, no button and nothing to click, so a default environment missing
   -- them could only ever assert that nothing happened. The degradation is a case of its own
-  -- (tests/test_libka0s.lua), built by handing tests/degraded_env.lua a `mutate` that takes these
+  -- (tests/test_launcher.lua), built by handing tests/degraded_env.lua a `mutate` that takes these
   -- two back out again.
   --
   -- MODELED, not stubbed, for the reason AceDB above is: the launcher's whole contract is that ONE

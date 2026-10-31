@@ -66,7 +66,7 @@ panels panel unlock lock recover` — refuses. **The gate is the library's**: th
 gates *after* the `COMMANDS` lookup, so only a verb this addon actually ships is refused and a
 **typo still falls through** to `unknown command` and the help index (`slash-commands-§3`). The
 degraded stub, which has no library to route to, keeps a host-side wrap of `NS.COMMANDS` and
-reproduces the format string byte for byte; `tests/test_libka0s.lua` compares the two. With
+reproduces the format string byte for byte; `tests/test_libka0s_degraded.lua` compares the two. With
 logging on, the library also writes each such refusal to the debug log as one `[Cmd] refused <verb>:
 disabled` line, through the `debug` sink `settings/Slash.lua` passes; the host adds none.
 

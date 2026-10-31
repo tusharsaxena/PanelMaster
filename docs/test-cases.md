@@ -1117,7 +1117,7 @@ Total.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (53)
+### test_libka0s.lua (38)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -1150,6 +1150,16 @@ Total.
 - Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
 - L trap (Options tripwire): Options reads no descriptor L
 - Options seam: the live wiring patches LSM30_Border through the library, not a private copy
+- L trap (Core tripwire): Core cannot express the trap
+- L trap (matcher): the guard catches every offending spelling, not one
+- Bus seam: a mistyped Registry message key raises at the read
+- Bus seam: a mistyped Schema message key raises at the read
+- Bus seam: with no library the same reads answer nil and do not raise
+- L trap: no seam file hands a descriptor this addon's locale table
+- L trap: the seam-file list covers every file that calls lib:New
+
+### test_libka0s_degraded.lua (15)
+
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
 - Degraded install: the notice is announced exactly ONCE, before the first line
@@ -1164,13 +1174,6 @@ Total.
 - Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing
 - Degraded install: /pm profile prints the library-absent line and switches nothing
 - Degraded install: the help index still lists every verb
-- L trap (Core tripwire): Core cannot express the trap
-- L trap (matcher): the guard catches every offending spelling, not one
-- Bus seam: a mistyped Registry message key raises at the read
-- Bus seam: a mistyped Schema message key raises at the read
-- Bus seam: with no library the same reads answer nil and do not raise
-- L trap: no seam file hands a descriptor this addon's locale table
-- L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
 ### test_surface_parity.lua (9)
@@ -1355,7 +1358,8 @@ Total.
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 53 |
+| test_libka0s.lua | 38 |
+| test_libka0s_degraded.lua | 15 |
 | test_surface_parity.lua | 9 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |

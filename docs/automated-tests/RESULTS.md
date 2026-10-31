@@ -102,8 +102,8 @@ None.
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1215 | **Accepted, and moving.** Grew 1131 → 1184 since the 1.2.0 release: the `/pm profile` adoption cases (`9bceeab`, +29) and the Options `addonName` pin (`74429c7`, +24). 116 lines short of its 1300 re-check trigger. Second release run carried as Accepted (1.2.0, 1.3.0); a third makes it owed a split or a tracking issue (anti-pattern #53). Peel the `Degraded …` cases into a sibling suite. |
-| 1000–1500 (on notice) | `tests/test_slash.lua` | 1167 | **Newly crossed; Accepted.** 933 at the 1.2.0 release, 1166 now, from case growth rather than tangle (74 → 85 cases): the `/pm profile` verb (`9bceeab`, +150), the session-row sweep on Reset all (`3060ec4`, +54) and the delete-all profile name (`5c42c0d`, +19). Seam: the profile-verb cases lift out whole into a sibling suite. Re-check trigger 1300. First release run carrying it. |
+| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1215 | **Split, FX-PM-SIZE.** The `Degraded install` cases moved whole into `tests/test_libka0s_degraded.lua`, which leaves this file at 857 lines and out of the band at the next run. Settled before the third Accepted release run (anti-pattern #53). |
+| 1000–1500 (on notice) | `tests/test_slash.lua` | 1167 | **Newly crossed; Accepted.** 933 at the 1.2.0 release, 1167 now, from case growth rather than tangle (74 → 85 cases): the `/pm profile` verb (`9bceeab`, +150), the session-row sweep on Reset all (`3060ec4`, +54) and the delete-all profile name (`5c42c0d`, +19). Seam: the profile-verb cases lift out whole into a sibling suite. Re-check trigger 1300. First release run carrying it. |
 
 `lizard` counts every `and`/`or` short-circuit as a decision, so in Lua a run of
 `t.k = rec.k or D.k` defaulting lines scores high with no visible branching at all: a large CCN

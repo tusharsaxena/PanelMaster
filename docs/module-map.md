@@ -70,7 +70,7 @@ about **what** at each one. The latching differs on purpose, and the rule is wha
 the Core and DebugLog notices ride other output, where repeating would drown the line the user
 asked for, so they are once per session; `/pm config`'s line rides nothing — it *is* the answer to a
 verb the user invoked — so latching it would make the second invocation read as a broken command. The wording is the whole Ka0s collection's and is not this addon's to
-reword — `tests/test_libka0s.lua` pins the clause on both paths.
+reword — `tests/test_libka0s_degraded.lua` pins the clause on both paths.
 
 The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
 
@@ -132,7 +132,7 @@ beside `libs/LibKa0s/` and never edited here, so it is not listed. Case counts l
 |---|---|
 | `tests/run.lua` | The runner. Loads every source in TOC order, calls the real `OnInitialize` / `OnEnable`, exposes `_G.PM_TEST`, runs every suite; `--list` writes `docs/test-cases.md`. |
 | `tests/wow_mock.lua` | The WoW-API mock: an extender over `tests/_kit/mock_base.lua`, overriding only what is this addon's own. |
-| `tests/degraded_env.lua` | Not a suite. Builds a whole environment from a partial LibKa0s file list, for the degraded arms of `test_disabled.lua`, `test_launcher.lua`, `test_libka0s.lua`, `test_schema.lua`, `test_skin_verb.lua` and `test_surface_parity.lua`. |
+| `tests/degraded_env.lua` | Not a suite. Builds a whole environment from a partial LibKa0s file list, for the degraded arms of `test_disabled.lua`, `test_launcher.lua`, `test_libka0s.lua`, `test_libka0s_degraded.lua`, `test_schema.lua`, `test_skin_verb.lua` and `test_surface_parity.lua`. |
 | `tests/prose_waivers.lua` | Not a suite. The per-file, per-word waivers the kit's US-English prose gate reads. |
 | `tests/mock_menu.lua` | Not a suite. A headless stand-in for the client's context-menu API (`MenuUtil`), copied from LibKa0s v1.58.0's own `tests/mock_menu.lua`, for the launcher menu cases in `test_launcher.lua` and `test_disabled.lua`. |
 
@@ -157,7 +157,8 @@ The suites, one per subject:
 | `tests/test_harness.lua` | The harness itself: suite inventory, TOC-derived load order, load-order pins. |
 | `tests/test_layers.lua` | Frame layering (`frame-layering-§1` to `§5`): where every frame this addon creates sits, read back through the kit's frame-layer recorder against `NS.Constants.LAYERS`. |
 | `tests/test_launcher.lua` | The Launcher seam: the broker object, the two clicks (left opens settings, right opens the options menu), the menu's Enabled and Locked entries and their slash handlers, the status tooltip (enabled and disabled), the minimap row, the degraded install. |
-| `tests/test_libka0s.lua` | Every seam against the live library, the shared cause clause, and the degraded install. |
+| `tests/test_libka0s.lua` | Every seam against the live library, and the `L` trap. |
+| `tests/test_libka0s_degraded.lua` | The degraded install: the shared cause clause, the notice, the verbs that still answer, and the rows the schema loses. |
 | `tests/test_lintconfig.lua` | The no-blanket-suppression gate over `.luacheckrc`. |
 | `tests/test_media.lua` | Media on the canvas: background and border textures, `Registry.Reset`, `Util.Slugify`. |
 | `tests/test_mediasetup.lua` | The Media seam: `NS.Icon`, `NS.MediaFont`, LibSharedMedia registration. |

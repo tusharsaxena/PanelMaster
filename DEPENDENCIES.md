@@ -30,7 +30,7 @@ Read only the section you need:
 - `LibDataBroker-1.1` and `LibDBIcon-1.0` back the launcher (`launcher-§1`): one broker object,
   registered twice. Both are resolved with `LibStub(..., true)` inside `LibKa0s-Launcher-1.0`, so a
   client carrying neither loses the minimap button and the broker row and raises nothing — which is
-  what `tests/test_libka0s.lua` pins.
+  what `tests/test_launcher.lua` pins.
 - `LibSharedMedia-3.0` is genuinely optional at runtime — the addon has a tested soft-fallback path
   for its absence, which is why the headless mock deliberately omits it
   (`docs/testing.md` ▸ *Mock fidelity that is load-bearing*).
