@@ -497,7 +497,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:685` — because the page
+`currentRecord()` survives — `settings/PanelEditor.lua:104`, called at `:717` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enable this panel** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
@@ -567,6 +567,12 @@ this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15, called
 leaves a gap beside the closed dropdown. It lives in the library because AceGUI's widget registry is
 process-global — one slot every addon in the client shares — so five Ka0s addons each fixing it
 privately meant the last one loaded owned the dropdown for all of them.
+
+Every per-panel media picker is the previewing `LSM30_*` type for its kind (`options-ui-§23`):
+`makeMediaDropdown` has no plain `Dropdown` fallback, because every `C.PANEL_FIELD_MEDIA` kind has one.
+The descriptor also passes `getLSM`, for `O.LSMValues` and the font preload on a panel's show. The
+per-panel pickers still replace their composed `values` with `NS.Compat.MediaList`, so the preload is
+what the library's Skin tab Font list needs, not what they read.
 
 **An open dropdown does not follow, or close with, a scrolling page.** AceGUI parents a dropdown's
 open list to `UIParent` so it can overflow the panel, which means scrolling slides the control away
@@ -650,7 +656,7 @@ the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the foot
 button are one implementation and the confirmation cannot be reached round.
 
 **The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
-panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:355`,
-`:362-367`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:377`,
+`:384-389`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
 `options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
 tooltip and the contract agree again.

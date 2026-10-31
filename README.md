@@ -68,9 +68,9 @@ opens the settings on a left-click, and its right-click menu turns the addon on 
 unlocks your panels.
 
 The first time you log in, a skin picker asks how the addon's own windows should look. Pick one,
-or close it and stay on Ka0s Default. The **Skin** tab on the General page changes it later, and can
-take the look from EllesmereUI instead if you run it. A skin colors the unlock outlines and the debug
-console. The settings pages keep the game's look unless you untick **Ignore settings panel** there.
+or close it and stay on Ka0s Default. `/pm skin` brings the picker back any time. The **Skin** tab on
+the General page changes it too, and can take the look from EllesmereUI instead if you run it. A skin
+colors the unlock outlines and the debug console. The settings pages keep the game's look unless you untick **Ignore settings panel** there.
 Your panels are never touched: their colors, borders and artwork stay exactly as you set them.
 
 Everything else is on the addon's page under Settings → AddOns, which a bare `/pm` opens, and

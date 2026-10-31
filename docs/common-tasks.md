@@ -160,4 +160,4 @@ reverse, is the shape of **every** rendering bug this addon can have, so start t
 
 ## Before committing
 
-`lua tests/run.lua` green **and** `luacheck .` clean. Full instructions in [testing.md](testing.md).
+`lua tests/run.lua` green **and** `~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` clean. Full instructions in [testing.md](testing.md).

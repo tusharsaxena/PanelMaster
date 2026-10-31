@@ -1046,7 +1046,7 @@ panel names a player types, through two seams:
   ASCII-only `%w` dropped those bytes, so `Ärger` and `Örger` both slugged to `rger`.
 - **Case folding.** `Registry:FindByName` folds with `Util.FoldName`: ASCII plus a UTF-8 case fold
   for Latin-1, Latin Extended-A, Greek and Cyrillic. The Panels list's sort
-  (`settings/PanelEditor.lua:221`) still uses `string.lower`, which folds ASCII only (LOC-4).
+  (`settings/PanelEditor.lua:232`) still uses `string.lower`, which folds ASCII only (LOC-4).
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a
 regression. Steps LOC-1 to LOC-4 can be provoked on an English client by typing the same letters into
