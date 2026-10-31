@@ -32,6 +32,7 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 | Run | Commit | Tree | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20261031-211558`](20261031-211558/) | `5732e01` | clean | 1.3.0 | 0/0 | 84 | 1161/1/1162 | skip | 20287 | 2536 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20261031-202058`](20261031-202058/) | `e63877d` | clean | 1.3.0 | 0/0 | 83 | 1161/1/1162 | skip | 20290 | 2537 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20261009-191730`](20261009-191730/) | `0fcb643` | clean | 1.2.0 → 1.3.0 | 0/0 | 71 | 1063/1/1064 | skip | 17849 | 2222 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20260927-032003`](20260927-032003/) | `8cda106` | clean | 1.2.0 | 0/0 | 68 | 964/0/964 | skip | 16138 | 1917 | 7.4 | 2.0 | 15 | 0 | **green** |
@@ -55,17 +56,17 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 ## Test suite
 
 **1162 cases** — 1161 passed, 0 failed, 1 skipped. The generated inventory
-[`20261031-202058/test-cases.md`](20261031-202058/test-cases.md) is the authority on which cases existed at this run;
+[`20261031-211558/test-cases.md`](20261031-211558/test-cases.md) is the authority on which cases existed at this run;
 `docs/test-cases.md` is that same list at HEAD.
 
-Moved **1064 → 1162** since the previous run.
+Unchanged from the previous run at 1162 cases.
 
 **1 case(s) reported a `skip`.** A skip is counted in the total and never in `passed`, and at
 the release gate it is NOT EVALUATED rather than passed (`automated-tests-§3`).
 
 ## Lint
 
-**0 warnings / 0 errors over 83 files** (`luacheck .`).
+**0 warnings / 0 errors over 84 files** (`luacheck .`).
 
 Read that figure with its scope attached: `.luacheckrc` excludes 5 path(s) from it — `libs/`, `docs/audits/`, `docs/reviews/`, `_dev/`, `tests/_kit/` —
 so nothing under them is in the count above. A `0/0` that never moves is partly a statement about
@@ -82,8 +83,8 @@ never asked.
 
 ## Complexity watch list
 
-Current as of [`20261031-202058`](20261031-202058/) — **this run's measurement, not its diff.** Max CCN **15** across 2537
-functions, **0** of them warned on; 2 file(s) in the 1000–1500 band and 0 over the 1500 cap
+Current as of [`20261031-211558`](20261031-211558/) — **this run's measurement, not its diff.** Max CCN **15** across 2536
+functions, **0** of them warned on; 1 file(s) in the 1000–1500 band and 0 over the 1500 cap
 (`layout-§1`).
 
 Every row below is generated from this run's own `lizard` output. **The `Disposition` column is
@@ -102,7 +103,6 @@ None.
 
 | Band | File | LOC | Disposition |
 |---|---|---|---|
-| 1000–1500 (on notice) | `tests/test_libka0s.lua` | 1215 | **Split, FX-PM-SIZE.** The `Degraded install` cases moved whole into `tests/test_libka0s_degraded.lua`, which leaves this file at 857 lines and out of the band at the next run. Settled before the third Accepted release run (anti-pattern #53). |
 | 1000–1500 (on notice) | `tests/test_slash.lua` | 1167 | **Newly crossed; Accepted.** 933 at the 1.2.0 release, 1167 now, from case growth rather than tangle (74 → 85 cases): the `/pm profile` verb (`9bceeab`, +150), the session-row sweep on Reset all (`3060ec4`, +54) and the delete-all profile name (`5c42c0d`, +19). Seam: the profile-verb cases lift out whole into a sibling suite. Re-check trigger 1300. First release run carrying it. |
 
 `lizard` counts every `and`/`or` short-circuit as a decision, so in Lua a run of
