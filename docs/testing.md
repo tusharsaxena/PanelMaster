@@ -26,7 +26,7 @@ was before the test tree came in. Before quoting 0/0, confirm what was actually 
 
 ## The suppression gate
 
-`luacheck .` reporting 0/0 has to be a statement about the code rather than about `.luacheckrc`, and
+`~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` reporting 0/0 has to be a statement about the code rather than about `.luacheckrc`, and
 nothing in the two commands above can tell the difference. `tests/test_lintconfig.lua` is what does:
 it loads `.luacheckrc` as Lua under a sandbox — the table luacheck obeys, not text a different
 spelling would slip past — and holds four rules.
@@ -239,7 +239,7 @@ the table names both. A single "Gates?" column could only ever describe one of t
 
 | Suite | Command | Gates the commit? | Gates the tag? |
 |---|---|---|---|
-| `lint` | `luacheck .` | **yes** | **yes** |
+| `lint` | `~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` | **yes** | **yes** |
 | `tests` | `lua tests/run.lua` | **yes** | **yes** |
 | `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
 | `complexity` | `bash tests/_kit/run-automated-tests.sh --suite complexity` (`lizard -l lua -L 1500` over the kit's sighted shadow, at the kit revision the `CLAUDE.md` provenance line pins; a function-count parity mismatch, or a crashed or bounded lizard run (reported in the kit-41 `crashed` bucket with the file named), is a fail; a crash is never a pass) | no — recorded only | **yes** |

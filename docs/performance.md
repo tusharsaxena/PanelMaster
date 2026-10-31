@@ -132,13 +132,16 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 |---|---|---|
 | `modules/Canvas.lua:654-659` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Fade unless hovered* ticked |
 
-### `RegisterEvent` — 4 hits
+The sweep reads this addon's own code. The vendored `libs/LibKa0s/OptionsSkinPicker.lua` also sets a throttled `OnUpdate`, from v1.83.0, only while the skin picker's rows are drawn locked; it removes itself once the lock clears, and it does no per-panel work.
+
+### `RegisterEvent` — 5 hits
 
 | Site | Event | Work | Runs in combat? |
 |---|---|---|---|
 | `core/PanelMaster.lua:71` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
 | `core/LifecycleSetup.lua:75` (handler `core/PanelMaster.lua:116`) | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
 | `core/LifecycleSetup.lua:76` (handler `core/PanelMaster.lua:135`) | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
+| `core/SkinSetup.lua:325` | `PLAYER_REGEN_ENABLED` | the first-run skin picker's combat hold: one-shot, on a private target, made only while a start waits out combat | fires on **leaving** combat, by definition |
 | `core/LifecycleSetup.lua:77` (handler `core/PanelMaster.lua:148`) | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
 
 ### `C_Timer` — 0 hits
