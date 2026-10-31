@@ -285,6 +285,11 @@ NS.Helpers = lib:New({
     if NS.addon and NS.addon.ScheduleTimer then return NS.addon:ScheduleTimer(fn, delay) end
   end,
 
+  -- O.LSMValues and the font preload on a panel's show (options-ui-§23). The per-panel pickers
+  -- replace their composed `values` with NS.Compat.MediaList, this addon's None and Solid in its
+  -- own order, so this lookup is not their list; the preload is what the Skin tab's Font list needs.
+  getLSM = function() return LibStub and LibStub("LibSharedMedia-3.0", true) end,
+
   -- DELIBERATELY NOT PASSED:
   --
   --   colorDecode / colorEncode — this addon has no COLOR schema row. Its colors live on panel
@@ -293,9 +298,6 @@ NS.Helpers = lib:New({
   --                { r, g, b, a } arrays to and from the library's named keys itself. There is
   --                nothing left for a codec to translate. If a color schema row is ever added,
   --                both majors take the same pair.
-  --   getLSM     — the media dropdowns are per-PANEL pickers, and PanelEditor replaces each
-  --                composed row's `values` with NS.Compat.MediaList (this addon's None and Solid,
-  --                in its own order), so the library's LSM lookup is never the list a player sees.
   --   skipRestoreAll / afterRestoreAll — still not passed, although `resetProfile` now is. The
   --                global reset is still `Sl:DoResetAll`, not O.RestoreAllDefaults: `Sl:CliResetAll`
   --                and every control confirm through `Sl:ConfirmResetAll`, which then calls

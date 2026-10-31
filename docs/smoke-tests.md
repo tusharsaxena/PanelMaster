@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 26 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change |
+| SKIN-1 to 27 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change |
 
 ## Before you start
 
@@ -1266,6 +1266,14 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   skin → both reset to the new skin's default (`/pm get skin.font` → empty). The Scope's two check boxes
   line up with the dropdowns above, and **Copy to every Ka0s addon** sits under its own heading,
   **Other Ka0s addons**. Result:
+- **SKIN-27. Every media picker previews (PM-F02, LibKa0s v1.83.0; options-ui-§23, D-08, D-09).**
+  With **Ignore settings panel** off, on any skin but WoW Default, open the Skin tab's **Font** list
+  → the leading row reads *Skin's default (the skin's face)* and every row is drawn in its own face,
+  with none blank on the first open of the session. Open **Texture** → each row shows its bar, and
+  the pull-out wears the skin. On the Panels page open **Background texture**, **Border style**,
+  **Bar texture** and the accent bar's **Border style** → each row shows its art, the pull-outs
+  stay stock (they are SharedMediaWidgets' own), and a pick lands, shows in the closed row and
+  survives a `/reload`. Fail: a list of plain names anywhere, or a blank row. Result:
 
 ## Pending sign-off
 
@@ -1288,4 +1296,4 @@ Pending: SKIN-21 to SKIN-26, added by the skin fonts and feedback run (PM-01, Ka
 Re-opened by LibKa0s v1.83.0's new faces and "Skin's default" (PM-F01, Ka0sAddonsCommonTasks
 `docs/2026-10-31-FONT_PICKERS_AND_SKIN_FACES/`): SKIN-2, SKIN-3, SKIN-6,
 SKIN-7 and SKIN-8, their earlier
-owner pass no longer covering what they check.
+owner pass no longer covering what they check. SKIN-27 is new (PM-F02).

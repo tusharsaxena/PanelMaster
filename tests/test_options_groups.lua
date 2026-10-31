@@ -502,3 +502,29 @@ for _, spec in ipairs(TABS) do
     end)
   end)
 end
+
+-- ── every media picker previews (options-ui-§23, anti-pattern #109; PM-F02) ──────────────────────
+
+test("optionsgroups: the descriptor passes getLSM, so LSMValues and the font preload work", function()
+  local list = NS.Helpers.LSMValues("background")
+  T.mocks.__libs["LibSharedMedia-3.0"] = {
+    HashTable = function(_, kind) return { ["Probe " .. kind] = "path" } end,
+  }
+  local ok, got = pcall(list)
+  T.mocks.__libs["LibSharedMedia-3.0"] = nil
+  assertTrue(ok, tostring(got))
+  assertEqual(got["Probe background"], "Probe background", "O.LSMValues read no LibSharedMedia")
+end)
+
+test("optionsgroups: every panel media field has a preview picker, with no plain fallback", function()
+  local LSM_WIDGET = NS.Panel.__ui.LSM_WIDGET
+  local C = NS.Constants
+  for field, kind in pairs(C.PANEL_FIELD_MEDIA) do
+    assertEqual(LSM_WIDGET[kind], "LSM30_" .. kind:sub(1, 1):upper() .. kind:sub(2), field)
+  end
+  local fh = assert(io.open("settings/PanelEditor.lua", "rb"))
+  local src = fh:read("*a")
+  fh:close()
+  assertTrue(not src:find('LSM_WIDGET%[mediaType%] or "Dropdown"'),
+    "makeMediaDropdown falls back to a plain Dropdown over media keys")
+end)
