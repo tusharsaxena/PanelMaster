@@ -21,7 +21,7 @@ local addonName, NS = ...
 --                           skin's own; false, false before NS:InitDB.
 --   NS.ApplySkinOverride(f,t) moves the applied overrides: `Skin:SetOverride`, live; no argument
 --                           applies the stored pair, a nil half keeps that half, false or "" clears.
---   NS.SkinOutline()        the stored font outline mode: "all", "hud" or "off"; "all" before
+--   NS.SkinOutline()        the stored font outline mode: "all", "hud" or "off"; "hud" before
 --                           NS:InitDB has built the profile store.
 --   NS.ApplySkinOutline(m)  moves the applied font outline: `Skin:SetOutline`, live; no argument
 --                           applies the stored skin.outline (LibKa0s v1.82.0, Skin minor 9, D-06).
@@ -96,7 +96,7 @@ local Skin = LibStub and LibStub("LibKa0s-Skin-1.0", true)
 local SOURCE_PATH, SKIN_PATH = "skin.source", "skin.skin"
 local PANEL_PATH, FONTS_PATH = "skin.ignorePanel", "skin.ignoreFonts"
 local FONT_PATH, TEXTURE_PATH = "skin.font", "skin.texture"
-local OUTLINE_PATH, OUTLINE_DEFAULT = "skin.outline", "all"
+local OUTLINE_PATH, OUTLINE_DEFAULT = "skin.outline", "hud"
 local DEFAULT = "ka0s"
 
 -- The Ka0s Default tokens the DEGRADED facade answers, copied from the library and limited to the
@@ -210,7 +210,7 @@ function NS.WriteSkinChoice(source, skin, ignore, media)
   end
 end
 
---- The stored font outline mode, nil-safely: "all" until the profile store exists.
+--- The stored font outline mode, nil-safely: "hud" until the profile store exists.
 function NS.SkinOutline()
   local S = NS.Schema
   if not (NS.db and S and S.Get) then return OUTLINE_DEFAULT end

@@ -923,9 +923,11 @@ Total.
 - Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
 - Skin seam: a profile's stored exceptions and overrides are applied with its skin
 
-### test_skin_outline.lua (9)
+### test_skin_outline.lua (11)
 
-- Skin outline: a fresh profile stores All text, the library's default
+- Skin outline: a fresh profile stores HUD text only, the library's default
+- Skin outline: a stored All text stays, with no migration (D-10)
+- Skin outline: the reader answers the new default before the store exists
 - Skin outline: the schema row offers the library's three modes, in its order
 - Skin outline: the write seam stores media.outline, and leaves it alone when it is nil
 - Skin outline: another addon's copy reaches the store through WriteChoice
@@ -933,7 +935,7 @@ Total.
 - Skin outline: /pm set takes a known mode and refuses one the library does not know
 - Skin outline: the stored mode is applied with the stored pair (load, profile events)
 - Skin outline: a profile switch applies the incoming profile's mode
-- Skin outline: a profile reset puts the outline back to All text
+- Skin outline: a profile reset puts the outline back to HUD text only
 
 ### test_skin_literals.lua (8)
 
@@ -1341,7 +1343,7 @@ Total.
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
-| test_skin_outline.lua | 9 |
+| test_skin_outline.lua | 11 |
 | test_skin_literals.lua | 8 |
 | test_skin_unlock.lua | 5 |
 | test_skin_picker.lua | 13 |
@@ -1367,4 +1369,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1157** |
+| **Total** | **1159** |

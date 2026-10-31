@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-1157%2F1157_passing-green)
+![Tests](https://img.shields.io/badge/Tests-1159%2F1159_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -293,30 +293,7 @@ The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg
 the sizes the client wants and redistributed under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
 
-The debug console uses [JetBrains Mono](https://www.jetbrains.com/lp/mono/), licensed under the SIL
-Open Font License 1.1.
-
-The skins' faces ship in the same payload, each with its terms beside it. They are SIL Open Font
-License 1.1 except Prototype and Expressway:
-
-- [Nunito](https://github.com/googlefonts/nunito) by The Nunito Project Authors,
-  [Vollkorn](https://github.com/FAlthausen/Vollkorn-Typeface) by The Vollkorn Project Authors,
-  [Bitter](https://github.com/solmatas/BitterPro) by The Bitter Project Authors,
-  [Philosopher](https://github.com/alexeiva/philosopher) by The Philosopher Project Authors, and
-  [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) by the Braille Institute of
-  America. Nunito, Vollkorn and Bitter are static weights cut from upstream's variable fonts.
-- [Fira Sans](https://github.com/mozilla/Fira) Medium and SemiBold, WoW Forever's faces, by The
-  Mozilla Foundation and Telefonica S.A.
-- [Prototype](https://www.dafont.com/prototype.font) v2.0 (2001), Ka0s Default's face, the skin
-  every profile starts on. It is not under the OFL: it is "free for personal use, freely
-  distributed with Prototype.txt", and the author's `Prototype.txt` ships beside it unchanged.
-- [Expressway](https://www.dafont.com/expressway.font) Rg Bold 2.100 (2005) by Ray Larabie,
-  Typodermic, Obsidian's face. It is not under the OFL. It ships on the owner's ruling of
-  2026-10-30, against its name table's "Do not distribute" and the Typodermic Desktop EULA 2026,
-  which ship beside it (`Expressway-EULA.pdf`, `Expressway-EULA-Guide.html`) as the record of the
-  terms that ruling overrode. Expressway is a trademark of Typodermic.
-
 The debug console's copy, clear and close marks and the skin picker's settings gear are from
 [Open Iconic](https://github.com/iconic/open-iconic) by Waybury, MIT-licensed. Only the icons the
-addon draws are shipped. The fonts and the icons are bundled inside the LibKa0s payload, with their
-license text beside them.
+addon draws are shipped. The icons are bundled inside the LibKa0s payload, with their license text
+beside them.

@@ -85,7 +85,7 @@ NS.defaults.profile = {
     ignoreFonts = false,
     font        = "",
     texture     = "",
-    outline     = "all",
+    outline     = "hud",
     pickerSeen  = false,
   },
   -- debug is session-only (NS.State.debug), never persisted here (debug-logging-§5). So is unlock

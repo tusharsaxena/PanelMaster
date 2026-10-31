@@ -102,8 +102,8 @@ local PROFILE_PIN = {
   ["skin.ignoreFonts"] = "{default=false,type=\"bool\"}",
   ["skin.ignorePanel"] = "{default=true,type=\"bool\"}",
   -- The font outline (PM-01 of the skin fonts run, LibKa0s v1.82.0, ruling D-06): a new key with an
-  -- AceDB default, "all", the library's own default, so no existing profile's look moves.
-  ["skin.outline"] = "{default=\"all\",type=\"string\",values=\"all|hud|off\"}",
+  -- AceDB default, the library's own: "all" until v1.83.0, "hud" since (D-10), and a stored mode stays.
+  ["skin.outline"] = "{default=\"hud\",type=\"string\",values=\"all|hud|off\"}",
   ["skin.pickerSeen"] = "{default=false,type=\"bool\"}",
   ["skin.skin"] = "{default=\"ka0s\",type=\"string\",values=\"azeroth|contrast|ember|forever|glass|ka0s|midnight|obsidian|wow\"}",
   ["skin.source"] = "{default=\"ka0s\",type=\"string\",values=\"eui|ka0s\"}",

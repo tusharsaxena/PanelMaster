@@ -310,8 +310,8 @@ addon draws).
   declares only the `settings` icon. Only the player's close marks it seen; the stand-down and a
   profile event take it down unseen. `/pm skin` shows the same picker on demand (`NS.RunSkinVerb`,
   `O.SkinVerb`), whatever `skin.pickerSeen` says.
-- **The font outline.** `skin.outline` (LibKa0s v1.82.0, ruling D-06): **All text** (the default),
-  **HUD text only** or **Off**, the Skin tab's *Font outline*, stored through the same write seam
+- **The font outline.** `skin.outline` (LibKa0s v1.82.0, ruling D-06): **All text**,
+  **HUD text only** (the default since LibKa0s v1.83.0, D-10; a stored mode stays) or **Off**, the Skin tab's *Font outline*, stored through the same write seam
   as the font and texture overrides (`media.outline`) and applied with `Skin:SetOutline` beside
   them at load and on every profile event. It reaches the skinned text this addon draws (the
   unlock overlay's label, the settings pages while not ignored, the console's chrome), never the

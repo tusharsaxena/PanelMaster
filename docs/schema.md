@@ -48,9 +48,9 @@ not one of the General page's settings rows; the keys read as `/pm get skin.skin
   skin.skin         -- which Ka0s skin; "ka0s" is Ka0s Default
   skin.ignorePanel  -- the Scope: leave the settings panel the client's (true for a new profile)
   skin.ignoreFonts  -- the Scope: leave every font the client's (false)
-  skin.font         -- an LSM font key over the skin's own; "" is the skin's own
-  skin.texture      -- an LSM statusbar key over the skin's own; "" is the skin's own
-  skin.outline      -- the font outline: "all" (the default) | "hud" (HUD text only) | "off"
+  skin.font         -- an LSM font key over the skin's default; "" is the skin's default
+  skin.texture      -- an LSM statusbar key over the skin's default; "" is the skin's default
+  skin.outline      -- the font outline: "all" | "hud" (HUD text only, the default since LibKa0s v1.83.0) | "off"
   skin.pickerSeen   -- the first-run skin picker was closed on this profile (false: every profile shows it once)
 ```
 

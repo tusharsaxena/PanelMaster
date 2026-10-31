@@ -1121,9 +1121,9 @@ a Lua error or a taint warning.
 - **SKIN-2. The Skin tab (PM-01).** Settings → General → the strip reads **Master controls | Moving
   panels | New panels | Skin**, **Skin** last (there is no Keybindings tab here), and no empty
   **Panel** tab. **Skin** shows **Skin source**, the nine skins with their swatches under a **Look**
-  heading, **Font and texture** (**Font** and **Texture**, both *Skin's own* on a new profile), the
+  heading, **Font and texture** (**Font** and **Texture**, both *Skin's default* on a new profile), the
   Scope (**Ignore settings panel** on, **Ignore fonts** off), **Copy to every Ka0s addon…** and the
-  note. `/pm get skin.skin` → `ka0s`. Result: pass (owner-marked 2026-10-30)
+  note. `/pm get skin.skin` → `ka0s`. Result:
 - **SKIN-3. Each skin, live, on the settings pages (PM-01, PM-02, PM-04).** Turn **Ignore settings
   panel** off, then pick each skin in turn: Obsidian, Azeroth, Glass, High Contrast, Ember, WoW
   Default, WoW Midnight, WoW Forever, then Ka0s Default → with **no reload** the landing page, the
@@ -1135,7 +1135,7 @@ a Lua error or a taint warning.
   **Panel** picker with a disabled panel → its *(disabled)* marker is in the skin's
   disabled gray. The LibSharedMedia pull-outs and the color picker window stay stock. Fail: a
   control that keeps the old skin until `/reload`, or the tab strip or its content box in the game's
-  look under Ka0s Default. Result: pass (owner-marked 2026-10-30)
+  look under Ka0s Default. Result:
 - **SKIN-4. The Scope's Ignore settings panel (PM-01, PM-04).** Under **Obsidian**, tick **Ignore
   settings panel** → every settings page goes back to the game's own look at once, the Panels band
   and the editor included, while the debug console and the unlock overlay still wear Obsidian. The
@@ -1149,19 +1149,19 @@ a Lua error or a taint warning.
   **Ember** and **High Contrast** in turn → each unlocked panel's outline takes the skin's accent,
   slightly transparent, and its name label the skin's accent color and face, live with no
   re-unlock. Lock one panel (untick **Unlock this panel**) and switch again → only the unlocked ones
-  repaint. Back on **Ka0s Default** → gold outline and gold label. Result: pass (owner-marked 2026-10-30)
+  repaint. Back on **Ka0s Default** → gold outline and gold label. Result:
 - **SKIN-7. Fonts and the overrides (PM-01).** Under **Azeroth** the settings pages (with Ignore
   settings panel off), the console (its title-bar words included) and the unlock label read in
-  Vollkorn. Tick **Ignore fonts** → every string goes back to its own face, the console's title-bar
+  Open Sans. Tick **Ignore fonts** → every string goes back to its own face, the console's title-bar
   words to the game's, and the colors stay the skin's. Untick it, then pick a
-  **Font** override → the same strings take that font, live; set it back to *Skin's own*. A
-  **Texture** override changes no panel (the panels' textures are the player's). Result: pass (owner-marked 2026-10-30)
+  **Font** override → the same strings take that font, live; set it back to *Skin's default*. A
+  **Texture** override changes no panel (the panels' textures are the player's). Result:
 - **SKIN-8. The debug console follows the skin (PM-04).** Under **Azeroth**, `/pm debug` and its
   **Copy** window → both wear Azeroth: edge, title, log lines, scroll bar, the console's title-bar
-  words in Vollkorn, and both windows' resize grips (bottom right) tinted Azeroth's icon color. Switch
+  words in Open Sans, and both windows' resize grips (bottom right) tinted Azeroth's icon color. Switch
   to **Ka0s Default** with the console open → it recolors with no reload, and the grips are the
   game's own art again (Ka0s Default and WoW Default draw the client's grip). The log lines keep their monospace face under
-  every skin. Result: pass (owner-marked 2026-10-30)
+  every skin. Result:
 - **SKIN-9. EllesmereUI on (library EUI).** With EllesmereUI loaded, its third-party skinning on and
   PanelMaster on in its Third-Party list → **Skin source** offers **EllesmereUI**; choosing it gives
   the settings pages (with Ignore settings panel off) and the console the EllesmereUI look, live.
@@ -1218,13 +1218,14 @@ outline setting and the `skin` verb; decisions D-06, D-07, D-08, D-10, D-11, D-1
 above: a fresh client start, a few styled panels, the Skin tab at `/pm config` → General → **Skin**.
 
 - **SKIN-21. The Font outline setting (PM-01; D-06).** On a fresh profile, the Skin tab's Font and
-  texture section shows **Font outline** set to **All text**, under the Reset font / Reset texture
-  row, and `/pm get skin.outline` → `all`. With **Ignore settings panel** off, the settings pages'
-  text, the debug console's title and buttons, the skin picker's text and the unlock overlay's panel
-  names (`/pm unlock`) are outlined. Pick **HUD text only** → the settings pages and the console
-  lose the outline at once, with no reload. Pick **Off** → no outline anywhere. `/pm set
+  texture section shows **Font outline** set to **HUD text only** (the default since LibKa0s v1.83.0, D-10), under the
+  Reset font / Reset texture row, and `/pm get skin.outline` → `hud`. With **Ignore settings panel**
+  off, the settings pages' text, the debug console's title and buttons, the skin picker's text and
+  the unlock overlay's panel names (`/pm unlock`) draw no outline: all of it is window text, and
+  this addon draws no HUD text. Pick **All text** → all of them take the outline at once, with no
+  reload, and a stored **All text** survives a `/reload`. Pick **Off** → no outline anywhere. `/pm set
   skin.outline all` → it comes back; `/pm set skin.outline thick` is refused. Switch profiles and
-  reset one → each profile's own mode is worn; the reset one is back on All text. Under **Ignore
+  reset one → each profile's own mode is worn; the reset one is back on HUD text only. Under **Ignore
   fonts** the dropdown is grayed out and the client's fonts are drawn. The console's log lines (the
   monospace face) are never outlined. Result:
 - **SKIN-22. No font settings of the addon's own, and From skin (PM-01; D-07).** Open every page of
@@ -1242,12 +1243,15 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   `/pm disable`, then `/pm skin` → the one *is disabled — enable it with /pm enable* line and no
   window; `/pm enable` after. With Loot History's picker open, `/pm skin` → PanelMaster's waits
   until that one closes. Result:
-- **SKIN-24. The new faces (PM-01; D-02).** On **Ka0s Default** the settings pages (Ignore settings
-  panel off), the console chrome and the skin picker draw **Prototype**; on **Obsidian**
-  **Expressway**; on **WoW Forever** Fira Sans Medium for body text and Fira Sans SemiBold for
-  titles. The Skin tab's Font dropdown lists Ka0s Prototype, Ka0s Expressway and Ka0s Fira Sans
-  Medium, and no longer lists Ka0s Inter, Ka0s Oxanium or plain Ka0s Fira Sans. A profile whose
-  font override named a retired face falls back to the skin's own face, with no error. Result:
+- **SKIN-24. The faces (PM-F01, LibKa0s v1.83.0; D-01, D-05, D-06).** After a full client restart
+  (new font files), on **Ka0s Default** the settings pages (Ignore settings panel off), the console
+  chrome and the skin picker draw **Prototype**; on **WoW Default** Ka0s Friz Quadrata TT, visibly
+  different from Prototype; on **Obsidian** Expressway; on **WoW Midnight** Segoe UI Semibold with
+  Segoe UI Bold titles; on **Azeroth** Open Sans Semibold with Open Sans Bold titles; on **Ember**
+  Emblem; on **High Contrast** Doris PP; on **Glass** Avant Garde; on **WoW Forever** Fira Sans
+  Medium for body text and Fira Sans SemiBold for titles. The Skin tab's Font list starts with
+  *Skin's default (the skin's face)* and holds the Ka0s faces, the older ones among them (Ka0s Inter,
+  Ka0s Oxanium SemiBold, Ka0s Fira Sans), each row drawn in its own face. Result:
 - **SKIN-25. Equal widths across skins (PM-01; D-08).** With Ignore settings panel off and the
   outline on, open the debug console, the General page's Master controls tab, the Skin tab and the
   skin picker under each of the nine skins in turn → each window's text takes about the same width
@@ -1258,8 +1262,8 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
 - **SKIN-26. The overrides reset on a skin change, and the Skin tab's layout (PM-01; D-10, D-11).**
   Pick a font override and a texture override on the Skin tab → **Reset font** and **Reset
   texture** sit side by side under the two dropdowns, each enabled only while its half is
-  overridden; each puts its half back to the skin's own. Pick the overrides again, then pick another
-  skin → both reset to the new skin's own (`/pm get skin.font` → empty). The Scope's two check boxes
+  overridden; each puts its half back to the skin's default. Pick the overrides again, then pick another
+  skin → both reset to the new skin's default (`/pm get skin.font` → empty). The Scope's two check boxes
   line up with the dropdowns above, and **Copy to every Ka0s addon** sits under its own heading,
   **Other Ka0s addons**. Result:
 
@@ -1281,3 +1285,7 @@ skins' new HUD faces have no check here.
 
 Pending: SKIN-21 to SKIN-26, added by the skin fonts and feedback run (PM-01, Ka0sAddonsCommonTasks
 `docs/2026-10-30-SKIN_FONTS_AND_FEEDBACK/`, LibKa0s v1.82.0), each with an empty `Result:` line.
+Re-opened by LibKa0s v1.83.0's new faces and "Skin's default" (PM-F01, Ka0sAddonsCommonTasks
+`docs/2026-10-31-FONT_PICKERS_AND_SKIN_FACES/`): SKIN-2, SKIN-3, SKIN-6,
+SKIN-7 and SKIN-8, their earlier
+owner pass no longer covering what they check.
