@@ -66,7 +66,7 @@ core\CoreSetup.lua
 # The LibKa0s-Skin-1.0 seam, registered at FILE LOAD (skinning-§1) and LOAD-BEARING in two ways:
 # AFTER Namespace (NS.BRAND, the owner's label), and BEFORE core\DebugLogSetup.lua and every file
 # that builds a frame, so NS.Skin exists for all of them, and before settings\Schema.lua, which reads
-# NS.SKIN_SOURCE_OPTIONS and NS.SKIN_OPTIONS as row values at its own file load. The profile's skin is
+# NS.SKIN_SOURCE_OPTIONS, NS.SKIN_OPTIONS and NS.SKIN_OUTLINE_OPTIONS as row values at its own file load. The profile's skin is
 # applied later, from OnInitialize, once AceDB exists.
 core\SkinSetup.lua
 # The LibKa0s-Bus-1.0 seam, and its position is LOAD-BEARING: modules\Registry.lua and
