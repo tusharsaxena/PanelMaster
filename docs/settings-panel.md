@@ -53,7 +53,7 @@ game's own Settings ▸ AddOns list.
 | New panels | Default width, Default height | The size new panels start at. Existing panels are not touched. |
 | New panels | Default frame strata | The layer new panels start in. Its tooltip is the library's `O.StrataTooltip(C.STRATA)`, after the row's own sentences, so it says what `DIALOG` and above cover (`frame-layering-§1`). |
 | New panels | Default opacity | How see-through new panels start out. |
-| Skin | Skin source, the skins, Font and texture, the Scope, Copy to every Ka0s addon… | The library's Skin tab (`O.AppearanceTab`), drawn for this addon's skin owner: where the look comes from (the Ka0s skins or EllesmereUI), which of the nine Ka0s skins, a font and a texture over the skin's own, **Ignore settings panel** (on for a new profile) and **Ignore fonts**, and the copy to every other loaded Ka0s addon that uses skins. It changes the settings pages (while the panel is not ignored), the debug console and the unlock overlay, never the panels themselves. |
+| Skin | Skin source, the skins, Font and texture, the Scope, Copy to every Ka0s addon… | The library's Skin tab (`O.AppearanceTab`), drawn for this addon's skin owner: where the look comes from (the Ka0s skins or EllesmereUI), which of the nine Ka0s skins, a font and a texture over the skin's default (each with its reset button), the **Font outline** (All text, HUD text only, the default, or Off), **Ignore settings panel** (on for a new profile) and **Ignore fonts**, and the copy to every other loaded Ka0s addon that uses skins. It changes the settings pages (while the panel is not ignored), the debug console and the unlock overlay, never the panels themselves. |
 
 Every **Moving panels** tooltip ends on the same sentence, because the switch those rows depend on is
 a fixed element of another tab (`options-ui-§15`): *"These only matter while panels are unlocked:
@@ -189,7 +189,7 @@ hidden.)
 
 | Page | Tabs | Rows per tab |
 |---|---|---|
-| General | **Master controls**, **Moving panels**, **New panels**, **Skin** | 7, 4, 4, 7 — 22 schema rows; the Skin tab's 7 are `skipRender` and drawn by the library's tab |
+| General | **Master controls**, **Moving panels**, **New panels**, **Skin** | 7, 4, 4, 8 — 23 schema rows; the Skin tab's 8 are `skipRender` and drawn by the library's tab |
 | Panels | **General**, **Size and position**, **Background and border**, **Accent bar**, **Artwork**, **Opacity and fade** | 6, 8, 6, 11, 16, 3 — bespoke controls, not schema rows. `General` carries the six page-wide acts and is **first**, which is what `options-ui-§14` requires of the escape it grants (standard v2.40.0); the chrome band keeps the picker and the create box, one row. |
 | Profiles | none | AceDBOptions' own page |
 
@@ -497,7 +497,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:93`, called at `:685` — because the page
+`currentRecord()` survives — `settings/PanelEditor.lua:104`, called at `:717` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enable this panel** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
@@ -567,6 +567,12 @@ this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15, called
 leaves a gap beside the closed dropdown. It lives in the library because AceGUI's widget registry is
 process-global — one slot every addon in the client shares — so five Ka0s addons each fixing it
 privately meant the last one loaded owned the dropdown for all of them.
+
+Every per-panel media picker is the previewing `LSM30_*` type for its kind (`options-ui-§23`):
+`makeMediaDropdown` has no plain `Dropdown` fallback, because every `C.PANEL_FIELD_MEDIA` kind has one.
+The descriptor also passes `getLSM`, for `O.LSMValues` and the font preload on a panel's show. The
+per-panel pickers still replace their composed `values` with `NS.Compat.MediaList`, so the preload is
+what the library's Skin tab Font list needs, not what they read.
 
 **An open dropdown does not follow, or close with, a scrolling page.** AceGUI parents a dropdown's
 open list to `UIParent` so it can overflow the panel, which means scrolling slides the control away
@@ -650,7 +656,7 @@ the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the foot
 button are one implementation and the confirmation cannot be reached round.
 
 **The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
-panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:355`,
-`:362-367`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:377`,
+`:384-389`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
 `options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
 tooltip and the contract agree again.

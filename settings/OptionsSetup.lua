@@ -120,6 +120,9 @@ if not lib then
     AppearanceTab = function() return { key = "Appearance", label = "Skin", render = noop } end,
     AppearanceRows = function() return nil end,
     SkinPicker = function() return nil end, HideSkinPicker = noop,
+    -- SkinVerb, the act behind `/pm skin` (OptionsSkinPicker minor 3, LibKa0s v1.82.0): nothing to
+    -- show, and the reason "absent", on which NS.RunSkinVerb prints the library-absent line.
+    SkinVerb = function() return nil, "absent" end,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for
@@ -282,6 +285,11 @@ NS.Helpers = lib:New({
     if NS.addon and NS.addon.ScheduleTimer then return NS.addon:ScheduleTimer(fn, delay) end
   end,
 
+  -- O.LSMValues and the font preload on a panel's show (options-ui-§23). The per-panel pickers
+  -- replace their composed `values` with NS.Compat.MediaList, this addon's None and Solid in its
+  -- own order, so this lookup is not their list; the preload is what the Skin tab's Font list needs.
+  getLSM = function() return LibStub and LibStub("LibSharedMedia-3.0", true) end,
+
   -- DELIBERATELY NOT PASSED:
   --
   --   colorDecode / colorEncode — this addon has no COLOR schema row. Its colors live on panel
@@ -290,9 +298,6 @@ NS.Helpers = lib:New({
   --                { r, g, b, a } arrays to and from the library's named keys itself. There is
   --                nothing left for a codec to translate. If a color schema row is ever added,
   --                both majors take the same pair.
-  --   getLSM     — the media dropdowns are per-PANEL pickers, and PanelEditor replaces each
-  --                composed row's `values` with NS.Compat.MediaList (this addon's None and Solid,
-  --                in its own order), so the library's LSM lookup is never the list a player sees.
   --   skipRestoreAll / afterRestoreAll — still not passed, although `resetProfile` now is. The
   --                global reset is still `Sl:DoResetAll`, not O.RestoreAllDefaults: `Sl:CliResetAll`
   --                and every control confirm through `Sl:ConfirmResetAll`, which then calls

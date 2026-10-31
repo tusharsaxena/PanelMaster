@@ -790,7 +790,7 @@ Total.
 - Disabled: the gate is the VERB TABLE's, so the live set is the standard's own
 - Disabled: the refusal is the COLLECTION'S line, built by the library (slash-commands-§7)
 - COMMANDS: `profile` sits beside the settings verbs, described through NS.L
-- COMMANDS: the verb order is pinned, twenty-one verbs
+- COMMANDS: the verb order is pinned, twenty-two verbs
 - Profile verb: bare `/pm profile` lists the profiles, current marked, then the hint
 - Profile verb: an existing name switches, and the profile handler runs
 - Profile verb: the current profile answers 'already', and switches nothing
@@ -923,6 +923,20 @@ Total.
 - Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
 - Skin seam: a profile's stored exceptions and overrides are applied with its skin
 
+### test_skin_outline.lua (11)
+
+- Skin outline: a fresh profile stores HUD text only, the library's default
+- Skin outline: a stored All text stays, with no migration (D-10)
+- Skin outline: the reader answers the new default before the store exists
+- Skin outline: the schema row offers the library's three modes, in its order
+- Skin outline: the write seam stores media.outline, and leaves it alone when it is nil
+- Skin outline: another addon's copy reaches the store through WriteChoice
+- Skin outline: the row's write applies the mode live
+- Skin outline: /pm set takes a known mode and refuses one the library does not know
+- Skin outline: the stored mode is applied with the stored pair (load, profile events)
+- Skin outline: a profile switch applies the incoming profile's mode
+- Skin outline: a profile reset puts the outline back to HUD text only
+
 ### test_skin_literals.lua (8)
 
 - Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list
@@ -958,6 +972,15 @@ Total.
 - Skin picker: a profile event takes a shown picker down before the new profile's skin
 - Skin picker: the stand-down takes a shown picker down unseen
 
+### test_skin_verb.lua (6)
+
+- Skin verb: the row sits right after config, with the library's help words
+- Skin verb: /pm skin shows the picker on a profile that has closed it
+- Skin verb: NS.RunSkinVerb hands O.SkinVerb this addon's first-run spec
+- Skin verb: in combat every call prints the library's gray line and shows nothing
+- Skin verb: refused while the addon is disabled, and no picker shows
+- Skin verb: without LibKa0s the verb prints the library-absent line
+
 ### test_skin_settings.lua (7)
 
 - skin settings: with the panel painted, every editor widget is painted for this owner
@@ -967,6 +990,10 @@ Total.
 - skin settings: the band's picker and create box follow the Scope and a switch in place
 - skin settings: the Profiles page paints the tree AceConfigDialog drew, after every Open
 - skin settings: degraded, PaintAce and PaintAceTree paint nothing
+
+### test_glyphs.lua (1)
+
+- glyphs: display strings use only characters every shipped skin face draws
 
 ### test_launcher.lua (37)
 
@@ -1146,7 +1173,7 @@ Total.
 - L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
-### test_surface_parity.lua (8)
+### test_surface_parity.lua (9)
 
 - Parity: the Core seam's degraded surface matches the live one
 - Parity: the DebugLog seam's degraded surface matches the live one
@@ -1156,6 +1183,7 @@ Total.
 - Parity: the Schema seam's degraded surface matches the live one, on both levels
 - Parity: the Bus seam's degraded surface matches the live one
 - Parity: the Lifecycle seam's degraded surface matches the live one
+- Parity: the Skin seam's degraded facade answers every name of the library's VOCAB
 
 ### test_harness.lua (18)
 
@@ -1218,7 +1246,7 @@ Total.
 - layoutcap self-test: a census that states nothing is told apart from one that states none
 - layoutcap self-test: the exempt set takes folders as well as paths
 
-### test_options_groups.lua (7)
+### test_options_groups.lua (9)
 
 - optionsgroups: the Panels editor types out no canonical block
 - optionsgroups: the three blocks are composed through the record-backed arm (#48)
@@ -1227,6 +1255,8 @@ Total.
 - optionsgroups: the Background and border blocks follow a write made elsewhere (#48)
 - optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
 - optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
+- optionsgroups: the descriptor passes getLSM, so LSMValues and the font preload work
+- optionsgroups: every panel media field has a preview picker, with no plain fallback
 
 ### test_settings_guard.lua (2)
 
@@ -1315,20 +1345,23 @@ Total.
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
+| test_skin_outline.lua | 11 |
 | test_skin_literals.lua | 8 |
 | test_skin_unlock.lua | 5 |
 | test_skin_picker.lua | 13 |
+| test_skin_verb.lua | 6 |
 | test_skin_settings.lua | 7 |
+| test_glyphs.lua | 1 |
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 53 |
-| test_surface_parity.lua | 8 |
+| test_surface_parity.lua | 9 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 13 |
-| test_options_groups.lua | 7 |
+| test_options_groups.lua | 9 |
 | test_settings_guard.lua | 2 |
 | test_settings_layout.lua | 8 |
 | test_register.lua | 1 |
@@ -1338,4 +1371,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1140** |
+| **Total** | **1161** |

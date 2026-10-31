@@ -139,8 +139,10 @@ test("Skin seam: the skin.* keys default to Ka0s Default, as skipRender Appearan
   assertEqual(d.ignoreFonts, false)
   assertEqual(d.font, "")
   assertEqual(d.texture, "")
+  assertEqual(d.outline, "hud")
   assertEqual(d.pickerSeen, false)
-  for _, leaf in ipairs({ "source", "skin", "ignorePanel", "ignoreFonts", "font", "texture", "pickerSeen" }) do
+  for _, leaf in ipairs({ "source", "skin", "ignorePanel", "ignoreFonts", "font", "texture", "outline",
+                          "pickerSeen" }) do
     local path = "skin." .. leaf
     local row = NS.Schema:FindRow(path)
     assertTrue(row ~= nil, path .. " is not a schema row")

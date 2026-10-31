@@ -12,6 +12,16 @@ it too, and prints help only if the table has no `config` row.
 
 Schema-driven verbs: `config version get set list reset resetall debug diagnostics enable disable help`.
 
+**The `skin` verb** (LibKa0s v1.82.0, ruling D-16) sits right after `config`, the reserved verb
+behind every skinned Ka0s addon's `/xx skin`. Its help is the library's `VERB_HELP`, *Choose a skin:
+open the skin picker*. `NS.RunSkinVerb` (`core/SkinSetup.lua`) hands `O.SkinVerb` the spec the
+first-run start builds (`NS.SkinPickerSpec()`), so `/pm skin` shows the picker a new profile shows
+whatever `skin.pickerSeen` says; only the player's close marks it seen. It takes no arguments. It
+is a feature verb, not a live one, so the dispatcher refuses it while the addon is disabled. In
+combat the library prints its gray line on every call and shows nothing; queued behind another Ka0s
+addon's picker, or with no picker to show, the library says so. Without LibKa0s the Options stub's
+`SkinVerb` answers `nil, "absent"` and the verb prints the collection's library-absent line.
+
 **The `profile` verb** lists the profiles or switches to one. The row is this addon's, next to
 `resetall`; what it does is `LibKa0s-Slash-1.0`'s `CliProfile` (Slash minor 17), which reads AceDB's
 db through the descriptor's `profiles` field, asked at call time. Bare `/pm profile` prints a green

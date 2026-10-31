@@ -30,8 +30,8 @@ File-by-file table and the seam/load-order contract in **[module-map.md](module-
 
 Two SavedVariables scopes: `defaults/Profile.lua` (the panel registry, `nextID`, the settings block;
 profile-scoped) and `defaults/Global.lua` (`schemaVersion = 0` and LibDBIcon's `minimap` table).
-`settings/Schema.lua` holds **22 rows in 4 tabs** — `Master controls` (7, composed), `Moving panels` (4),
-`New panels` (4) and the Skin tab's seven `skin.*` rows (all `skipRender`, drawn by the library's
+`settings/Schema.lua` holds **23 rows in 4 tabs** — `Master controls` (7, composed), `Moving panels` (4),
+`New panels` (4) and the Skin tab's eight `skin.*` rows (all `skipRender`, drawn by the library's
 `O.AppearanceTab`; [§ Skins](#skins)) — on a `LibKa0s-Schema-1.0` runtime behind this addon's own seam names, and is the
 sole sender of `SettingsChanged`. The same runtime also holds the **50 per-panel `panel.<field>`
 rows** that `settings/PanelSchema.lua` generates (below); they are hidden from every profile
@@ -128,7 +128,11 @@ takes the player's panels with it because `db.profile.panels` is in the profile.
 list, never created). The row is this addon's and the behavior is `LibKa0s-Slash-1.0`'s
 `CliProfile` (minor 17), reached through the descriptor's `profiles` field; the switch lands in
 AceDB's `SetProfile`, so the same `OnProfileChanged` handler a Profiles-page switch runs does the
-rebuild and writes the one `[Profile]` line. Panel verbs: `new
+rebuild and writes the one `[Profile]` line. Skin verb: `skin`, right after `config`, the
+reserved verb behind every Ka0s addon's `/xx skin` (LibKa0s v1.82.0's `O.SkinVerb`): it opens the
+first-run skin picker on demand, whatever `skin.pickerSeen` says, through `NS.RunSkinVerb`
+(`core/SkinSetup.lua`). A feature verb, so it is refused while disabled; in combat the library
+prints its gray line on every call; without LibKa0s it prints the library-absent line. Panel verbs: `new
 delete rename panels panel unlock lock recover` — no `test` verb, because unlocking is this addon's
 test mode (`options-ui-§15`). `enable` and `disable` are **aliases** onto `settings.enabled`, the
 path the Master-controls checkbox writes, through the same write seam and holding no state of their
@@ -139,7 +143,7 @@ version enable disable debug perf diagnostics get set list reset resetall`, read
 so does `profile`, the one host verb this addon adds to its own live set so a player can switch to a
 profile where the addon is enabled without opening the panel.
 `perf` sits in that set as a **reservation**, not a command: this addon does not register it —
-`NS.COMMANDS` (`settings/Slash.lua:381`) holds 21 verbs and `perf` is not among them — so the
+`NS.COMMANDS` (`settings/Slash.lua:381`) holds 22 verbs and `perf` is not among them — so the
 twelve reserved verbs it does ship, `diagnostics` among them (`debug-logging-§14`), are the ones
 that behave normally. The only
 refusal is the addon's own **feature verbs**, on one tagged line naming `/pm enable`, and that gate is **the library's**:
@@ -304,7 +308,16 @@ addon draws).
   `PLAYER_REGEN_ENABLED`. It is titled *Choose a skin*, with this addon's label (`NS.BRAND`, from
   `RegisterOwner`) on its own line above the dropdown (the library's `frame.ownerLabel`). It has no eye (no window or test mode to preview in, X6), so `CLAUDE.md`
   declares only the `settings` icon. Only the player's close marks it seen; the stand-down and a
-  profile event take it down unseen.
+  profile event take it down unseen. `/pm skin` shows the same picker on demand (`NS.RunSkinVerb`,
+  `O.SkinVerb`), whatever `skin.pickerSeen` says.
+- **The font outline.** `skin.outline` (LibKa0s v1.82.0, ruling D-06): **All text**,
+  **HUD text only** (the default since LibKa0s v1.83.0, D-10; a stored mode stays) or **Off**, the Skin tab's *Font outline*, stored through the same write seam
+  as the font and texture overrides (`media.outline`) and applied with `Skin:SetOutline` beside
+  them at load and on every profile event. It reaches the skinned text this addon draws (the
+  unlock overlay's label, the settings pages while not ignored, the console's chrome), never the
+  console's monospace face. This addon has **no font settings of its own**: no element stores a
+  face, size, color or flags, because the panels draw no text, so the font-setting minimum set
+  (D-07) and the HUD size scale (D-09) have nothing to apply to here.
 - **EllesmereUI.** The library's provider (`skin.source = "eui"`); `EllesmereUI` is in the TOC's
   `OptionalDeps`. PanelMaster has no bridge of its own.
 - **The color gate.** `tests/test_skin_literals.lua` fails on a color literal outside
@@ -365,7 +378,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 
 | Doc | Status | Trigger |
 |---|---|---|
-| `slash-dispatch.md` | Present | 21 verbs in `NS.COMMANDS` (threshold is 8) |
+| `slash-dispatch.md` | Present | 22 verbs in `NS.COMMANDS` (threshold is 8) |
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
 | `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) `NS.DebugBuild`, `NS.DebugOnce` and the tag-by-tag Coverage map are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |

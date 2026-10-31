@@ -195,13 +195,21 @@ S.Schema = {
   { path = "skin.font", default = "", type = "string",
     widget = "EditBox", skipRender = true,
     group = "Appearance", label = "Font",
-    tooltip = "The font this addon's text uses, over the skin's own. Empty keeps the skin's.",
+    tooltip = "The font this addon's text uses, over the skin's default. Empty keeps the skin's.",
     onChange = function(v) NS.ApplySkinOverride(v, nil) end },
   { path = "skin.texture", default = "", type = "string",
     widget = "EditBox", skipRender = true,
     group = "Appearance", label = "Texture",
-    tooltip = "The texture this addon's bars use, over the skin's own. Empty keeps the skin's.",
+    tooltip = "The texture this addon's bars use, over the skin's default. Empty keeps the skin's.",
     onChange = function(v) NS.ApplySkinOverride(nil, v) end },
+  -- The font outline (LibKa0s-Skin-1.0 minor 9, ruling D-06), drawn by the same tab as its "Font
+  -- outline" dropdown: where the skin outlines this addon's text. The library's three modes, in its
+  -- order; `/pm set skin.outline` validates against them. Its onChange applies only its own half.
+  { path = "skin.outline", default = "hud", type = "string",
+    widget = "Dropdown", skipRender = true, values = NS.SKIN_OUTLINE_OPTIONS,
+    group = "Appearance", label = "Font outline",
+    tooltip = "Where the skin outlines this addon's text: all of it, its HUD text only, or nowhere.",
+    onChange = function(v) NS.ApplySkinOutline(v) end },
   -- The first-run skin picker's memory: set when the picker closes, so it shows once per profile
   -- (rollout ruling O3: false on every profile, old and new). Drawn by nothing; a reset puts it
   -- back to false.

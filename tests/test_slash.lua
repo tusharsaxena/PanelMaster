@@ -1064,8 +1064,9 @@ test("COMMANDS: `profile` sits beside the settings verbs, described through NS.L
   assertEqual(got, "My Alt")
 end)
 
-test("COMMANDS: the verb order is pinned, twenty-one verbs", function()
-  local want = { "config", "enable", "disable", "new", "delete", "rename", "panels", "panel",
+test("COMMANDS: the verb order is pinned, twenty-two verbs", function()
+  -- `skin` joined right after `config` at LibKa0s v1.82.0 (O.SkinVerb, ruling D-16).
+  local want = { "config", "skin", "enable", "disable", "new", "delete", "rename", "panels", "panel",
                  "unlock", "lock", "recover", "version", "get", "set", "list", "reset", "resetall",
                  "profile", "debug", "diagnostics", "help" }
   local have = {}

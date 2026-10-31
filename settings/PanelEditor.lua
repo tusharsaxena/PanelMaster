@@ -307,10 +307,11 @@ function E.SliderSpan(value, minV, maxV)
   return math.min(minV, v), math.max(maxV, v)
 end
 
--- A LibSharedMedia picker for one of a panel's media fields.
+-- A LibSharedMedia picker for one of a panel's media fields: always the previewing LSM30_* type
+-- (options-ui-§23), never a plain Dropdown over media keys. Every C.PANEL_FIELD_MEDIA kind has one.
 local function makeMediaDropdown(ctx, row, rec, field, label, tooltip)
   local mediaType = C.PANEL_FIELD_MEDIA[field]
-  local dd = acquire(LSM_WIDGET[mediaType] or "Dropdown")
+  local dd = acquire(LSM_WIDGET[mediaType])
   trackDropdown(ctx, dd)
   dd:SetLabel(label)
   dd:SetRelativeWidth(0.5)

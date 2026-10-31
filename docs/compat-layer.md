@@ -127,7 +127,7 @@ session. It is queried at click time rather than cached for that reason.
 **When the API is absent.** `None` and `Solid`, in that order. `None` always comes first, whether or
 not LSM ships it, because "draw no border" is a choice this addon's UI must always be able to offer.
 
-**Who calls it.** `settings/PanelEditor.lua:311` and `settings/PanelEditorTabs.lua:246` (the media dropdowns) and
+**Who calls it.** `settings/PanelEditor.lua:323` and `settings/PanelEditorTabs.lua:257` (the media dropdowns) and
 `settings/PanelSchema.lua:98` (`COERCE.media`, matching a name typed on the command line against the live list).
 
 ## `MouseIsOver` — `core/Compat.lua:180`

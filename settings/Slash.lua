@@ -382,6 +382,12 @@ NS.COMMANDS = {
   { "config",   "Open settings", function()
       if NS.Panel then NS.Panel:Open() end
     end },
+  -- The reserved `skin` verb (LibKa0s v1.82.0's O.SkinVerb, ruling D-16), right after `config`: the
+  -- skin picker a new profile shows, on demand, whatever `skin.pickerSeen` says. A FEATURE verb,
+  -- not a live one, so the dispatcher refuses it while the addon is disabled; its help is the
+  -- library's VERB_HELP, one wording for every host. core/SkinSetup.lua's NS.RunSkinVerb prints the
+  -- library-absent line itself when the Options stub answers nil, "absent".
+  { "skin",     "Choose a skin: open the skin picker", function() NS.RunSkinVerb() end },
   -- THE RESERVED PAIR (slash-commands-§2), and they are ALIASES rather than a second switch. Both
   -- write `NS.Schema.ENABLED_PATH` -- the very path the Master controls *Enable Ka0s Panel Master*
   -- checkbox writes -- through the very seam it writes through, so the two surfaces can never show
