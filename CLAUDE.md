@@ -70,7 +70,7 @@ second line is the **icon declaration** (kit revision 40, `library-stack-§7`): 
 `tools/prune-icons.lua`, and both lines move in the same commit as the bytes. The four names are
 the marks the library draws for this addon: the debug console's copy and clear buttons and its
 close button, and the first-run skin picker's settings gear (no `eye`: the picker is shown with no
-preview, because the addon has no window or test mode to preview a skin in). No code here passes a catalog name of its own (`NS.Icon` has no caller).
+preview, because the addon has no window or test mode to preview a skin in). No code here passes a catalog name of its own (`NS.Icon` has no caller, and stays because `library-stack-§8` requires the seam to publish it).
 
 The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/ARCHITECTURE.md`
 ▸ *Documented deviations* citing `performance-§1` directly, on the bounded-cost argument reasoned in

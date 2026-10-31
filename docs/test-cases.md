@@ -943,7 +943,7 @@ Total.
 - Skin literals: every allow-list entry carries its reason
 - Skin literals: the gate is falsifiable, a planted literal of each shape is reported
 - Skin literals: the host copy of Ka0s Default equals the library's Ka0s Default
-- Skin literals: NS.SkinColor keeps a call site's arity, NS.SkinEscape its bytes
+- Skin literals: NS.SkinEscape keeps the bytes of the literal it replaced
 - Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
 - Skin literals: the picker's (disabled) marker follows the skin's text.disabled
 - Skin literals: the picker's (disabled) marker stays today's gray while the panel is ignored

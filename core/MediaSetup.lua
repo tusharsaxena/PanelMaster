@@ -51,6 +51,9 @@ local Media = LibStub and LibStub("LibKa0s-Media-1.0", true)
 --- one it ships. Both mean the same thing to a caller, which is "draw something else",
 --- and both are far better than a plausible path to a texture that is not there.
 ---
+--- NO CALLER HERE, AND IT STAYS. Every mark this addon shows is drawn by the library, so nothing in
+--- this repo calls this. library-stack-§8 requires this file to publish it all the same.
+---
 --- @param name string  an entry of the library's `ICONS` catalog, e.g. "close"
 --- @return string|nil
 function NS.Icon(name)
