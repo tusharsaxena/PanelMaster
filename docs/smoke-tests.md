@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 30 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal |
+| SKIN-1 to 30 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0 |
 
 ## Before you start
 

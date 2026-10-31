@@ -665,12 +665,19 @@ test("L trap (Options tripwire): Options reads no descriptor L", function()
   assertTrue(rawget(o, "LAYOUT") ~= nil,
     "Options lost lib.LAYOUT — `local L = lib.LAYOUT` inside that file is GEOMETRY, not a locale, " ..
     "and a source sweep for `d.L` must not be confused by it")
-  for _, path in ipairs({ "libs/LibKa0s/Options.lua", "libs/LibKa0s/OptionsWidgets.lua",
-                          "libs/LibKa0s/OptionsScroll.lua" }) do
-    local src = readFile(path)
-    assertTrue(src:find("d.L", 1, true) == nil and src:find("d%.L") == nil,
-      path .. " reads a descriptor L — replace this tripwire with a real rendered assertion")
+  -- Derived from the library's own load list, so a peel that moves code into a new Options*.lua
+  -- stays swept: lib.__AttachFlow in OptionsFlow.lua receives the descriptor too.
+  local swept = {}
+  for _, path in ipairs(Loader.xmlFiles("libs/LibKa0s/LibKa0s.xml")) do
+    if path:match("/Options[^/]*%.lua$") then
+      swept[path] = true
+      local src = readFile(path)
+      assertTrue(src:find("d.L", 1, true) == nil and src:find("d%.L") == nil,
+        path .. " reads a descriptor L — replace this tripwire with a real rendered assertion")
+    end
   end
+  assertTrue(swept["libs/LibKa0s/Options.lua"] and swept["libs/LibKa0s/OptionsFlow.lua"],
+    "the Options* filter no longer reaches Options.lua and OptionsFlow.lua, so it swept too little")
 end)
 
 -- ── the LSM30_Border fixup, promoted out of core/LSMPatch.lua ──────────────────
