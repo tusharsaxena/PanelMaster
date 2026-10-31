@@ -109,7 +109,7 @@ local SUITES = {
   -- OnClick and reads better beside the file that builds it.
   "test_disabled",
   "test_sunnart",
-  "test_libka0s", "test_surface_parity", "test_harness",
+  "test_libka0s", "test_libka0s_degraded", "test_surface_parity", "test_harness",
   { name = "test_prose", dir = "tests/_kit/" },
   "test_vendor_sync",
   -- The layout-§1 cap gate is the kit's since revision 25, declared by the pair (basename, kit

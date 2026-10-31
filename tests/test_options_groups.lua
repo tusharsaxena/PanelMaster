@@ -184,10 +184,10 @@ end)
 -- landing in the record THROUGH `NS.Registry:Set`, and a write made elsewhere reaching the control
 -- through the page's refreshers.
 --
--- The LSM30_* widget types are registered for the duration of each case, because the library's
--- dropdown maker falls back to a plain Dropdown when AceGUI-3.0-SharedMediaWidgets is absent (the
--- harness default) while the hand-written picker asked for the LSM type by name. With the types
--- registered both paths build the widget a player with SharedMediaWidgets gets.
+-- The Ka0sMedia_* widget types are registered for the duration of each case, with the two stock
+-- types they build on, because the library answers no picker for a registry without those (the
+-- harness default). Both the composed rows and the hand-written picker then build the type a player
+-- gets.
 
 local NS = T.NS
 local E  = NS.PanelEditor
@@ -204,7 +204,7 @@ end
 -- `field` is a control outside the three blocks, pinned by label only so the block's position on
 -- its tab is pinned too.
 local BORDER = {
-  { label = "Border style", type = "LSM30_Border", field = "borderTexture", media = "border",
+  { label = "Border style", type = "Ka0sMedia_Border", field = "borderTexture", media = "border",
     tip = "The edge style drawn around the panel. 'Solid' is a plain outline; 'None' removes it." },
   { label = "Border thickness (px)", type = "Slider", field = "borderSize", min = 0, max = 32, step = 1,
     tip = "Border thickness. 0 removes the border entirely." },
@@ -217,7 +217,7 @@ local BORDER = {
 }
 
 local BAR = {
-  { label = "Bar texture", type = "LSM30_Statusbar", field = "accentTexture", media = "statusbar",
+  { label = "Bar texture", type = "Ka0sMedia_Statusbar", field = "accentTexture", media = "statusbar",
     tip = "The texture the accent bar is drawn with, from your LibSharedMedia status-bar textures. "
       .. "'Solid' is a flat color." },
   { label = "Bar opacity", type = "Slider", field = "accentAlpha", min = 0, max = 1, step = 0.05,
@@ -234,7 +234,7 @@ local BAR = {
 }
 
 local BAR_BORDER = {
-  { label = "Border style", type = "LSM30_Border", field = "accentBorderTexture", media = "border",
+  { label = "Border style", type = "Ka0sMedia_Border", field = "accentBorderTexture", media = "border",
     tip = "The edge style drawn around the accent bar. 'None' removes it, as does a thickness of 0." },
   { label = "Border thickness (px)", type = "Slider", field = "accentBorderSize", min = 0, max = 32,
     step = 1, tip = "Thickness of the accent bar's own border. 0 removes it entirely." },
@@ -260,7 +260,8 @@ local TABS = {
   {
     name = "Background and border",
     blocks = { BORDER },
-    order = concat({ { label = "Background texture" }, { label = "Background color" },
+    order = concat({ { label = "Background texture", type = "Ka0sMedia_Background" },
+                     { label = "Background color" },
                      { label = "Use class color" } }, BORDER),
   },
   {
@@ -274,17 +275,19 @@ local TABS = {
 }
 
 local CONTROL_TYPES = { CheckBox = true, Slider = true, ColorPicker = true, Dropdown = true,
-                        LSM30_Border = true, LSM30_Statusbar = true, LSM30_Background = true }
+                        Ka0sMedia_Border = true, Ka0sMedia_Statusbar = true,
+                        Ka0sMedia_Background = true }
 
---- Register the LSM30_* widget types for the length of `fn`, then take them back out.
-local function withLSMWidgets(fn)
+--- Register the Ka0sMedia_* widget types and their two bases for the length of `fn`, then take them
+--- back out. Above the library's own version, so it keeps these stand-ins rather than its pickers,
+--- which need a real Dropdown. Ka0sMedia_Item is the library's, registered once the bases are there.
+local function withMediaWidgets(fn)
   local gui = T.mocks.LibStub("AceGUI-3.0", true)
-  local added = {}
-  for _, wt in ipairs({ "LSM30_Border", "LSM30_Statusbar", "LSM30_Background" }) do
-    if not gui.WidgetRegistry[wt] then
-      added[#added + 1] = wt
-      gui:RegisterWidgetType(wt, function() return T.mocks.__makeAceGUIWidget(wt) end, 1)
-    end
+  local added = { "Ka0sMedia_Item" }
+  for _, wt in ipairs({ "Dropdown", "Dropdown-Item-Toggle", "Ka0sMedia_Border", "Ka0sMedia_Statusbar",
+                        "Ka0sMedia_Background", "Ka0sMedia_Font" }) do
+    added[#added + 1] = wt
+    gui:RegisterWidgetType(wt, function() return T.mocks.__makeAceGUIWidget(wt) end, 99)
   end
   local ok, err = pcall(fn)
   for _, wt in ipairs(added) do gui.WidgetRegistry[wt], gui.__widgetVersions[wt] = nil, nil end
@@ -433,7 +436,7 @@ for _, spec in ipairs(TABS) do
   local tab = spec.name
   test("optionsgroups: the " .. tab .. " tab draws its canonical blocks control by control (#48)",
   function()
-    withLSMWidgets(function()
+    withMediaWidgets(function()
       NS.Registry:DeleteAll()
       local rec = NS.Registry:New("Characterized")
       local _, controls, rowOf = renderTab(rec, tab)
@@ -452,6 +455,7 @@ for _, spec in ipairs(TABS) do
 
       for i, e in ipairs(spec.order) do
         if e.field then assertControl(controls[i], e, rec) end
+        if e.type then assertEqual(controls[i].type, e.type, e.label .. " drew the wrong widget") end
       end
 
       -- Rows: the mandated four land as two pairs, and this addon's own rows after them.
@@ -485,7 +489,7 @@ for _, spec in ipairs(TABS) do
   end)
 
   test("optionsgroups: the " .. tab .. " blocks follow a write made elsewhere (#48)", function()
-    withLSMWidgets(function()
+    withMediaWidgets(function()
       NS.Registry:DeleteAll()
       local rec = NS.Registry:New("Followed")
       local ctx, controls = renderTab(rec, tab)
@@ -516,15 +520,34 @@ test("optionsgroups: the descriptor passes getLSM, so LSMValues and the font pre
   assertEqual(got["Probe background"], "Probe background", "O.LSMValues read no LibSharedMedia")
 end)
 
-test("optionsgroups: every panel media field has a preview picker, with no plain fallback", function()
-  local LSM_WIDGET = NS.Panel.__ui.LSM_WIDGET
-  local C = NS.Constants
-  for field, kind in pairs(C.PANEL_FIELD_MEDIA) do
-    assertEqual(LSM_WIDGET[kind], "LSM30_" .. kind:sub(1, 1):upper() .. kind:sub(2), field)
-  end
-  local fh = assert(io.open("settings/PanelEditor.lua", "rb"))
-  local src = fh:read("*a")
+test("optionsgroups: every panel media field has a preview picker", function()
+  local mediaWidgetType = NS.Panel.__ui.mediaWidgetType
+  withMediaWidgets(function()
+    for field, kind in pairs(NS.Constants.PANEL_FIELD_MEDIA) do
+      assertEqual(mediaWidgetType(kind), "Ka0sMedia_" .. kind:sub(1, 1):upper() .. kind:sub(2), field)
+    end
+  end)
+end)
+
+test("optionsgroups: a media row the library draws is tracked, so a scroll closes its list", function()
+  withMediaWidgets(function()
+    local ctx = NS.Helpers.CreatePanel(nil, "Probe", { pageKey = "probe" })
+    ctx.dropdowns, ctx.refreshers = {}, {}
+    local rowType = NS.Helpers.RenderField(ctx, { type = "string", path = "probe", label = "Probe",
+      dialogControl = "Ka0sMedia_Font", values = function() return { A = "A" } end,
+      get = function() return "A" end, set = function() end }, NS.Helpers.EnsureScroll(ctx)).type
+    assertEqual(rowType, "Ka0sMedia_Font", "the row did not draw the picker")
+    assertEqual(#ctx.dropdowns, 1, "settings/Panel.lua's RenderField wrap did not track the picker")
+  end)
+end)
+
+test("optionsgroups: the addon loads no second media widget library", function()
+  local fh = assert(io.open("PanelMaster.toc", "rb"))
+  local toc = fh:read("*a")
   fh:close()
-  assertTrue(not src:find('LSM_WIDGET%[mediaType%] or "Dropdown"'),
-    "makeMediaDropdown falls back to a plain Dropdown over media keys")
+  assertTrue(not toc:find("SharedMediaWidgets", 1, true), "the TOC still names the widget library")
+  assertTrue(toc:find("libs\\LibSharedMedia-3.0\\lib.xml", 1, true) ~= nil,
+    "the pickers read LibSharedMedia, and the TOC no longer loads it")
+  assertTrue(io.open("libs/AceGUI-3.0-SharedMediaWidgets/widget.xml", "rb") == nil,
+    "the widget library is still vendored")
 end)

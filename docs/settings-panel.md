@@ -1,6 +1,6 @@
 # Settings panel
 
-The Blizzard-canvas options UI: the four pages, what each covers, and the three widget workarounds
+The Blizzard-canvas options UI: the four pages, what each covers, and the two widget workarounds
 that keep AceGUI usable inside a canvas.
 
 Blizzard `Settings.RegisterCanvasLayoutCategory` + raw AceGUI (`options-ui`). A parent category and
@@ -80,8 +80,8 @@ which are kept for the session and so repainted in place on `NS.Skin.OnLooksChan
 back stock when the Scope ignores the panel), and the Profiles tree, which `NS.SkinPaintAceTree`
 paints after every `AceConfigDialog:Open`. The picker's *(disabled)* marker reads `text.disabled`
 through `NS.SkinPanelEscape`. While **Ignore settings panel** is on, the default, none of it is
-painted, and the marker keeps Ka0s Default's gray. The LibSharedMedia pull-outs, the color picker window and the confirmation popups stay
-stock under every skin.
+painted, and the marker keeps Ka0s Default's gray. The media pickers' pull-outs paint with the skin as well. The color picker window and the
+confirmation popups stay stock under every skin.
 
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws
 your panels immediately.
@@ -497,7 +497,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:104`, called at `:717` — because the page
+`currentRecord()` survives — `settings/PanelEditor.lua:105`, called at `:712` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enable this panel** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
@@ -544,9 +544,9 @@ its own — an empty title bar plus padding, near twenty pixels — and with it 
 rather than inherited from a widget that happened to have one. `EDITOR_SELECT_GAP` went the other
 way: it spaced the panel dropdown from the editor, and the picker is in the band now.
 
-#### Three widget workarounds
+#### Two widget workarounds
 
-All three are live-client-only and none can be caught by the headless suite, which stubs AceGUI out.
+Both are live-client-only and neither can be caught by the headless suite, which stubs AceGUI out.
 
 **`AceGUI-3.0` ColorPicker (v28) does not reliably fire `OnValueConfirmed`.** Its `ColorCallback` is
 invoked twice — once from `swatchFunc` (`isAlpha` nil) and once from `opacityFunc` (`isAlpha` true) —
@@ -558,18 +558,16 @@ swatch still updates, because it calls `SetColor` on itself first, which is why 
 swatch is the color I picked but the panel is unchanged". Both color pickers therefore bind
 **`OnValueChanged` as well**, which fires while the picker is open and gives a live preview besides.
 
-**`AceGUI-3.0-SharedMediaWidgets` fire `OnValueChanged` without calling `SetValue` first**, because
-upstream assumes AceConfigDialog re-renders the whole panel afterwards. This is a canvas panel that
-does not, so each callback pushes the value back explicitly or the dropdown keeps displaying the old
-name even though the write landed. There is a further fixup for the same library, and it is no longer
-this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15, called once from
-`settings/OptionsSetup.lua`) collapses the `LSM30_Border` widget's 42px preview tile, which otherwise
-leaves a gap beside the closed dropdown. It lives in the library because AceGUI's widget registry is
-process-global — one slot every addon in the client shares — so five Ka0s addons each fixing it
-privately meant the last one loaded owned the dropdown for all of them.
+Every per-panel media picker is the previewing `Ka0sMedia_*` type for its kind (`options-ui-§23`), the
+only media picker in the collection (the owner's ruling of 2026-11-01). `makeMediaDropdown` asks the
+library for it, through `NS.MediaWidgetType(kind)` (`settings/OptionsSetup.lua`, over the library's `lib.__MediaWidgetType`), each time it builds one, because the asking is
+what registers the type. The answer is nil only for a registry with no stock `Dropdown` to build on,
+which is the headless harness, and the page then draws that stock `Dropdown`. A picker is the stock
+widget under a type name of its own, so it sets its value before firing `OnValueChanged` and a pick
+shows in the closed row with no help from the callback. Its pull-out wears the skin, because the
+library aliases the type to `Dropdown` for `NS.SkinPaintAce`. The rows read LibSharedMedia, which is
+still vendored; AceGUI-3.0-SharedMediaWidgets is not.
 
-Every per-panel media picker is the previewing `LSM30_*` type for its kind (`options-ui-§23`):
-`makeMediaDropdown` has no plain `Dropdown` fallback, because every `C.PANEL_FIELD_MEDIA` kind has one.
 The descriptor also passes `getLSM`, for `O.LSMValues` and the font preload on a panel's show. The
 per-panel pickers still replace their composed `values` with `NS.Compat.MediaList`, so the preload is
 what the library's Skin tab Font list needs, not what they read.
@@ -582,12 +580,11 @@ open one on any **user-driven** scroll. Tracking lives on the **render context**
 one registry per page: a single file-level list meant the Panels page's rebuild emptied the General
 page's tracking too, after which scrolling General left its open list floating.
 
-Closing dispatches on the widget's **`type`**, never on which fields it happens to carry. A stock
-AceGUI `Dropdown` also has a `.dropdown` field — its Blizzard `UIDropDownMenuTemplate` frame — so an
-earlier field-presence check handed that frame to the SharedMedia library's pool-return, which
-iterates a `contentRepo` a Blizzard frame does not have. The error propagated out of `MoveScroll` and
-killed mouse-wheel scrolling on the whole page. A unit test pins the dispatch against hand-built
-widget stand-ins, since the headless harness builds no real widgets.
+Closing dispatches on the widget's **`type`**, never on which fields it happens to carry: a stock
+`Dropdown` and each `Ka0sMedia_*` picker close through their AceGUI pull-out, and any other type is
+left alone. An earlier field-presence check raised out of `MoveScroll` and killed mouse-wheel
+scrolling on the whole page. A unit test pins the dispatch against hand-built widget stand-ins, since
+the headless harness builds no real widgets.
 
 The two scroll hooks: the `MoveScroll` override (the wheel path) and the
 scrollbar's `OnMouseDown` (the drag path). `OnMouseDown` rather than the slider's `OnValueChanged`,
@@ -656,7 +653,7 @@ the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the foot
 button are one implementation and the confirmation cannot be reached round.
 
 **The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
-panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:377`,
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:376`,
 `:384-389`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
 `options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
 tooltip and the contract agree again.

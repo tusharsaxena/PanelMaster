@@ -32,10 +32,9 @@ local addonName, NS = ...
 --                           events), and with it the stored exceptions, overrides and outline; a
 --                           nil half keeps that half (each Skin tab row's onChange).
 --   NS.SKIN_SOURCE_OPTIONS  the source row's values, and NS.SKIN_OPTIONS the skin row's (every
---   NS.SKIN_OPTIONS         registered skin, in the library's order). settings/Schema.lua reads both.
+--   NS.SKIN_OPTIONS         registered skin, in the library's order). settings/Schema.lua reads both, and
+--                           NS.SKIN_OUTLINE_OPTIONS.
 --   NS.SKIN_FALLBACK        the host copy of the Ka0s Default tokens the degraded facade answers.
---   NS.SkinColor(name)      a color token as a call site writes it (three components when opaque),
---                           so a literal that became a token keeps its arity on Ka0s Default.
 --   NS.SkinEscape(name)     a color token as a "|cffrrggbb" escape, rounded to the byte, so markup
 --                           written as a literal keeps its bytes on Ka0s Default (|cff808080).
 --   NS.SkinPanelEscape(name) the same for markup on a settings page: Ka0s Default's escape while
@@ -71,8 +70,8 @@ local addonName, NS = ...
 --
 -- After core/CoreSetup.lua and core/Namespace.lua (NS.BRAND, the owner's label) and before
 -- core/DebugLogSetup.lua and every file that builds a frame, so NS.Skin exists for all of them.
--- settings/Schema.lua reads NS.SKIN_SOURCE_OPTIONS and NS.SKIN_OPTIONS at file load and is far
--- below. Registered at FILE LOAD, never at PLAYER_LOGIN (skinning-§1): the EllesmereUI provider has
+-- settings/Schema.lua reads NS.SKIN_SOURCE_OPTIONS, NS.SKIN_OPTIONS and NS.SKIN_OUTLINE_OPTIONS at
+-- file load and is far below. Registered at FILE LOAD, never at PLAYER_LOGIN (skinning-§1): the EllesmereUI provider has
 -- to offer the owner to EllesmereUI before EllesmereUI dispatches its skins (skinning-§5). Nothing
 -- here reads the profile at load: RegisterOwner calls `get` once, before AceDB exists, and it
 -- answers Ka0s Default; the profile's pair is applied by NS.ApplySkinChoice right after NS:InitDB
@@ -113,17 +112,6 @@ NS.SKIN_FALLBACK = {
   -- leaves on GameFontNormal's own gold.
   ["list.dropLine"] = { 1, 0.82, 0, 0.9 },
 }
-
---- A color token's components AS A CALL SITE WRITES THEM: r, g, b for an opaque color and r, g, b,
---- a otherwise (the library's own text and vertex rule), so a site that passed three components
---- before it read a token still passes three on Ka0s Default. nil for a token the skin leaves alone.
---- Read through NS.Skin at call time, so it answers the live skin, or the host copy degraded.
-function NS.SkinColor(name)
-  local r, g, b, a = NS.Skin.Color(name)
-  if r == nil then return nil end
-  if a == nil or a == 1 then return r, g, b end
-  return r, g, b, a
-end
 
 --- A color token as a "|cffrrggbb" escape, each channel rounded to the nearest byte (.5 is 80), so
 --- markup a call site wrote as a literal keeps its bytes on Ka0s Default. nil for a token the skin

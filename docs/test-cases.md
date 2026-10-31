@@ -943,7 +943,7 @@ Total.
 - Skin literals: every allow-list entry carries its reason
 - Skin literals: the gate is falsifiable, a planted literal of each shape is reported
 - Skin literals: the host copy of Ka0s Default equals the library's Ka0s Default
-- Skin literals: NS.SkinColor keeps a call site's arity, NS.SkinEscape its bytes
+- Skin literals: NS.SkinEscape keeps the bytes of the literal it replaced
 - Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
 - Skin literals: the picker's (disabled) marker follows the skin's text.disabled
 - Skin literals: the picker's (disabled) marker stays today's gray while the panel is ignored
@@ -1117,7 +1117,7 @@ Total.
 - Fit: FIT still shrinks below a scale of 1, and fitting does not spiral
 - Fit: a junk rotation or scale fits to what will actually be drawn
 
-### test_libka0s.lua (53)
+### test_libka0s.lua (37)
 
 - LibKa0s: the vendored library registered for real
 - LibKa0s: NS.Core is the live Core library, not a stub
@@ -1149,7 +1149,16 @@ Total.
 - Options ADAPTER: a library-built dropdown lands in this addon's open-dropdown registry
 - Options ADAPTER: the scroll frame keeps this addon's dropdown-close hooks
 - L trap (Options tripwire): Options reads no descriptor L
-- Options seam: the live wiring patches LSM30_Border through the library, not a private copy
+- L trap (Core tripwire): Core cannot express the trap
+- L trap (matcher): the guard catches every offending spelling, not one
+- Bus seam: a mistyped Registry message key raises at the read
+- Bus seam: a mistyped Schema message key raises at the read
+- Bus seam: with no library the same reads answer nil and do not raise
+- L trap: no seam file hands a descriptor this addon's locale table
+- L trap: the seam-file list covers every file that calls lib:New
+
+### test_libka0s_degraded.lua (15)
+
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
 - Degraded install: the notice is announced exactly ONCE, before the first line
@@ -1164,13 +1173,6 @@ Total.
 - Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing
 - Degraded install: /pm profile prints the library-absent line and switches nothing
 - Degraded install: the help index still lists every verb
-- L trap (Core tripwire): Core cannot express the trap
-- L trap (matcher): the guard catches every offending spelling, not one
-- Bus seam: a mistyped Registry message key raises at the read
-- Bus seam: a mistyped Schema message key raises at the read
-- Bus seam: with no library the same reads answer nil and do not raise
-- L trap: no seam file hands a descriptor this addon's locale table
-- L trap: the seam-file list covers every file that calls lib:New
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
 ### test_surface_parity.lua (9)
@@ -1246,7 +1248,7 @@ Total.
 - layoutcap self-test: a census that states nothing is told apart from one that states none
 - layoutcap self-test: the exempt set takes folders as well as paths
 
-### test_options_groups.lua (9)
+### test_options_groups.lua (11)
 
 - optionsgroups: the Panels editor types out no canonical block
 - optionsgroups: the three blocks are composed through the record-backed arm (#48)
@@ -1256,7 +1258,9 @@ Total.
 - optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
 - optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
 - optionsgroups: the descriptor passes getLSM, so LSMValues and the font preload work
-- optionsgroups: every panel media field has a preview picker, with no plain fallback
+- optionsgroups: every panel media field has a preview picker
+- optionsgroups: a media row the library draws is tracked, so a scroll closes its list
+- optionsgroups: the addon loads no second media widget library
 
 ### test_settings_guard.lua (2)
 
@@ -1355,13 +1359,14 @@ Total.
 | test_launcher.lua | 37 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
-| test_libka0s.lua | 53 |
+| test_libka0s.lua | 37 |
+| test_libka0s_degraded.lua | 15 |
 | test_surface_parity.lua | 9 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 13 |
-| test_options_groups.lua | 9 |
+| test_options_groups.lua | 11 |
 | test_settings_guard.lua | 2 |
 | test_settings_layout.lua | 8 |
 | test_register.lua | 1 |
@@ -1371,4 +1376,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1161** |
+| **Total** | **1162** |

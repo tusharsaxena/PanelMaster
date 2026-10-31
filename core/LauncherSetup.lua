@@ -76,7 +76,7 @@ local addonName, NS = ...
 -- and the stub below answers every member this addon calls. No LibDataBroker means no object at all
 -- and the library says so on one line. No LibDBIcon means the broker plugin still registers and only
 -- the minimap button is missing — which is the honest half-state, and why `Register` answers false
--- there. None of the three raises, and `tests/test_libka0s.lua` pins that.
+-- there. None of the three raises, and `tests/test_launcher.lua` pins that.
 
 local C = NS.Constants
 

@@ -10,7 +10,8 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- above is AceGUI itself, not the Options instance's owner proxy, so nothing else paints them:
 -- NS.SkinPaintAce does (core/SkinSetup.lua), nothing while the Scope's Ignore settings panel is on
 -- (a new profile's default), and the release hands each back to AceGUI's shared pool stock. The
--- LSM30 media pickers and the ColorPicker's Blizzard frame have no painter and stay stock.
+-- Ka0sMedia_* pickers paint as a Dropdown. The ColorPicker's Blizzard frame has no painter and stays
+-- stock.
 local function acquire(wtype)
   local w = AceGUI:Create(wtype)
   NS.SkinPaintAce(w)
@@ -46,7 +47,7 @@ end
 -- settings/Panel.lua — the page has to be able to reach the editor by the time it registers, so the
 -- editor cannot depend on the page existing yet at load time.
 local attachTooltip, ensureScroll
-local trackDropdown, forgetDropdowns, safeRun, LSM_WIDGET
+local trackDropdown, forgetDropdowns, safeRun, mediaWidgetType
 local SECTION_HEADING_H
 
 -- The editor tabs' half, published by settings/PanelEditorTabs.lua as E.__editorTabs and bound here
@@ -68,7 +69,7 @@ local function bindHelpers()
   if not ui then return end
   attachTooltip,  ensureScroll                    = ui.attachTooltip, ui.ensureScroll
   trackDropdown,  forgetDropdowns, safeRun        = ui.trackDropdown, ui.forgetDropdowns, ui.safeRun
-  LSM_WIDGET                                      = ui.LSM_WIDGET
+  mediaWidgetType                                 = ui.mediaWidgetType
   SECTION_HEADING_H                               = ui.SECTION_HEADING_H
 end
 
@@ -307,11 +308,11 @@ function E.SliderSpan(value, minV, maxV)
   return math.min(minV, v), math.max(maxV, v)
 end
 
--- A LibSharedMedia picker for one of a panel's media fields: always the previewing LSM30_* type
--- (options-ui-§23), never a plain Dropdown over media keys. Every C.PANEL_FIELD_MEDIA kind has one.
+-- A LibSharedMedia picker for one of a panel's media fields: the previewing Ka0sMedia_* type
+-- (options-ui-§23). Every C.PANEL_FIELD_MEDIA kind has one.
 local function makeMediaDropdown(ctx, row, rec, field, label, tooltip)
   local mediaType = C.PANEL_FIELD_MEDIA[field]
-  local dd = acquire(LSM_WIDGET[mediaType])
+  local dd = acquire(mediaWidgetType(mediaType))
   trackDropdown(ctx, dd)
   dd:SetLabel(label)
   dd:SetRelativeWidth(0.5)
@@ -329,12 +330,6 @@ local function makeMediaDropdown(ctx, row, rec, field, label, tooltip)
 
   dd:SetCallback("OnValueChanged", function(_, _, value)
     NS.Registry:Set(rec.id, field, value)
-    -- The AceGUI-3.0-SharedMediaWidgets widgets fire OnValueChanged from their own click handler
-    -- WITHOUT calling SetValue first — upstream assumes AceConfigDialog re-renders the whole panel
-    -- afterwards. This is a canvas panel that does not re-render on a value change, so without this
-    -- push the widget keeps displaying the old name even though the write landed. Harmlessly
-    -- idempotent for the stock Dropdown, which already SetValue'd itself.
-    dd:SetValue(value)
   end)
   attachTooltip(dd, label, tooltip)
   row:AddChild(dd)

@@ -93,41 +93,27 @@ local function forgetDropdowns(ctx)
 end
 P.__forgetDropdownsForTest = forgetDropdowns
 
--- The LSM media type → the AceGUI widget registered by libs/AceGUI-3.0-SharedMediaWidgets. Those
--- widgets render a preview swatch of each texture in the dropdown, which for a texture picker is the
--- entire point — a list of names tells you nothing about what they look like.
-local LSM_WIDGET = {
-  background = "LSM30_Background",
-  border     = "LSM30_Border",
-  statusbar  = "LSM30_Statusbar",
+-- The AceGUI type of a dropdown this page tracks: the stock one and the library's media pickers
+-- (OptionsMedia.lua), which are the stock one under type names of their own. A picker renders a
+-- preview swatch of each texture in its list, which for a texture picker is the entire point: a
+-- list of names tells you nothing about what they look like.
+local IS_DROPDOWN = {
+  Dropdown             = true,
+  Ka0sMedia_Background = true,
+  Ka0sMedia_Border     = true,
+  Ka0sMedia_Font       = true,
+  Ka0sMedia_Statusbar  = true,
 }
-
--- The same names as a set, for telling the two families of dropdown apart when closing them.
-local IS_LSM_WIDGET = {}
-for _, widgetType in pairs(LSM_WIDGET) do IS_LSM_WIDGET[widgetType] = true end
 
 -- Close whichever tracked dropdown is open.
 --
 -- Dispatch is on the widget's `type`, NOT on which fields it happens to have. That distinction is
--- the whole bug this function once had: a stock AceGUI Dropdown ALSO carries a `.dropdown` field —
--- its Blizzard `UIDropDownMenuTemplate` frame — so a field-presence check handed that frame to
--- AGSMW's pool-return, which expects one of its own frames and iterates a `contentRepo` the Blizzard
--- frame does not have. The resulting error propagated out of `MoveScroll` and killed mouse-wheel
--- scrolling on the whole page.
+-- the whole bug this function once had: a field-presence check treated a stock `.dropdown` frame as
+-- something else and raised out of `MoveScroll`, which killed mouse-wheel scrolling on the whole
+-- page. Every type here owns an AceGUI "Dropdown-Pullout", so they all close the same way.
 function P.__closeOpenDropdowns(ctx)
-  local AGSMW
   for _, widget in ipairs(ctx.dropdowns) do
-    if IS_LSM_WIDGET[widget.type] then
-      -- AceGUI-3.0-SharedMediaWidgets: a plain frame from its own pool, RETURNED rather than hidden,
-      -- so the widget's next click opens it instead of toggling it shut.
-      if widget.dropdown then
-        AGSMW = AGSMW or (LibStub and LibStub("AceGUISharedMediaWidgets-1.0", true))
-        if AGSMW and AGSMW.ReturnDropDownFrame then
-          widget.dropdown = AGSMW:ReturnDropDownFrame(widget.dropdown)
-        end
-      end
-    elseif widget.pullout and widget.pullout.Close then
-      -- Stock AceGUI Dropdown: an AceGUI "Dropdown-Pullout" widget it owns.
+    if IS_DROPDOWN[widget.type] and widget.pullout and widget.pullout.Close then
       widget.pullout:Close()
     end
   end
@@ -162,7 +148,7 @@ if baseRenderField then
     local widget = baseRenderField(ctx, row, parent, relWidth)
     -- Only a dropdown needs tracking, and only on a ctx that has a registry — the library's own
     -- suites build ctxs that do not.
-    if widget and ctx.dropdowns and (widget.type == "Dropdown" or IS_LSM_WIDGET[widget.type]) then
+    if widget and ctx.dropdowns and IS_DROPDOWN[widget.type] then
       trackDropdown(ctx, widget)
     end
     return widget
@@ -261,7 +247,7 @@ P.__ui = {
   forgetDropdowns = forgetDropdowns,   -- host: same
   safeRun         = safeRun,           -- host: the library pcalls its own closures, not the
                                        --       editor's rebuilders
-  LSM_WIDGET      = LSM_WIDGET,        -- host: the per-panel media pickers are PanelEditor's, drawn
+  mediaWidgetType = NS.MediaWidgetType, -- library: the per-panel media pickers are PanelEditor's, drawn
                                        --       from NS.Registry rather than from a schema row
 }
 

@@ -321,35 +321,38 @@ test("Panel: one page's rebuild does not deregister another page's dropdowns", f
 end)
 
 test("Panel: closing dropdowns dispatches on widget TYPE, not on field presence", function()
-  -- The regression pin. A stock AceGUI Dropdown ALSO has a `.dropdown` field (its Blizzard
-  -- UIDropDownMenuTemplate frame), so a field-presence check handed that frame to the SharedMedia
-  -- library's pool-return, which iterates a `contentRepo` the Blizzard frame does not have. The
-  -- error propagated out of MoveScroll and killed mouse-wheel scrolling on the entire page.
-  local closed, returned = false, false
+  -- The regression pin. A field-presence check once raised out of MoveScroll and killed mouse-wheel
+  -- scrolling on the entire page. Every tracked type closes through its AceGUI pull-out, and a
+  -- `.dropdown` field is nothing to this routine.
+  local closed = {}
+  local function pullout(name) return { Close = function() closed[name] = true end } end
   local stock = {
     type = "Dropdown",
     dropdown = { itIsABlizzardFrame = true },   -- present, and MUST NOT be touched
-    pullout = { Close = function() closed = true end },
+    pullout = pullout("stock"),
   }
-  local lsm = {
-    type = "LSM30_Border",
-    dropdown = { contentRepo = {}, __returned = function() returned = true end },
-  }
+  local picker = { type = "Ka0sMedia_Border", pullout = pullout("picker") }
+  local font = { type = "Ka0sMedia_Font", pullout = pullout("font") }
+  local other = { type = "SomeFutureWidget", pullout = pullout("other") }
   local ctx = fakeCtx()
   P.__registerDropdownForTest(ctx, stock)
-  P.__registerDropdownForTest(ctx, lsm)
+  P.__registerDropdownForTest(ctx, picker)
+  P.__registerDropdownForTest(ctx, font)
+  P.__registerDropdownForTest(ctx, other)
 
   P.__closeOpenDropdowns(ctx)
 
-  assertTrue(closed, "the stock dropdown's pullout was not closed")
-  assertFalse(returned, "the stock dropdown was routed down the SharedMedia path")
+  assertTrue(closed.stock, "the stock dropdown's pullout was not closed")
+  assertTrue(closed.picker, "a border picker's pullout was not closed")
+  assertTrue(closed.font, "a font picker's pullout was not closed")
+  assertFalse(closed.other, "an unknown widget type was closed by what it carries")
 end)
 
 test("Panel: closing an unopened dropdown is a no-op, not an error", function()
   -- Every tracked dropdown is visited on every scroll, and almost all of them are shut.
   local ctx = fakeCtx()
   P.__registerDropdownForTest(ctx, { type = "Dropdown" })
-  P.__registerDropdownForTest(ctx, { type = "LSM30_Statusbar" })
+  P.__registerDropdownForTest(ctx, { type = "Ka0sMedia_Statusbar" })
   P.__closeOpenDropdowns(ctx)
 end)
 

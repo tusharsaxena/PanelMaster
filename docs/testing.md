@@ -17,7 +17,7 @@ lua tests/run.lua     # all suites green; exits non-zero on any failure
 gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
 vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
 under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
-addon's code and are linted as such, which is why the figure below is 83 files and not the 26 it
+addon's code and are linted as such, which is why the figure below is 84 files and not the 26 it
 was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
@@ -26,14 +26,14 @@ was before the test tree came in. Before quoting 0/0, confirm what was actually 
 
 ## The suppression gate
 
-`luacheck .` reporting 0/0 has to be a statement about the code rather than about `.luacheckrc`, and
+`~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` reporting 0/0 has to be a statement about the code rather than about `.luacheckrc`, and
 nothing in the two commands above can tell the difference. `tests/test_lintconfig.lua` is what does:
 it loads `.luacheckrc` as Lua under a sandbox — the table luacheck obeys, not text a different
 spelling would slip past — and holds four rules.
 
 | Rule | What it refuses |
 | --- | --- |
-| No top-level `ignore` | An entry there reaches all 83 files, including every file with no business producing the code. |
+| No top-level `ignore` | An entry there reaches all 84 files, including every file with no business producing the code. |
 | No wholesale class switch | `unused_args = false` and eight relatives are the same blanket spelled as a switch. |
 | Every `files[...]` ignore is narrow | The stanza key names one `.lua` file, or the entry names the variable as well as the code (`212/self`). |
 | Every inline `-- luacheck: ignore` names a code | Bare, it silences everything in scope; with only a variable after it, every code for that name. |
@@ -45,7 +45,7 @@ convention that forces the receiver. Next to the blanket sat nineteen files open
 `local addonName, NS = ...` over a folder name they never read, each behind an inline
 `-- luacheck: ignore addonName` — narrow by the letter of the other three rules, and hiding dead code
 in nineteen files. Those nineteen are fixed at source rather than re-parked; the one inline directive
-the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:253`).
+the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:231`).
 
 Adding a suppression is a two-minute job and removing one is an afternoon's. If a warning is genuine,
 fix the code; if the code is right, put the narrowest suppression the gate allows beside it and say
@@ -239,7 +239,7 @@ the table names both. A single "Gates?" column could only ever describe one of t
 
 | Suite | Command | Gates the commit? | Gates the tag? |
 |---|---|---|---|
-| `lint` | `luacheck .` | **yes** | **yes** |
+| `lint` | `~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` | **yes** | **yes** |
 | `tests` | `lua tests/run.lua` | **yes** | **yes** |
 | `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
 | `complexity` | `bash tests/_kit/run-automated-tests.sh --suite complexity` (`lizard -l lua -L 1500` over the kit's sighted shadow, at the kit revision the `CLAUDE.md` provenance line pins; a function-count parity mismatch, or a crashed or bounded lizard run (reported in the kit-41 `crashed` bucket with the file named), is a fail; a crash is never a pass) | no — recorded only | **yes** |

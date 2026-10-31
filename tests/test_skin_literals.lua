@@ -8,7 +8,7 @@
 --   1. A NUMERIC LITERAL IN A COLOR POSITION of a paint call: the r, g or b argument of
 --      SetTextColor, SetColorTexture, SetVertexColor, SetBackdropColor and SetBackdropBorderColor,
 --      the r, g, b after AddLine's text, and the two r, g, b triples after AddDoubleLine's texts.
---      `SetTextColor(0.5, 0.5, 0.5)` fails; `SetTextColor(NS.SkinColor("text.disabled"))` passes.
+--      `SetTextColor(0.5, 0.5, 0.5)` fails; `SetTextColor(NS.Skin.Color("text.disabled"))` passes.
 --      An ALPHA literal over token components (`SetColorTexture(r, g, b, 0.95)`) is not a color:
 --      it is the surface's opacity, the same under every skin, and is left alone on purpose.
 --   2. A `|cff` (any case) escape in code, i.e. markup that names a color byte for byte. Comments
@@ -153,7 +153,7 @@ test("Skin literals: no color literal outside core/SkinSetup.lua and the named a
     end
   end
   assertEqual(#bad, 0, "hard-coded colors the skin cannot reach (read a token through NS.Skin / "
-    .. "NS.SkinColor / NS.SkinEscape, or add an allow-list entry with its reason):\n  "
+    .. "NS.SkinEscape, or add an allow-list entry with its reason):\n  "
     .. table.concat(bad, "\n  "))
   for i, a in ipairs(ALLOW) do
     assertTrue(used[i], ("stale allow-list entry: %s %q matches nothing"):format(a.file, a.find))
@@ -175,7 +175,7 @@ test("Skin literals: the gate is falsifiable, a planted literal of each shape is
     'tt:AddLine("n records", 0.7, 0.7, 0.7)',
     'tt:AddDoubleLine("a", "b", r, g, b, 1, 1, 1)',
     'local s = "|cff808080(disabled)|r"',
-    "fs:SetTextColor(NS.SkinColor(\"text.body\"))   -- 0.9, 0.9, 0.9 in a comment",
+    "fs:SetTextColor(NS.Skin.Color(\"text.body\"))   -- 0.9, 0.9, 0.9 in a comment",
     "tex:SetColorTexture(r, g, b, 0.95)",
     "-- |cffffffff in a comment",
   }, "\n")
@@ -215,10 +215,8 @@ test("Skin literals: the host copy of Ka0s Default equals the library's Ka0s Def
   end)
 end)
 
-test("Skin literals: NS.SkinColor keeps a call site's arity, NS.SkinEscape its bytes", function()
+test("Skin literals: NS.SkinEscape keeps the bytes of the literal it replaced", function()
   onSkin("ka0s", function()
-    assertEqual(select("#", NS.SkinColor("text.disabled")), 3, "an opaque token answers r, g, b")
-    assertEqual(NS.SkinColor("no.such.token"), nil)
     assertEqual(NS.SkinEscape("text.disabled"), "|cff808080",
       "Ka0s Default's disabled gray is the |cff808080 the marker was typed as")
     assertEqual(NS.SkinEscape("no.such.token"), nil)

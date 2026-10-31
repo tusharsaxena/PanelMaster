@@ -2,8 +2,8 @@
 --
 -- Not a suite: `tests/run.lua` never lists it and `Kit.assertSuiteInventory` never sees it, because
 -- it does not match `tests/test_*.lua`. It is the one builder of degraded environments, shared by
--- `tests/test_libka0s.lua` (the seams, the shared cause clause, the `L` trap) and
--- `tests/test_surface_parity.lua` (the stub-surface gate).
+-- `tests/test_libka0s.lua` (the seams, the `L` trap), `tests/test_libka0s_degraded.lua` (the shared
+-- cause clause, the degraded verbs) and `tests/test_surface_parity.lua` (the stub-surface gate).
 --
 -- It lived inside test_libka0s.lua until the parity cases moved out into a file of their own. A
 -- second copy of a load list is a second thing that can be wrong — this file's own comment on
