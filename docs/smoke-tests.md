@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 30 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0 |
+| SKIN-1 to 31 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker |
 
 ## Before you start
 
@@ -276,24 +276,17 @@ client and is run when one is available, not per release.
 - **LOOK-7. Background texture.** **Panels ▸ Background and border ▸ Background texture** → a list
   with a preview swatch per entry, `Solid` among them, plus textures other addons registered. Pick
   `Blizzard Parchment` → the panel fills with it at once, tinted by its background color. Reopen the
-  dropdown → it still reads your pick. **Fail:** it reverted while the panel changed (the LSM
-  widget's value push; `settings-panel.md` ▸ *Three widget workarounds*). Result: pass (owner-marked 2026-10-10)
+  dropdown → it still reads your pick. **Fail:** it reverted while the panel changed. Result:
 - **LOOK-8. Border style.** **Border style** → `Blizzard Tooltip` → a decorative edge with correct
   corners, not four flat bars. **Border thickness (px)** to 8 and back to 1 → the edge scales.
   **Border style** → `None` → the border disappears while the thickness stays; set it back and the
   border returns. Result: pass (owner-marked 2026-10-10)
 - **LOOK-9. The Border dropdown sits flush.** With PanelMaster alone, the closed **Border style**
   dropdown is flush with the controls stacked with it, with no ~42px gap on its left. **Fail:** a
-  gap, meaning `lib.__PatchLSM30Border()` is not taking effect. This passing alone proves nothing
-  about LOOK-10. Result: pass (owner-marked 2026-10-10)
-- **LOOK-10. The Border dropdown with five Ka0s addons loaded.** Enable KickCD, PanelMaster,
-  AbsorbTracker, ConsumableMaster and MultiMeters, log in, and open each addon's Border dropdown
-  (here: **Panels** → a panel → **Border style**). Change the load order (disable and re-enable
-  addons, or rename folders), `/reload`, and walk all five again → in every one the closed control is
-  flush with no ~42px gap, and opening it still draws the per-row previews; nothing differs between
-  passes, and no Lua error. **Fail:** any dropdown that differs from the other four, or changes with
-  load order: AceGUI's `LSM30_Border` slot is process-global, and one library-level registration is
-  what makes the answer independent of who loaded last. Result: pass (owner-marked 2026-10-10)
+  gap. Result:
+- **LOOK-10. Retired (M3-MEDIA, LibKa0s#73).** It walked the shared `LSM30_Border` slot across five
+  addons and load orders. No Ka0s row draws that type now, so the load order has nothing to change.
+  The ID is not reused.
 - **LOOK-11. No background texture.** **Background texture** → `None` → the fill disappears and the
   border stays. Result: pass (owner-marked 2026-10-10)
 - **LOOK-12. Appearance persists.** Set textures, both colors, a border offset and accent settings on
@@ -1046,7 +1039,7 @@ panel names a player types, through two seams:
   ASCII-only `%w` dropped those bytes, so `Ärger` and `Örger` both slugged to `rger`.
 - **Case folding.** `Registry:FindByName` folds with `Util.FoldName`: ASCII plus a UTF-8 case fold
   for Latin-1, Latin Extended-A, Greek and Cyrillic. The Panels list's sort
-  (`settings/PanelEditor.lua:232`) still uses `string.lower`, which folds ASCII only (LOC-4).
+  (`settings/PanelEditor.lua:233`) still uses `string.lower`, which folds ASCII only (LOC-4).
 
 Every label the addon prints is hardcoded English and stays English here; that is scope, not a
 regression. Steps LOC-1 to LOC-4 can be provoked on an English client by typing the same letters into
@@ -1133,9 +1126,9 @@ a Lua error or a taint warning.
   Back on **Ka0s Default** (still with the panel not ignored) → the tab strip and its content box
   keep the **Ka0s look**; the game's look is the **WoW Default** skin (R-2). Open the
   **Panel** picker with a disabled panel → its *(disabled)* marker is in the skin's
-  disabled gray. The LibSharedMedia pull-outs and the color picker window stay stock. Fail: a
-  control that keeps the old skin until `/reload`, or the tab strip or its content box in the game's
-  look under Ka0s Default. Result: Owner reported pass, 2026-10-31
+  disabled gray. The media pickers' pull-outs wear the skin, and the color picker window stays stock.
+  Fail: a control that keeps the old skin until `/reload`, or the tab strip or its content box in the
+  game's look under Ka0s Default. Result:
 - **SKIN-4. The Scope's Ignore settings panel (PM-01, PM-04).** Under **Obsidian**, tick **Ignore
   settings panel** → every settings page goes back to the game's own look at once, the Panels band
   and the editor included, while the debug console and the unlock overlay still wear Obsidian. The
@@ -1272,8 +1265,8 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   with none blank on the first open of the session. Open **Texture** → each row shows its bar, and
   the pull-out wears the skin. On the Panels page open **Background texture**, **Border style**,
   **Bar texture** and the accent bar's **Border style** → each row shows its art, the pull-outs
-  stay stock (they are SharedMediaWidgets' own), and a pick lands, shows in the closed row and
-  survives a `/reload`. Fail: a list of plain names anywhere, or a blank row. Result: Owner reported pass, 2026-10-31
+  wear the skin, and a pick lands, shows in the closed row and survives a `/reload`. Fail: a list of
+  plain names anywhere, or a blank row. Result:
 - **SKIN-28. The skin picker's rows (LibKa0s v1.83.0, LK-A3).** On a fresh profile, or with `/pm skin`
   → under the skin dropdown the window shows **Font** and **Texture**, each with a reset icon at its
   right, **Font outline**, and **Scope** with **Ignore settings panel** and **Ignore fonts** side by
@@ -1290,6 +1283,16 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   tab and switch to **Obsidian** and back → each draws as before and no Lua error appears. The
   first-run skin picker (`/pm skin`) shows every skin row. The diagnostics report's library line
   names Charts between Toast and Media. Result:
+- **SKIN-31. One media picker: a font and a border row (M3-MEDIA, LibKa0s#73).** The addon no longer
+  vendors AceGUI-3.0-SharedMediaWidgets, so disable any standalone copy for this check. Log in with
+  `/console scriptErrors 1`, with **Ignore settings panel** off, under **Obsidian**. On the Skin tab
+  open **Font** → every row is drawn in its own face and the pull-out wears the skin. On **Panels** ▸
+  **Background and border** open **Border style** → every row shows its edge beside its name, the
+  closed row shows a swatch for the chosen border and sits flush with the controls stacked with it,
+  and the pull-out wears the skin. Pick `Blizzard Tooltip` → the panel takes it and the closed row
+  reads it. With the list open, scroll the page with the mouse wheel → the list closes and the page
+  scrolls. Fail: a plain list of names, a stock pull-out under a skin, a list left floating, or any
+  Lua error. Result:
 
 ## Pending sign-off
 
@@ -1314,5 +1317,7 @@ pickers and skin faces run (PM-F01 and PM-F02, Ka0sAddonsCommonTasks
 SKIN-2, SKIN-3, SKIN-6, SKIN-7 and SKIN-8, which v1.83.0's new faces and "Skin's default" had
 re-opened. Each is recorded on its `Result:` line as `Owner reported pass, 2026-10-31`.
 
-Pending: SKIN-28, SKIN-29 and SKIN-30, added by the findings remediation (Ka0sAddonsCommonTasks
-`docs/2026-10-31-FINDINGS_REMEDIATION/`), each with an empty `Result:` line.
+Pending: SKIN-28, SKIN-29, SKIN-30 and SKIN-31, added by the findings remediation
+(Ka0sAddonsCommonTasks `docs/2026-10-31-FINDINGS_REMEDIATION/`), each with an empty `Result:` line.
+That run's one media picker (M3-MEDIA) also rewrote LOOK-7, LOOK-9, SKIN-3 and SKIN-27 and retired
+LOOK-10, so the first four are pending with their `Result:` lines emptied.

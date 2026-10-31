@@ -5,7 +5,7 @@
 ## Version: 1.3.0
 ## IconTexture: Interface\AddOns\PanelMaster\media\logos\panelmaster.logo.128.tga
 ## SavedVariables: PanelMasterDB
-## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets, LibDataBroker-1.1, LibDBIcon-1.0, EllesmereUI
+## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, LibDataBroker-1.1, LibDBIcon-1.0, EllesmereUI
 ## DefaultState: enabled
 ## Category-enUS: UI
 ## X-License: MIT
@@ -24,7 +24,6 @@ libs\AceGUI-3.0\AceGUI-3.0.xml
 libs\AceConfig-3.0\AceConfig-3.0.xml
 libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
 libs\LibSharedMedia-3.0\lib.xml
-libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 # The launcher's two libraries (launcher-§1), AFTER CallbackHandler-1.0 and LibStub, which
 # LibDataBroker resolves at its own file load. LibDBIcon reads the broker object this addon
 # registers, so the pair has to be present before core\LauncherSetup.lua runs; both are

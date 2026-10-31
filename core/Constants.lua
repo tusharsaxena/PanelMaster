@@ -244,7 +244,7 @@ C.MAX_ART_SCALE = 4.0
 --        console: DIALOG (library- and Blizzard-owned). MODAL is the threshold an unlocked panel
 --        at or above which yields the mouse while one of this addon's popups is shown (PAN-Z05).
 --   T7   LibKa0s CopyWindow (the console's Copy): FULLSCREEN, library-owned.
---   T8   AceGUI pullouts, the color picker: FULLSCREEN_DIALOG; LSM30 media pullouts: TOOLTIP.
+--   T8   AceGUI pullouts, the color picker: FULLSCREEN_DIALOG; a pullout while open: TOOLTIP.
 --   T9   GameTooltip: TOOLTIP.
 --   outside: the Blizzard Settings panel (HIGH, toplevel) hosts the settings canvases; the library
 --        chrome inside it (tab strip, combat cover) sets relative levels of its own; the LibDBIcon
@@ -554,7 +554,7 @@ C.PANEL_FIELD_ENUM = {
 }
 
 -- Media field → the LibSharedMedia media type it selects from. Drives both the CLI's validation and
--- the settings page's choice of LSM30_* widget.
+-- the settings page's choice of Ka0sMedia_* picker.
 C.PANEL_FIELD_MEDIA = {
   bgTexture     = "background",
   borderTexture = "border",

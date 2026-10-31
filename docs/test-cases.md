@@ -1248,7 +1248,7 @@ Total.
 - layoutcap self-test: a census that states nothing is told apart from one that states none
 - layoutcap self-test: the exempt set takes folders as well as paths
 
-### test_options_groups.lua (9)
+### test_options_groups.lua (11)
 
 - optionsgroups: the Panels editor types out no canonical block
 - optionsgroups: the three blocks are composed through the record-backed arm (#48)
@@ -1258,7 +1258,9 @@ Total.
 - optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
 - optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
 - optionsgroups: the descriptor passes getLSM, so LSMValues and the font preload work
-- optionsgroups: every panel media field has a preview picker, with no plain fallback
+- optionsgroups: every panel media field has a preview picker
+- optionsgroups: a media row the library draws is tracked, so a scroll closes its list
+- optionsgroups: the addon loads no second media widget library
 
 ### test_settings_guard.lua (2)
 
@@ -1364,7 +1366,7 @@ Total.
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 13 |
-| test_options_groups.lua | 9 |
+| test_options_groups.lua | 11 |
 | test_settings_guard.lua | 2 |
 | test_settings_layout.lua | 8 |
 | test_register.lua | 1 |
@@ -1374,4 +1376,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1160** |
+| **Total** | **1162** |

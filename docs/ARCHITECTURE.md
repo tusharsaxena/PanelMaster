@@ -298,8 +298,8 @@ addon draws).
 - **What does not.** The panels themselves — fill, border, accent bars, accent border, artwork and
   class colors — are the player's content (decision D1): no `fromSkin` companions and **no one-time
   HUD style reset**, so no skin and no upgrade restyles a saved layout. New panels start from the
-  template, not the skin (D2). StaticPopups, GameTooltip's frame, `ColorPickerFrame`, the
-  LibSharedMedia pull-outs and the minimap button stay stock (skinning-§7); chat lines keep their
+  template, not the skin (D2). StaticPopups, GameTooltip's frame, `ColorPickerFrame` and the
+  minimap button stay stock (skinning-§7); chat lines keep their
   colors (X7); the editor tooltips' inline yellow is content markup (X9); the console keeps its
   monospace face.
 - **The first-run skin picker.** `NS.MaybeShowSkinPicker` shows the library's `O.SkinPicker` while
@@ -341,7 +341,7 @@ reads that table, and `tests/test_layers.lua` pins it. The addon's tiers:
   when the last popup closes.
 - **Library and Blizzard tiers it relies on.** The debug console (`DIALOG`), the first-run skin
   picker (`DIALOG`), its copy window
-  (`FULLSCREEN`), AceGUI pullouts and the color picker (`FULLSCREEN_DIALOG`), LSM pullouts and
+  (`FULLSCREEN`), AceGUI pullouts and the color picker (`FULLSCREEN_DIALOG`), an open pullout and
   tooltips (`TOOLTIP`), the Settings panel (`HIGH`) and the LibDBIcon button (`MEDIUM`).
 
 ## Taint Notes
@@ -370,7 +370,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `scope.md` | What the addon draws, and what it deliberately refuses to become |
 | `module-map.md` | Every non-vendored file, what it publishes, and the load order the seams pin |
 | `schema.md` | The two SavedVariables scopes, the panel record, the skin keys, artwork fields, sanitizing, the schema runtime and its stub |
-| `settings-panel.md` | The four canvas pages and the three AceGUI widget workarounds |
+| `settings-panel.md` | The four canvas pages and the two AceGUI widget workarounds |
 | `data-flow.md` | Record → spec → frame, the frame ladder and pool, the leftover-sample sweep, combat, events |
 | `common-tasks.md` | Add a setting, a verb, a panel field, an artwork entry, a migration |
 
@@ -382,7 +382,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `profiles.md` | Present | AceDB profiles are user-visible — the Profiles settings page |
 | `debug.md` | Present | The diagnostics report's sections (`modules/Diagnostics.lua`) `NS.DebugBuild`, `NS.DebugOnce` and the tag-by-tag Coverage map are the addon's own, beyond the library console |
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |
-| `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. The one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and it is no longer this addon's: `lib.__PatchLSM30Border()` (`LibKa0s-Options-1.0` minor 15) owns it for the whole collection, called from `settings/OptionsSetup.lua` |
+| `midnight-quirks.md` | Not applicable | No client-version workaround of the addon's own. The one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and that widget is gone: the library's `Ka0sMedia_*` pickers replaced it |
 | `compat-layer.md` | Present | 8 shims in `core/Compat.lua` (threshold is 3) |
 | `perf-analysis/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
 

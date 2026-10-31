@@ -10,7 +10,8 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 -- above is AceGUI itself, not the Options instance's owner proxy, so nothing else paints them:
 -- NS.SkinPaintAce does (core/SkinSetup.lua), nothing while the Scope's Ignore settings panel is on
 -- (a new profile's default), and the release hands each back to AceGUI's shared pool stock. The
--- LSM30 media pickers and the ColorPicker's Blizzard frame have no painter and stay stock.
+-- Ka0sMedia_* pickers paint as a Dropdown. The ColorPicker's Blizzard frame has no painter and stays
+-- stock.
 local function acquire(wtype)
   local w = AceGUI:Create(wtype)
   NS.SkinPaintAce(w)

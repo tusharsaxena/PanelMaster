@@ -26,7 +26,7 @@ local E = NS.PanelEditor
 local OWNER = "PanelMaster"
 
 -- The types SkinAce has a painter for among what the editor draws; a SimpleGroup has none and the
--- LSM30 pickers are stock by the library's rule.
+-- Ka0sMedia_* pickers draw as the stock Dropdown here, since the fake has no Dropdown to build on.
 local PAINTED = { CheckBox = true, Dropdown = true, EditBox = true, Slider = true, Heading = true,
                   Label = true, ColorPicker = true }
 
