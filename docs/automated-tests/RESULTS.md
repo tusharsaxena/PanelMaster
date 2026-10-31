@@ -32,6 +32,7 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 | Run | Commit | Tree | Version | Lint w/e | Files | Tests | Perf | NLOC | Funcs | Avg NLOC | Avg CCN | Max CCN | CCN warn | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [`20261101-030136`](20261101-030136/) | `d8024b8` | clean | 1.3.0 | 0/0 | 84 | 1162/1/1163 | skip | 20294 | 2543 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20261101-000723`](20261101-000723/) | `d157fe4` | clean | 1.3.0 | 0/0 | 84 | 1161/1/1162 | skip | 20293 | 2537 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20261031-211558`](20261031-211558/) | `5732e01` | clean | 1.3.0 | 0/0 | 84 | 1161/1/1162 | skip | 20287 | 2536 | 7.4 | 2.0 | 15 | 0 | **green** |
 | [`20261031-202058`](20261031-202058/) | `e63877d` | clean | 1.3.0 | 0/0 | 83 | 1161/1/1162 | skip | 20290 | 2537 | 7.4 | 2.0 | 15 | 0 | **green** |
@@ -56,12 +57,11 @@ archaeology, for the same reason a skip is never a pass (`automated-tests-§4`).
 
 ## Test suite
 
-**1162 cases** — 1161 passed, 0 failed, 1 skipped. The generated inventory
-[`20261101-000723/test-cases.md`](20261101-000723/test-cases.md) is the authority on which cases existed at this run;
+**1163 cases** — 1162 passed, 0 failed, 1 skipped. The generated inventory
+[`20261101-030136/test-cases.md`](20261101-030136/test-cases.md) is the authority on which cases existed at this run;
 `docs/test-cases.md` is that same list at HEAD.
 
-The count has been **flat at 1162 across the last 3 runs**. A suite that stopped growing while
-the addon did is a coverage gap, and it is the one thing the table above cannot show.
+Moved **1162 → 1163** since the previous run.
 
 **1 case(s) reported a `skip`.** A skip is counted in the total and never in `passed`, and at
 the release gate it is NOT EVALUATED rather than passed (`automated-tests-§3`).
@@ -85,7 +85,7 @@ never asked.
 
 ## Complexity watch list
 
-Current as of [`20261101-000723`](20261101-000723/) — **this run's measurement, not its diff.** Max CCN **15** across 2537
+Current as of [`20261101-030136`](20261101-030136/) — **this run's measurement, not its diff.** Max CCN **15** across 2543
 functions, **0** of them warned on; 1 file(s) in the 1000–1500 band and 0 over the 1500 cap
 (`layout-§1`).
 
