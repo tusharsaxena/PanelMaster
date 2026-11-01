@@ -27,8 +27,10 @@ local VENDORED = "Interface\\AddOns\\PanelMaster\\libs\\LibKa0s\\media\\"
 -- OptionsSkinPicker) draws the settings gear; its eye is not drawn, because no onPreview is passed
 -- (Ka0sAddonsCommonTasks docs/2026-10-29-SKINNING_ROLLOUT, X6) — which is exactly why they are
 -- listed here: nothing in core/, modules/ or settings/ mentions them, so nothing else in this suite
--- would notice a rename on either side of the seam.
-local DRAWN = { "close", "clear", "copy", "settings" }
+-- would notice a rename on either side of the seam. The other seven are what LibKa0s v1.85.0's
+-- library-drawn marks owe every consumer (releasing.md, Step 8 for v1.85.0; kit revision 49).
+local DRAWN = { "close", "clear", "copy", "settings", "chevron-down", "chevron-up", "confirm",
+  "info", "move", "reset", "volume-high" }
 
 -- ── the seam ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +89,7 @@ end)
 
 test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the console draws", function()
   -- red under: dropping copy from the `LibKa0s icons:` line (a drawn mark the prune would remove,
-  -- so the button draws blank), or adding info to it (a declared mark nothing here draws). The
+  -- so the button draws blank), or adding a name nothing draws. The
   -- kit's vendor gate holds the folder to the declaration; this holds the declaration to DRAWN.
   -- The parser is the kit's own, never a second one written here.
   local VendorSync = dofile("tests/_kit/vendor_sync.lua")

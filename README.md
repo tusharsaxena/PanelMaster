@@ -293,7 +293,8 @@ The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg
 the sizes the client wants and redistributed under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
 
-The debug console's copy, clear and close marks and the skin picker's settings gear are from
+The debug console's copy, clear and close marks, the skin picker's settings gear and the small
+marks LibKa0s draws beside skinned controls are from
 [Open Iconic](https://github.com/iconic/open-iconic) by Waybury, MIT-licensed. Only the icons the
 addon draws are shipped. The icons are bundled inside the LibKa0s payload, with their license text
 beside them.

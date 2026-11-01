@@ -52,7 +52,7 @@ library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here
 problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a
 local edit and the revert reads as a regression with no cause anywhere in this repo's history.
 The one carve-out is `libs/LibKa0s/media/icons/`, pruned to the `LibKa0s icons:` declaration in
-`CLAUDE.md` (the console's `clear`, `close` and `copy`, and the skin picker's `settings` gear) by the tag's `tools/prune-icons.lua`.
+`CLAUDE.md` (the console's `clear`, `close` and `copy`, the skin picker's `settings` gear, and the seven marks LibKa0s v1.85.0 owes every consumer) by the tag's `tools/prune-icons.lua`.
 
 **`NS.LIBKA0S_MISSING` is a cross-file contract, not an implementation detail.** `core/CoreSetup.lua`
 publishes it — *outside* its own missing-library branch, because the later seams read it on **both**
