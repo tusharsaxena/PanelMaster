@@ -49,7 +49,7 @@ and `Bus` for its `Catalog` alone); `Perf` is declined, and `Widgets`, `Pool`, `
 `docs/ARCHITECTURE.md` → *Skins*): every color, face and texture on a surface of this addon's own
 (the unlock overlay, the console, and the settings pages unless the Scope leaves them the
 client's) comes from `NS.Skin`, never a literal
-(`tests/test_skin_literals.lua`), while the panels themselves are the player's content and no skin
+(the kit's `tests/_kit/test_skin_values.lua`, and `tests/_kit/test_skin_switch.lua` over the surfaces `tests/skin_surfaces.lua` declares), while the panels themselves are the player's content and no skin
 or upgrade restyles them. **Never edit anything
 under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and re-vendored back, because the next
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load

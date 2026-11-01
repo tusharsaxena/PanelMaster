@@ -1,189 +1,15 @@
--- tests/test_skin_literals.lua — the hard-coded color gate (PM-02; skinning's anti-pattern #107,
--- binding for this addon since it adopted skins). LootHistory's tests/test_skin_literals.lua, the
--- collection's first adopter, with this addon's allow-list.
+-- tests/test_skin_literals.lua — the cases around the typed-value gate that the gate cannot be.
 --
--- WHAT IT PROVES. That no color this addon draws on its own chrome is a literal the skin cannot
--- reach. Two shapes are caught, in every tracked .lua file under core/, modules/ and settings/:
---
---   1. A NUMERIC LITERAL IN A COLOR POSITION of a paint call: the r, g or b argument of
---      SetTextColor, SetColorTexture, SetVertexColor, SetBackdropColor and SetBackdropBorderColor,
---      the r, g, b after AddLine's text, and the two r, g, b triples after AddDoubleLine's texts.
---      `SetTextColor(0.5, 0.5, 0.5)` fails; `SetTextColor(NS.Skin.Color("text.disabled"))` passes.
---      An ALPHA literal over token components (`SetColorTexture(r, g, b, 0.95)`) is not a color:
---      it is the surface's opacity, the same under every skin, and is left alone on purpose.
---   2. A `|cff` (any case) escape in code, i.e. markup that names a color byte for byte. Comments
---      are stripped first; NS.SkinEscape builds the escapes a token feeds.
---
--- WHAT IT DOES NOT SEE, ON PURPOSE. The panels' own fill, border, accent and artwork colors are the
--- player's per-record values (rollout E8, D1), passed as variables, so the shape never matches them.
---
--- core/SkinSetup.lua is out of scope: it IS the seam, and its host copy of the Ka0s Default tokens
--- (NS.SKIN_FALLBACK) and NS.SkinEscape's format are the literals every other file reads through.
---
--- THE ALLOW-LIST. Each entry names one file, a plain substring the offending line carries, and the
--- reason it is not chrome (the rollout's DECISIONS X7, chat output, and X9, inline content markup).
--- An entry that matches nothing fails the gate, so the list cannot outlive what it excuses.
---
--- IT FAILS RATHER THAN PASSES WHEN IT CANNOT LOOK: no io.popen, no git, or an empty file list is a
--- failure, the bargain tests/test_lintconfig.lua strikes. The fourth case proves the gate is
--- falsifiable: a planted literal of each shape is reported.
+-- The gate itself is the kit's since revision 50 (tests/_kit/test_skin_values.lua, skinning-§1,
+-- anti-pattern #107), wired through Kit.skinValues in tests/run.lua; this suite held a copy of it
+-- until then. What stays is what a scan of the source cannot see: that the seam's host copy of Ka0s
+-- Default (NS.SKIN_FALLBACK) and NS.SkinEscape keep the bytes they replaced, and that the settings
+-- pages' typed markup follows the skin with the Scope cleared and stays stock while the panel is
+-- ignored. The skin-switch half of the same surfaces is declared in tests/skin_surfaces.lua.
 
 local T = _G.PM_TEST
 local NS, mocks = T.NS, T.mocks
-local test, assertEqual, assertTrue, fail = T.test, T.assertEqual, T.assertTrue, T.fail
-local ROOT = T.root or "."
-
-local SEAM = "core/SkinSetup.lua"
-
--- call name -> the argument positions that hold color components.
-local COLOR_ARGS = {
-  SetTextColor = { 1, 2, 3 }, SetColorTexture = { 1, 2, 3 }, SetVertexColor = { 1, 2, 3 },
-  SetBackdropColor = { 1, 2, 3 }, SetBackdropBorderColor = { 1, 2, 3 },
-  AddLine = { 2, 3, 4 }, AddDoubleLine = { 3, 4, 5, 6, 7, 8 },
-}
-
-local ALLOW = {
-  { file = "core/Namespace.lua", find = "NS.PREFIX",
-    why = "the [PM] chat prefix: chat output, not a skinned surface (X7)" },
-  { file = "modules/Unlock.lua", find = "unlock queued",
-    why = "the deferred-unlock chat line: chat output (X7)" },
-  { file = "settings/Schema.lua", find = "schema error",
-    why = "the schema error chat line: chat output (X7)" },
-  { file = "settings/Slash.lua", find = "|cff33ff99",
-    why = "the /pm list and /pm panel dump headers: chat output (X7)" },
-  { file = "settings/Slash.lua", find = "|cffffff00",
-    why = "commands and panel names in the /pm chat lines: chat output (X7)" },
-  { file = "settings/Slash.lua", find = "|cff808080",
-    why = "a disabled panel's name in the /pm list dump: chat output (X7)" },
-  { file = "settings/Slash.lua", find = "|cffffffff",
-    why = "a panel's geometry in the /pm list dump: chat output (X7)" },
-  { file = "settings/Slash.lua", find = "|cFFFFFF00",
-    why = "the library's disabled line, pinned byte for byte to lib.DISABLED_LINE_FORMAT (X7)" },
-}
-
---- Strip a line's trailing comment. `--` never occurs inside a string in these files' color code, so
---- a plain cut is enough; a string that did hold one would only shorten what is scanned.
-local function code(line) return (line:gsub("%-%-.*$", "")) end
-
---- Split a call's argument list at its top-level commas (parens, braces and quotes nest).
-local function splitArgs(s)
-  local args, depth, buf, quote = {}, 0, {}, nil
-  local i = 1
-  while i <= #s do
-    local c = s:sub(i, i)
-    if quote then
-      buf[#buf + 1] = c
-      if c == "\\" then buf[#buf + 1] = s:sub(i + 1, i + 1); i = i + 1
-      elseif c == quote then quote = nil end
-    elseif c == '"' or c == "'" then quote = c; buf[#buf + 1] = c
-    elseif c == "(" or c == "{" or c == "[" then depth = depth + 1; buf[#buf + 1] = c
-    elseif c == ")" or c == "}" or c == "]" then depth = depth - 1; buf[#buf + 1] = c
-    elseif c == "," and depth == 0 then args[#args + 1] = table.concat(buf); buf = {}
-    else buf[#buf + 1] = c end
-    i = i + 1
-  end
-  args[#args + 1] = table.concat(buf)
-  return args
-end
-
-local function isNumber(arg) return arg:match("^%s*%-?%d*%.?%d+%s*$") ~= nil end
-
---- Every offending line of one source text: { line = n, text = what was found }.
-local function scan(src)
-  local lines, hits = {}, {}
-  for ln in (src .. "\n"):gmatch("(.-)\n") do lines[#lines + 1] = code(ln) end
-  local stripped = table.concat(lines, "\n")
-  for name, positions in pairs(COLOR_ARGS) do
-    local init = 1
-    while true do
-      local s, e, args = stripped:find("[:%.]" .. name .. "%s*(%b())", init)
-      if not s then break end
-      init = e + 1
-      local list = splitArgs(args:sub(2, -2))
-      for _, p in ipairs(positions) do
-        if list[p] and isNumber(list[p]) then
-          local n = select(2, stripped:sub(1, s):gsub("\n", "")) + 1
-          hits[#hits + 1] = { line = n, text = lines[n] }
-          break
-        end
-      end
-    end
-  end
-  for n, ln in ipairs(lines) do
-    if ln:find("|c[fF][fF]") then hits[#hits + 1] = { line = n, text = ln } end
-  end
-  return hits
-end
-
-local function allowed(file, text, used)
-  for i, a in ipairs(ALLOW) do
-    if a.file == file and text:find(a.find, 1, true) then used[i] = true; return true end
-  end
-  return false
-end
-
-local function trackedSources()
-  if not io.popen then fail("skin literal gate: io.popen is unavailable, so this gate cannot run") end
-  local p = io.popen("git -C '" .. ROOT .. "' ls-files 'core/*.lua' 'modules/*.lua' 'settings/*.lua' 2>/dev/null")
-  if not p then fail("skin literal gate: io.popen returned no handle") end
-  local files = {}
-  for path in p:lines() do if path ~= SEAM then files[#files + 1] = path end end
-  p:close()
-  if #files == 0 then fail("skin literal gate: git listed no source files, so nothing was scanned") end
-  return files
-end
-
-local function readAll(path)
-  local f = io.open(ROOT .. "/" .. path, "rb")
-  if not f then fail("skin literal gate: cannot read " .. path) end
-  local s = f:read("*a")
-  f:close()
-  return s
-end
-
-test("Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list", function()
-  local bad, used = {}, {}
-  for _, path in ipairs(trackedSources()) do
-    for _, h in ipairs(scan(readAll(path))) do
-      if not allowed(path, h.text, used) then
-        bad[#bad + 1] = ("%s:%d: %s"):format(path, h.line, (h.text:gsub("^%s+", "")))
-      end
-    end
-  end
-  assertEqual(#bad, 0, "hard-coded colors the skin cannot reach (read a token through NS.Skin / "
-    .. "NS.SkinEscape, or add an allow-list entry with its reason):\n  "
-    .. table.concat(bad, "\n  "))
-  for i, a in ipairs(ALLOW) do
-    assertTrue(used[i], ("stale allow-list entry: %s %q matches nothing"):format(a.file, a.find))
-  end
-end)
-
-test("Skin literals: every allow-list entry carries its reason", function()
-  for _, a in ipairs(ALLOW) do
-    assertTrue(type(a.why) == "string" and #a.why > 10, a.file .. " " .. a.find .. ": no reason")
-  end
-end)
-
-test("Skin literals: the gate is falsifiable, a planted literal of each shape is reported", function()
-  local planted = table.concat({
-    "local x = 1",
-    "fs:SetTextColor(0.85, 0.85, 0.85)",
-    "tex:SetColorTexture(r, g,",
-    "  0.5, 1)",
-    'tt:AddLine("n records", 0.7, 0.7, 0.7)',
-    'tt:AddDoubleLine("a", "b", r, g, b, 1, 1, 1)',
-    'local s = "|cff808080(disabled)|r"',
-    "fs:SetTextColor(NS.Skin.Color(\"text.body\"))   -- 0.9, 0.9, 0.9 in a comment",
-    "tex:SetColorTexture(r, g, b, 0.95)",
-    "-- |cffffffff in a comment",
-  }, "\n")
-  local hits = scan(planted)
-  local lines = {}
-  for _, h in ipairs(hits) do lines[#lines + 1] = h.line end
-  table.sort(lines)
-  assertEqual(table.concat(lines, ","), "2,3,5,6,7",
-    "the literal lines and only those (a token call, an alpha literal and a comment pass)")
-end)
+local test, assertEqual, assertTrue = T.test, T.assertEqual, T.assertTrue
 
 -- ── the seam's helpers and the host copy ─────────────────────────────────────────────────────
 
@@ -315,7 +141,7 @@ local function nameTooltip(skin)
 end
 
 -- Change that turns these red: typing |cffffff00 back into settings/PanelEditorTabs.lua (the first
--- case and the gate's scan), or building the word from NS.SkinEscape (the third).
+-- case and the kit's gate), or building the word from NS.SkinEscape (the third).
 test("Skin literals: the editor tooltips' emphasis is today's yellow on Ka0s Default", function()
   withPanelIgnored(false, function()
     assertTrue(nameTooltip("ka0s"):find("|cffffff00", 1, true) ~= nil)

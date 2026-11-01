@@ -390,9 +390,9 @@ if not Skin then
     "TitleBar", "Divider", "Footer", "Card", "Slider", "NavItem", "Drawer", "ListRow", "MenuFrame",
     "Tooltip", "Strip", "Cover", "Text", "ChartStyle", "BarStyle", "IconBorder", "GlowColor",
     "BarTexture", "FontFlags", "HudFontSize", "Mark", "BarGloss",
-    -- LibKa0s v1.85.0: nil is each getter's degraded answer, and nothing here calls one: the
-    -- panels are the player's, so this addon has no HUD surface on these tokens.
-    "HudTextColor", "HudLabelColor", "BarFillColor", "HudShadow",
+    -- LibKa0s v1.85.0: nil is each getter's degraded answer, HoverArt draws nothing, and nothing
+    -- here calls one: the panels are the player's, so this addon has no HUD surface on these tokens.
+    "HudTextColor", "HudLabelColor", "BarFillColor", "HudShadow", "HoverArt",
   }) do S[name] = noop end
 
   S.Token = function(name) return NS.SKIN_FALLBACK[name] end
@@ -441,6 +441,9 @@ if not Skin then
     fs:SetShadowColor(0, 0, 0, on and 1 or 0)
     fs:SetShadowOffset(on and 1 or 0, on and -1 or 0)
   end
+  -- The re-cut v1.85.0 (SkinPaintExtras minor 16): with no skin the stored border stands, so the
+  -- stub answers its first three arguments. No caller here; it must not lose a future one's border.
+  S.BarBorder = function(style, show, size) return style, show, size end
 
   NS.Skin = S
   function NS.ApplySkinChoice() return false, false end

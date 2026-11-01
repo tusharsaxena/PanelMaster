@@ -1348,4 +1348,6 @@ LOOK-10, so the first four are pending with their `Result:` lines emptied.
 
 Owed by the full skinning run (FS-PM-RV and FS-PM-FIX, Ka0sAddonsCommonTasks
 `docs/2026-11-01-FULL_SKINNING/`, LibKa0s v1.85.0): SKIN-32, SKIN-33, SKIN-34 and SKIN-35, new, and
-SKIN-20, whose expected result changed and which lost its 2026-10-30 pass mark.
+SKIN-20, whose expected result changed and which lost its 2026-10-30 pass mark. The re-cut tag's
+per-skin bar, icon, glow and cover values (FS-PM-GATE) changed no expected result here: the panels
+stay the player's and no check names one of those values, so every other mark stands.

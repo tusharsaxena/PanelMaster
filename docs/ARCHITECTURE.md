@@ -321,8 +321,10 @@ addon draws).
   (D-07) and the HUD size scale (D-09) have nothing to apply to here.
 - **EllesmereUI.** The library's provider (`skin.source = "eui"`); `EllesmereUI` is in the TOC's
   `OptionalDeps`. PanelMaster has no bridge of its own.
-- **The color gate.** `tests/test_skin_literals.lua` fails on a color literal outside
-  `core/SkinSetup.lua` and its reasoned allow-list (anti-pattern #107).
+- **The gates.** The kit's `tests/_kit/test_skin_values.lua` (kit revision 50, anti-pattern #107)
+  fails on a typed color or texture outside its categories and the rows in `tests/run.lua`, each
+  naming a cause; its `tests/_kit/test_skin_switch.lua` fails a surface `tests/skin_surfaces.lua`
+  declares that does not change under a probe skin.
 
 ## Frame layering
 

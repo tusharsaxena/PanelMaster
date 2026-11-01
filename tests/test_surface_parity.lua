@@ -374,6 +374,11 @@ test("Parity: the Skin seam's degraded facade answers every name of the library'
   assertEqual(bare.font[3], "THICKOUTLINE")
   assertEqual(bare.shadowColor[4], 0)
   assertEqual(table.concat(bare.shadowOffset, ","), "0,0")
+  -- BarBorder answers its stored three: with no skin the stored border stands.
+  local style, show, size = S.BarBorder("Solid", true, 2, true)
+  assertEqual(style, "Solid")
+  assertEqual(show, true)
+  assertEqual(size, 2)
   -- The outline apply is the degraded arm's quiet no-op.
   assertEqual(degradedNS.ApplySkinOutline(), false)
 end)

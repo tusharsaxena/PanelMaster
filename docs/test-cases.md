@@ -937,11 +937,8 @@ Total.
 - Skin outline: a profile switch applies the incoming profile's mode
 - Skin outline: a profile reset puts the outline back to HUD text only
 
-### test_skin_literals.lua (12)
+### test_skin_literals.lua (9)
 
-- Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list
-- Skin literals: every allow-list entry carries its reason
-- Skin literals: the gate is falsifiable, a planted literal of each shape is reported
 - Skin literals: the host copy of Ka0s Default equals the library's Ka0s Default
 - Skin literals: NS.SkinEscape keeps the bytes of the literal it replaced
 - Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
@@ -1325,6 +1322,24 @@ Total.
 - lizard sighted: parity names every file whose counts differ, and only those
 - lizard sighted: lizard lists every function of a hazard fixture once it is sanitized
 
+### test_skin_values.lua (3)
+
+- skin values: every host row carries its file, substring, why and cause id
+- skin values: no typed value outside the kit's categories and the host's rows
+- skin values: the check is falsifiable, a planted value of each shape is reported
+
+### test_skin_switch.lua (9)
+
+- skin switch: the check is falsifiable, a surface that redraws a literal is reported
+- skin switch: the unlock outline changes
+- skin switch: the unlock outline changes with the Scope ignored
+- skin switch: the unlock name label changes
+- skin switch: the unlock name label changes with the Scope ignored
+- skin switch: the panel picker's (disabled) marker changes
+- skin switch: an editor tooltip's emphasis changes
+- skin switch: the band's create box changes
+- skin switch: an editor heading changes
+
 ## Totals
 
 | Suite | Cases |
@@ -1354,7 +1369,7 @@ Total.
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
 | test_skin_outline.lua | 11 |
-| test_skin_literals.lua | 12 |
+| test_skin_literals.lua | 9 |
 | test_skin_unlock.lua | 5 |
 | test_skin_picker.lua | 13 |
 | test_skin_verb.lua | 6 |
@@ -1379,5 +1394,7 @@ Total.
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
+| test_skin_values.lua | 3 |
+| test_skin_switch.lua | 9 |
 | Skipped | 1 |
-| **Total** | **1166** |
+| **Total** | **1175** |
