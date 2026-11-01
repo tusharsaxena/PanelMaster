@@ -104,6 +104,7 @@ local SUITES = {
   "test_skinsetup", "test_skin_outline", "test_skin_literals", "test_skin_unlock", "test_skin_picker",
   "test_skin_verb", "test_skin_settings", "test_glyphs",
   "test_launcher",
+  "test_launcher_skin_entry",
   -- The stand-down conformance suite slash-commands-§7 MUSTs. Listed here like any other suite,
   -- inside the green gate, and placed AFTER test_launcher because step 8 drives the launcher's own
   -- OnClick and reads better beside the file that builds it.
