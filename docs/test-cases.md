@@ -97,8 +97,8 @@ Total.
 - MediaSetup: NS.MediaFont answers the vendored face, extension and all
 - MediaSetup: the font this addon names is the face the library registers
 - MediaSetup: the console's font is the payload's, not a copy of it
-- MediaSetup: every mark this addon's console draws is one the library ships
-- MediaSetup: the CLAUDE.md icon declaration names exactly the marks the console draws
+- MediaSetup: every mark the library draws for this addon is one it ships
+- MediaSetup: the CLAUDE.md icon declaration names exactly the marks the library draws for this addon
 - MediaSetup: the face the seam names exists in the vendored copy
 - MediaSetup: the TOC loads it before the file that resolves the font path
 - MediaSetup: with no library there is no art and no face, and that is not an error

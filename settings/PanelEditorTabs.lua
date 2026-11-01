@@ -83,8 +83,6 @@ local TAB_ACCENT   = "Accent bar"
 local TAB_ARTWORK  = "Artwork"
 local TAB_FADE     = "Opacity and fade"
 
--- Strip order: the panel whole (the tab the page opens on), where it sits, the three appearance
--- tabs read together, then the one you set once.
 -- A word a tooltip body picks out (cause L5): the skin's gtip.emphasis with the Scope cleared, the
 -- yellow it was typed as while the settings panel is ignored. Text is read at the build, and the
 -- library's re-render of an open page rebuilds this editor after a skin or Scope change.
@@ -92,6 +90,8 @@ local function emphasis(text)
   return (NS.SkinPanelEscape("gtip.emphasis") or "") .. text .. "|r"
 end
 
+-- Strip order: the panel whole (the tab the page opens on), where it sits, the three appearance
+-- tabs read together, then the one you set once.
 local EDITOR_TABS = {
   TAB_GENERAL, TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
 }

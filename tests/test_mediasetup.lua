@@ -75,19 +75,19 @@ end)
 
 -- ── the catalog, against what this addon actually asks for ──────────────────────
 
-test("MediaSetup: every mark this addon's console draws is one the library ships", function()
+test("MediaSetup: every mark the library draws for this addon is one it ships", function()
   -- red under: any name here the catalog does not carry, on either side of a re-vendor.
   local Media = mocks.LibStub("LibKa0s-Media-1.0", true)
   local known = {}
   for _, name in ipairs(Media.ICONS) do known[name] = true end
   for _, name in ipairs(DRAWN) do
     assertTrue(known[name] == true,
-      "the console draws '" .. name .. "', which LibKa0s-Media does not ship")
+      "the library draws '" .. name .. "' for this addon, but LibKa0s-Media does not ship it")
     assertTrue(NS.Icon(name) ~= nil, "NS.Icon answered nil for " .. name)
   end
 end)
 
-test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the console draws", function()
+test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the library draws for this addon", function()
   -- red under: dropping copy from the `LibKa0s icons:` line (a drawn mark the prune would remove,
   -- so the button draws blank), or adding a name nothing draws. The
   -- kit's vendor gate holds the folder to the declaration; this holds the declaration to DRAWN.
@@ -107,7 +107,7 @@ test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the con
   assertEqual(table.concat(declared, ", "), table.concat(drawn, ", "))
   for _, name in ipairs(DRAWN) do
     local art = io.open("libs/LibKa0s/media/icons/" .. name .. ".tga", "rb")
-    assertTrue(art ~= nil, "the console draws '" .. name .. "', which the vendored copy does not ship")
+    assertTrue(art ~= nil, "the library draws '" .. name .. "' for this addon, but the vendored copy does not ship it")
     if art then art:close() end
   end
 end)
