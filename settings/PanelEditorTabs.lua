@@ -85,6 +85,13 @@ local TAB_FADE     = "Opacity and fade"
 
 -- Strip order: the panel whole (the tab the page opens on), where it sits, the three appearance
 -- tabs read together, then the one you set once.
+-- A word a tooltip body picks out (cause L5): the skin's gtip.emphasis with the Scope cleared, the
+-- yellow it was typed as while the settings panel is ignored. Text is read at the build, and the
+-- library's re-render of an open page rebuilds this editor after a skin or Scope change.
+local function emphasis(text)
+  return (NS.SkinPanelEscape("gtip.emphasis") or "") .. text .. "|r"
+end
+
 local EDITOR_TABS = {
   TAB_GENERAL, TAB_POSITION, TAB_SURFACE, TAB_ACCENT, TAB_ARTWORK, TAB_FADE,
 }
@@ -325,10 +332,10 @@ local function buildPanelEditor(ctx, parent, rec)
     -- The frame name lives in the TOOLTIP rather than as a second label. It is reference
     -- information you need once, when anchoring something else to this panel.
     attachTooltip(nameBox, "Panel name",
-      ("Rename this panel. Frame name: |cffffff00%s|r\n\nOther addons and WeakAuras can anchor "
+      ("Rename this panel. Frame name: %s\n\nOther addons and WeakAuras can anchor "
        .. "to this frame by name. It is fixed when the panel is created and does not change when "
        .. "you rename the panel, so anything anchored to it keeps working.")
-        :format(NS.Registry.FrameName(rec)))
+        :format(emphasis(NS.Registry.FrameName(rec))))
     identityRow:AddChild(nameBox)
 
     -- Copy every setting from another panel but its identity and its position -- see
@@ -663,8 +670,8 @@ local function buildPanelEditor(ctx, parent, rec)
     end)
     attachTooltip(pathBox, "Custom texture path",
       "A texture file of your own, given as a full path \226\128\148 either one of the game's own, "
-      .. "like |cffffff00Interface\\DialogFrame\\UI-DialogBox-Gold-Dragon|r, or your own, like "
-      .. "|cffffff00Interface\\AddOns\\MyAddon\\art\\logo.tga|r. Only used while Artwork is set "
+      .. "like " .. emphasis("Interface\\DialogFrame\\UI-DialogBox-Gold-Dragon") .. ", or your own, like "
+      .. emphasis("Interface\\AddOns\\MyAddon\\art\\logo.tga") .. ". Only used while Artwork is set "
       .. "to 'Custom path\226\128\166'.\n\nWoW loads TGA and BLP files whose width and height are "
       .. "both powers of two. Anything else draws as a green square or as nothing, with no error.")
     artPathRow:AddChild(pathBox)
@@ -688,7 +695,7 @@ local function buildPanelEditor(ctx, parent, rec)
     end)
     attachTooltip(fitBtn, "Fit to artwork",
       "Overwrites this panel's Width and Height (Size and position tab) with the artwork's "
-      .. "|cffffff00exact pixel size|r.\n\nA bundled piece is "
+      .. emphasis("exact pixel size") .. ".\n\nA bundled piece is "
       .. "1024x1024 and gives a square panel that big; a three-section Sunn bar is 1536x256 and gives "
       .. "a long thin one. A composed bar uses the size of the WHOLE bar, not one section.\n\nOnly "
       .. "when you press this \226\128\148 nothing resizes on its own. Very large art gives a very "
@@ -705,13 +712,13 @@ local function buildPanelEditor(ctx, parent, rec)
     local artFillRow = editorRow(group)
     optionDropdown(artFillRow, "Fill", "artFill", C.ART_FILL_OPTIONS,
       "How the image is sized inside the panel.\n\n"
-      .. "|cffffff00Native size|r draws it at its authored pixel size, aspect intact.\n"
-      .. "|cffffff00Stretch|r matches the panel exactly and distorts the aspect to do it.\n"
-      .. "|cffffff00Fill (crop)|r covers the panel with the aspect intact, cropping whatever "
+      .. emphasis("Native size") .. " draws it at its authored pixel size, aspect intact.\n"
+      .. emphasis("Stretch") .. " matches the panel exactly and distorts the aspect to do it.\n"
+      .. emphasis("Fill (crop)") .. " covers the panel with the aspect intact, cropping whatever "
       .. "overflows.\n"
-      .. "|cffffff00Fit (contain)|r shows the whole image with the aspect intact, leaving space on "
+      .. emphasis("Fit (contain)") .. " shows the whole image with the aspect intact, leaving space on "
       .. "two sides.\n"
-      .. "|cffffff00Tile|r repeats it at native size across the panel.\n\n"
+      .. emphasis("Tile") .. " repeats it at native size across the panel.\n\n"
       .. "Stretch ignores Scale \226\128\148 a scaled stretch is really Fill or Native size.")
     numberField(artFillRow, "Artwork scale", "artScale", C.MIN_ART_SCALE, C.MAX_ART_SCALE, 0.05,
       "Size multiplier for the artwork.\n\nIgnored entirely by Stretch, which always matches the "
@@ -727,12 +734,12 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "is nowhere for the art to move to.")
     optionDropdown(artPointRow, "Draw layer", "artLayer", C.ART_LAYER_OPTIONS,
       "Where the artwork sits in the panel's stack.\n\n"
-      .. "|cffffff00Behind background|r puts it under the fill, so it only shows through a "
+      .. emphasis("Behind background") .. " puts it under the fill, so it only shows through a "
       .. "background that is transparent or partly so \226\128\148 with a solid background it is "
       .. "invisible.\n"
-      .. "|cffffff00Above background|r is the default: over the fill, under the border and accent "
+      .. emphasis("Above background") .. " is the default: over the fill, under the border and accent "
       .. "bar.\n"
-      .. "|cffffff00Above border and accent|r draws it over everything, which is what a logo wants.")
+      .. emphasis("Above border and accent") .. " draws it over everything, which is what a logo wants.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
     local artOffsetRow = editorRow(group)
@@ -775,8 +782,8 @@ local function buildPanelEditor(ctx, parent, rec)
       .. "panel's own opacity, so a faded panel fades its art with it.")
     optionDropdown(artOpacityRow, "Blend mode", "artBlend", C.ART_BLEND_OPTIONS,
       "How the artwork's pixels combine with what is behind them.\n\n"
-      .. "|cffffff00Normal|r paints over the panel, obeying the image's transparency.\n"
-      .. "|cffffff00Glow|r ADDS the artwork's light to the panel instead: it can only brighten, "
+      .. emphasis("Normal") .. " paints over the panel, obeying the image's transparency.\n"
+      .. emphasis("Glow") .. " ADDS the artwork's light to the panel instead: it can only brighten, "
       .. "never darken, and reads as a lit emblem. Strongest over a dark panel.")
 
     editorSpacer(group, EDITOR_ROW_GAP)
@@ -795,7 +802,7 @@ local function buildPanelEditor(ctx, parent, rec)
     local artToneRow = editorRow(group)
     boolField(artToneRow, "Desaturate", "artDesaturate",
       "Drains the color out of the artwork before the tint is applied.\n\nThis is what makes "
-      .. "|cffffff00Artwork color|r work properly on full-color art: tinting a gold-and-crimson crest "
+      .. emphasis("Artwork color") .. " work properly on full-color art: tinting a gold-and-crimson crest "
       .. "blue only drags every hue toward blue and muddies it, but draining it to grayscale first "
       .. "means the tint comes back as a clean blue.")
 

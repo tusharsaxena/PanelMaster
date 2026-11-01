@@ -269,9 +269,9 @@ local function editorHeading(parent, text)
   h:SetText(text)
   h:SetFullWidth(true)
   h:SetHeight(SECTION_HEADING_H)
-  if h.label and h.label.SetFontObject and _G.GameFontNormalLarge then
-    h.label:SetFontObject(_G.GameFontNormalLarge)
-  end
+  -- O.LabelFont rather than the FontString's own setter: the row is painted at acquire, and a font
+  -- the skin cannot see would replace the skin's face with the Scope cleared (cause L4).
+  NS.Helpers.LabelFont(h, "GameFontNormalLarge")
   parent:AddChild(h)
   return h
 end

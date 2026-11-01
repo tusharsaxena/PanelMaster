@@ -59,8 +59,6 @@ local ALLOW = {
     why = "a panel's geometry in the /pm list dump: chat output (X7)" },
   { file = "settings/Slash.lua", find = "|cFFFFFF00",
     why = "the library's disabled line, pinned byte for byte to lib.DISABLED_LINE_FORMAT (X7)" },
-  { file = "settings/PanelEditorTabs.lua", find = "|cffffff00",
-    why = "inline emphasis inside the editor's tooltip bodies: content markup, as FormatRow (X9)" },
 }
 
 --- Strip a line's trailing comment. `--` never occurs inside a string in these files' color code, so
@@ -278,5 +276,97 @@ test("Skin literals: the picker's (disabled) marker stays today's gray while the
     withPanelIgnored(true, function()
       assertEqual(disabledEntry("obsidian"), "Dimmed |cff808080(disabled)|r",
         "the ignored settings panel took the worn skin's disabled gray")
+    end)
+  end)
+
+-- ── the editor tooltips' inline emphasis (cause L5, FS-PM-FIX) ──────────────────────────────────
+
+--- The Panel name row's tooltip body on a fresh editor under `skin`, read through a recording
+--- GameTooltip, which is what O.AttachTooltip draws into.
+local function nameTooltip(skin)
+  local body
+  onSkin(skin, function()
+    NS.Registry:DeleteAll()
+    local rec = NS.Registry:New("Emphasis", {})
+    E.__setSelectedID(rec.id)
+    local ctx = NS.Helpers.CreatePanel(nil, "Panels", { pageKey = "panels" })
+    ctx.dropdowns, ctx.rebuilders = {}, {}
+    ctx.refreshers = ctx.refreshers or {}
+    E:BuildPage(ctx)
+    local list = mocks.LibStub("AceGUI-3.0", true).__created
+    local from = #list + 1
+    E:Rebuild(ctx)
+    local box
+    for i = from, #list do
+      if list[i].labelText == "Panel name" then box = list[i] end
+    end
+    assertTrue(box ~= nil, "the editor drew no Panel name row")
+    local saved = mocks.GameTooltip
+    mocks.GameTooltip = setmetatable({
+      AddLine = function(_, text) body = text end,
+    }, { __index = function() return function() end end })
+    local ok, err = pcall(box.__fire, box, "OnEnter")
+    mocks.GameTooltip = saved
+    NS.Registry:DeleteAll()
+    E.__setSelectedID(nil)
+    assertTrue(ok, tostring(err))
+  end)
+  return body
+end
+
+-- Change that turns these red: typing |cffffff00 back into settings/PanelEditorTabs.lua (the first
+-- case and the gate's scan), or building the word from NS.SkinEscape (the third).
+test("Skin literals: the editor tooltips' emphasis is today's yellow on Ka0s Default", function()
+  withPanelIgnored(false, function()
+    assertTrue(nameTooltip("ka0s"):find("|cffffff00", 1, true) ~= nil)
+  end)
+end)
+
+test("Skin literals: the editor tooltips' emphasis follows gtip.emphasis with the Scope cleared",
+  function()
+    withPanelIgnored(false, function()
+      local want
+      onSkin("obsidian", function() want = NS.SkinEscape("gtip.emphasis") end)
+      assertTrue(want ~= nil and want ~= "|cffffff00",
+        "the obsidian skin's gtip.emphasis is Ka0s Default's, so this case could not see a miss")
+      assertTrue(nameTooltip("obsidian"):find(want, 1, true) ~= nil,
+        "the tooltip did not draw the worn skin's emphasis")
+    end)
+  end)
+
+test("Skin literals: the editor tooltips' emphasis stays today's yellow while the panel is ignored",
+  function()
+    withPanelIgnored(true, function()
+      assertTrue(nameTooltip("obsidian"):find("|cffffff00", 1, true) ~= nil,
+        "the ignored settings panel took the worn skin's emphasis")
+    end)
+  end)
+
+-- ── the editor's subsection headings (cause L4, FS-PM-FIX) ─────────────────────────────────────
+
+-- Change that turns this red: setting the label's font object directly, which the skin cannot see,
+-- so with the Scope cleared the heading drops the skin's face at the first paint's stock font.
+test("Skin fonts: an editor heading sets its font through O.LabelFont, so the skin keeps its face",
+  function()
+    withPanelIgnored(false, function()
+      NS.Registry:DeleteAll()
+      local rec = NS.Registry:New("Heading", {})
+      E.__setSelectedID(rec.id)
+      local ctx = NS.Helpers.CreatePanel(nil, "Panels", { pageKey = "panels" })
+      ctx.dropdowns, ctx.rebuilders = {}, {}
+      ctx.refreshers = ctx.refreshers or {}
+      E:BuildPage(ctx)
+      -- The mock's Heading has no font object to set, so the seam's call is what can be seen.
+      local seen, real = 0, NS.Helpers.LabelFont
+      NS.Helpers.LabelFont = function(w, font)
+        if w.type == "Heading" and font == "GameFontNormalLarge" then seen = seen + 1 end
+        return real(w, font)
+      end
+      local ok, err = pcall(function() ctx.activeTab = E.TABS[2]; E:Rebuild(ctx) end)
+      NS.Helpers.LabelFont = real
+      NS.Registry:DeleteAll()
+      E.__setSelectedID(nil)
+      assertTrue(ok, tostring(err))
+      assertTrue(seen > 0, "no editor heading went through O.LabelFont")
     end)
   end)

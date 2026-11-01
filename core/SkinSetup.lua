@@ -62,9 +62,9 @@ local addonName, NS = ...
 --                           when the stub answers nil, "absent".
 --
 -- This is LootHistory's seam (core/SkinSetup.lua there, the collection's first adopter), cut to what
--- PanelMaster draws: no owner tokens (the one color the M0 inventory found with no exact library
--- token, the tooltips' inline `|cffffff00` emphasis, stays content markup, rollout decision X9), and
--- no window of its own for a degraded Shell to route to (core/CoreSetup.lua adopts no skin half).
+-- PanelMaster draws: no owner tokens (the tooltips' inline emphasis, the one color the M0 inventory
+-- found with no exact library token, reads `gtip.emphasis` since LibKa0s v1.85.0, cause L5), and no
+-- window of its own for a degraded Shell to route to (core/CoreSetup.lua adopts no skin half).
 --
 -- ── WHERE IT LOADS ───────────────────────────────────────────────────────────────────────────
 --
@@ -111,6 +111,9 @@ NS.SKIN_FALLBACK = {
   -- {1, 0.82, 0, 0.9} gold it was typed as. Its label is S.Text's, which the degraded facade
   -- leaves on GameFontNormal's own gold.
   ["list.dropLine"] = { 1, 0.82, 0, 0.9 },
+  -- A word the Panels editor's tooltip bodies pick out (settings/PanelEditorTabs.lua, cause L5):
+  -- the |cffffff00 it was typed as.
+  ["gtip.emphasis"] = { 1, 1, 0, 1 },
 }
 
 --- A color token as a "|cffrrggbb" escape, each channel rounded to the nearest byte (.5 is 80), so
