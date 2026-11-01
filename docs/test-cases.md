@@ -937,7 +937,7 @@ Total.
 - Skin outline: a profile switch applies the incoming profile's mode
 - Skin outline: a profile reset puts the outline back to HUD text only
 
-### test_skin_literals.lua (8)
+### test_skin_literals.lua (12)
 
 - Skin literals: no color literal outside core/SkinSetup.lua and the named allow-list
 - Skin literals: every allow-list entry carries its reason
@@ -947,6 +947,10 @@ Total.
 - Skin literals: the picker's (disabled) marker is today's gray on Ka0s Default
 - Skin literals: the picker's (disabled) marker follows the skin's text.disabled
 - Skin literals: the picker's (disabled) marker stays today's gray while the panel is ignored
+- Skin literals: the editor tooltips' emphasis is today's yellow on Ka0s Default
+- Skin literals: the editor tooltips' emphasis follows gtip.emphasis with the Scope cleared
+- Skin literals: the editor tooltips' emphasis stays today's yellow while the panel is ignored
+- Skin fonts: an editor heading sets its font through O.LabelFont, so the skin keeps its face
 
 ### test_skin_unlock.lua (5)
 
@@ -1131,7 +1135,7 @@ Total.
 - DebugLog seam: the console's title bar is three marks, at the icon pitch
 - DebugLog seam: the library is told the FOLDER name, not just the frame name
 - Options seam: the descriptor is told the FOLDER name, so IdList help art can resolve
-- Options seam: info is declared exactly when a page builds an IdList
+- Options seam: info is declared, and no page here builds an IdList
 - Core seam: MakeCloseButton is wrapped to say which addon folder is asking
 - L trap (DebugLog): every rendered console string resolves to prose, not to its own key
 - Slash seam: the dispatcher is the library's, not a host re-implementation
@@ -1350,7 +1354,7 @@ Total.
 | test_profiles.lua | 26 |
 | test_skinsetup.lua | 16 |
 | test_skin_outline.lua | 11 |
-| test_skin_literals.lua | 8 |
+| test_skin_literals.lua | 12 |
 | test_skin_unlock.lua | 5 |
 | test_skin_picker.lua | 13 |
 | test_skin_verb.lua | 6 |
@@ -1376,4 +1380,4 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | Skipped | 1 |
-| **Total** | **1162** |
+| **Total** | **1166** |
