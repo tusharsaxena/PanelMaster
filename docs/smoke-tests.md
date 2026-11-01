@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 31 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker |
+| SKIN-1 to 35 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation |
 
 ## Before you start
 
@@ -1198,11 +1198,14 @@ a Lua error or a taint warning.
 - **SKIN-19. A profile switch with a preview pending (PM-04).** Preview **Ember** in the picker,
   then switch to a profile that has closed the picker → the picker goes, and that profile's own
   skin is worn, not Ember. Result: pass (owner-marked 2026-10-30)
-- **SKIN-20. Tooltips, popups, chat and the minimap button (X7, X8, X9).** Under **Azeroth** and
-  **High Contrast**: hover an editor control with a tooltip → the tooltip frame is Blizzard's and its
-  yellow highlighted words stay yellow; `/pm resetall`, **Delete panel…** and **Reset panel…** raise
-  stock popups (cancel each); chat lines keep the cyan `[PM]` tag and their colors; the minimap
-  button and its tooltip look as before. Result: pass (owner-marked 2026-10-30)
+- **SKIN-20. Tooltips, popups, chat and the minimap button (X7, X8; rewritten by FS-PM-REC).** Under
+  **Azeroth** and **High Contrast**, with **Ignore settings panel** on: hover an editor control with
+  a tooltip → the tooltip frame is Blizzard's and its highlighted words stay yellow (SKIN-33 has
+  them with the Scope cleared); `/pm resetall`, **Delete panel…** and **Reset panel…** raise stock
+  popups (cancel each); chat lines keep the cyan `[PM]` tag and their colors. The minimap button
+  stays as it was, but its tooltip's lines now follow the skin, Scope or no Scope: hover it under
+  each skin → the frame is Blizzard's, and the text and the Yes/No words take the worn skin's colors.
+  Result:
 
 ### The skin fonts and feedback run (LibKa0s v1.82.0)
 
@@ -1293,6 +1296,27 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   reads it. With the list open, scroll the page with the mouse wheel → the list closes and the page
   scrolls. Fail: a plain list of names, a stock pull-out under a skin, a list left floating, or any
   Lua error. Result:
+- **SKIN-32. A clean load on LibKa0s v1.85.0 (FS-PM-RV).** After a full client restart, since the
+  re-vendor added icon files, log in with `/console scriptErrors 1`, open every Settings page and
+  every Panels editor tab, then switch to **Obsidian** and back with **Ignore settings panel** on,
+  then again with it off → no Lua error and no blank mark on any control or scroll bar, and with
+  the Scope cleared a scroll bar's small arrows wear the skin. Your panels do not change under any
+  skin (cause A8). Result:
+- **SKIN-33. Tooltip emphasis follows the skin (FS-PM-FIX, cause L5).** With **Ignore settings panel**
+  off, under **Ka0s Default**: hover **Panels ▸ General ▸ Panel name** → the frame name is yellow.
+  Switch to **Obsidian** and hover again → it takes the skin's emphasis color, not yellow; so do the
+  words picked out on the **Artwork** tab's rows. Tick **Ignore settings panel** → yellow again. Fail:
+  yellow under Obsidian with the Scope cleared, or a skin color with it ticked. Result:
+- **SKIN-34. Panels editor headings keep the skin's face (FS-PM-FIX, cause L4).** With **Ignore
+  settings panel** off, under **Obsidian**: on **Panels ▸ Size and position**, the **Size**, **Position**
+  and **Layer** headings draw in the same face as a General page section heading, at the size they had. Open
+  another editor tab and come back → still that face. Tick **Ignore settings panel** → stock look,
+  same size. Fail: a heading in the client's face with the Scope cleared. Result:
+- **SKIN-35. The delete profile confirmation (LibKa0s v1.85.0, cause A4).** With **Ignore settings
+  panel** off, under **Obsidian**, make a second profile, then on **Profiles** click **Delete a
+  Profile** and pick it → the confirmation box wears the skin; cancel. Tick **Ignore settings
+  panel** and repeat → it is the client's stock box. Fail: a box that stays skinned for another
+  addon's use of it afterwards. Result:
 
 ## Pending sign-off
 
@@ -1321,3 +1345,7 @@ Pending: SKIN-28, SKIN-29, SKIN-30 and SKIN-31, added by the findings remediatio
 (Ka0sAddonsCommonTasks `docs/2026-10-31-FINDINGS_REMEDIATION/`), each with an empty `Result:` line.
 That run's one media picker (M3-MEDIA) also rewrote LOOK-7, LOOK-9, SKIN-3 and SKIN-27 and retired
 LOOK-10, so the first four are pending with their `Result:` lines emptied.
+
+Owed by the full skinning run (FS-PM-RV and FS-PM-FIX, Ka0sAddonsCommonTasks
+`docs/2026-11-01-FULL_SKINNING/`, LibKa0s v1.85.0): SKIN-32, SKIN-33, SKIN-34 and SKIN-35, new, and
+SKIN-20, whose expected result changed and which lost its 2026-10-30 pass mark.

@@ -79,8 +79,10 @@ this addon paints them: the Panels editor's AceGUI rows (both editor files acqui
 which are kept for the session and so repainted in place on `NS.Skin.OnLooksChanged` (or handed
 back stock when the Scope ignores the panel), and the Profiles tree, which `NS.SkinPaintAceTree`
 paints after every `AceConfigDialog:Open`. The picker's *(disabled)* marker reads `text.disabled`
-through `NS.SkinPanelEscape`. While **Ignore settings panel** is on, the default, none of it is
-painted, and the marker keeps Ka0s Default's gray. The media pickers' pull-outs paint with the skin as well. The color picker window and the
+and the editor tooltips' highlighted words `gtip.emphasis`, both through `NS.SkinPanelEscape`, and an
+editor heading sets its font through `O.LabelFont`, which keeps the skin's face. While **Ignore
+settings panel** is on, the default, none of it is painted, and the two keep Ka0s Default's gray and
+yellow. The media pickers' pull-outs paint with the skin as well. The color picker window and the
 confirmation popups stay stock under every skin.
 
 On **Profiles**, everyone starts on the shared **Default** profile, and switching profiles redraws

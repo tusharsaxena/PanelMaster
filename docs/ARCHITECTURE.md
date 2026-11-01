@@ -299,9 +299,10 @@ addon draws).
   class colors — are the player's content (decision D1): no `fromSkin` companions and **no one-time
   HUD style reset**, so no skin and no upgrade restyles a saved layout. New panels start from the
   template, not the skin (D2). StaticPopups, GameTooltip's frame, `ColorPickerFrame` and the
-  minimap button stay stock (skinning-§7); chat lines keep their
-  colors (X7); the editor tooltips' inline yellow is content markup (X9); the console keeps its
-  monospace face.
+  minimap button stay stock (skinning-§7), though the lines the library writes on the button's
+  tooltip follow the skin (LibKa0s v1.85.0); chat lines keep their colors (X7); the console keeps
+  its monospace face. The editor tooltips' inline emphasis reads `gtip.emphasis` through
+  `NS.SkinPanelEscape`, so it stays yellow while the settings panel is ignored.
 - **The first-run skin picker.** `NS.MaybeShowSkinPicker` shows the library's `O.SkinPicker` while
   the profile's `skin.pickerSeen` is false and the latch is up: once per session two seconds after
   the first `PLAYER_ENTERING_WORLD`, and after every profile event; in combat it waits for
