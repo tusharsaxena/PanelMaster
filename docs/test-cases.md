@@ -536,7 +536,7 @@ Total.
 - Artwork.BuildArtSpec: an unknown fill or layer falls back to the template
 - Artwork.BuildArtSpec: the layer resolves to the frame level the renderer must use
 
-### test_database.lua (24)
+### test_database.lua (25)
 
 - Database: InitDB opened both scopes
 - Database: InitDB runs the migration runner, so the live DB comes back stamped
@@ -562,6 +562,7 @@ Total.
 - Database.SweepPreviewPanels: survives being called before the DB exists
 - Database: InitDB sweeps preview orphans before anything can read the panels
 - Database.InitSummary: survives a missing DB
+- Database.RunMigrations: v3 moves a stored Ka0s Friz Quadrata TT to Ka0s Ubuntu in every profile, Blizzard's Friz kept
 
 ### test_debuglog.lua (52)
 
@@ -1036,6 +1037,10 @@ Total.
 - Degraded install: no LibKa0s leaves a launcher stub that answers and never raises
 - Degraded install: the launcher stub announces nothing at login
 
+### test_launcher_skin_entry.lua (1)
+
+- launcher descriptor passes openSkinPicker, which runs the skin verb
+
 ### test_disabled.lua (23)
 
 - Disabled 1: enabled, the addon registers, draws and arms its ticker
@@ -1358,7 +1363,7 @@ Total.
 | test_accent.lua | 65 |
 | test_artwork.lua | 46 |
 | test_artwork_geometry.lua | 52 |
-| test_database.lua | 24 |
+| test_database.lua | 25 |
 | test_debuglog.lua | 52 |
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
@@ -1376,6 +1381,7 @@ Total.
 | test_skin_settings.lua | 7 |
 | test_glyphs.lua | 1 |
 | test_launcher.lua | 37 |
+| test_launcher_skin_entry.lua | 1 |
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 37 |
@@ -1397,4 +1403,4 @@ Total.
 | test_skin_values.lua | 3 |
 | test_skin_switch.lua | 9 |
 | Skipped | 1 |
-| **Total** | **1175** |
+| **Total** | **1177** |

@@ -266,3 +266,27 @@ test("Database.InitSummary: survives a missing DB", function()
   assertTrue(type(s) == "string")
   NS.db = saved
 end)
+
+-- R3-FRIZ: LibKa0s v1.85.0 deleted Ka0s Friz Quadrata TT (R3-L7); v3 moves a stored pick of it to Ka0s
+-- Ubuntu in every stored profile, at any depth. red under: no v3 step, one that reaches only the
+-- active profile, or one that rewrites Blizzard's own "Friz Quadrata TT".
+test("Database.RunMigrations: v3 moves a stored Ka0s Friz Quadrata TT to Ka0s Ubuntu in every profile, Blizzard's Friz kept", function()
+  local saved, savedSV = NS.db.global.schemaVersion, NS.db.sv
+  NS.db.sv = { profiles = {
+    Other = { skin = { font = "Ka0s Friz Quadrata TT" }, panels = { { id = 1, name = "A", frameName = "x", text = { font = "Ka0s Friz Quadrata TT" } } } },
+    Plain = { skin = { font = "Friz Quadrata TT" } },
+  } }
+  NS.db.global.schemaVersion = 2
+
+  NS:RunMigrations()
+
+  local version = NS.db.global.schemaVersion
+  local other, plain = NS.db.sv.profiles.Other, NS.db.sv.profiles.Plain
+  NS.db.sv = savedSV
+  NS.db.global.schemaVersion = saved
+  assertEqual(version, 3)
+  assertEqual(other.skin.font, "Ka0s Ubuntu", "the skin override of a profile not active")
+  assertEqual(other.panels[1].text.font, "Ka0s Ubuntu", "a nested pick")
+  assertEqual(plain.skin.font, "Friz Quadrata TT", "Blizzard's own Friz stays")
+  assertEqual(NS.RetireFonts(other), 0, "a second pass moves nothing")
+end)

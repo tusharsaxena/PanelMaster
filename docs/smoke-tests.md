@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 35 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation |
+| SKIN-1 to 36 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation; a stored pick of the deleted Friz |
 
 ## Before you start
 
@@ -87,11 +87,11 @@ client and is run when one is available, not per release.
   `Interface/AddOns/PanelMaster/` (never the repo), set `PanelMaster.toc`'s `## Version:` to
   `1.3.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in the console (it is not echoed
   to chat), then `/pm version`; afterwards restore the TOC and `/reload` → the `[Init]` line reads
-  `PanelMaster v1.3.0-smoke, schema v2, profile '<yours>', N panels` and `/pm version` reads
+  `PanelMaster v1.3.0-smoke, schema v3, profile '<yours>', N panels` and `/pm version` reads
   `[PM] v1.3.0-smoke`. **Fail:** an `[Init]` line reading `v1.3.0` while `/pm version` reads
   `v1.3.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
   one a user pastes into a bug report. `tests/test_database.lua` proves the line's content against a
-  mock; only the client can witness the timing. Result: pass (owner-marked 2026-10-10)
+  mock; only the client can witness the timing. Result: not run (re-opened by R3-FRIZ: schema v3)
 - **INSTALL-9. A clean load with the LibKa0s v1.75.0 payload.** Enable only PanelMaster and its
   libraries, log in, then type `/pm` → no Lua error at load or on the first `/pm`. Repeat with every
   Ka0s addon enabled. The re-vendor added two majors this addon never calls,
@@ -1241,13 +1241,13 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   until that one closes. Result: Owner reported pass, 2026-10-31
 - **SKIN-24. The faces (PM-F01, LibKa0s v1.83.0; D-01, D-05, D-06).** After a full client restart
   (new font files), on **Ka0s Default** the settings pages (Ignore settings panel off), the console
-  chrome and the skin picker draw **Prototype**; on **WoW Default** Ka0s Friz Quadrata TT, visibly
+  chrome and the skin picker draw **Prototype**; on **WoW Default** Ka0s Ubuntu (R3-FRIZ; Ka0s Friz Quadrata TT before), visibly
   different from Prototype; on **Obsidian** Expressway; on **WoW Midnight** Segoe UI Semibold with
   Segoe UI Bold titles; on **Azeroth** Open Sans Semibold with Open Sans Bold titles; on **Ember**
   Emblem; on **High Contrast** Doris PP; on **Glass** Avant Garde; on **WoW Forever** Fira Sans
   Medium for body text and Fira Sans SemiBold for titles. The Skin tab's Font list starts with
   *Skin's default (the skin's face)* and holds the Ka0s faces, the older ones among them (Ka0s Inter,
-  Ka0s Oxanium SemiBold, Ka0s Fira Sans), each row drawn in its own face. Result: Owner reported pass, 2026-10-31
+  Ka0s Oxanium SemiBold, Ka0s Fira Sans), each row drawn in its own face. Result: not run (re-opened by R3-FRIZ)
 - **SKIN-25. Equal widths across skins (PM-01; D-08).** With Ignore settings panel off and the
   outline on, open the debug console, the General page's Master controls tab, the Skin tab and the
   skin picker under each of the nine skins in turn → each window's text takes about the same width
@@ -1317,6 +1317,11 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   Profile** and pick it → the confirmation box wears the skin; cancel. Tick **Ignore settings
   panel** and repeat → it is the client's stock box. Fail: a box that stays skinned for another
   addon's use of it afterwards. Result:
+- **SKIN-36. A stored pick of the deleted Friz lands on Ka0s Ubuntu (R3-FRIZ, schema v3).** Before
+  updating, set the Skin tab's **Font** to *Ka0s Friz Quadrata TT* in two profiles and log out. Update
+  and fully restart the client (a new font file) → the settings chrome draws in Ubuntu and the Font row
+  reads *Ka0s Ubuntu*; switch to the other profile → the same. Fail: the game's default face, or the
+  row still naming Ka0s Friz Quadrata TT. Result:
 
 ## Pending sign-off
 
@@ -1351,3 +1356,7 @@ Owed by the full skinning run (FS-PM-RV and FS-PM-FIX, Ka0sAddonsCommonTasks
 SKIN-20, whose expected result changed and which lost its 2026-10-30 pass mark. The re-cut tag's
 per-skin bar, icon, glow and cover values (FS-PM-GATE) changed no expected result here: the panels
 stay the player's and no check names one of those values, so every other mark stands.
+
+Pending from the owner's third smoke round (Ka0sAddonsCommonTasks `docs/2026-11-02-SMOKE_ROUND3/`, R3-FRIZ):
+SKIN-36, new, and SKIN-24 and INSTALL-8, whose WoW Default face (Ka0s Ubuntu) and schema line (v3) changed
+and which lost their pass marks.
