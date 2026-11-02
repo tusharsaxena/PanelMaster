@@ -1205,7 +1205,7 @@ a Lua error or a taint warning.
   popups (cancel each); chat lines keep the cyan `[PM]` tag and their colors. The minimap button
   stays as it was, but its tooltip's lines now follow the skin, Scope or no Scope: hover it under
   each skin → the frame is Blizzard's, and the text and the Yes/No words take the worn skin's colors.
-  Result:
+  Result: Passed (owner, 2026-11-02)
 
 ### The skin fonts and feedback run (LibKa0s v1.82.0)
 
@@ -1301,22 +1301,22 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   every Panels editor tab, then switch to **Obsidian** and back with **Ignore settings panel** on,
   then again with it off → no Lua error and no blank mark on any control or scroll bar, and with
   the Scope cleared a scroll bar's small arrows wear the skin. Your panels do not change under any
-  skin (cause A8). Result:
+  skin (cause A8). Result: Passed (owner, 2026-11-02)
 - **SKIN-33. Tooltip emphasis follows the skin (FS-PM-FIX, cause L5).** With **Ignore settings panel**
   off, under **Ka0s Default**: hover **Panels ▸ General ▸ Panel name** → the frame name is yellow.
   Switch to **Obsidian** and hover again → it takes the skin's emphasis color, not yellow; so do the
   words picked out on the **Artwork** tab's rows. Tick **Ignore settings panel** → yellow again. Fail:
-  yellow under Obsidian with the Scope cleared, or a skin color with it ticked. Result:
+  yellow under Obsidian with the Scope cleared, or a skin color with it ticked. Result: Passed (owner, 2026-11-02)
 - **SKIN-34. Panels editor headings keep the skin's face (FS-PM-FIX, cause L4).** With **Ignore
   settings panel** off, under **Obsidian**: on **Panels ▸ Size and position**, the **Size**, **Position**
   and **Layer** headings draw in the same face as a General page section heading, at the size they had. Open
   another editor tab and come back → still that face. Tick **Ignore settings panel** → stock look,
-  same size. Fail: a heading in the client's face with the Scope cleared. Result:
+  same size. Fail: a heading in the client's face with the Scope cleared. Result: Passed (owner, 2026-11-02)
 - **SKIN-35. The delete profile confirmation (LibKa0s v1.85.0, cause A4).** With **Ignore settings
   panel** off, under **Obsidian**, make a second profile, then on **Profiles** click **Delete a
   Profile** and pick it → the confirmation box wears the skin; cancel. Tick **Ignore settings
   panel** and repeat → it is the client's stock box. Fail: a box that stays skinned for another
-  addon's use of it afterwards. Result:
+  addon's use of it afterwards. Result: Passed (owner, 2026-11-02)
 - **SKIN-36. A stored pick of the deleted Friz lands on Ka0s Ubuntu (R3-FRIZ, schema v3).** Before
   updating, set the Skin tab's **Font** to *Ka0s Friz Quadrata TT* in two profiles and log out. Update
   and fully restart the client (a new font file) → the settings chrome draws in Ubuntu and the Font row
@@ -1360,3 +1360,5 @@ stay the player's and no check names one of those values, so every other mark st
 Pending from the owner's third smoke round (Ka0sAddonsCommonTasks `docs/2026-11-02-SMOKE_ROUND3/`, R3-FRIZ):
 SKIN-36, new, and SKIN-24 and INSTALL-8, whose WoW Default face (Ka0s Ubuntu) and schema line (v3) changed
 and which lost their pass marks.
+
+On 2026-11-02 the owner reported that every check on the smoke lists of the full skinning run and its smoke feedback batch (Ka0sAddonsCommonTasks `docs/2026-11-01-FULL_SKINNING/` and `docs/2026-11-01-SMOKE_FEEDBACK/`) passed, apart from DpsRace's clock font, the skinned look of the AceGUI Dropdown and the Ka0sMedia_Font and Ka0sMedia_Statusbar pickers, FadeNineSlice and IconBorder (`docs/2026-11-02-SMOKE_ROUND3/`, R3-SMOKE). Passed, recorded on each `Result:` line as `Passed (owner, 2026-11-02)`: SKIN-20, SKIN-32, SKIN-33, SKIN-34 and SKIN-35.
