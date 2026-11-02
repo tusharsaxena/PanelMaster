@@ -123,6 +123,7 @@ if not lib then
     -- SkinVerb, the act behind `/pm skin` (OptionsSkinPicker minor 3, LibKa0s v1.82.0): nothing to
     -- show, and the reason "absent", on which NS.RunSkinVerb prints the library-absent line.
     SkinVerb = function() return nil, "absent" end,
+    SkinNotice = function() return nil, "unavailable" end,
     -- PositionBlock (OptionsCompose minor 15, LibKa0s v1.84.0): no rows and an inert hook, the
     -- same two returns the live member gives, because nothing here draws a Position block.
     PositionBlock = function() return {}, noop end,
