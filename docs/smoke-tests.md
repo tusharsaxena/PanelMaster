@@ -1361,6 +1361,14 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` â
   pullout opens. Escape still closes the whole picker. Fail: a list that stays open after any of
   the three presses. Result:
 
+### The owner's sixth smoke round (LibKa0s v1.85.0, round 6 re-cut)
+
+- **SKIN-42. The round 6 re-cut loads clean (R6-RV, R6-L1).** The re-cut moves only the skin
+  picker (`OptionsSkinPicker.lua` minor 11). Update and `/reload` with BugSack on â†’ no Lua error on
+  load; under **Ka0s Default** `/pm debug`, **Copy** and `/pm skin` look as SKIN-40 describes, and
+  `/pm`'s settings pages are unchanged. Fail: a load error, or any of those windows looking
+  different. Result:
+
 ## Pending sign-off
 
 On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
@@ -1408,3 +1416,6 @@ its title and which lost its pass mark.
 Pending from the owner's fifth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND5/`,
 R5-RV): SKIN-40 and SKIN-41, new. SKIN-37 no longer quotes the round 4 hexes; its expected result is
 unchanged apart from the darker shade SKIN-40 checks.
+
+Pending from the owner's sixth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND6/`,
+R6-RV): SKIN-42, new.
