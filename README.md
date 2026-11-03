@@ -1,4 +1,4 @@
-# Ka0s Panel Master
+# Panel Master
 
 ![WoW](https://img.shields.io/badge/WoW-Midnight_12.1.5-purple)
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
@@ -6,7 +6,7 @@
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
 ![Tests](https://img.shields.io/badge/Tests-1194%2F1194_passing-green)
 
-Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
+Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
 
 A panel is a rectangle with a color, a border and a position, and that is all it is. It sits behind
