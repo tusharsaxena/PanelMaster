@@ -811,8 +811,8 @@ and at least one art pack; skip those without it.
 - **DIAG-1. The console window.** `/pm debug` → the console opens: monospace, timestamped, a red
   `Debug: OFF` toggle at the left of the title bar, a scrollbar on the right, `0 / 3000 lines`
   bottom-right. It wears the Ka0s window edge (a 1px black outer border with a 1px light-gray
-  highlight inside it), a **gold** title and a gray divider under the title bar, and reads as one
-  suite beside another Ka0s addon's console. Result: pass (owner-marked 2026-10-10)
+  highlight inside it), a **gold** title and no line under the title bar, and reads as one
+  suite beside another Ka0s addon's console. Result: not run (re-opened by R4-SEP)
 - **DIAG-2. Title-bar controls.** At the right end of the title bar → three small square controls of
   one size, evenly spaced: a copy mark, a clear mark and a close mark, gray, each turning white (the
   close mark red) under the pointer. No words and no tooltips. **Fail:** the words *Copy* and *Clear*
@@ -1331,6 +1331,12 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   is the same. `/pm skin` → the skin picker's second swatch on the Ka0s Default card is that header
   color. Switch to **Obsidian** and back → each band follows the skin and returns. Fail: a near-black
   band under Ka0s Default. Result:
+- **SKIN-38. No line under any window's title (R4-SEP).** `/pm debug` → no line runs under the title
+  band; the log starts straight below it. Press **Copy** → the copy window has no line under its
+  title either. `/pm skin` → the skin picker has none. Repeat under **Obsidian**, **WoW Default** and
+  **Glass**. PanelMaster has no other window: the panels are the player's and the unlock overlay is
+  an outline, not a header. The settings pages keep their gold rule under the page title. Fail: a
+  gray or skin-colored line under any window's title band. Result:
 
 ## Pending sign-off
 
@@ -1373,4 +1379,5 @@ and which lost their pass marks.
 On 2026-11-02 the owner reported that every check on the smoke lists of the full skinning run and its smoke feedback batch (Ka0sAddonsCommonTasks `docs/2026-11-01-FULL_SKINNING/` and `docs/2026-11-01-SMOKE_FEEDBACK/`) passed, apart from DpsRace's clock font, the skinned look of the AceGUI Dropdown and the Ka0sMedia_Font and Ka0sMedia_Statusbar pickers, FadeNineSlice and IconBorder (`docs/2026-11-02-SMOKE_ROUND3/`, R3-SMOKE). Passed, recorded on each `Result:` line as `Passed (owner, 2026-11-02)`: SKIN-20, SKIN-32, SKIN-33, SKIN-34 and SKIN-35.
 
 Pending from the owner's fourth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND4/`,
-R4-RV2): SKIN-37, new.
+R4-RV2 and R4-SEP): SKIN-37 and SKIN-38, new, and DIAG-1, whose console no longer has a line under
+its title and which lost its pass mark.

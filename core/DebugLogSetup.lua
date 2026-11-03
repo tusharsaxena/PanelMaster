@@ -170,7 +170,7 @@ NS.DebugLog = lib:New({
   -- DELIBERATELY NOT PASSED, and each omission is a decision:
   --
   --   applySkin  — the console now wears Core.SKIN: a flat 1px black edge with a 1px light-gray inner
-  --                highlight, a gold title and a gray divider. The old local SKIN here was a bare
+  --                highlight, a gold title and no line under the title bar. The old local SKIN was a bare
   --                background texture with a border color it never actually applied. As of Core
   --                minor 3 the Ka0s window edge is the LIBRARY's, not each host's, precisely so the
   --                collection's consoles read as one suite of addons (standalone-windows). Taking
