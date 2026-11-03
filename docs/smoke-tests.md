@@ -1379,7 +1379,9 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   Ka0s addons** and the **gear** → locked after each. Now `/pm unlock` first, then `/pm skin` → the
   panels stay unlocked and the eye is lit; click the eye (locked), close the picker → unlocked again.
   `/pm lock`, unlock one panel on its own from its editor, then `/pm skin` → every panel unlocks;
-  close → only that one panel is still unlocked. In combat (a training dummy) with the picker up and
+  close → only that one panel is still unlocked. Then, with that panel still unlocked on its own,
+  `/pm skin`, `/pm lock` while the picker is up, close it; `/pm unlock`, `/pm skin`, click the eye
+  (locked) → no panel is unlocked, that one included (R6-PV review). In combat (a training dummy) with the picker up and
   the eye dimmed, click the eye → a gray *no skin preview in combat — the panels stay locked* line,
   the panels stay locked, and nothing unlocks when combat ends. Unlock is session state here, not a
   stored setting: a `/reload` while the picker is up comes back with the panels locked. Fail: the

@@ -262,7 +262,8 @@ end
 --     "refused enter": nothing moved, nothing to undo). A lock is never refused or deferred.
 --   * a panel unlocked on its own (its editor) before the preview: the global lock drops every
 --     per-panel unlock, so the preview's lock puts back the ones its unlock found
---     (NS.State.previewPanels, which a profile event drops with the other panel-keyed state).
+--     (NS.State.previewPanels, which every close drops after the restore, and a profile event with
+--     the other panel-keyed state).
 -- Unlock is session state (`state.locked` is sessionOnly), so a /reload while the picker is up
 -- comes back locked. CLAUDE.md's icon line declares `eye`.
 --
@@ -277,8 +278,12 @@ local pickerTarget       -- the one-shot PLAYER_REGEN_ENABLED target, while a st
 local quietClose = false -- true while NS.HideSkinPicker takes the picker down
 
 --- The player's close: the picker seen, and nothing else. The library's put-back already wears the
---- stored choice, so the skin is not this callback's to move.
+--- stored choice, so the skin is not this callback's to move. On every close, the quiet one too, the
+--- preview's per-panel list goes: the library's restore (which runs first) has used it, or owed
+--- nothing because the player's own lock or unlock moved the mode, and a list kept past the picker
+--- would be put back by a later picker's eye lock, unlocking panels the player had locked since.
 local function pickerClosed()
+  NS.State.previewPanels = nil
   if quietClose then return end
   local S = NS.Schema
   if not (NS.db and S and S.Set) then return end

@@ -958,7 +958,7 @@ Total.
 - Skin unlock: the repaint touches unlocked panels only, and never the panel's own colors
 - Skin unlock: the label takes the skin's accent text role once, at creation
 
-### test_skin_picker.lua (29)
+### test_skin_picker.lua (30)
 
 - Skin picker: the spec names this owner, its seams, the General page's Skin tab, the unlock eye
 - Skin picker: an unseen profile shows it; a seen one does not
@@ -989,6 +989,7 @@ Total.
 - Skin picker preview: a profile event forgets the per-panel unlocks the preview found
 - Skin picker preview: in combat the eye refuses the unlock rather than queue it
 - Skin picker preview: in combat the close still locks what the picker unlocked
+- Skin picker preview: a list the close did not use is dropped, not replayed by a later eye
 
 ### test_skin_verb.lua (6)
 
@@ -1392,7 +1393,7 @@ Total.
 | test_skin_outline.lua | 11 |
 | test_skin_literals.lua | 9 |
 | test_skin_unlock.lua | 5 |
-| test_skin_picker.lua | 29 |
+| test_skin_picker.lua | 30 |
 | test_skin_verb.lua | 6 |
 | test_skin_settings.lua | 7 |
 | test_glyphs.lua | 1 |
@@ -1419,4 +1420,4 @@ Total.
 | test_skin_values.lua | 3 |
 | test_skin_switch.lua | 9 |
 | Skipped | 1 |
-| **Total** | **1193** |
+| **Total** | **1194** |

@@ -487,3 +487,26 @@ test("Skin picker preview: in combat the close still locks what the picker unloc
   f.close:GetScript("OnClick")(f.close)
   assertTrue(locked(), "a lock is never deferred")
 end))
+
+test("Skin picker preview: a list the close did not use is dropped, not replayed by a later eye", fromLock(true, function()
+  -- red under: NS.State.previewPanels outliving the picker when the player's own lock made the
+  -- restore owe nothing; a later picker opened unlocked then puts those panels back at the eye's lock.
+  local p = NS.Registry:New("PreviewStale", {})
+  local ok, err = pcall(function()
+    NS.Unlock:SetPanelUnlocked(p.id, true)
+    assertTrue(NS.MaybeShowSkinPicker() ~= nil, "the first-run picker did not show")
+    assertFalse(locked(), "unlocked at show")
+    NS.Slash:CliLock(true)            -- the player's own /pm lock drops the panel's unlock
+    O.HideSkinPicker()
+    assertEqual(NS.State.previewPanels, nil, "the close left the preview's list behind")
+    NS.Slash:CliLock(false)
+    local f = O.SkinPicker(NS.SkinPickerSpec())   -- `/pm skin`: the profile has seen the first-run one
+    assertTrue(f ~= nil and f:IsShown(), "the second picker did not show")
+    eye(f)
+    assertTrue(locked(), "the eye locks")
+    assertEqual(NS.State.unlockedPanels[p.id], nil, "a per-panel unlock the player dropped came back")
+    O.HideSkinPicker()
+  end)
+  NS.Registry:DeleteAll()
+  if not ok then error(err, 0) end
+end))
