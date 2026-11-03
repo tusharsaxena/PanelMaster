@@ -1323,6 +1323,15 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   reads *Ka0s Ubuntu*; switch to the other profile → the same. Fail: the game's default face, or the
   row still naming Ka0s Friz Quadrata TT. Result:
 
+### The owner's fourth smoke round (LibKa0s v1.85.0, second re-cut)
+
+- **SKIN-37. The console's title band is the dark gold header (R4-RV2, R4-L2).** Under **Ka0s
+  Default**, `/pm debug` → the title band is a dark gold gradient, lighter at the top (#3A2F0A) and
+  darker at the bottom (#1F1905), with the gold title on it; press **Copy** → the copy window's band
+  is the same. `/pm skin` → the skin picker's second swatch on the Ka0s Default card is that header
+  color. Switch to **Obsidian** and back → each band follows the skin and returns. Fail: a near-black
+  band under Ka0s Default. Result:
+
 ## Pending sign-off
 
 On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
@@ -1362,3 +1371,6 @@ SKIN-36, new, and SKIN-24 and INSTALL-8, whose WoW Default face (Ka0s Ubuntu) an
 and which lost their pass marks.
 
 On 2026-11-02 the owner reported that every check on the smoke lists of the full skinning run and its smoke feedback batch (Ka0sAddonsCommonTasks `docs/2026-11-01-FULL_SKINNING/` and `docs/2026-11-01-SMOKE_FEEDBACK/`) passed, apart from DpsRace's clock font, the skinned look of the AceGUI Dropdown and the Ka0sMedia_Font and Ka0sMedia_Statusbar pickers, FadeNineSlice and IconBorder (`docs/2026-11-02-SMOKE_ROUND3/`, R3-SMOKE). Passed, recorded on each `Result:` line as `Passed (owner, 2026-11-02)`: SKIN-20, SKIN-32, SKIN-33, SKIN-34 and SKIN-35.
+
+Pending from the owner's fourth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND4/`,
+R4-RV2): SKIN-37, new.
