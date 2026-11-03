@@ -1,0 +1,3 @@
+Independent review (R6, adversarial), 2026-11-04: R6-RV dfe4910 PASS.
+libs/LibKa0s/ matches LibKa0s tag v1.85.0 (79d043d) byte for byte, apart from media/icons pruned to the CLAUDE.md declaration; tests/_kit/ identical. Provenance line v1.85.0. eye.tga (added in 1b61758) equals the tag's. SKIN-42 added, Result blank.
+Gate fresh: lua tests/run.lua 1193 passed / 0 failed / 1 skipped at 1b61758; luacheck 0/0.
