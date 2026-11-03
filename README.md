@@ -64,8 +64,8 @@ Your second panel doesn't have to start from nothing. **Copy settings from panel
 tab, copies everything from another panel except its name and its position. Every character shares one
 set of panels unless you give one its own profile on the Profiles page. `/pm profile Raid` switches
 to a profile called Raid from chat, and `/pm profile` on its own lists them. The minimap button
-opens the settings on a left-click, and its right-click menu turns the addon on or off and locks or
-unlocks your panels.
+opens the settings on a left-click. Its right-click menu turns the addon on or off, locks or
+unlocks your panels, and can open the settings or the skin picker.
 
 The first time you log in, a skin picker asks how the addon's own windows should look. Pick one,
 or close it and stay on Ka0s Default. While it is open your panels are unlocked, so you can see the
