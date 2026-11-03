@@ -104,6 +104,7 @@ local SUITES = {
   "test_skinsetup", "test_skin_outline", "test_skin_literals", "test_skin_unlock", "test_skin_picker",
   "test_skin_verb", "test_skin_settings", "test_glyphs",
   "test_launcher",
+  "test_launcher_skin_entry",
   -- The stand-down conformance suite slash-commands-§7 MUSTs. Listed here like any other suite,
   -- inside the green gate, and placed AFTER test_launcher because step 8 drives the launcher's own
   -- OnClick and reads better beside the file that builds it.
@@ -134,6 +135,10 @@ local SUITES = {
   -- and the parity reader the complexity suite measures lizard through, and runs lizard on a
   -- hazard fixture when it is on PATH (a declared skip otherwise).
   { name = "test_lizard_sighted", dir = "tests/_kit/" },
+  -- Kit revision 50's skin gates (skinning-§1): the typed-value gate and the probe-skin switch test,
+  -- run against Kit.skinValues and Kit.skinSwitch below.
+  { name = "test_skin_values", dir = "tests/_kit/" },
+  { name = "test_skin_switch", dir = "tests/_kit/" },
 }
 
 -- Published so tests/test_harness.lua can state the inventory gate as a NAMED case over the
@@ -159,5 +164,19 @@ Kit.diagnostics = {
   setDisabled = function(off) NS.Schema:Set(NS.Schema.ENABLED_PATH, not off) end,
   retired     = { "dump" },
 }
+
+-- The typed-value gate and the switch test (kit revision 50, skinning-§1). Every category the old
+-- tests/test_skin_literals.lua allow-list named is the kit's now; what is left is this addon's own.
+-- A row is { file, substring, why, cause }. No `calls`: no paint helper here takes a color.
+Kit.skinValues = {
+  rows = {
+    { file = "settings/PanelEditorTabs.lua", substring = "UI-DialogBox-Gold-Dragon",
+      why = "words in the Custom texture path tooltip, an example of what a player may type for a "
+        .. "panel's artwork; nothing draws it", cause = "A8" },
+    { file = "settings/PanelEditorTabs.lua", substring = "MyAddon\\\\art\\\\logo.tga",
+      why = "the same tooltip's second example of a player's own path; nothing draws it", cause = "A8" },
+  },
+}
+Kit.skinSwitch = dofile("tests/skin_surfaces.lua")(NS, mocks)
 
 Kit.run({ dir = "tests/", suites = SUITES })

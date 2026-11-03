@@ -210,6 +210,35 @@ local function stampEveryProfile(db)
   return rows
 end
 
+-- v2 → v3 (R3-FRIZ): LibKa0s v1.85.0 deleted Ka0s Friz Quadrata TT (R3-L7) and WoW Default draws Ka0s
+-- Ubuntu in its place (R3-L6). Every stored string naming the deleted face, at any depth (the skin's
+-- Font override, a panel's own), moves to its successor. Blizzard's own "Friz Quadrata TT" stays.
+local RETIRED_FONTS = { ["Ka0s Friz Quadrata TT"] = "Ka0s Ubuntu" }
+
+--- Moves every string naming a retired face, at any depth of `t`, to its successor. Answers how many moved.
+function NS.RetireFonts(t)
+  local n = 0
+  for k, v in pairs(t) do
+    if type(v) == "table" then
+      n = n + NS.RetireFonts(v)
+    elseif RETIRED_FONTS[v] then
+      t[k], n = RETIRED_FONTS[v], n + 1
+    end
+  end
+  return n
+end
+
+-- The v2 → v3 step over every stored profile, for the reason stampEveryProfile gives.
+local function retireFontsEveryProfile(db)
+  local rows, sawActive = 0, false
+  for _, prof in pairs((db.sv and db.sv.profiles) or {}) do
+    if prof == db.profile then sawActive = true end
+    if type(prof) == "table" then rows = rows + NS.RetireFonts(prof) end
+  end
+  if not sawActive and type(db.profile) == "table" then rows = rows + NS.RetireFonts(db.profile) end
+  return rows
+end
+
 -- Schema-migration runner (savedvariables-§1). The runner OWNS the stamp: defaults/Global.lua
 -- declares `schemaVersion = 0` as the floor, an unstamped account reads that 0 and the gate opens,
 -- and the runner writes the real stamp into the SavedVariables file. Future schema changes get a
@@ -224,6 +253,7 @@ function NS:RunMigrations()
 
   local rows = 0
   if from < 2 then rows = rows + stampEveryProfile(NS.db) end
+  if from < 3 then rows = rows + retireFontsEveryProfile(NS.db) end
 
   g.schemaVersion = NS.SCHEMA_VERSION
   NS.Debug("Migrate", "%s", NS.MigrationSummary(from, NS.SCHEMA_VERSION, rows))

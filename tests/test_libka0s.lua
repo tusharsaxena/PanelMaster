@@ -197,14 +197,14 @@ test("Options seam: the descriptor is told the FOLDER name, so IdList help art c
     "the Options descriptor does not pass addonName, so IdList help marks draw the client glyph")
 end)
 
-test("Options seam: info is declared exactly when a page builds an IdList", function()
-  -- The vendored media/icons/ is pruned to the CLAUDE.md `LibKa0s icons:` line (kit revision 40),
-  -- and OptionsIdList's help mark is the only thing that would draw `info` here. No page builds an
-  -- IdList (the degraded stub's `IdList = noop` is the only mention), so `info` is NOT declared and
-  -- its file is not shipped. The first page that builds one must declare it in the same commit, or
-  -- its help mark resolves to a path the prune removed and draws blank.
-  -- red under: a live `IdList(` call in settings/ with no `info` on the declaration, or `info`
-  -- declared while nothing builds a list.
+test("Options seam: info is declared, and no page here builds an IdList", function()
+  -- The vendored media/icons/ is pruned to the CLAUDE.md `LibKa0s icons:` line (kit revision 40).
+  -- OptionsIdList's help mark used to be the only thing that would draw `info` here, and no page
+  -- builds an IdList (the degraded stub's `IdList = noop` is the only mention), so it stayed out.
+  -- LibKa0s v1.85.0's kit revision 49 owes it on every consumer whatever the host builds, so the
+  -- name is declared and shipped. The two halves stay pinned apart.
+  -- red under: dropping `info` from the declaration, or a live `IdList(` call appearing in settings/
+  -- that nobody looked at.
   local VendorSync = dofile("tests/_kit/vendor_sync.lua")
   local decl, why = VendorSync.iconDeclaration(readFile("CLAUDE.md"))
   assertTrue(decl ~= nil, "CLAUDE.md carries no valid `LibKa0s icons:` line: " .. tostring(why))
@@ -221,7 +221,7 @@ test("Options seam: info is declared exactly when a page builds an IdList", func
   end
   assertTrue(scanned >= 7, "read only " .. scanned .. " settings/ files off the TOC")
   assertEqual(table.concat(builders, ", "), "")
-  assertFalse(declaresInfo, "`info` is declared, but no page in settings/ builds an IdList")
+  assertTrue(declaresInfo, "kit revision 49 owes `info` on every consumer's declaration")
 end)
 
 test("Core seam: MakeCloseButton is wrapped to say which addon folder is asking", function()

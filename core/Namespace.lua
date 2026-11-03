@@ -10,8 +10,9 @@ NS.version = "1.3.0"
 -- (defaults/Global.lua) and the migration runner's target (NS:RunMigrations), so the two cannot
 -- drift and a fresh install can never ship a value the runner immediately migrates off.
 -- v2 stamped the derived frame name onto every panel record, making it identity rather than
--- something recomputed from the panel's name on every read (see NS:RunMigrations).
-NS.SCHEMA_VERSION = 2
+-- something recomputed from the panel's name on every read (see NS:RunMigrations). v3 moves a stored
+-- Ka0s Friz Quadrata TT, which LibKa0s v1.85.0 deleted, to Ka0s Ubuntu (R3-FRIZ).
+NS.SCHEMA_VERSION = 3
 
 -- Shared chat tag. Cyan (00ffff) is the Ka0s Standard house color (slash-commands-§4) — every Ka0s
 -- addon prints the same cyan bracketed tag so a user running several recognizes them at a glance.

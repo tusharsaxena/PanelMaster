@@ -24,11 +24,13 @@ local VENDORED = "Interface\\AddOns\\PanelMaster\\libs\\LibKa0s\\media\\"
 -- The marks this addon puts on screen. They are drawn by the library rather than by any file in
 -- this repo — the descriptor in core/DebugLogSetup.lua hands over `addonName` and LibKa0s-DebugLog-1.0
 -- resolves close, clear and copy with it, and the first-run skin picker (LibKa0s-Options-1.0's
--- OptionsSkinPicker) draws the settings gear; its eye is not drawn, because no onPreview is passed
--- (Ka0sAddonsCommonTasks docs/2026-10-29-SKINNING_ROLLOUT, X6) — which is exactly why they are
+-- OptionsSkinPicker) draws the settings gear and the eye, since R6-PV's `spec.preview` (the unlock
+-- mode; Ka0sAddonsCommonTasks docs/2026-11-03-SMOKE_ROUND6, which overturns X6) — which is exactly why they are
 -- listed here: nothing in core/, modules/ or settings/ mentions them, so nothing else in this suite
--- would notice a rename on either side of the seam.
-local DRAWN = { "close", "clear", "copy", "settings" }
+-- would notice a rename on either side of the seam. The other seven are what LibKa0s v1.85.0's
+-- library-drawn marks owe every consumer (releasing.md, Step 8 for v1.85.0; kit revision 49).
+local DRAWN = { "close", "clear", "copy", "settings", "eye", "chevron-down", "chevron-up", "confirm",
+  "info", "move", "reset", "volume-high" }
 
 -- ── the seam ────────────────────────────────────────────────────────────────────
 
@@ -73,21 +75,21 @@ end)
 
 -- ── the catalog, against what this addon actually asks for ──────────────────────
 
-test("MediaSetup: every mark this addon's console draws is one the library ships", function()
+test("MediaSetup: every mark the library draws for this addon is one it ships", function()
   -- red under: any name here the catalog does not carry, on either side of a re-vendor.
   local Media = mocks.LibStub("LibKa0s-Media-1.0", true)
   local known = {}
   for _, name in ipairs(Media.ICONS) do known[name] = true end
   for _, name in ipairs(DRAWN) do
     assertTrue(known[name] == true,
-      "the console draws '" .. name .. "', which LibKa0s-Media does not ship")
+      "the library draws '" .. name .. "' for this addon, but LibKa0s-Media does not ship it")
     assertTrue(NS.Icon(name) ~= nil, "NS.Icon answered nil for " .. name)
   end
 end)
 
-test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the console draws", function()
+test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the library draws for this addon", function()
   -- red under: dropping copy from the `LibKa0s icons:` line (a drawn mark the prune would remove,
-  -- so the button draws blank), or adding info to it (a declared mark nothing here draws). The
+  -- so the button draws blank), or adding a name nothing draws. The
   -- kit's vendor gate holds the folder to the declaration; this holds the declaration to DRAWN.
   -- The parser is the kit's own, never a second one written here.
   local VendorSync = dofile("tests/_kit/vendor_sync.lua")
@@ -105,7 +107,7 @@ test("MediaSetup: the CLAUDE.md icon declaration names exactly the marks the con
   assertEqual(table.concat(declared, ", "), table.concat(drawn, ", "))
   for _, name in ipairs(DRAWN) do
     local art = io.open("libs/LibKa0s/media/icons/" .. name .. ".tga", "rb")
-    assertTrue(art ~= nil, "the console draws '" .. name .. "', which the vendored copy does not ship")
+    assertTrue(art ~= nil, "the library draws '" .. name .. "' for this addon, but the vendored copy does not ship it")
     if art then art:close() end
   end
 end)

@@ -123,9 +123,12 @@ if not lib then
     -- SkinVerb, the act behind `/pm skin` (OptionsSkinPicker minor 3, LibKa0s v1.82.0): nothing to
     -- show, and the reason "absent", on which NS.RunSkinVerb prints the library-absent line.
     SkinVerb = function() return nil, "absent" end,
+    SkinNotice = function() return nil, "unavailable" end,
     -- PositionBlock (OptionsCompose minor 15, LibKa0s v1.84.0): no rows and an inert hook, the
     -- same two returns the live member gives, because nothing here draws a Position block.
     PositionBlock = function() return {}, noop end,
+    -- LabelFont (OptionsWidgets minor 43, LibKa0s v1.85.0): no library, no label to set a font on.
+    LabelFont = noop,
     -- NO `__`-PREFIXED LIBRARY INTERNALS BELOW, and their absence is a decision rather than an
     -- oversight. Twelve of them used to sit here -- __pages, __panels, __panelFor, the six chrome
     -- band primitives, __tabArtHeight and __resetTabArtHeight -- and the only reason recorded for

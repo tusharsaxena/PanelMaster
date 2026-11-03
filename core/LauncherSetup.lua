@@ -208,6 +208,7 @@ NS.Launcher = lib:New({
   -- One accessor-and-toggle pair per state this addon really has, in the library's order. The
   -- accessors are read on every menu open and every hover; the toggles are the slash verbs' own
   -- handlers (see the header). `isEnabled` and `isLocked` also feed the status tooltip.
+  openSkinPicker = function() if NS.RunSkinVerb then NS.RunSkinVerb() end end,
   isEnabled  = isEnabled,
   setEnabled = setEnabled,
   isLocked   = isLocked,

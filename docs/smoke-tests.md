@@ -31,7 +31,7 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
-| SKIN-1 to 31 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker |
+| SKIN-1 to 36 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation; a stored pick of the deleted Friz |
 
 ## Before you start
 
@@ -87,11 +87,11 @@ client and is run when one is available, not per release.
   `Interface/AddOns/PanelMaster/` (never the repo), set `PanelMaster.toc`'s `## Version:` to
   `1.3.0-smoke`. Log in, `/pm debug on`, read the `[Init]` line in the console (it is not echoed
   to chat), then `/pm version`; afterwards restore the TOC and `/reload` → the `[Init]` line reads
-  `PanelMaster v1.3.0-smoke, schema v2, profile '<yours>', N panels` and `/pm version` reads
+  `PanelMaster v1.3.0-smoke, schema v3, profile '<yours>', N panels` and `/pm version` reads
   `[PM] v1.3.0-smoke`. **Fail:** an `[Init]` line reading `v1.3.0` while `/pm version` reads
   `v1.3.0-smoke`: the manifest read had not resolved when the line was built, and that line is the
   one a user pastes into a bug report. `tests/test_database.lua` proves the line's content against a
-  mock; only the client can witness the timing. Result: pass (owner-marked 2026-10-10)
+  mock; only the client can witness the timing. Result: not run (re-opened by R3-FRIZ: schema v3)
 - **INSTALL-9. A clean load with the LibKa0s v1.75.0 payload.** Enable only PanelMaster and its
   libraries, log in, then type `/pm` → no Lua error at load or on the first `/pm`. Repeat with every
   Ka0s addon enabled. The re-vendor added two majors this addon never calls,
@@ -811,8 +811,8 @@ and at least one art pack; skip those without it.
 - **DIAG-1. The console window.** `/pm debug` → the console opens: monospace, timestamped, a red
   `Debug: OFF` toggle at the left of the title bar, a scrollbar on the right, `0 / 3000 lines`
   bottom-right. It wears the Ka0s window edge (a 1px black outer border with a 1px light-gray
-  highlight inside it), a **gold** title and a gray divider under the title bar, and reads as one
-  suite beside another Ka0s addon's console. Result: pass (owner-marked 2026-10-10)
+  highlight inside it), a **gold** title and no line under the title bar, and reads as one
+  suite beside another Ka0s addon's console. Result: not run (re-opened by R4-SEP)
 - **DIAG-2. Title-bar controls.** At the right end of the title bar → three small square controls of
   one size, evenly spaced: a copy mark, a clear mark and a close mark, gray, each turning white (the
   close mark red) under the pointer. No words and no tooltips. **Fail:** the words *Copy* and *Clear*
@@ -1173,15 +1173,15 @@ a Lua error or a taint warning.
   with no reload; the reset profile is back on Ka0s Default with Ignore settings panel on. Result: pass (owner-marked 2026-10-30)
 - **SKIN-14. Combat (PM-01).** Change the skin in combat (on a training dummy) → no Lua error and no
   taint warning; the settings page behaves as it does for any other setting in combat. Result: pass (owner-marked 2026-10-30)
-- **SKIN-15. The skin picker on a fresh profile and at login (PM-04; O3, X6).** Create a new profile
+- **SKIN-15. The skin picker on a fresh profile and at login (PM-04; O3; R6-PV).** Create a new profile
   on the Profiles page → a small window titled **Choose a skin** opens about three quarters of the
   way up the screen: **Ka0s Panel Master** on its own line, in full, above a dropdown showing the
   skin worn now, a **gear** button
-  beside it and **no eye** (the addon has no window or test mode to preview in), an **Apply** button
+  beside it and an **eye** (lit: the picker unlocked the panels, SKIN-43), an **Apply** button
   and a close mark. Close it, then reset the profile → it opens again. For a profile that has never
   run this build: log in → it opens about two seconds after the world loads, already in the
-  profile's skin. Fail: a window on a profile that already closed it, an eye button, none on a new
-  or reset profile, the addon's name in the title, or the name cut off. Result: pass (owner-marked 2026-10-30)
+  profile's skin. Fail: a window on a profile that already closed it, no eye button, none on a new
+  or reset profile, the addon's name in the title, or the name cut off. Result:
 - **SKIN-16. The picker's preview, Apply, close and gear (PM-04).** On a fresh profile pick
   **Obsidian** in the picker's dropdown → the console and (with Ignore settings panel off) the
   settings pages repaint, the picker included, and nothing is saved yet: `/pm get skin.skin` →
@@ -1198,11 +1198,14 @@ a Lua error or a taint warning.
 - **SKIN-19. A profile switch with a preview pending (PM-04).** Preview **Ember** in the picker,
   then switch to a profile that has closed the picker → the picker goes, and that profile's own
   skin is worn, not Ember. Result: pass (owner-marked 2026-10-30)
-- **SKIN-20. Tooltips, popups, chat and the minimap button (X7, X8, X9).** Under **Azeroth** and
-  **High Contrast**: hover an editor control with a tooltip → the tooltip frame is Blizzard's and its
-  yellow highlighted words stay yellow; `/pm resetall`, **Delete panel…** and **Reset panel…** raise
-  stock popups (cancel each); chat lines keep the cyan `[PM]` tag and their colors; the minimap
-  button and its tooltip look as before. Result: pass (owner-marked 2026-10-30)
+- **SKIN-20. Tooltips, popups, chat and the minimap button (X7, X8; rewritten by FS-PM-REC).** Under
+  **Azeroth** and **High Contrast**, with **Ignore settings panel** on: hover an editor control with
+  a tooltip → the tooltip frame is Blizzard's and its highlighted words stay yellow (SKIN-33 has
+  them with the Scope cleared); `/pm resetall`, **Delete panel…** and **Reset panel…** raise stock
+  popups (cancel each); chat lines keep the cyan `[PM]` tag and their colors. The minimap button
+  stays as it was, but its tooltip's lines now follow the skin, Scope or no Scope: hover it under
+  each skin → the frame is Blizzard's, and the text and the Yes/No words take the worn skin's colors.
+  Result: Passed (owner, 2026-11-02)
 
 ### The skin fonts and feedback run (LibKa0s v1.82.0)
 
@@ -1229,22 +1232,22 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   resolves to. Fail: a font flags control anywhere on the pages. Result: Owner reported pass, 2026-10-31
 - **SKIN-23. `/pm skin` opens the picker on demand (PM-01; D-16).** On a profile that has already
   closed the first-run picker, `/pm help` lists `skin` right after `config` as *Choose a skin: open
-  the skin picker*. `/pm skin` → the **Choose a skin** window opens, as on a fresh profile, with no
-  eye. Pick **Glass** and close it → Ka0s Default comes back and nothing is saved; `/pm skin` again,
+  the skin picker*. `/pm skin` → the **Choose a skin** window opens, as on a fresh profile, with the
+  eye (R6-PV, SKIN-43). Pick **Glass** and close it → Ka0s Default comes back and nothing is saved; `/pm skin` again,
   pick **Glass** and **Apply** → `/pm get skin.skin` → `glass`. In combat (on a training dummy)
   `/pm skin` → a gray *cannot open the skin picker during combat* line on every try, and no window.
   `/pm disable`, then `/pm skin` → the one *is disabled — enable it with /pm enable* line and no
   window; `/pm enable` after. With Loot History's picker open, `/pm skin` → PanelMaster's waits
-  until that one closes. Result: Owner reported pass, 2026-10-31
+  until that one closes. Result:
 - **SKIN-24. The faces (PM-F01, LibKa0s v1.83.0; D-01, D-05, D-06).** After a full client restart
   (new font files), on **Ka0s Default** the settings pages (Ignore settings panel off), the console
-  chrome and the skin picker draw **Prototype**; on **WoW Default** Ka0s Friz Quadrata TT, visibly
+  chrome and the skin picker draw **Prototype**; on **WoW Default** Ka0s Ubuntu (R3-FRIZ; Ka0s Friz Quadrata TT before), visibly
   different from Prototype; on **Obsidian** Expressway; on **WoW Midnight** Segoe UI Semibold with
   Segoe UI Bold titles; on **Azeroth** Open Sans Semibold with Open Sans Bold titles; on **Ember**
   Emblem; on **High Contrast** Doris PP; on **Glass** Avant Garde; on **WoW Forever** Fira Sans
   Medium for body text and Fira Sans SemiBold for titles. The Skin tab's Font list starts with
   *Skin's default (the skin's face)* and holds the Ka0s faces, the older ones among them (Ka0s Inter,
-  Ka0s Oxanium SemiBold, Ka0s Fira Sans), each row drawn in its own face. Result: Owner reported pass, 2026-10-31
+  Ka0s Oxanium SemiBold, Ka0s Fira Sans), each row drawn in its own face. Result: not run (re-opened by R3-FRIZ)
 - **SKIN-25. Equal widths across skins (PM-01; D-08).** With Ignore settings panel off and the
   outline on, open the debug console, the General page's Master controls tab, the Skin tab and the
   skin picker under each of the nine skins in turn → each window's text takes about the same width
@@ -1293,6 +1296,103 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   reads it. With the list open, scroll the page with the mouse wheel → the list closes and the page
   scrolls. Fail: a plain list of names, a stock pull-out under a skin, a list left floating, or any
   Lua error. Result:
+- **SKIN-32. A clean load on LibKa0s v1.85.0 (FS-PM-RV).** After a full client restart, since the
+  re-vendor added icon files, log in with `/console scriptErrors 1`, open every Settings page and
+  every Panels editor tab, then switch to **Obsidian** and back with **Ignore settings panel** on,
+  then again with it off → no Lua error and no blank mark on any control or scroll bar, and with
+  the Scope cleared a scroll bar's small arrows wear the skin. Your panels do not change under any
+  skin (cause A8). Result: Passed (owner, 2026-11-02)
+- **SKIN-33. Tooltip emphasis follows the skin (FS-PM-FIX, cause L5).** With **Ignore settings panel**
+  off, under **Ka0s Default**: hover **Panels ▸ General ▸ Panel name** → the frame name is yellow.
+  Switch to **Obsidian** and hover again → it takes the skin's emphasis color, not yellow; so do the
+  words picked out on the **Artwork** tab's rows. Tick **Ignore settings panel** → yellow again. Fail:
+  yellow under Obsidian with the Scope cleared, or a skin color with it ticked. Result: Passed (owner, 2026-11-02)
+- **SKIN-34. Panels editor headings keep the skin's face (FS-PM-FIX, cause L4).** With **Ignore
+  settings panel** off, under **Obsidian**: on **Panels ▸ Size and position**, the **Size**, **Position**
+  and **Layer** headings draw in the same face as a General page section heading, at the size they had. Open
+  another editor tab and come back → still that face. Tick **Ignore settings panel** → stock look,
+  same size. Fail: a heading in the client's face with the Scope cleared. Result: Passed (owner, 2026-11-02)
+- **SKIN-35. The delete profile confirmation (LibKa0s v1.85.0, cause A4).** With **Ignore settings
+  panel** off, under **Obsidian**, make a second profile, then on **Profiles** click **Delete a
+  Profile** and pick it → the confirmation box wears the skin; cancel. Tick **Ignore settings
+  panel** and repeat → it is the client's stock box. Fail: a box that stays skinned for another
+  addon's use of it afterwards. Result: Passed (owner, 2026-11-02)
+- **SKIN-36. A stored pick of the deleted Friz lands on Ka0s Ubuntu (R3-FRIZ, schema v3).** Before
+  updating, set the Skin tab's **Font** to *Ka0s Friz Quadrata TT* in two profiles and log out. Update
+  and fully restart the client (a new font file) → the settings chrome draws in Ubuntu and the Font row
+  reads *Ka0s Ubuntu*; switch to the other profile → the same. Fail: the game's default face, or the
+  row still naming Ka0s Friz Quadrata TT. Result:
+
+### The owner's fourth smoke round (LibKa0s v1.85.0, second re-cut)
+
+- **SKIN-37. The console's title band is the dark gold header (R4-RV2, R4-L2).** Under **Ka0s
+  Default**, `/pm debug` → the title band is a dark gold gradient, lighter at the top and darker at
+  the bottom (round 5 darkens both ends, SKIN-40), with the gold title on it; press **Copy** → the copy window's band
+  is the same. `/pm skin` → the skin picker's second swatch on the Ka0s Default card is that header
+  color. Switch to **Obsidian** and back → each band follows the skin and returns. Fail: a near-black
+  band under Ka0s Default. Result:
+- **SKIN-38. No line under any window's title (R4-SEP).** `/pm debug` → no line runs under the title
+  band; the log starts straight below it. Press **Copy** → the copy window has no line under its
+  title either. `/pm skin` → the skin picker has none. Repeat under **Obsidian**, **WoW Default** and
+  **Glass**. PanelMaster has no other window: the panels are the player's and the unlock overlay is
+  an outline, not a header. The settings pages keep their gold rule under the page title. Fail: a
+  gray or skin-colored line under any window's title band. Result:
+- **SKIN-39. The third re-cut changes nothing PanelMaster draws (R4-RV3, R4-L4).** LibKa0s's
+  third round-4 re-cut moves only `S.IconBorder` (a HUD icon's edge stays black), and PanelMaster
+  draws no icon through it. Update and `/reload` with BugSack on → no Lua error on load; under **Ka0s
+  Default** `/pm debug`, **Copy** and `/pm skin` look as SKIN-37 and SKIN-38 describe, and `/pm`'s
+  settings pages are unchanged. Fail: a load error, or any of those windows looking different. Result:
+
+### The owner's fifth smoke round (LibKa0s v1.85.0, round 5 re-cut)
+
+- **SKIN-40. The library windows' header is darker, flush and centered (R5-RV, R5-L1 to R5-L3).**
+  PanelMaster has no window of its own; its three windows are the library's. Update and `/reload`
+  with BugSack on → no Lua error on load. Under **Ka0s Default**, `/pm debug` → the title band is
+  darker than round 4, sits flush inside the window edge with no strip of body color between the
+  edge and the band, and the title and close button are both vertically centered on it. Press
+  **Copy** → the copy window's band is the same, and so is `/pm skin`'s picker band; the picker's
+  second swatch on the Ka0s Default card is the new, darker header color. Repeat under **Obsidian**,
+  **WoW Default** and **Glass** → each window has one band, its children centered on it. Fail: a load
+  error, a strip of body color under the edge, two bands, or a title or button sitting above or
+  below the band's middle. Result:
+- **SKIN-41. The skin list closes on an outside press (R5-RV, R5-L4).** `/pm skin`, open the skin
+  list, then press the picker window's body → the list closes. Open it again and press the game
+  world → it closes. Open it again and press the **Font** dropdown → the list closes and the Font
+  pullout opens. Escape still closes the whole picker. Fail: a list that stays open after any of
+  the three presses. Result:
+
+### The owner's sixth smoke round (LibKa0s v1.85.0, round 6 re-cut)
+
+- **SKIN-42. The round 6 re-cut loads clean (R6-RV, R6-L1).** The re-cut moves only the skin
+  picker (`OptionsSkinPicker.lua` minor 11). Update and `/reload` with BugSack on → no Lua error on
+  load; under **Ka0s Default** `/pm debug`, **Copy** and `/pm skin` look as SKIN-40 describes, and
+  `/pm`'s settings pages are unchanged. Fail: a load error, or any of those windows looking
+  different. Result:
+- **SKIN-43. `/pm skin` with the panels locked: the unlock mode turns on; the eye toggles it; every
+  close puts it back (R6-PV, R6-L1).** Have at least one panel; `/pm lock`. `/pm skin` → every panel
+  shows its gold outline and name (unlocked), the picker stays in front of them, and its **eye** is
+  lit; hover it → *Preview: the frames are unlocked. Click to lock them.* Click the eye → the
+  panels lock, the eye dims and its tooltip reads *Preview: the frames are locked. Click to unlock
+  them.*; click it again → unlocked and lit. The minimap button's tooltip and the General page's
+  **Lock frame** box follow each click, and chat gets no `state.locked` line. Close the picker with
+  its close mark → the panels are locked again. Repeat with **Escape**, **Apply**, **Apply to all
+  Ka0s addons** and the **gear** → locked after each. Now `/pm unlock` first, then `/pm skin` → the
+  panels stay unlocked and the eye is lit; click the eye (locked), close the picker → unlocked again.
+  `/pm lock`, unlock one panel on its own from its editor, then `/pm skin` → every panel unlocks;
+  close → only that one panel is still unlocked. Then, with that panel still unlocked on its own,
+  `/pm skin`, `/pm lock` while the picker is up, close it; `/pm unlock`, `/pm skin`, click the eye
+  (locked) → no panel is unlocked, that one included (R6-PV review). In combat (a training dummy) with the picker up and
+  the eye dimmed, click the eye → a gray *no skin preview in combat — the panels stay locked* line,
+  the panels stay locked, and nothing unlocks when combat ends. Unlock is session state here, not a
+  stored setting: a `/reload` while the picker is up comes back with the panels locked. Fail: the
+  panels left unlocked after any close, an unlock that lands after combat, a picker behind the
+  panels' outlines, or an eye that does not light, dim or reword. Result:
+- **SKIN-44. The sim checkbox re-cut loads clean and draws no Sim mode box here (R6-RV2, R6-SIM-L).**
+  The re-cut moves only `OptionsCompose.lua` (minor 19). PanelMaster has no sim mode and passes no
+  sim hooks. Update and `/reload` with BugSack on → no Lua error on load; `/pm config` → **Master
+  controls** shows the same rows as before, in the same order, with **Minimap button** alone on its
+  line and no **Sim mode** box anywhere; `/pm skin` and `/pm debug` look as SKIN-42 describes. Fail:
+  a load error, a Sim mode box, or any Master controls row moved. Result:
 
 ## Pending sign-off
 
@@ -1321,3 +1421,27 @@ Pending: SKIN-28, SKIN-29, SKIN-30 and SKIN-31, added by the findings remediatio
 (Ka0sAddonsCommonTasks `docs/2026-10-31-FINDINGS_REMEDIATION/`), each with an empty `Result:` line.
 That run's one media picker (M3-MEDIA) also rewrote LOOK-7, LOOK-9, SKIN-3 and SKIN-27 and retired
 LOOK-10, so the first four are pending with their `Result:` lines emptied.
+
+Owed by the full skinning run (FS-PM-RV and FS-PM-FIX, Ka0sAddonsCommonTasks
+`docs/2026-11-01-FULL_SKINNING/`, LibKa0s v1.85.0): SKIN-32, SKIN-33, SKIN-34 and SKIN-35, new, and
+SKIN-20, whose expected result changed and which lost its 2026-10-30 pass mark. The re-cut tag's
+per-skin bar, icon, glow and cover values (FS-PM-GATE) changed no expected result here: the panels
+stay the player's and no check names one of those values, so every other mark stands.
+
+Pending from the owner's third smoke round (Ka0sAddonsCommonTasks `docs/2026-11-02-SMOKE_ROUND3/`, R3-FRIZ):
+SKIN-36, new, and SKIN-24 and INSTALL-8, whose WoW Default face (Ka0s Ubuntu) and schema line (v3) changed
+and which lost their pass marks.
+
+On 2026-11-02 the owner reported that every check on the smoke lists of the full skinning run and its smoke feedback batch (Ka0sAddonsCommonTasks `docs/2026-11-01-FULL_SKINNING/` and `docs/2026-11-01-SMOKE_FEEDBACK/`) passed, apart from DpsRace's clock font, the skinned look of the AceGUI Dropdown and the Ka0sMedia_Font and Ka0sMedia_Statusbar pickers, FadeNineSlice and IconBorder (`docs/2026-11-02-SMOKE_ROUND3/`, R3-SMOKE). Passed, recorded on each `Result:` line as `Passed (owner, 2026-11-02)`: SKIN-20, SKIN-32, SKIN-33, SKIN-34 and SKIN-35.
+
+Pending from the owner's fourth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND4/`,
+R4-RV2, R4-SEP and R4-RV3): SKIN-37, SKIN-38 and SKIN-39, new, and DIAG-1, whose console no longer has a line under
+its title and which lost its pass mark.
+
+Pending from the owner's fifth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND5/`,
+R5-RV): SKIN-40 and SKIN-41, new. SKIN-37 no longer quotes the round 4 hexes; its expected result is
+unchanged apart from the darker shade SKIN-40 checks.
+
+Pending from the owner's sixth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND6/`,
+R6-RV, R6-PV and R6-RV2): SKIN-42, SKIN-43 and SKIN-44, new, and SKIN-15 and SKIN-23, which described the picker
+with no eye and lost their pass marks.

@@ -184,11 +184,13 @@ The alternative considered and rejected: anonymous pooled frames plus `_G` alias
 pool, but hands out frames whose `GetName()` is `nil`, which breaks every consumer expecting a real
 named frame.
 
-`NS.SCHEMA_VERSION` is **2** for this: the v1 → v2 migration stamps `frameName` onto every panel by
+`NS.SCHEMA_VERSION` is **3**. The v1 → v2 migration stamps `frameName` onto every panel by
 deriving it from the name, which reproduces exactly the global that build already gave the frame, so
 the upgrade moves nobody's anchors. `R.Sanitize` fills the field the same way for a record arriving
 by another route (an imported profile, a test), which is what covers profiles other than the one
-active when the migration ran.
+active when the migration ran. The v2 → v3 migration (R3-FRIZ) moves every stored string naming
+`Ka0s Friz Quadrata TT`, which LibKa0s v1.85.0 deleted, to `Ka0s Ubuntu` in every stored profile
+(`NS.RetireFonts`); Blizzard's own `Friz Quadrata TT` stays.
 
 **Leftover sample panels.** Older builds had a test mode that wrote three sample panels into the
 registry as real records, each marked `rec[C.PREVIEW_FIELD]` (`preview = true`). It is gone:

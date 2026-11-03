@@ -348,6 +348,37 @@ test("Parity: the Skin seam's degraded facade answers every name of the library'
   assertEqual(S.HudFontSize(14), 14)
   assertEqual(S.HudFontSize(nil), 12)
   assertEqual(S.HudFontSize(0), 12)
+  -- MarkText is concatenated by its caller, so it answers the markup at the size asked, 14 unasked.
+  assertEqual(S.MarkText("art\\mark", 20), "|Tart\\mark:20:20|t")
+  assertEqual(S.MarkText("art\\mark"), "|Tart\\mark:14:14|t")
+  -- HudFont is the one member that must draw, and "@skin" must never reach SetFont.
+  local function recorder()
+    local fs = {}
+    function fs:SetFont(...) self.font = { ... } end
+    function fs:SetShadowColor(...) self.shadowColor = { ... } end
+    function fs:SetShadowOffset(...) self.shadowOffset = { ... } end
+    return fs
+  end
+  assertEqual(S.FROM_SKIN, "@skin", "the sentinel this case passes as flags")
+  local fs = recorder()
+  S.HudFont(fs, { face = "Fonts\\TEST.TTF", size = 16, flags = "@skin", shadow = true })
+  assertEqual(fs.font[1], "Fonts\\TEST.TTF")
+  assertEqual(fs.font[2], 16)
+  assertEqual(fs.font[3], S.FontFlags(S.FROM_SKIN), "HudFont resolves its flags through FontFlags")
+  assertEqual(fs.shadowColor[4], 1)
+  assertEqual(table.concat(fs.shadowOffset, ","), "1,-1")
+  local bare = recorder()
+  S.HudFont(bare, { flags = "THICKOUTLINE" })
+  assertEqual(bare.font[1], _G.STANDARD_TEXT_FONT, "no face falls back to the client's")
+  assertEqual(bare.font[2], 12)
+  assertEqual(bare.font[3], "THICKOUTLINE")
+  assertEqual(bare.shadowColor[4], 0)
+  assertEqual(table.concat(bare.shadowOffset, ","), "0,0")
+  -- BarBorder answers its stored three: with no skin the stored border stands.
+  local style, show, size = S.BarBorder("Solid", true, 2, true)
+  assertEqual(style, "Solid")
+  assertEqual(show, true)
+  assertEqual(size, 2)
   -- The outline apply is the degraded arm's quiet no-op.
   assertEqual(degradedNS.ApplySkinOutline(), false)
 end)

@@ -167,7 +167,7 @@ construction rather than by two implementations agreeing. The name is the **fold
 
 | Part | Where it lives | Note |
 |---|---|---|
-| The object and its clicks | `core/LauncherSetup.lua` → the library | `LibKa0s-Launcher-1.0` minor 4 (`launcher-§2`, standard v2.67.0) owns both buttons. **Left-click opens the settings panel**, in either state. **Right-click opens the options menu** — the client's context menu, titled `Ka0s Panel Master` — with the entries **Enabled · Locked** (the row the standard's `ADDONS.md` records): *Enabled* is `isEnabled` + `setEnabled` → `NS.Slash:CliEnable`, the body of `/pm enable` / `/pm disable`; *Locked* is `isLocked` + `toggleLock` → `NS.Slash:CliLock`, the body of `/pm lock` / `/pm unlock`, which writes `state.locked` through the same seam the *Lock frame* checkbox writes through. No *Test mode* (unlocking is this addon's preview; there is no test mode) and no *Show window* (no primary window). The descriptor holds no copy of either state. `tests/test_launcher.lua` drives the menu through `tests/mock_menu.lua`. |
+| The object and its clicks | `core/LauncherSetup.lua` → the library | `LibKa0s-Launcher-1.0` minor 4 (`launcher-§2`, standard v2.67.0) owns both buttons. **Left-click opens the settings panel**, in either state. **Right-click opens the options menu** — the client's context menu, titled `Ka0s Panel Master` — with the entries **Enabled · Locked** (the row the standard's `ADDONS.md` records): *Enabled* is `isEnabled` + `setEnabled` → `NS.Slash:CliEnable`, the body of `/pm enable` / `/pm disable`; *Locked* is `isLocked` + `toggleLock` → `NS.Slash:CliLock`, the body of `/pm lock` / `/pm unlock`, which writes `state.locked` through the same seam the *Lock frame* checkbox writes through. No *Test mode* (unlocking is this addon's preview; there is no test mode) and no *Show window* (no primary window). Below the two checkboxes the library adds two action rows: **Open settings** (on every host, never grayed) and, since Launcher minor 6 (SF-F2), **Open skin selector**, offered because the descriptor passes `openSkinPicker` → `NS.RunSkinVerb` (the act of `/pm skin`) and this addon is a registered skin owner; it grays with *enable the addon first* while disabled. The descriptor holds no copy of either state. `tests/test_launcher.lua` drives the menu through `tests/mock_menu.lua`; `tests/test_launcher_skin_entry.lua` pins the `openSkinPicker` wiring. |
 | The status tooltip | `core/LauncherSetup.lua` → the library | Drawn by `LibKa0s-Launcher-1.0` (`launcher-§1`; minor 3, hints fixed at minor 4) on every hover, **disabled included**; the descriptor only answers it, read on every show: `version` (`NS.Version`, the TOC's `## Version`), `isEnabled` (the master switch, `NS.IsAddonEnabled`), `isLocked` (`state.locked`, the *Lock frame* row). The hints are the library's fixed `Left-click: Open settings` / `Right-click: Options menu`. No `isTestMode` (there is no test mode) and no `onTooltipShow` (nothing of its own to add). `tests/test_launcher.lua` pins every line through the object's `OnTooltipShow`. |
 | The icon | `C.ICON_PATH` (`core/Constants.lua`) | `media/logos/panelmaster.logo.128.tga`, the same file the TOC's `## IconTexture` names (`launcher-§4`). `tests/test_constants.lua` asserts the two spellings name one file and reads its header bytes. |
 | The broker label | `core/LauncherSetup.lua` | `Ka0s Panel Master` — the **brand name in plain text** (`launcher-§1`), which is what a broker display prints in its row beside the other ten Ka0s addons. Deliberately **not** the TOC `## Title` and not wired to it (a Title may carry color escapes, and one in the collection does), and not the folder name, which is the registration `name` above. A literal here, with no escape sequence of any kind. |
@@ -299,17 +299,29 @@ addon draws).
   class colors — are the player's content (decision D1): no `fromSkin` companions and **no one-time
   HUD style reset**, so no skin and no upgrade restyles a saved layout. New panels start from the
   template, not the skin (D2). StaticPopups, GameTooltip's frame, `ColorPickerFrame` and the
-  minimap button stay stock (skinning-§7); chat lines keep their
-  colors (X7); the editor tooltips' inline yellow is content markup (X9); the console keeps its
-  monospace face.
+  minimap button stay stock (skinning-§7), though the lines the library writes on the button's
+  tooltip follow the skin (LibKa0s v1.85.0); chat lines keep their colors (X7); the console keeps
+  its monospace face. The editor tooltips' inline emphasis reads `gtip.emphasis` through
+  `NS.SkinPanelEscape`, so it stays yellow while the settings panel is ignored.
 - **The first-run skin picker.** `NS.MaybeShowSkinPicker` shows the library's `O.SkinPicker` while
   the profile's `skin.pickerSeen` is false and the latch is up: once per session two seconds after
   the first `PLAYER_ENTERING_WORLD`, and after every profile event; in combat it waits for
   `PLAYER_REGEN_ENABLED`. It is titled *Choose a skin*, with this addon's label (`NS.BRAND`, from
-  `RegisterOwner`) on its own line above the dropdown (the library's `frame.ownerLabel`). It has no eye (no window or test mode to preview in, X6), so `CLAUDE.md`
-  declares only the `settings` icon. Only the player's close marks it seen; the stand-down and a
+  `RegisterOwner`) on its own line above the dropdown (the library's `frame.ownerLabel`). Its eye is the **unlock
+  mode** (`spec.preview`, LibKa0s OptionsSkinPicker 11, R6-PV of Ka0sAddonsCommonTasks
+  `docs/2026-11-03-SMOKE_ROUND6/`, which overturned the no-eye ruling X6): the addon has no window
+  and no test mode, and the unlock overlay is the chrome that wears the skin. A picker shown with the
+  panels locked unlocks them; the eye locks and unlocks (lit while unlocked); every close (Apply,
+  *Apply to all*, the gear, the close control, Escape, `NS.HideSkinPicker`) puts back the lock it
+  opened on, and panels already unlocked are left alone. Every move is
+  `NS.Schema:Set("state.locked", v)`, the row `/pm lock`, `/pm unlock` and the launcher write
+  through, so the *Lock frame* checkbox, the launcher and the verbs agree. In combat the preview
+  refuses the unlock rather than let the unlock gate queue it for the combat exit (which would land
+  after the picker closed); a lock is never refused. Panels unlocked on their own are unlocked again
+  when the preview locks. Unlock is session state, so a `/reload` with the picker up comes back
+  locked. `CLAUDE.md` declares the `settings` and `eye` icons. Only the player's close marks it seen; the stand-down and a
   profile event take it down unseen. `/pm skin` shows the same picker on demand (`NS.RunSkinVerb`,
-  `O.SkinVerb`), whatever `skin.pickerSeen` says.
+  `O.SkinVerb`), whatever `skin.pickerSeen` says, and so does the launcher menu's **Open skin selector**.
 - **The font outline.** `skin.outline` (LibKa0s v1.82.0, ruling D-06): **All text**,
   **HUD text only** (the default since LibKa0s v1.83.0, D-10; a stored mode stays) or **Off**, the Skin tab's *Font outline*, stored through the same write seam
   as the font and texture overrides (`media.outline`) and applied with `Skin:SetOutline` beside
@@ -320,8 +332,10 @@ addon draws).
   (D-07) and the HUD size scale (D-09) have nothing to apply to here.
 - **EllesmereUI.** The library's provider (`skin.source = "eui"`); `EllesmereUI` is in the TOC's
   `OptionalDeps`. PanelMaster has no bridge of its own.
-- **The color gate.** `tests/test_skin_literals.lua` fails on a color literal outside
-  `core/SkinSetup.lua` and its reasoned allow-list (anti-pattern #107).
+- **The gates.** The kit's `tests/_kit/test_skin_values.lua` (kit revision 50, anti-pattern #107)
+  fails on a typed color or texture outside its categories and the rows in `tests/run.lua`, each
+  naming a cause; its `tests/_kit/test_skin_switch.lua` fails a surface `tests/skin_surfaces.lua`
+  declares that does not change under a probe skin.
 
 ## Frame layering
 
