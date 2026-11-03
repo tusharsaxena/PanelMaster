@@ -1337,6 +1337,11 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` â
   **Glass**. PanelMaster has no other window: the panels are the player's and the unlock overlay is
   an outline, not a header. The settings pages keep their gold rule under the page title. Fail: a
   gray or skin-colored line under any window's title band. Result:
+- **SKIN-39. The third re-cut changes nothing PanelMaster draws (R4-RV3, R4-L4).** LibKa0s's
+  third round-4 re-cut moves only `S.IconBorder` (a HUD icon's edge stays black), and PanelMaster
+  draws no icon through it. Update and `/reload` with BugSack on â†’ no Lua error on load; under **Ka0s
+  Default** `/pm debug`, **Copy** and `/pm skin` look as SKIN-37 and SKIN-38 describe, and `/pm`'s
+  settings pages are unchanged. Fail: a load error, or any of those windows looking different. Result:
 
 ## Pending sign-off
 
@@ -1379,5 +1384,5 @@ and which lost their pass marks.
 On 2026-11-02 the owner reported that every check on the smoke lists of the full skinning run and its smoke feedback batch (Ka0sAddonsCommonTasks `docs/2026-11-01-FULL_SKINNING/` and `docs/2026-11-01-SMOKE_FEEDBACK/`) passed, apart from DpsRace's clock font, the skinned look of the AceGUI Dropdown and the Ka0sMedia_Font and Ka0sMedia_Statusbar pickers, FadeNineSlice and IconBorder (`docs/2026-11-02-SMOKE_ROUND3/`, R3-SMOKE). Passed, recorded on each `Result:` line as `Passed (owner, 2026-11-02)`: SKIN-20, SKIN-32, SKIN-33, SKIN-34 and SKIN-35.
 
 Pending from the owner's fourth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND4/`,
-R4-RV2 and R4-SEP): SKIN-37 and SKIN-38, new, and DIAG-1, whose console no longer has a line under
+R4-RV2, R4-SEP and R4-RV3): SKIN-37, SKIN-38 and SKIN-39, new, and DIAG-1, whose console no longer has a line under
 its title and which lost its pass mark.
