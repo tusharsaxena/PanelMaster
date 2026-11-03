@@ -958,9 +958,9 @@ Total.
 - Skin unlock: the repaint touches unlocked panels only, and never the panel's own colors
 - Skin unlock: the label takes the skin's accent text role once, at creation
 
-### test_skin_picker.lua (13)
+### test_skin_picker.lua (29)
 
-- Skin picker: the spec names this owner, its seams, the General page's Skin tab, no eye
+- Skin picker: the spec names this owner, its seams, the General page's Skin tab, the unlock eye
 - Skin picker: an unseen profile shows it; a seen one does not
 - Skin picker: it shows once after login, two seconds in, from OnEnterWorld
 - Skin picker: the stand-down cancels an unfired login start and gives it back
@@ -973,6 +973,22 @@ Total.
 - Skin picker: Apply saves the pick through the write seam and marks the picker seen
 - Skin picker: a profile event takes a shown picker down before the new profile's skin
 - Skin picker: the stand-down takes a shown picker down unseen
+- Skin picker preview: shown with the panels locked, it unlocks them through the write seam
+- Skin picker preview: the eye locks and unlocks, through the seam each time
+- Skin picker preview: the close control locks the panels it unlocked
+- Skin picker preview: Escape locks the panels it unlocked
+- Skin picker preview: Apply locks the panels it unlocked
+- Skin picker preview: Apply to all locks the panels it unlocked
+- Skin picker preview: the gear locks the panels it unlocked
+- Skin picker preview: the library's HideSkinPicker locks the panels it unlocked
+- Skin picker preview: this addon's own hide (stand-down, profile event) locks the panels it unlocked
+- Skin picker preview: an eye that locked again leaves the close nothing to undo
+- Skin picker preview: panels already unlocked are left alone, and stay unlocked
+- Skin picker preview: opened unlocked, locked by the eye, the close unlocks again
+- Skin picker preview: a panel unlocked on its own is unlocked again after the close
+- Skin picker preview: a profile event forgets the per-panel unlocks the preview found
+- Skin picker preview: in combat the eye refuses the unlock rather than queue it
+- Skin picker preview: in combat the close still locks what the picker unlocked
 
 ### test_skin_verb.lua (6)
 
@@ -1376,7 +1392,7 @@ Total.
 | test_skin_outline.lua | 11 |
 | test_skin_literals.lua | 9 |
 | test_skin_unlock.lua | 5 |
-| test_skin_picker.lua | 13 |
+| test_skin_picker.lua | 29 |
 | test_skin_verb.lua | 6 |
 | test_skin_settings.lua | 7 |
 | test_glyphs.lua | 1 |
@@ -1403,4 +1419,4 @@ Total.
 | test_skin_values.lua | 3 |
 | test_skin_switch.lua | 9 |
 | Skipped | 1 |
-| **Total** | **1177** |
+| **Total** | **1193** |

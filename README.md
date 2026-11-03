@@ -4,7 +4,7 @@
 ![CurseForge Version](https://img.shields.io/curseforge/v/1642836)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
-![Tests](https://img.shields.io/badge/Tests-1162%2F1162_passing-green)
+![Tests](https://img.shields.io/badge/Tests-1193%2F1193_passing-green)
 
 Ka0s Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
@@ -68,7 +68,9 @@ opens the settings on a left-click, and its right-click menu turns the addon on 
 unlocks your panels.
 
 The first time you log in, a skin picker asks how the addon's own windows should look. Pick one,
-or close it and stay on Ka0s Default. `/pm skin` brings the picker back any time. The **Skin** tab on
+or close it and stay on Ka0s Default. While it is open your panels are unlocked, so you can see the
+skin on their outlines and names; the eye button beside the skin list locks and unlocks them, and
+closing the picker puts the lock back the way it was. `/pm skin` brings the picker back any time. The **Skin** tab on
 the General page changes it too, and can take the look from EllesmereUI instead if you run it. A skin
 colors the unlock outlines and the debug console. The settings pages keep the game's look unless you untick **Ignore settings panel** there.
 Your panels are never touched: their colors, borders and artwork stay exactly as you set them.
@@ -293,7 +295,7 @@ The bundled panel artwork comes from [warcraft.wiki.gg](https://warcraft.wiki.gg
 the sizes the client wants and redistributed under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), the same license as the originals.
 
-The debug console's copy, clear and close marks, the skin picker's settings gear and the small
+The debug console's copy, clear and close marks, the skin picker's settings gear and eye, and the small
 marks LibKa0s draws beside skinned controls are from
 [Open Iconic](https://github.com/iconic/open-iconic) by Waybury, MIT-licensed. Only the icons the
 addon draws are shipped. The icons are bundled inside the LibKa0s payload, with their license text

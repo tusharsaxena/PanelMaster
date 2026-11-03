@@ -600,6 +600,7 @@ end
 -- stays out, for the reason dropSessionIDs gives.
 local function clearPanelSessionState()
   for id in pairs(NS.State.unlockedPanels) do NS.State.unlockedPanels[id] = nil end
+  NS.State.previewPanels = nil   -- the skin picker preview's copy of them (core/SkinSetup.lua)
 end
 
 -- Re-read the registry after the active AceDB profile changed underneath it.

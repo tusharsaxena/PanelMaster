@@ -56,7 +56,7 @@ re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam f
 order they pin, and this repo's GitHub issues for every adoption decision.
 
 Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.85.0 (MIT).
-LibKa0s icons: chevron-down, chevron-up, clear, close, confirm, copy, info, move, reset, settings, volume-high.
+LibKa0s icons: chevron-down, chevron-up, clear, close, confirm, copy, eye, info, move, reset, settings, volume-high.
 
 The first of those two lines is the **provenance line**, and it is an input rather than a note:
 `tests/test_vendor_sync.lua` greps this file for it and compares both vendored payloads —
@@ -67,10 +67,11 @@ it here, where the build facts already are, and there is no fallback to the old 
 second line is the **icon declaration** (kit revision 40, `library-stack-§7`): the same gate holds
 `libs/LibKa0s/media/icons/` to exactly the declared names plus Open Iconic's
 `LICENSE-open-iconic.txt`, the re-vendor prunes the folder to it with the tag's
-`tools/prune-icons.lua`, and both lines move in the same commit as the bytes. The eleven names are
+`tools/prune-icons.lua`, and both lines move in the same commit as the bytes. The twelve names are
 the marks the library draws for this addon: the debug console's copy and clear buttons and its
-close button, the first-run skin picker's settings gear (no `eye`: the picker is shown with no
-preview, because the addon has no window or test mode to preview a skin in), and the seven small
+close button, the skin picker's settings gear and its `eye` (the preview is the unlock mode,
+`spec.preview`, since R6-PV of Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND6/`, which
+overturned the old no-eye ruling X6), and the seven small
 marks LibKa0s v1.85.0 draws beside skinned controls, which it owes every consumer. No code here passes a catalog name of its own (`NS.Icon` has no caller, and stays because `library-stack-§8` requires the seam to publish it).
 
 The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/ARCHITECTURE.md`

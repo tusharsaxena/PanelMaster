@@ -52,7 +52,7 @@ library is vendored whole-folder into `libs/LibKa0s/` and is **never edited here
 problem is fixed in `../LibKa0s` and re-vendored back, because the next re-vendor silently reverts a
 local edit and the revert reads as a regression with no cause anywhere in this repo's history.
 The one carve-out is `libs/LibKa0s/media/icons/`, pruned to the `LibKa0s icons:` declaration in
-`CLAUDE.md` (the console's `clear`, `close` and `copy`, the skin picker's `settings` gear, and the seven marks LibKa0s v1.85.0 owes every consumer) by the tag's `tools/prune-icons.lua`.
+`CLAUDE.md` (the console's `clear`, `close` and `copy`, the skin picker's `settings` gear and `eye`, and the seven marks LibKa0s v1.85.0 owes every consumer) by the tag's `tools/prune-icons.lua`.
 
 **`NS.LIBKA0S_MISSING` is a cross-file contract, not an implementation detail.** `core/CoreSetup.lua`
 publishes it — *outside* its own missing-library branch, because the later seams read it on **both**
@@ -176,7 +176,7 @@ The suites, one per subject:
 | `tests/test_skin_literals.lua` | What the kit's typed-value gate cannot see: `NS.SKIN_FALLBACK` against the library's Ka0s Default, the *(disabled)* marker and the editor tooltips' emphasis on Ka0s Default and Obsidian, and the editor headings' `O.LabelFont`. |
 | `tests/test_skin_outline.lua` | The font outline: `skin.outline`'s default and row, the write seam's `media.outline`, another addon's copy, the live apply, `/pm set`, the whole-pair apply, a profile switch and a reset. |
 | `tests/test_skin_verb.lua` | The reserved `/pm skin` verb: its row after `config`, the picker on a seen profile, the spec, combat, the disabled refusal and the library-absent line. |
-| `tests/test_skin_picker.lua` | The first-run skin picker: the spec, the login start, the combat hold, the profile events, the stand-down and `skin.pickerSeen`. |
+| `tests/test_skin_picker.lua` | The first-run skin picker: the spec, the login start, the combat hold, the profile events, the stand-down and `skin.pickerSeen`; the eye's unlock mode (`spec.preview`): entered at show, toggled by the eye, restored on every close, refused in combat. |
 | `tests/test_skin_settings.lua` | The settings widgets this addon acquires itself: the Panels editor's AceGUI rows, the kept band repainted on `OnLooksChanged`, and the Profiles tree. |
 | `tests/test_skin_unlock.lua` | The unlock overlay on the skin: Ka0s Default's bytes, the token on Obsidian, the live repaint of unlocked panels only, never the player's fill. |
 | `tests/test_skinsetup.lua` | The Skin seam: the owner, the load order, the `skin.*` keys, the CLI path, the Skin tab's single repaint, the copy, and the profile switch and reset. |

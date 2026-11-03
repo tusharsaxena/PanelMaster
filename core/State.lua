@@ -22,6 +22,12 @@ State.unlocked = false
 -- Session-only for the same reason as the global flag.
 State.unlockedPanels = {}
 
+-- The per-panel unlocks the skin picker's preview found when it unlocked the screen (R6-PV,
+-- core/SkinSetup.lua), a list of panel ids its lock puts back, since a global lock drops every
+-- per-panel unlock; nil while no preview unlock is out. Keyed on panel ids, so it goes with them on a
+-- profile event (modules/Registry.lua, clearPanelSessionState).
+State.previewPanels = nil
+
 -- Event names the client refused to register this session, in the order they were refused, each
 -- at most once. NS.SafeRegisterEvent (core/CoreSetup.lua) appends to it on every registration path
 -- and `/pm diagnostics` prints it (modules/Diagnostics.lua), which is the record events-frames-taint-§1

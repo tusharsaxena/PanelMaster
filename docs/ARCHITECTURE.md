@@ -307,8 +307,19 @@ addon draws).
   the profile's `skin.pickerSeen` is false and the latch is up: once per session two seconds after
   the first `PLAYER_ENTERING_WORLD`, and after every profile event; in combat it waits for
   `PLAYER_REGEN_ENABLED`. It is titled *Choose a skin*, with this addon's label (`NS.BRAND`, from
-  `RegisterOwner`) on its own line above the dropdown (the library's `frame.ownerLabel`). It has no eye (no window or test mode to preview in, X6), so `CLAUDE.md`
-  declares only the `settings` icon. Only the player's close marks it seen; the stand-down and a
+  `RegisterOwner`) on its own line above the dropdown (the library's `frame.ownerLabel`). Its eye is the **unlock
+  mode** (`spec.preview`, LibKa0s OptionsSkinPicker 11, R6-PV of Ka0sAddonsCommonTasks
+  `docs/2026-11-03-SMOKE_ROUND6/`, which overturned the no-eye ruling X6): the addon has no window
+  and no test mode, and the unlock overlay is the chrome that wears the skin. A picker shown with the
+  panels locked unlocks them; the eye locks and unlocks (lit while unlocked); every close (Apply,
+  *Apply to all*, the gear, the close control, Escape, `NS.HideSkinPicker`) puts back the lock it
+  opened on, and panels already unlocked are left alone. Every move is
+  `NS.Schema:Set("state.locked", v)`, the row `/pm lock`, `/pm unlock` and the launcher write
+  through, so the *Lock frame* checkbox, the launcher and the verbs agree. In combat the preview
+  refuses the unlock rather than let the unlock gate queue it for the combat exit (which would land
+  after the picker closed); a lock is never refused. Panels unlocked on their own are unlocked again
+  when the preview locks. Unlock is session state, so a `/reload` with the picker up comes back
+  locked. `CLAUDE.md` declares the `settings` and `eye` icons. Only the player's close marks it seen; the stand-down and a
   profile event take it down unseen. `/pm skin` shows the same picker on demand (`NS.RunSkinVerb`,
   `O.SkinVerb`), whatever `skin.pickerSeen` says.
 - **The font outline.** `skin.outline` (LibKa0s v1.82.0, ruling D-06): **All text**,

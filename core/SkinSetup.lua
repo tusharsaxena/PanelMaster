@@ -224,7 +224,7 @@ local function storedIgnore()
   return S:Get(PANEL_PATH) == true, S:Get(FONTS_PATH) == true
 end
 
--- ── the first-run skin picker (LibKa0s OptionsSkinPicker 1, rollout rulings O3 and X6) ─────────
+-- ── the first-run skin picker (LibKa0s OptionsSkinPicker 1, rollout ruling O3) ────────────────
 --
 -- WHEN. Once after login (NS.ArmSkinPicker from addon:OnEnterWorld, which only an addon that
 -- stands up registers), after OnInitialize applied the stored skin; and again after every profile
@@ -242,10 +242,29 @@ end
 --
 -- PREVIEW. A pick only previews: the Skin major moves and the settings pages repaint, but `set`
 -- (NS.WriteSkinChoice) runs only on Apply, the gear or Apply to all; the close control and Escape
--- put back the stored choice as it reads at the close. NO EYE (X6, PanelMaster decision D6): the
--- addon has no window of its own and no test mode to preview a skin in, and the panels are the
--- player's and never wear one (D1), so `onPreview` is omitted, the library hides the button, and
--- CLAUDE.md's icon line declares only `settings`.
+-- put back the stored choice as it reads at the close.
+--
+-- THE EYE: UNLOCK MODE (R6-PV; LibKa0s OptionsSkinPicker 11, `spec.preview`; Ka0sAddonsCommonTasks
+-- docs/2026-11-03-SMOKE_ROUND6, the lead's call 2, which overturns X6 and D6's "no eye"). The addon
+-- has no window and no test mode; the chrome that wears the skin is the unlock overlay on each panel
+-- (handle, name label, outline; the panels themselves stay the player's, D1). So the preview is the
+-- unlock: a picker shown with the panels locked unlocks them, the eye locks and unlocks, and every
+-- close puts back the lock the picker opened on (the library's restore). Every move is
+-- NS.Schema:Set("state.locked", v), the write seam the Master controls' *Lock frame* row sets and
+-- that `/pm lock`, `/pm unlock` and the launcher's toggle reach through NS.Slash:CliLock, never
+-- NS.Unlock directly, so the row, the launcher and the verb agree. Not CliLock itself: that is the
+-- verb's body and prints the `state.locked = ...` echo, which a picker showing at login or after a
+-- profile event has no business putting in chat.
+-- `isActive` and `isShown` both read "unlocked", the launcher's `not isLocked()`: unlocked panels
+-- are the surface shown, which the picker leaves alone. Two edges are this addon's own:
+--   * combat: the seam DEFERS an unlock to the combat exit, which would land after the picker had
+--     closed with nothing left to lock it again; the preview's enter refuses instead (the library's
+--     "refused enter": nothing moved, nothing to undo). A lock is never refused or deferred.
+--   * a panel unlocked on its own (its editor) before the preview: the global lock drops every
+--     per-panel unlock, so the preview's lock puts back the ones its unlock found
+--     (NS.State.previewPanels, which a profile event drops with the other panel-keyed state).
+-- Unlock is session state (`state.locked` is sessionOnly), so a /reload while the picker is up
+-- comes back locked. CLAUDE.md's icon line declares `eye`.
 --
 -- QUEUED. One picker is up at a time across every Ka0s addon: while another addon's is up,
 -- O.SkinPicker queues this one and answers nil, "queued", which NS.MaybeShowSkinPicker passes
@@ -266,6 +285,44 @@ local function pickerClosed()
   S:Set(PICKER_PATH, true)
 end
 
+local function previewUnlocked()
+  return not (NS.Schema and NS.Schema:Get("state.locked"))
+end
+
+local function writeLocked(v)
+  local S = NS.Schema
+  if S and S.FindRow and S:FindRow("state.locked") then S:Set("state.locked", v) end
+end
+
+--- The preview's unlock: refused in combat (false, no write), otherwise the lock row's write.
+local function previewEnter(why)
+  if previewUnlocked() then return nil end
+  if type(InCombatLockdown) == "function" and InCombatLockdown()
+    and not (NS.Lifecycle and NS.Lifecycle:IsDown()) then
+    NS.Print("|cff808080no skin preview in combat \226\128\148 the panels stay locked|r")
+    NS.Debug("Unlock", "skin picker preview (%s) refused: in combat", tostring(why))
+    return false
+  end
+  local found = {}
+  for id in pairs(NS.State.unlockedPanels) do found[#found + 1] = id end
+  writeLocked(false)
+  if previewUnlocked() then NS.State.previewPanels = found end
+end
+
+--- The preview's lock: the lock row's write, then the per-panel unlocks its unlock found, back.
+local function previewExit()
+  if not previewUnlocked() then return nil end
+  local panels = NS.State.previewPanels
+  NS.State.previewPanels = nil
+  writeLocked(true)
+  if panels and NS.Unlock and NS.Unlock.SetPanelUnlocked then
+    for _, id in ipairs(panels) do
+      -- A panel deleted while the picker was up is not unlocked back into session state.
+      if not (NS.Registry and NS.Registry.Get) or NS.Registry:Get(id) then NS.Unlock:SetPanelUnlocked(id, true) end
+    end
+  end
+end
+
 function NS.SkinPickerSpec()
   return {
     owner = addonName, get = NS.SkinChoice, set = NS.WriteSkinChoice,
@@ -273,6 +330,12 @@ function NS.SkinPickerSpec()
     -- O.SelectTab("general", "Appearance"), the Skin tab's key (settings/Panel.lua).
     page = "general", tab = "Appearance",
     onClose = pickerClosed,
+    -- THE EYE, above: unlock mode, through the `state.locked` write seam.
+    preview = {
+      mode = "unlock",
+      enter = previewEnter, exit = previewExit,
+      isActive = previewUnlocked, isShown = previewUnlocked,
+    },
   }
 end
 

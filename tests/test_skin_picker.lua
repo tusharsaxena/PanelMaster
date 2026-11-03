@@ -1,9 +1,9 @@
 -- tests/test_skin_picker.lua — the first-run skin picker on this addon's seam (core/SkinSetup.lua;
--- LibKa0s OptionsSkinPicker 1; rollout rulings O3 and X6, PanelMaster decision D6).
+-- LibKa0s OptionsSkinPicker 1; rollout ruling O3; the preview, OptionsSkinPicker 11 and R6-PV).
 --
 -- What this addon owes the picker, and nothing the library pins itself: the spec it hands
--- O.SkinPicker (its owner, its two seams, the Skin tab's page and key, the close, and NO eye: the
--- addon has no window or test mode to preview in); WHEN it shows (a profile whose `skin.pickerSeen`
+-- O.SkinPicker (its owner, its two seams, the Skin tab's page and key, the close, and the eye's
+-- unlock mode, `spec.preview`, through the `/pm unlock` / `/pm lock` seam); WHEN it shows (a profile whose `skin.pickerSeen`
 -- is false, once after login and after every profile event, never while the addon stands down, held
 -- through combat); and that only the player's close marks it seen. The trigger cases spy on
 -- O.SkinPicker; the last cases drive the library's real window. LootHistory's
@@ -89,17 +89,23 @@ end
 
 -- ── the key and the spec ─────────────────────────────────────────────────────────────────────
 
-test("Skin picker: the spec names this owner, its seams, the General page's Skin tab, no eye", function()
+test("Skin picker: the spec names this owner, its seams, the General page's Skin tab, the unlock eye", function()
   -- red under: a set that is not the write seam (Apply would never reach the profile), a page or
-  -- tab key O.SelectTab does not know (the gear would open the wrong tab), or an eye with nothing
-  -- to preview (X6, D6).
+  -- tab key O.SelectTab does not know (the gear would open the wrong tab), or the old one-shot eye
+  -- (R6-PV: the eye's mode is unlock, entered at show, toggled, restored at close).
   local spec = NS.SkinPickerSpec()
   assertEqual(spec.owner, OWNER)
   assertTrue(rawequal(spec.get, NS.SkinChoice), "get is the read seam")
   assertTrue(rawequal(spec.set, NS.WriteSkinChoice), "set is the write seam")
   assertEqual(spec.page, "general", "the key the General page was registered under")
   assertEqual(spec.tab, "Appearance", "the Skin tab's key")
-  assertEqual(spec.onPreview, nil, "no eye: the addon has no window or test mode to preview in")
+  assertEqual(spec.onPreview, nil, "no one-shot eye: spec.preview replaces it")
+  local h = spec.preview
+  assertEqual(type(h), "table", "the eye's preview contract")
+  assertEqual(h.mode, "unlock", "unlocking is this addon's preview (00_PLAN.md call 2)")
+  for _, k in ipairs({ "enter", "exit", "isActive", "isShown" }) do
+    assertEqual(type(h[k]), "function", "spec.preview." .. k)
+  end
   assertEqual(type(spec.onClose), "function")
 end)
 
@@ -229,7 +235,7 @@ test("Skin picker: the player's close marks it seen; this addon's own hide does 
   -- is the library's to pin (the mock measures every string 0 wide); the smoke check SKIN-15 sees it.
   assertEqual(f.title:GetText(), "Choose a skin", "the title no longer carries the addon's name")
   assertEqual(f.ownerLabel:GetText(), NS.BRAND, "the line above the dropdown names this addon")
-  assertFalse(f.preview:IsShown(), "no eye on a picker with nothing to preview")
+  assertTrue(f.preview:IsShown(), "the eye shows: the preview is the unlock mode")
   NS.HideSkinPicker()
   assertEqual(NS.Schema:Get(PATH), false, "a stand-down hide is not the player's close")
   f = NS.MaybeShowSkinPicker()
@@ -291,4 +297,193 @@ test("Skin picker: the stand-down takes a shown picker down unseen", clean(funct
   end)
   quietly(function() NS.Schema:Set("settings.enabled", true) end)
   if not ok then error(err, 0) end
+end))
+
+-- ── the eye: unlock mode (R6-PV; LibKa0s OptionsSkinPicker 11, spec.preview) ─────────────────
+--
+-- The owner's rule (Ka0sAddonsCommonTasks docs/2026-11-03-SMOKE_ROUND6, call 2): with the panels
+-- locked, a showing picker unlocks them; the eye locks and unlocks; every close puts back the state
+-- the picker opened on. Every move goes through NS.Schema:Set("state.locked"), the write seam
+-- `/pm lock`, `/pm unlock`, the launcher and the Lock frame row share, never NS.Unlock directly.
+
+local function locked() return NS.Schema:Get("state.locked") and true or false end
+
+--- `fn()` with the panels in a known global state, put back locked whatever it raised.
+local function fromLock(isLocked, fn)
+  return clean(function()
+    quietly(function() NS.Unlock:SetUnlocked(not isLocked) end)
+    local ok, err = pcall(quietly, fn)
+    mocks.__inCombat = false
+    quietly(function()
+      NS.HideSkinPicker()
+      NS.Unlock:DropPending("test")
+      NS.Unlock:SetUnlocked(false)
+    end)
+    if not ok then error(err, 0) end
+  end)
+end
+
+--- `fn(calls)` with the write seam's `state.locked` writes recorded: each value, in order.
+local function lockCalls(fn)
+  local S = NS.Schema
+  local real = S.Set
+  local calls = {}
+  S.Set = function(self, path, v, ...)
+    if path == "state.locked" then calls[#calls + 1] = v end
+    return real(self, path, v, ...)
+  end
+  local ok, err = pcall(fn, calls)
+  S.Set = real
+  if not ok then error(err, 0) end
+end
+
+local function eye(f) f.preview:GetScript("OnClick")(f.preview) end
+
+--- Escape, as the client runs it: UISpecialFrames hides the window, then its OnHide script fires
+--- (the harness records SetScript handlers rather than firing them from Hide).
+local function escape(f)
+  f:Hide()
+  local onHide = f:GetScript("OnHide")
+  if onHide then onHide(f) end
+end
+
+test("Skin picker preview: shown with the panels locked, it unlocks them through the write seam",
+  fromLock(true, function()
+  -- red under: no spec.preview (nothing enters at show), or an enter that goes round the seam.
+  lockCalls(function(calls)
+    local f = NS.MaybeShowSkinPicker()
+    assertTrue(f ~= nil and f:IsShown(), "the library's picker did not show")
+    assertFalse(locked(), "the picker's show unlocks the panels")
+    assertTrue(NS.State.unlocked, "the unlock is the session state every panel reads")
+    assertEqual(calls[1], false, "through NS.Schema:Set(\"state.locked\", false)")
+    assertTrue(f.preview.lit, "the eye is lit while unlocked")
+  end)
+end))
+
+test("Skin picker preview: the eye locks and unlocks, through the seam each time", fromLock(true, function()
+  lockCalls(function(calls)
+    local f = NS.MaybeShowSkinPicker()
+    eye(f)
+    assertTrue(locked(), "the eye locks")
+    assertFalse(f.preview.lit, "and dims")
+    eye(f)
+    assertFalse(locked(), "the eye unlocks again")
+    assertTrue(f.preview.lit, "and lights")
+    assertEqual(table.concat({ tostring(calls[1]), tostring(calls[2]), tostring(calls[3]) }, ","),
+      "false,true,false", "every move is the write seam")
+  end)
+end))
+
+-- Every close route the library has, each from a locked start: the panels are locked again after.
+local ROUTES = {
+  { "the close control", function(f) f.close:GetScript("OnClick")(f.close) end },
+  { "Escape", escape },
+  { "Apply", function(f) f.apply:GetScript("OnClick")(f.apply) end },
+  { "Apply to all", function(f) f.applyAll:GetScript("OnClick")(f.applyAll) end },
+  { "the gear", function(f) f.settings:GetScript("OnClick")(f.settings) end },
+  { "the library's HideSkinPicker", function() O.HideSkinPicker() end },
+  { "this addon's own hide (stand-down, profile event)", function() NS.HideSkinPicker() end },
+}
+for _, route in ipairs(ROUTES) do
+  test("Skin picker preview: " .. route[1] .. " locks the panels it unlocked", fromLock(true, function()
+    -- red under: a restore that skips this route (the panels stay unlocked after the picker).
+    local f = NS.MaybeShowSkinPicker()
+    assertFalse(locked(), "unlocked at show")
+    route[2](f)
+    assertFalse(f:IsShown(), "the route closes the picker")
+    assertTrue(locked(), "the close put the lock back")
+  end))
+end
+
+test("Skin picker preview: an eye that locked again leaves the close nothing to undo", fromLock(true, function()
+  lockCalls(function(calls)
+    local f = NS.MaybeShowSkinPicker()
+    eye(f)
+    local n = #calls
+    O.HideSkinPicker()
+    assertTrue(locked(), "still locked")
+    assertEqual(#calls, n, "no write at the close")
+  end)
+end))
+
+test("Skin picker preview: panels already unlocked are left alone, and stay unlocked", fromLock(false, function()
+  -- red under: an isShown or isActive that misreads the unlock (the show or the close would move it).
+  lockCalls(function(calls)
+    local f = NS.MaybeShowSkinPicker()
+    assertFalse(locked(), "still unlocked")
+    assertEqual(#calls, 0, "the show writes nothing over an unlock the player made")
+    O.HideSkinPicker()
+    assertFalse(locked(), "the close leaves the player's unlock")
+    assertFalse(f:IsShown())
+  end)
+end))
+
+test("Skin picker preview: opened unlocked, locked by the eye, the close unlocks again", fromLock(false, function()
+  local f = NS.MaybeShowSkinPicker()
+  eye(f)
+  assertTrue(locked(), "the eye locks")
+  escape(f)
+  assertFalse(locked(), "the close put back the unlock the picker opened on")
+end))
+
+test("Skin picker preview: a panel unlocked on its own is unlocked again after the close", fromLock(true, function()
+  -- red under: the preview's lock dropping every per-panel unlock (SetUnlocked(false) clears them),
+  -- or putting back one for a panel deleted while the picker was up.
+  local kept = NS.Registry:New("PreviewKept", {})
+  local gone = NS.Registry:New("PreviewGone", {})
+  local ok, err = pcall(function()
+    NS.Unlock:SetPanelUnlocked(kept.id, true)
+    NS.Unlock:SetPanelUnlocked(gone.id, true)
+    local f = NS.MaybeShowSkinPicker()
+    assertFalse(locked())
+    NS.Registry:Delete(gone.id)
+    escape(f)
+    assertTrue(locked(), "the global lock is back")
+    assertTrue(NS.State.unlockedPanels[kept.id] == true, "the panel's own unlock survives the preview")
+    assertEqual(NS.State.unlockedPanels[gone.id], nil, "a deleted panel is not unlocked back")
+  end)
+  NS.Registry:DeleteAll()
+  if not ok then error(err, 0) end
+end))
+
+test("Skin picker preview: a profile event forgets the per-panel unlocks the preview found", fromLock(true, function()
+  -- Panel ids are per profile (modules/Registry.lua, clearPanelSessionState): a profile event shows
+  -- the new profile's picker BEFORE the registry reloads, so its unlock finds the old profile's ids.
+  -- red under: a close that unlocks those ids again, in a profile where they name other panels.
+  NS.State.unlockedPanels[4242] = true
+  NS.db:SetProfile("PreviewProbe")
+  local ok, err = pcall(function()
+    assertFalse(locked(), "the new profile's picker unlocked the panels")
+    O.HideSkinPicker()
+    assertTrue(locked(), "the close locked them")
+    assertEqual(NS.State.unlockedPanels[4242], nil, "an id from the profile left behind came back")
+  end)
+  NS.db:SetProfile("Default")
+  if mocks.__profiles then mocks.__profiles.PreviewProbe = nil end
+  NS.State.unlockedPanels[4242] = nil
+  if not ok then error(err, 0) end
+end))
+
+test("Skin picker preview: in combat the eye refuses the unlock rather than queue it", fromLock(true, function()
+  -- red under: an enter that hands the seam a combat-held unlock, which would land on the combat
+  -- exit after the picker had closed, unlocking the panels with nothing left to lock them.
+  local f = NS.MaybeShowSkinPicker()
+  eye(f)
+  assertTrue(locked(), "locked by the eye")
+  mocks.__inCombat = true
+  eye(f)
+  assertTrue(locked(), "no unlock in combat")
+  assertFalse(f.preview.lit, "the eye stays dimmed")
+  escape(f)
+  mocks.__inCombat = false
+  mocks.__fireEvent("PLAYER_REGEN_ENABLED")
+  assertTrue(locked(), "nothing was held to unlock at the combat exit")
+end))
+
+test("Skin picker preview: in combat the close still locks what the picker unlocked", fromLock(true, function()
+  local f = NS.MaybeShowSkinPicker()
+  assertFalse(locked())
+  mocks.__inCombat = true
+  f.close:GetScript("OnClick")(f.close)
+  assertTrue(locked(), "a lock is never deferred")
 end))

@@ -293,6 +293,22 @@ local function bulkFresh()
   NS.Registry:DeleteAll()
 end
 
+--- `fn` with the first-run skin picker held off. A reset, copied or new profile starts unseen, so the
+--- profile handler shows the picker, and since R6-PV its show unlocks the panels (the eye's unlock
+--- mode) and its close locks them: writes of their own, through the `state.locked` row, each with its
+--- own [Set] line. They are the picker's act, not the profile event's, and tests/test_skin_picker.lua
+--- pins them; here they would only be counted as the profile event's second line.
+local function withoutPicker(fn)
+  return function()
+    local show = NS.MaybeShowSkinPicker
+    NS.HideSkinPicker()
+    NS.MaybeShowSkinPicker = function() return nil end
+    local ok, err = pcall(fn)
+    NS.MaybeShowSkinPicker = show
+    if not ok then error(err, 0) end
+  end
+end
+
 test("bulk log: R:Reset is one [Set] line counting the fields it rewrote", function()
   bulkFresh()
   local rec = NS.Registry:New("Bulky", { width = 500, borderSize = 6 })
@@ -411,7 +427,7 @@ test("bulk log: a page Defaults that raises logs one marked line, unmutes and re
   bulkFresh()
 end)
 
-test("bulk log: the global reset is ONE line in total, counting the rows it changed", function()
+test("bulk log: the global reset is ONE line in total, counting the rows it changed", withoutPicker(function()
   bulkFresh()
   local name = NS.db:GetCurrentProfile()
   NS.Slash:DoResetAll()   -- start from the shipped profile
@@ -436,12 +452,12 @@ test("bulk log: the global reset is ONE line in total, counting the rows it chan
   assertEqual(#tagged("Set") + #tagged("Profile"), 1)
   assertEqual(tagged("Set")[1], ("reset profile '%s' to defaults"):format(name))
   bulkFresh()
-end)
+end))
 
 -- options-ui-§12: Reset all settings and Profiles -> Reset Profile MUST be the same act. The Profiles
 -- page calls db:ResetProfile() straight, with no DoResetAll around it, so the session-only sweep has
 -- to live where both resets arrive: the OnProfileReset handler.
-test("bulk log: Profiles' own Reset Profile sweeps the session rows too, in its one line", function()
+test("bulk log: Profiles' own Reset Profile sweeps the session rows too, in its one line", withoutPicker(function()
   bulkFresh()
   local name = NS.db:GetCurrentProfile()
   NS.Unlock:SetUnlocked(true)
@@ -459,9 +475,9 @@ test("bulk log: Profiles' own Reset Profile sweeps the session rows too, in its 
   assertEqual(tagged("Set")[1], ("reset profile '%s' to defaults"):format(name))
   assertFalse(NS.SchemaRuntime.InBulk(), "the sweep left its bracket open")
   bulkFresh()
-end)
+end))
 
-test("bulk log: a profile copy and a profile switch are each worded by their event", function()
+test("bulk log: a profile copy and a profile switch are each worded by their event", withoutPicker(function()
   bulkFresh()
   local name = NS.db:GetCurrentProfile()
   NS.State.debug = true
@@ -476,7 +492,7 @@ test("bulk log: a profile copy and a profile switch are each worded by their eve
   quiet()
   T.mocks.__switchProfile(name)
   bulkFresh()
-end)
+end))
 
 test("bulk log: an act inside another logs once, the outermost, with the total", function()
   bulkFresh()

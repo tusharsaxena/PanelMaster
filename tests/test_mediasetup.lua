@@ -24,12 +24,12 @@ local VENDORED = "Interface\\AddOns\\PanelMaster\\libs\\LibKa0s\\media\\"
 -- The marks this addon puts on screen. They are drawn by the library rather than by any file in
 -- this repo — the descriptor in core/DebugLogSetup.lua hands over `addonName` and LibKa0s-DebugLog-1.0
 -- resolves close, clear and copy with it, and the first-run skin picker (LibKa0s-Options-1.0's
--- OptionsSkinPicker) draws the settings gear; its eye is not drawn, because no onPreview is passed
--- (Ka0sAddonsCommonTasks docs/2026-10-29-SKINNING_ROLLOUT, X6) — which is exactly why they are
+-- OptionsSkinPicker) draws the settings gear and the eye, since R6-PV's `spec.preview` (the unlock
+-- mode; Ka0sAddonsCommonTasks docs/2026-11-03-SMOKE_ROUND6, which overturns X6) — which is exactly why they are
 -- listed here: nothing in core/, modules/ or settings/ mentions them, so nothing else in this suite
 -- would notice a rename on either side of the seam. The other seven are what LibKa0s v1.85.0's
 -- library-drawn marks owe every consumer (releasing.md, Step 8 for v1.85.0; kit revision 49).
-local DRAWN = { "close", "clear", "copy", "settings", "chevron-down", "chevron-up", "confirm",
+local DRAWN = { "close", "clear", "copy", "settings", "eye", "chevron-down", "chevron-up", "confirm",
   "info", "move", "reset", "volume-high" }
 
 -- ── the seam ────────────────────────────────────────────────────────────────────

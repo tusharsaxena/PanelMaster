@@ -1173,15 +1173,15 @@ a Lua error or a taint warning.
   with no reload; the reset profile is back on Ka0s Default with Ignore settings panel on. Result: pass (owner-marked 2026-10-30)
 - **SKIN-14. Combat (PM-01).** Change the skin in combat (on a training dummy) → no Lua error and no
   taint warning; the settings page behaves as it does for any other setting in combat. Result: pass (owner-marked 2026-10-30)
-- **SKIN-15. The skin picker on a fresh profile and at login (PM-04; O3, X6).** Create a new profile
+- **SKIN-15. The skin picker on a fresh profile and at login (PM-04; O3; R6-PV).** Create a new profile
   on the Profiles page → a small window titled **Choose a skin** opens about three quarters of the
   way up the screen: **Ka0s Panel Master** on its own line, in full, above a dropdown showing the
   skin worn now, a **gear** button
-  beside it and **no eye** (the addon has no window or test mode to preview in), an **Apply** button
+  beside it and an **eye** (lit: the picker unlocked the panels, SKIN-43), an **Apply** button
   and a close mark. Close it, then reset the profile → it opens again. For a profile that has never
   run this build: log in → it opens about two seconds after the world loads, already in the
-  profile's skin. Fail: a window on a profile that already closed it, an eye button, none on a new
-  or reset profile, the addon's name in the title, or the name cut off. Result: pass (owner-marked 2026-10-30)
+  profile's skin. Fail: a window on a profile that already closed it, no eye button, none on a new
+  or reset profile, the addon's name in the title, or the name cut off. Result:
 - **SKIN-16. The picker's preview, Apply, close and gear (PM-04).** On a fresh profile pick
   **Obsidian** in the picker's dropdown → the console and (with Ignore settings panel off) the
   settings pages repaint, the picker included, and nothing is saved yet: `/pm get skin.skin` →
@@ -1232,13 +1232,13 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   resolves to. Fail: a font flags control anywhere on the pages. Result: Owner reported pass, 2026-10-31
 - **SKIN-23. `/pm skin` opens the picker on demand (PM-01; D-16).** On a profile that has already
   closed the first-run picker, `/pm help` lists `skin` right after `config` as *Choose a skin: open
-  the skin picker*. `/pm skin` → the **Choose a skin** window opens, as on a fresh profile, with no
-  eye. Pick **Glass** and close it → Ka0s Default comes back and nothing is saved; `/pm skin` again,
+  the skin picker*. `/pm skin` → the **Choose a skin** window opens, as on a fresh profile, with the
+  eye (R6-PV, SKIN-43). Pick **Glass** and close it → Ka0s Default comes back and nothing is saved; `/pm skin` again,
   pick **Glass** and **Apply** → `/pm get skin.skin` → `glass`. In combat (on a training dummy)
   `/pm skin` → a gray *cannot open the skin picker during combat* line on every try, and no window.
   `/pm disable`, then `/pm skin` → the one *is disabled — enable it with /pm enable* line and no
   window; `/pm enable` after. With Loot History's picker open, `/pm skin` → PanelMaster's waits
-  until that one closes. Result: Owner reported pass, 2026-10-31
+  until that one closes. Result:
 - **SKIN-24. The faces (PM-F01, LibKa0s v1.83.0; D-01, D-05, D-06).** After a full client restart
   (new font files), on **Ka0s Default** the settings pages (Ignore settings panel off), the console
   chrome and the skin picker draw **Prototype**; on **WoW Default** Ka0s Ubuntu (R3-FRIZ; Ka0s Friz Quadrata TT before), visibly
@@ -1368,6 +1368,23 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   load; under **Ka0s Default** `/pm debug`, **Copy** and `/pm skin` look as SKIN-40 describes, and
   `/pm`'s settings pages are unchanged. Fail: a load error, or any of those windows looking
   different. Result:
+- **SKIN-43. `/pm skin` with the panels locked: the unlock mode turns on; the eye toggles it; every
+  close puts it back (R6-PV, R6-L1).** Have at least one panel; `/pm lock`. `/pm skin` → every panel
+  shows its gold outline and name (unlocked), the picker stays in front of them, and its **eye** is
+  lit; hover it → *Preview: the frames are unlocked. Click to lock them.* Click the eye → the
+  panels lock, the eye dims and its tooltip reads *Preview: the frames are locked. Click to unlock
+  them.*; click it again → unlocked and lit. The minimap button's tooltip and the General page's
+  **Lock frame** box follow each click, and chat gets no `state.locked` line. Close the picker with
+  its close mark → the panels are locked again. Repeat with **Escape**, **Apply**, **Apply to all
+  Ka0s addons** and the **gear** → locked after each. Now `/pm unlock` first, then `/pm skin` → the
+  panels stay unlocked and the eye is lit; click the eye (locked), close the picker → unlocked again.
+  `/pm lock`, unlock one panel on its own from its editor, then `/pm skin` → every panel unlocks;
+  close → only that one panel is still unlocked. In combat (a training dummy) with the picker up and
+  the eye dimmed, click the eye → a gray *no skin preview in combat — the panels stay locked* line,
+  the panels stay locked, and nothing unlocks when combat ends. Unlock is session state here, not a
+  stored setting: a `/reload` while the picker is up comes back with the panels locked. Fail: the
+  panels left unlocked after any close, an unlock that lands after combat, a picker behind the
+  panels' outlines, or an eye that does not light, dim or reword. Result:
 
 ## Pending sign-off
 
@@ -1418,4 +1435,5 @@ R5-RV): SKIN-40 and SKIN-41, new. SKIN-37 no longer quotes the round 4 hexes; it
 unchanged apart from the darker shade SKIN-40 checks.
 
 Pending from the owner's sixth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND6/`,
-R6-RV): SKIN-42, new.
+R6-RV and R6-PV): SKIN-42 and SKIN-43, new, and SKIN-15 and SKIN-23, which described the picker
+with no eye and lost their pass marks.
