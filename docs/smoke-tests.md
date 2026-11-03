@@ -1326,8 +1326,8 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
 ### The owner's fourth smoke round (LibKa0s v1.85.0, second re-cut)
 
 - **SKIN-37. The console's title band is the dark gold header (R4-RV2, R4-L2).** Under **Ka0s
-  Default**, `/pm debug` → the title band is a dark gold gradient, lighter at the top (#3A2F0A) and
-  darker at the bottom (#1F1905), with the gold title on it; press **Copy** → the copy window's band
+  Default**, `/pm debug` → the title band is a dark gold gradient, lighter at the top and darker at
+  the bottom (round 5 darkens both ends, SKIN-40), with the gold title on it; press **Copy** → the copy window's band
   is the same. `/pm skin` → the skin picker's second swatch on the Ka0s Default card is that header
   color. Switch to **Obsidian** and back → each band follows the skin and returns. Fail: a near-black
   band under Ka0s Default. Result:
@@ -1342,6 +1342,24 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   draws no icon through it. Update and `/reload` with BugSack on → no Lua error on load; under **Ka0s
   Default** `/pm debug`, **Copy** and `/pm skin` look as SKIN-37 and SKIN-38 describe, and `/pm`'s
   settings pages are unchanged. Fail: a load error, or any of those windows looking different. Result:
+
+### The owner's fifth smoke round (LibKa0s v1.85.0, round 5 re-cut)
+
+- **SKIN-40. The library windows' header is darker, flush and centered (R5-RV, R5-L1 to R5-L3).**
+  PanelMaster has no window of its own; its three windows are the library's. Update and `/reload`
+  with BugSack on → no Lua error on load. Under **Ka0s Default**, `/pm debug` → the title band is
+  darker than round 4, sits flush inside the window edge with no strip of body color between the
+  edge and the band, and the title and close button are both vertically centered on it. Press
+  **Copy** → the copy window's band is the same, and so is `/pm skin`'s picker band; the picker's
+  second swatch on the Ka0s Default card is the new, darker header color. Repeat under **Obsidian**,
+  **WoW Default** and **Glass** → each window has one band, its children centered on it. Fail: a load
+  error, a strip of body color under the edge, two bands, or a title or button sitting above or
+  below the band's middle. Result:
+- **SKIN-41. The skin list closes on an outside press (R5-RV, R5-L4).** `/pm skin`, open the skin
+  list, then press the picker window's body → the list closes. Open it again and press the game
+  world → it closes. Open it again and press the **Font** dropdown → the list closes and the Font
+  pullout opens. Escape still closes the whole picker. Fail: a list that stays open after any of
+  the three presses. Result:
 
 ## Pending sign-off
 
@@ -1386,3 +1404,7 @@ On 2026-11-02 the owner reported that every check on the smoke lists of the full
 Pending from the owner's fourth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND4/`,
 R4-RV2, R4-SEP and R4-RV3): SKIN-37, SKIN-38 and SKIN-39, new, and DIAG-1, whose console no longer has a line under
 its title and which lost its pass mark.
+
+Pending from the owner's fifth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND5/`,
+R5-RV): SKIN-40 and SKIN-41, new. SKIN-37 no longer quotes the round 4 hexes; its expected result is
+unchanged apart from the darker shade SKIN-40 checks.

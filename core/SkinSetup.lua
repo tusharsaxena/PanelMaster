@@ -438,6 +438,9 @@ if not Skin then
     -- LibKa0s v1.85.0: nil is each getter's degraded answer, HoverArt draws nothing, and nothing
     -- here calls one: the panels are the player's, so this addon has no HUD surface on these tokens.
     "HudTextColor", "HudLabelColor", "BarFillColor", "HudShadow", "HoverArt",
+    -- Round 5 re-cut: Band answers nil (no band frame to anchor to), Header lays out nothing.
+    -- This addon owns no window header, so neither has a caller here.
+    "Band", "Header",
   }) do S[name] = noop end
 
   S.Token = function(name) return NS.SKIN_FALLBACK[name] end
