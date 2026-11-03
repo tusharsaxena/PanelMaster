@@ -1387,6 +1387,12 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   stored setting: a `/reload` while the picker is up comes back with the panels locked. Fail: the
   panels left unlocked after any close, an unlock that lands after combat, a picker behind the
   panels' outlines, or an eye that does not light, dim or reword. Result:
+- **SKIN-44. The sim checkbox re-cut loads clean and draws no Sim mode box here (R6-RV2, R6-SIM-L).**
+  The re-cut moves only `OptionsCompose.lua` (minor 19). PanelMaster has no sim mode and passes no
+  sim hooks. Update and `/reload` with BugSack on → no Lua error on load; `/pm config` → **Master
+  controls** shows the same rows as before, in the same order, with **Minimap button** alone on its
+  line and no **Sim mode** box anywhere; `/pm skin` and `/pm debug` look as SKIN-42 describes. Fail:
+  a load error, a Sim mode box, or any Master controls row moved. Result:
 
 ## Pending sign-off
 
@@ -1437,5 +1443,5 @@ R5-RV): SKIN-40 and SKIN-41, new. SKIN-37 no longer quotes the round 4 hexes; it
 unchanged apart from the darker shade SKIN-40 checks.
 
 Pending from the owner's sixth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND6/`,
-R6-RV and R6-PV): SKIN-42 and SKIN-43, new, and SKIN-15 and SKIN-23, which described the picker
+R6-RV, R6-PV and R6-RV2): SKIN-42, SKIN-43 and SKIN-44, new, and SKIN-15 and SKIN-23, which described the picker
 with no eye and lost their pass marks.
