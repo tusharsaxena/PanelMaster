@@ -67,10 +67,12 @@ to a profile called Raid from chat, and `/pm profile` on its own lists them. The
 opens the settings on a left-click. Its right-click menu turns the addon on or off, locks or
 unlocks your panels, and can open the settings or the skin picker.
 
-The first time you log in, a skin picker asks how the addon's own windows should look. Pick one,
-or close it and stay on Ka0s Default. While it is open your panels are unlocked, so you can see the
-skin on their outlines and names; the eye button beside the skin list locks and unlocks them, and
-closing the picker puts the lock back the way it was. `/pm skin` brings the picker back any time. The **Skin** tab on
+The first time you log in, a skin picker asks how the addon's own windows should look, and
+`/pm skin` opens it again any time. Choosing a skin from its list previews it, **Apply** keeps it,
+and closing the picker without applying puts back the skin you had (Ka0s Default on a fresh
+install). The picker uses unlock mode: while it is open your panels are unlocked, so you can see the
+skin on their outlines and names. The eye button beside the skin list locks and unlocks them, and
+closing the picker puts the lock back the way it was. The **Skin** tab on
 the General page changes it too, and can take the look from EllesmereUI instead if you run it. A skin
 colors the unlock outlines and the debug console. The settings pages keep the game's look unless you untick **Ignore settings panel** there.
 Your panels are never touched: their colors, borders and artwork stay exactly as you set them.
