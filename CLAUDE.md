@@ -42,7 +42,7 @@ Green gate before every commit: `lua tests/run.lua` and
 never bump the version without an explicit instruction.
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Eleven of the twenty majors are adopted
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Eleven of the twenty majors in the vendored v1.85.0 payload are adopted
 (`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`, `Skin`,
 and `Bus` for its `Catalog` alone); `Perf` is declined, and `Widgets`, `Pool`, `Item`, `Compat`, `Glow`,
 `Sim`, `Toast` and `Charts` are vendored but not consumed. **The look is the skin's** (`skinning`,
@@ -80,7 +80,7 @@ The `Perf` decline is **ratified**, as of 2026-08-25. It carries a row in `docs/
 [#31](https://github.com/tusharsaxena/PanelMaster/issues/31) and
 [#44](https://github.com/tusharsaxena/PanelMaster/issues/44). It is a deviation from `§1` itself and
 **not** a `performance-§12` exemption — `§12` is neither claimed nor claimable here, because its
-no-combat-path criterion (a) fails: `modules/Canvas.lua:654-659` runs a shared 10Hz `OnUpdate`.
+no-combat-path criterion (a) fails: `modules/Canvas.lua`'s `mouseoverTick` runs a shared 10Hz `OnUpdate`.
 `docs/performance.md` carries the sweep and the cost argument.
 
 At **release** — the same change that bumps the version and rolls the README forward, before the tag
