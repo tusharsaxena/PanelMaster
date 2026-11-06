@@ -75,7 +75,7 @@ reword — `tests/test_libka0s_degraded.lua` pins the clause on both paths.
 The TOC order is not arbitrary. Each seam's own header states its constraints; the ones that bind:
 
 - `libs\LibKa0s\LibKa0s.xml` sits **after** LibStub and Ace3. `Core` resolves LibStub; the other
-  fourteen resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
+  twenty resolve `LibKa0s-Core-1.0` and `return` **before** `LibStub:NewLibrary` when it is absent or
   too old, so the major is simply never registered.
 - `core/CoreSetup.lua` after `core/Namespace.lua` (which defines `NS.PREFIX`, passed to the printer
   descriptor verbatim) and after `core/Util.lua` (which owns `NS.Util`), and **before**
