@@ -49,8 +49,8 @@ The no-combat-path exemption is the narrow, recorded exit from the wiring MUST. 
 criterion **(a)** — *no `OnUpdate` handler, no repeating ticker, and no event handler doing more
 than occasional work while the player is in combat* — proven by a committed whole-repo sweep.
 
-**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua:654-659` is the
-tick and `:670` installs it on a single shared driver, the first time any panel is tracked for
+**This addon has an `OnUpdate` handler, and it runs in combat.** `modules/Canvas.lua`'s `mouseoverTick` is the
+tick and `ensureMouseoverDriver` installs it on a single shared driver, the first time any panel is tracked for
 mouseover:
 
 ```lua
@@ -67,7 +67,7 @@ setting alpha. There is no `InCombatLockdown` gate and none is wanted — the wh
 is that it keeps working while the player is busy.
 
 The driver exists only once a panel has **Fade unless hovered** ticked (`mouseover` defaults to
-`false`, `core/Constants.lua:369`), and the frame is never destroyed afterwards — only its script,
+`false` in `C.PANEL_TEMPLATE`, `core/Constants.lua`), and the frame is never destroyed afterwards — only its script,
 which `Canvas.SetMouseoverTracked` removes when the tracked set empties and re-installs when it
 refills. That makes it a user-reachable hot path, not dead code, so:
 
@@ -92,7 +92,7 @@ The reason is the shape of the one path, not a claim that the path does not exis
   `NS.Compat.MouseIsOver(f)` and one `SetAlpha(...)` for each panel in the tracked set. There is no
   per-record work, no allocation, no string building, and no scan that grows with saved data.
 - **The set is bounded by a number the player sets.** A panel joins it only with *Fade unless
-  hovered* ticked, and `mouseover` defaults to `false` (`core/Constants.lua:369`). With none ticked
+  hovered* ticked, and `mouseover` defaults to `false` (`C.PANEL_TEMPLATE`, `core/Constants.lua`). With none ticked
   `ensureMouseoverDriver` is never called and the frame does not exist. Emptied afterwards, the frame
   survives but its `OnUpdate` does not — `SetMouseoverTracked` clears the script on the untrack that
   empties the set, so the dormant cost is a bare frame and no per-frame callback at all.
@@ -130,7 +130,7 @@ grep -rn "ScheduleRepeatingTimer\|ScheduleTimer" core modules settings
 
 | Site | Per-tick work | Runs in combat? |
 |---|---|---|
-| `modules/Canvas.lua:654-659` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Fade unless hovered* ticked |
+| `modules/Canvas.lua`, `mouseoverTick` | 10Hz gate, then `updateMouseover`: one `MouseIsOver` + `SetAlpha` per mouseover-tracked panel | **yes**, whenever any panel has *Fade unless hovered* ticked |
 
 The sweep reads this addon's own code. The vendored `libs/LibKa0s/OptionsSkinPickerRows.lua` also sets a throttled `OnUpdate`, from v1.83.0, only while the skin picker's rows are drawn locked; it removes itself once the lock clears, and it does no per-panel work.
 
@@ -138,16 +138,17 @@ The sweep reads this addon's own code. The vendored `libs/LibKa0s/OptionsSkinPic
 
 | Site | Event | Work | Runs in combat? |
 |---|---|---|---|
-| `core/PanelMaster.lua:71` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
-| `core/LifecycleSetup.lua:75` (handler `core/PanelMaster.lua:116`) | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
-| `core/LifecycleSetup.lua:76` (handler `core/PanelMaster.lua:135`) | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
-| `core/SkinSetup.lua:325` | `PLAYER_REGEN_ENABLED` | the first-run skin picker's combat hold: one-shot, on a private target, made only while a start waits out combat | fires on **leaving** combat, by definition |
-| `core/LifecycleSetup.lua:77` (handler `core/PanelMaster.lua:148`) | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
+| `core/PanelMaster.lua`, `addon:OnInitialize` | `PLAYER_LOGIN` | `NS.Panel:Register()` — builds the settings category | no — once |
+| `core/LifecycleSetup.lua` (handler `addon:OnEnterWorld`, `core/PanelMaster.lua`) | `PLAYER_ENTERING_WORLD` | `NS.Canvas:RenderAll()` | login and each zone change; not a combat path |
+| `core/LifecycleSetup.lua` (handler `addon:OnRegenEnabled`, `core/PanelMaster.lua`) | `PLAYER_REGEN_ENABLED` | `NS.Unlock:ResumePending()`, then `NS.Canvas:RenderForCombat(false)` | fires on **leaving** combat, by definition |
+| `core/SkinSetup.lua`, `NS.MaybeShowSkinPicker` | `PLAYER_REGEN_ENABLED` | the first-run skin picker's combat hold: one-shot, on a private target, made only while a start waits out combat | fires on **leaving** combat, by definition |
+| `core/LifecycleSetup.lua` (handler `addon:OnRegenDisabled`, `core/PanelMaster.lua`) | `PLAYER_REGEN_DISABLED` | `NS.Canvas:RenderForCombat(true)` — one table read, and a `RenderAll` only when `settings.visibility` is `inCombat` or `outOfCombat` | fires on **entering** combat; it is the pull itself, not work during the fight |
 
 ### `C_Timer` — 0 hits
 
-None. The one scheduling seam is `settings/OptionsSetup.lua:260`, which forwards to the addon's
-AceTimer embed for a **one-shot** panel-refresh delay — not a repeating ticker.
+None. The one scheduling seam is the options descriptor's `scheduleTimer` in `settings/OptionsSetup.lua`,
+which forwards to the addon's AceTimer embed for the color picker's and live slider's 50 ms drag
+throttle, a **one-shot** delay — not a repeating ticker.
 
 ### `ScheduleRepeatingTimer` — 0 hits
 

@@ -499,7 +499,7 @@ in place on each rebuild, and the rename box needed a `dressNameBox` guard again
 while the user was mid-edit — machinery nothing else on this page needed. On the `General` tab they
 are built against the `rec` the editor already holds, so acting on the right panel is true by
 construction, so `refreshHeaderActs` and the `dressNameBox` guard were deleted rather than moved.
-`currentRecord()` survives — `settings/PanelEditor.lua:105`, called at `:712` — because the page
+`currentRecord()` survives — in `settings/PanelEditor.lua`, called from `buildPanelsPage` — because the page
 rebuilder still needs it; it is the two band-only helpers that went. **Enable this panel** keeps a refresher, and it is
 the only one that needs one: `/pm panel <name> enabled false`, a Reset and a CopyFrom all broadcast
 `PanelChanged` without rebuilding, so the checkbox has to follow.
@@ -655,7 +655,7 @@ the same closure on each page through `O.CreatePanel`'s `OnDefault`, so the foot
 button are one implementation and the confirmation cannot be reached round.
 
 **The General page's Defaults tooltip now reads *"Reset this profile to the addon's defaults. Your
-panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua:376`,
-`:384-389`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
+panels go with it."*, and the comment above `ctx.panel.defaultsOnClick` (`settings/Panel.lua`,
+`P:Register`) says the same.** Both used to promise *"Your panels are untouched"*, which predated
 `options-ui-§12` turning `resetall` into a profile reset; `900b085` corrected them together, so the
 tooltip and the contract agree again.

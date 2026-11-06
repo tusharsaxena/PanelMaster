@@ -17,7 +17,7 @@ lua tests/run.lua     # all suites green; exits non-zero on any failure
 gets mistaken for a clean checkout. `.luacheckrc` excludes `libs/` and `tests/_kit/` (both are
 vendored from the LibKa0s repo, which lints them as source), `_dev/`, and the frozen bundles
 under `docs/`. **The rest of `tests/` is in scope** — the suites, the mock and `run.lua` are this
-addon's code and are linted as such, which is why the figure below is 86 files and not the 26 it
+addon's code and are linted as such, which is why the figure below was 86 files as measured on 2026-11-06, not the 26 it
 was before the test tree came in. Before quoting 0/0, confirm what was actually opened:
 
 ```sh
@@ -33,7 +33,7 @@ spelling would slip past — and holds four rules.
 
 | Rule | What it refuses |
 | --- | --- |
-| No top-level `ignore` | An entry there reaches all 86 files, including every file with no business producing the code. |
+| No top-level `ignore` | An entry there reaches every file `luacheck` opens, including every file with no business producing the code. |
 | No wholesale class switch | `unused_args = false` and eight relatives are the same blanket spelled as a switch. |
 | Every `files[...]` ignore is narrow | The stanza key names one `.lua` file, or the entry names the variable as well as the code (`212/self`). |
 | Every inline `-- luacheck: ignore` names a code | Bare, it silences everything in scope; with only a variable after it, every code for that name. |
@@ -45,7 +45,7 @@ convention that forces the receiver. Next to the blanket sat nineteen files open
 `local addonName, NS = ...` over a folder name they never read, each behind an inline
 `-- luacheck: ignore addonName` — narrow by the letter of the other three rules, and hiding dead code
 in nineteen files. Those nineteen are fixed at source rather than re-parked; the one inline directive
-the repo keeps reads `212/filter` (`settings/OptionsSetup.lua:231`).
+the repo keeps reads `212/filter` (`settings/OptionsSetup.lua`, the descriptor's `rowsForPage`).
 
 Adding a suppression is a two-minute job and removing one is an afternoon's. If a warning is genuine,
 fix the code; if the code is right, put the narrowest suppression the gate allows beside it and say
@@ -103,7 +103,7 @@ this addon?* That is release planning, not a gate.
 |---|---|---|
 | Both empty | The vendored copies are exactly what the library ships. | Nothing. |
 | Content empty, bytes differ | A **line-ending** divergence, not a code one. Both repos are client-bound and pin `* text=auto eol=crlf` in an explicit `.gitattributes` (line-endings-§2), so the two sides should agree; if the bytes differ, one working tree has drifted from its own repo's policy — typically a file written by a tool that bypasses git's filters (see closed issue [`LIBKA0S-09`](https://github.com/tusharsaxena/PanelMaster/issues/33)). | Re-normalize whichever side drifted — `git add --renormalize .`. **Never** edit `libs/`, and note that re-vendoring will not converge it either: it just moves the wrong endings downstream. |
-| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time, **then** `lua ../LibKa0s/tools/prune-icons.lua .` to cut `media/icons/` back to the `CLAUDE.md` declaration. Sixteen of the seventeen majors resolve `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
+| Content differs | A real **fork** in a vendored folder, which is the forbidden state. | Re-vendor: `cp -r ../LibKa0s/LibKa0s/. libs/LibKa0s/`, whole-folder, never a file at a time, **then** `lua ../LibKa0s/tools/prune-icons.lua .` to cut `media/icons/` back to the `CLAUDE.md` declaration. Every major but Core itself resolves `LibKa0s-Core-1.0` before registering and refuse against an older minor than they name, so a partial copy silently loses whole modules. If the fork was a fix, it belongs upstream in `../LibKa0s` and comes back through a re-vendor. |
 
 A fifth check answers "which LibKa0s is this?" without grepping minors out of source: the
 `Bundles [LibKa0s] vX.Y.Z (MIT).` provenance line in the root **`CLAUDE.md`**, which moves with every

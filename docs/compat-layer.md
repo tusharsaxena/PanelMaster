@@ -31,18 +31,18 @@ All of them follow one rule: a capability is probed by **presence** (`type(X) ==
 `C_AddOns and C_AddOns.GetNumAddOns`), never by asking which game flavor is running. This is a
 Retail-only addon with no `WOW_PROJECT_ID` branching, and `tests/test_compat.lua` asserts that.
 
-| Shim | Line | Question it answers | API absent |
+| Shim | Defined as | Question it answers | API absent |
 |---|---|---|---|
-| `AddOnFolders` | `:27` | Which addon folders are installed | `nil` ("cannot tell") |
-| `GetScreenSize` | `:54` | The screen size in UI units | `nil` |
-| `GetUIScale` | `:63` | The effective UI scale | `1` |
-| `InCombat` | `:84` | Is the player fighting | `false` |
-| `RegisterMedia` | `:113` | Contribute the addon's own LSM entries | `false` (no-op) |
-| `FetchMedia` | `:134` | LSM name to texture path | the built-in flat texture |
-| `MediaList` | `:155` | LSM names for a settings dropdown | `None` and `Solid` only |
-| `MouseIsOver` | `:180` | Is the cursor over this frame | `false` |
+| `AddOnFolders` | `Compat.AddOnFolders` | Which addon folders are installed | `nil` ("cannot tell") |
+| `GetScreenSize` | `Compat.GetScreenSize` | The screen size in UI units | `nil` |
+| `GetUIScale` | `Compat.GetUIScale` | The effective UI scale | `1` |
+| `InCombat` | `Compat.InCombat` | Is the player fighting | `false` |
+| `RegisterMedia` | `Compat.RegisterMedia` | Contribute the addon's own LSM entries | `false` (no-op) |
+| `FetchMedia` | `Compat.FetchMedia` | LSM name to texture path | the built-in flat texture |
+| `MediaList` | `Compat.MediaList` | LSM names for a settings dropdown | `None` and `Solid` only |
+| `MouseIsOver` | `Compat.MouseIsOver` | Is the cursor over this frame | `false` |
 
-## `AddOnFolders` — `core/Compat.lua:27`
+## `AddOnFolders` — `core/Compat.lua`
 
 **What varies.** The installed-addon roster. It reads `C_AddOns.GetNumAddOns` / `C_AddOns.GetAddOnInfo`
 and nothing else: the bare `GetNumAddOns` / `GetAddOnInfo` globals went in the 11.0 AddOns purge and
@@ -53,10 +53,10 @@ Sunn adapter needs to know whether a pack folder exists on disk even when the pa
 answers an empty table, because "cannot tell" and "nothing installed" must stay distinguishable: an
 empty table would drop every known pack.
 
-**Who calls it.** `modules/SunnArt.lua:236` (`addonFolders`), whose `folderInstalled` gate reads `nil`
+**Who calls it.** `modules/SunnArt.lua` (`addonFolders`), whose `folderInstalled` gate reads `nil`
 as "offer the theme".
 
-## `GetScreenSize` — `core/Compat.lua:54`
+## `GetScreenSize` — `core/Compat.lua`
 
 **What varies.** Whether `UIParent` can report its size at all. It is a real frame in-game and a stub
 headlessly, and the stub reports 0×0.
@@ -65,19 +65,19 @@ headlessly, and the stub reports 0×0.
 either reading is not a positive number. A zero reading is "cannot tell", not a tiny screen.
 Otherwise the recovery pass would drag every panel to the origin.
 
-**Who calls it.** `modules/Registry.lua:929` (`R:Recover`, which on `nil` moves nothing and refuses with the reason `cannot measure the screen`) and
-`modules/Diagnostics.lua:114` and `:200` (the diagnostics report's screen section and its per-panel
-position line).
+**Who calls it.** `modules/Registry.lua` (`R:Recover`, which on `nil` moves nothing and refuses with the reason `cannot measure the screen`) and
+`modules/Diagnostics.lua` (`screenSection` and `positionLine`: the diagnostics report's screen
+section and its per-panel position line).
 
-## `GetUIScale` — `core/Compat.lua:63`
+## `GetUIScale` — `core/Compat.lua`
 
 **What varies.** Whether `UIParent:GetEffectiveScale` exists and answers a positive number.
 
 **When the API is absent.** `1`, the identity scale, which is always safe to multiply by.
 
-**Who calls it.** `modules/Diagnostics.lua:115` (the diagnostics report's screen section).
+**Who calls it.** `modules/Diagnostics.lua` (`screenSection`, the diagnostics report's screen section).
 
-## `InCombat` — `core/Compat.lua:84`
+## `InCombat` — `core/Compat.lua`
 
 **What varies.** Which combat API the client offers. The ladder reads the combat flag,
 `UnitAffectingCombat("player")`, first, then falls back to `InCombatLockdown()`, then answers `false`.
@@ -90,12 +90,12 @@ render does not ask this shim at all: `Canvas:RenderForCombat` takes the REGEN e
 screen: `true` on a client that cannot answer would hide every "Only out of combat" backdrop for the
 session with nothing said.
 
-**Who calls it.** `modules/Canvas.lua:794` (`Canvas:RenderAll` when no `inCombat` is passed) and
-`modules/Diagnostics.lua:234` (the diagnostics report builds each panel's spec with it). The
+**Who calls it.** `modules/Canvas.lua` (`Canvas:Render` when no `inCombat` is passed, which is how `Canvas:RenderAll` calls it) and
+`modules/Diagnostics.lua` (`panelLines`: the diagnostics report builds each panel's spec with it). The
 unlock deferral in `modules/Unlock.lua` deliberately asks `InCombatLockdown` directly instead, because
 lockdown is the question an unlock has to ask.
 
-## `RegisterMedia` — `core/Compat.lua:113`
+## `RegisterMedia` — `core/Compat.lua`
 
 **What varies.** Whether LibSharedMedia-3.0 is loaded. It is an optional dependency. When it is there,
 this registers the addon's `Solid` texture as a `border`, a `background` and a `statusbar`, because LSM
@@ -103,10 +103,10 @@ ships no solid border and a plain 1px outline is the addon's default look.
 
 **When the API is absent.** Returns `false` and registers nothing. Registering twice is harmless.
 
-**Who calls it.** `core/PanelMaster.lua:32` (`OnInitialize`), before the first render, so the shipped
+**Who calls it.** `core/PanelMaster.lua` (`addon:OnInitialize`), before the first render, so the shipped
 default resolves on the first frame.
 
-## `FetchMedia` — `core/Compat.lua:134`
+## `FetchMedia` — `core/Compat.lua`
 
 **What varies.** Whether LSM is loaded, and whether a stored media name still belongs to an installed
 addon.
@@ -116,10 +116,10 @@ and for a name LSM cannot resolve, so a panel with a missing texture looks plain
 (library-stack-§6). It returns `nil` only for the explicit `None` entry, which is the user's choice to
 draw nothing.
 
-**Who calls it.** `modules/Canvas.lua:359`, `:419`, `:443` and `:471` (border, accent bar, background
-and border again, at render time).
+**Who calls it.** `modules/Canvas.lua`'s `applyAccentBorder`, `applyAccents`, `applyBackground` and `applyBorder`
+(accent border, accent bar, background and border, at render time).
 
-## `MediaList` — `core/Compat.lua:155`
+## `MediaList` — `core/Compat.lua`
 
 **What varies.** Whether LSM is loaded, and which names other addons have registered so far this
 session. It is queried at click time rather than cached for that reason.
@@ -127,17 +127,17 @@ session. It is queried at click time rather than cached for that reason.
 **When the API is absent.** `None` and `Solid`, in that order. `None` always comes first, whether or
 not LSM ships it, because "draw no border" is a choice this addon's UI must always be able to offer.
 
-**Who calls it.** `settings/PanelEditor.lua:324` and `settings/PanelEditorTabs.lua:258` (the media dropdowns) and
-`settings/PanelSchema.lua:98` (`COERCE.media`, matching a name typed on the command line against the live list).
+**Who calls it.** `settings/PanelEditor.lua` (`makeMediaDropdown`) and `settings/PanelEditorTabs.lua` (`mediaValues`) (the media dropdowns) and
+`settings/PanelSchema.lua` (`COERCE.media`, matching a name typed on the command line against the live list).
 
-## `MouseIsOver` — `core/Compat.lua:180`
+## `MouseIsOver` — `core/Compat.lua`
 
 **What varies.** Whether the global `MouseIsOver` exists, and whether it accepts the frame in hand.
 The call is wrapped in `pcall`.
 
 **When the API is absent.** `false` when the global is missing, the frame is `nil` or the call errors.
 
-**Who calls it.** `modules/Canvas.lua:646`, the mouseover fade. The panel never enables mouse input,
+**Who calls it.** `modules/Canvas.lua`'s `updateMouseover`, the mouseover fade. The panel never enables mouse input,
 because a backdrop that took the mouse would stop being click-through; this shim answers the question
 without claiming the input.
 

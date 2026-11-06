@@ -21,12 +21,15 @@ Read only the section you need:
 
 **World of Warcraft (Retail). Nothing else.**
 
-- The TOC declares **no `## Dependencies`** — no other addon is required. Evidence:
-  `PanelMaster.toc:1-13`.
+- The TOC declares **no `## Dependencies`** — no other addon is required. Evidence: the
+  `PanelMaster.toc` header (its `##` fields).
 - `## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0, LibSharedMedia-3.0, LibDataBroker-1.1,
-  LibDBIcon-1.0` (`PanelMaster.toc:8`) lists libraries that are **already
-  vendored** under `libs/` and loaded from there (`PanelMaster.toc:15-35`). The line only lets the
-  client load a standalone copy first if one is installed; a player installs none of it.
+  LibDBIcon-1.0, EllesmereUI` (`PanelMaster.toc`) lists libraries that are **already
+  vendored** under `libs/` and loaded from there (the TOC's `# Libraries` block), plus EllesmereUI,
+  which is not a library and is not vendored. The line only lets the
+  client load a standalone copy, or EllesmereUI, first if one is installed; a player installs none of it.
+  EllesmereUI is read only as a skin source when the player already runs it (`docs/ARCHITECTURE.md`
+  ▸ *Skins*).
 - `LibDataBroker-1.1` and `LibDBIcon-1.0` back the launcher (`launcher-§1`): one broker object,
   registered twice. Both are resolved with `LibStub(..., true)` inside `LibKa0s-Launcher-1.0`, so a
   client carrying neither loses the minimap button and the broker row and raises nothing — which is
@@ -104,10 +107,10 @@ Four `python3` scripts are committed:
 
 | Script | Needs | Evidence |
 |---|---|---|
-| `tools/artwork/update_catalog.py` | Pillow | `update_catalog.py:29` — `from PIL import Image` |
-| `tools/artwork/make_poster.py` | Pillow | `make_poster.py:61-62` — `import PIL`, `from PIL import Image, ImageDraw, ImageFont, features` |
-| `tools/artwork/artwork_cleaner.py` | Pillow **and** numpy | `artwork_cleaner.py:45-46` — `import numpy as np`, `from PIL import Image, ImageFilter` |
-| `tools/sunn/build_manifest.py` | **stdlib only** | `build_manifest.py:35-39` — `argparse`, `os`, `re`, `struct`, `sys`. It reads TGA headers by hand precisely so it needs nothing installed. |
+| `tools/artwork/update_catalog.py` | Pillow | `update_catalog.py`'s imports — `from PIL import Image` |
+| `tools/artwork/make_poster.py` | Pillow | `make_poster.py`'s imports — `import PIL`, `from PIL import Image, ImageDraw, ImageFont, features` |
+| `tools/artwork/artwork_cleaner.py` | Pillow **and** numpy | `artwork_cleaner.py`'s imports — `import numpy as np`, `from PIL import Image, ImageFilter` |
+| `tools/sunn/build_manifest.py` | **stdlib only** | `build_manifest.py`'s imports — `argparse`, `os`, `re`, `struct`, `sys`. It reads TGA headers by hand precisely so it needs nothing installed. |
 
 So: **Pillow for three of the four, numpy for `artwork_cleaner.py` alone.**
 
@@ -124,7 +127,7 @@ sudo apt install -y python3 python3-pil python3-numpy
 Two notes on Pillow specifically. `make_poster.py --check` compares the poster's **pixels**, not its
 bytes, so a differing Pillow or zlib does not by itself stale the poster ([`ARTWORK-05`](https://github.com/tusharsaxena/PanelMaster/issues/36),
 [`ARTWORK-06`](https://github.com/tusharsaxena/PanelMaster/issues/37)). And it reports its own toolchain — Pillow, **FreeType** and **zlib** versions
-(`make_poster.py:386-388`) — into `media/poster/artwork-poster.txt`, so when the pixels *do* move you
+(`make_poster.py`, `toolchain()`) — into `media/poster/artwork-poster.txt`, so when the pixels *do* move you
 can see which component moved. FreeType and zlib arrive with Pillow; they are not separately
 installed.
 
@@ -139,8 +142,8 @@ It is already there after a clone — there is nothing to install and nothing to
 reasoning is recorded in closed issue [`ARTWORK-04`](https://github.com/tusharsaxena/PanelMaster/issues/35): the
 import pipeline's one irreplaceable step should not be a download link that can rot, and re-deriving
 the bundled plates from a different binary would not be byte-reproducible. Its models sit beside it
-at `tools/artwork/bin/models/` (`artwork_cleaner.py:87`), and it is invoked as a subprocess at
-`artwork_cleaner.py:276`.
+at `tools/artwork/bin/models/` (`artwork_cleaner.py`, `MODEL_DIR`), and it is invoked as a subprocess by
+`artwork_cleaner.py`'s `_run_upscaler`.
 
 It is dynamically linked, so it does need **system libraries** — this is the one part of this
 section that is a real install:
@@ -167,7 +170,7 @@ this machine can actually run compute is a separate question the loader will not
 upscaler runs but produces nothing, install `vulkan-tools` and read `vulkaninfo`.
 
 `artwork_cleaner.py` has a `--no-ai` path that falls back to Lanczos resampling
-(`artwork_cleaner.py:590`), so a machine with no working Vulkan can still run the pipeline — at
+(`artwork_cleaner.py`, `run_batch`), so a machine with no working Vulkan can still run the pipeline — at
 lower quality, and **not** reproducing the committed assets byte for byte.
 
 ### What is deliberately NOT listed here

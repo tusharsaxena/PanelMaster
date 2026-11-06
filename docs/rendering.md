@@ -224,7 +224,7 @@ was a second set of semantics to define, document and keep in agreement with the
   `art.tileClamped` records it for the harness.
 
 Sunn's per-theme `overlap` is **not** an overlap between sections — sections are flush
-(`SunnArt_Core.lua:322` anchors each to the previous one's `TOPRIGHT`). It is the transparent band at
+(Sunn - Viewport Art's `SunnArt_Core.lua`, its section-anchoring loop, anchors each to the previous one's `TOPRIGHT`). It is the transparent band at
 the top of the artwork, and it is consumed as a **content window**: a row declares `h` net of the
 band and `contentV0` as where its content starts in the file, and `BuildArtSpec` maps content space
 onto file space at the last moment. Because that is a row-level property, the per-section rows get
