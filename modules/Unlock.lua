@@ -73,6 +73,22 @@ function U.ChromeStrata(panelStrata)
   return floor
 end
 
+-- The strata a panel frame is drawn in, as a key C.STRATA_RANK can be indexed with. The panel's own
+-- stored strata comes first: modules/Canvas.lua's applySpec wrote it with SetFrameStrata, so it is
+-- the answer the frame would give. A live GetFrameStrata read is the fallback for a frame with no spec
+-- yet, and only when it is not secret: on WoW Forever a strata read can come back secret, and indexing
+-- the rank table with a secret raises (Enum.SecretAspect.FrameStrata). Last, the template's strata, a safe default.
+function U.PanelStrata(f)
+  local spec = f and f.__spec
+  local stored = spec and spec.strata
+  if type(stored) == "string" and C.STRATA_RANK[stored] then return stored end
+  if f and type(f.GetFrameStrata) == "function" then
+    local live = f:GetFrameStrata()
+    if not NS.Compat.IsSecret(live) and type(live) == "string" and C.STRATA_RANK[live] then return live end
+  end
+  return C.PANEL_TEMPLATE.strata
+end
+
 -- PURE: does a panel in `strata` draw at or over the addon's own confirmation popups (MODAL, the
 -- StaticPopups' DIALOG)? Such a panel, while unlocked, takes the mouse and would swallow the clicks
 -- meant for the popup's buttons.
@@ -219,7 +235,7 @@ function U:Decorate(f, rec)
   -- every applySpec, the one place the panel's strata moves. Unfixed for the write itself, then fixed
   -- again. The level is set after the strata, as a rung over the panel's own base.
   o.frame:SetFixedFrameStrata(false)
-  o.frame:SetFrameStrata(U.ChromeStrata(f:GetFrameStrata()))
+  o.frame:SetFrameStrata(U.ChromeStrata(U.PanelStrata(f)))
   o.frame:SetFixedFrameStrata(true)
   o.frame:SetFrameLevel((f:GetFrameLevel() or 0) + C.LAYERS.LEVEL.UNLOCK)
 
@@ -240,7 +256,7 @@ function U:Decorate(f, rec)
   U:ArmDrag(f)
   -- While one of the addon's own popups is up, a panel that covers it stays mouse-off, so a repaint
   -- under the popup (an accept that renders, a settings write) cannot re-arm it (PAN-Z05).
-  if popupsUp > 0 and U.CoversModals(f:GetFrameStrata()) then f:EnableMouse(false) end
+  if popupsUp > 0 and U.CoversModals(U.PanelStrata(f)) then f:EnableMouse(false) end
 end
 
 -- Remove the unlock furniture and make the panel inert again.
@@ -252,7 +268,7 @@ function U:StripOverlay(f)
     -- Back into the panel's strata, unfixed, so a locked panel's overlay is an ordinary child again.
     local o = f.overlay.frame
     o:SetFixedFrameStrata(false)
-    o:SetFrameStrata(f:GetFrameStrata())
+    o:SetFrameStrata(U.PanelStrata(f))
   end
   f:EnableMouse(false)
   f:SetMovable(false)
@@ -288,7 +304,7 @@ local function coveringPanels(fn)
   local n = 0
   for _, rec in ipairs(NS.Registry:All()) do
     local f = NS.Canvas:FrameFor(rec.id)
-    if f and U:IsPanelUnlocked(rec.id) and U.CoversModals(f:GetFrameStrata()) then
+    if f and U:IsPanelUnlocked(rec.id) and U.CoversModals(U.PanelStrata(f)) then
       n = n + 1
       fn(rec, f)
     end

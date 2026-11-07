@@ -1,14 +1,14 @@
 # Compat layer
 
 `core/Compat.lua` is the one file in PanelMaster allowed to call a version-variant or optional client
-API. Every other file calls `NS.Compat.X` and never the raw global. It publishes **eight** shims,
+API. Every other file calls `NS.Compat.X` and never the raw global. It publishes **nine** shims,
 counted the way documentation-§3 counts them:
 
 ```
-grep -cE '^\s*function\s+[A-Za-z_][A-Za-z0-9_]*\.' core/Compat.lua   # 8
+grep -cE '^\s*function\s+[A-Za-z_][A-Za-z0-9_]*\.' core/Compat.lua   # 9
 ```
 
-Eight is over the trigger's threshold of three, so this page exists and the `compat-layer.md` row in
+Nine is over the trigger's threshold of three, so this page exists and the `compat-layer.md` row in
 `docs/ARCHITECTURE.md` ▸ `## Documentation map` reads *Present*.
 
 ## Why the file is required here
@@ -18,18 +18,22 @@ any deprecated or version-variant client API outside `LibKa0s`'s majors, and exe
 none. PanelMaster is not exempt: it owns the addon-roster read, the combat-state read, the cursor
 test and the optional LibSharedMedia calls below, so the file is required and those calls live in it.
 
-## Why all eight stay addon-owned
+## Why eight stay addon-owned
 
-`LibKa0s-Compat-1.0` is vendored but not consumed. Its adoption was weighed and declined in
-[#53](https://github.com/tusharsaxena/PanelMaster/issues/53): no member of the major answers any of
-these eight questions the way this addon needs them answered, so every shim here is PanelMaster's own
+`LibKa0s-Compat-1.0` is consumed for one member only: `Compat.IsSecret` routes to the library's
+`IsSecret`, with the library-absent stub arm the major requires (a guard's stub re-implements the
+body, because "the library is missing" is not "the client has no secrets system"). The WoW Forever
+port added it for the unlock code's strata read (`U.PanelStrata`, `docs/ARCHITECTURE.md` ▸
+*Per-client features*). The rest of the major was weighed and declined in
+[#53](https://github.com/tusharsaxena/PanelMaster/issues/53): no other member answers any of
+the other eight questions the way this addon needs them answered, so those shims are PanelMaster's own
 and none of them re-documents a library shim. The TOC-metadata reader that once headed this file is
 the library's now (`LibKa0s-Env-1.0`, reached through `core/EnvSetup.lua`), and so is the class-color
 lookup (`LibKa0s-Core-1.0` minor 7, reached through `Util.ResolveColor`). Neither counts here.
 
 All of them follow one rule: a capability is probed by **presence** (`type(X) == "function"`,
-`C_AddOns and C_AddOns.GetNumAddOns`), never by asking which game flavor is running. This is a
-Retail-only addon with no `WOW_PROJECT_ID` branching, and `tests/test_compat.lua` asserts that.
+`C_AddOns and C_AddOns.GetNumAddOns`), never by asking which game flavor is running. The addon serves
+Retail and WoW Forever with no `WOW_PROJECT_ID` branching, and `tests/test_compat.lua` asserts that.
 
 | Shim | Defined as | Question it answers | API absent |
 |---|---|---|---|
@@ -41,6 +45,7 @@ Retail-only addon with no `WOW_PROJECT_ID` branching, and `tests/test_compat.lua
 | `FetchMedia` | `Compat.FetchMedia` | LSM name to texture path | the built-in flat texture |
 | `MediaList` | `Compat.MediaList` | LSM names for a settings dropdown | `None` and `Solid` only |
 | `MouseIsOver` | `Compat.MouseIsOver` | Is the cursor over this frame | `false` |
+| `IsSecret` | `Compat.IsSecret` | Is this value secret (`LibKa0s-Compat-1.0`'s guard) | the stub arm: `issecretvalue`, else `false` |
 
 ## `AddOnFolders` — `core/Compat.lua`
 

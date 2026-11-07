@@ -257,7 +257,7 @@ Total.
 - Unlock: a hand-edited outline thickness is clamped, not drawn
 - Unlock.PendingSnapshot: reports the combat queue as a copy, and reading it changes nothing
 
-### test_layers.lua (17)
+### test_layers.lua (21)
 
 - LAYERS names the strata this addon writes or compares against
 - LAYERS: the panel ladder is strictly increasing and ends under the stride (PAN-Z01, Z08)
@@ -267,6 +267,10 @@ Total.
 - every child frame takes an explicit rung of the ladder, accent bars and their border included (PAN-Z02, Z08)
 - the accent rungs follow the panel when its level changes
 - U.ChromeStrata lifts to HIGH and never below the panel (PAN-Z04)
+- U.PanelStrata: the panel's own stored strata wins over the live read
+- U.PanelStrata: with no spec it falls back to the live read, then to the template
+- U.PanelStrata: a secret live read never reaches the rank table
+- an unlocked panel whose strata read is secret decorates, yields and locks without raising
 - an unlocked LOW panel's overlay floats at HIGH while the panel stays LOW (PAN-Z04)
 - the overlay of a FULLSCREEN panel stays FULLSCREEN, and follows a strata change (PAN-Z04)
 - locking puts the overlay back in the panel's strata, unfixed (PAN-Z04)
@@ -908,10 +912,10 @@ Total.
 ### test_skinsetup.lua (16)
 
 - Skin seam: the owner is the folder name, and NS.Skin is its facade
-- Skin seam: the read answers Ka0s Default before the profile store exists
+- Skin seam: the read answers the client's default skin before the profile store exists
 - Skin seam: the TOC loads the seam after Namespace and before the first file that reads it
 - Skin seam: the TOC lists EllesmereUI as an optional dependency
-- Skin seam: the skin.* keys default to Ka0s Default, as skipRender Appearance rows
+- Skin seam: the skin.* keys default to the client's default skin, as skipRender Appearance rows
 - Skin seam: the skin row's values are every registered skin, in the library's order
 - Skin seam: /pm set refuses a skin that is not registered and applies one that is
 - Skin seam: /pm set reaches an exception, and only its own half
@@ -921,7 +925,7 @@ Total.
 - Skin seam: the tab's Ignore fonts reaches the library and the profile, one repaint
 - Skin seam: another addon's copy to every Ka0s addon repaints PanelMaster once
 - Skin seam: a profile switch applies the new profile's skin first, before the panels reload
-- Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default
+- Skin seam: a profile reset puts the skin, its exceptions and overrides back to the client's default skin
 - Skin seam: a profile's stored exceptions and overrides are applied with its skin
 
 ### test_skin_outline.lua (11)
@@ -1362,6 +1366,12 @@ Total.
 - skin switch: the band's create box changes
 - skin switch: an editor heading changes
 
+### test_client_globals.lua (3)
+
+- client globals: no call of a global a client lacks
+- client globals: every allowlist row has a reason and a finding to excuse
+- client globals: the check is falsifiable, a planted bare call is flagged for both clients
+
 ## Totals
 
 | Suite | Cases |
@@ -1375,7 +1385,7 @@ Total.
 | test_panel_schema.lua | 21 |
 | test_canvas.lua | 37 |
 | test_unlock.lua | 23 |
-| test_layers.lua | 17 |
+| test_layers.lua | 21 |
 | test_media.lua | 84 |
 | test_accent.lua | 65 |
 | test_artwork.lua | 46 |
@@ -1419,5 +1429,6 @@ Total.
 | test_lizard_sighted.lua | 8 |
 | test_skin_values.lua | 3 |
 | test_skin_switch.lua | 9 |
+| test_client_globals.lua | 3 |
 | Skipped | 1 |
-| **Total** | **1194** |
+| **Total** | **1201** |

@@ -35,6 +35,8 @@ read_globals = {
   -- Class color (the classFile token and the palette every UI addon agrees on) and the
   -- cursor test the mouseover fade polls with.
   "UnitClass", "RAID_CLASS_COLORS", "MouseIsOver",
+  -- The secrets system's test, read by core/Compat.lua's library-absent IsSecret arm.
+  "issecretvalue",
   -- UI globals used by the panels, the console and the settings pages
   "UIParent", "UISpecialFrames", "DEFAULT_CHAT_FRAME", "GameTooltip",
   "Settings", "CreateColor", "BackdropTemplateMixin", "STANDARD_TEXT_FONT",

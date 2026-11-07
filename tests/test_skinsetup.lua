@@ -17,6 +17,9 @@ local test, assertEqual, assertTrue = T.test, T.assertEqual, T.assertTrue
 
 local Skin = mocks.LibStub("LibKa0s-Skin-1.0")
 local OWNER = "PanelMaster"
+-- The client's default skin under the active kit profile (LibKa0s v1.94.0, skinning-§2): WoW Forever
+-- on forever, Ka0s Default on retail. Pinned from the profile, never read back from the addon.
+local CLIENT_SKIN = dofile("tests/_kit/mock_client.lua").current() == "forever" and "forever" or "ka0s"
 
 -- ONE listener of each kind for the whole file: the library keeps a listener for the session and
 -- the same function twice is one entry, so each case resets the counters instead of registering.
@@ -88,7 +91,7 @@ test("Skin seam: the owner is the folder name, and NS.Skin is its facade", funct
   assertEqual(Skin:OwnerLabel(OWNER), NS.BRAND, "the copy confirmation names the addon by its brand")
 end)
 
-test("Skin seam: the read answers Ka0s Default before the profile store exists", function()
+test("Skin seam: the read answers the client's default skin before the profile store exists", function()
   -- RegisterOwner calls `get` at FILE LOAD, before NS:InitDB; a getter that raised there would be a
   -- visible Lua error on every login.
   local db = NS.db
@@ -98,7 +101,7 @@ test("Skin seam: the read answers Ka0s Default before the profile store exists",
   NS.db = db
   assertTrue(ok, "NS.SkinChoice raised without a store: " .. tostring(source))
   assertEqual(source, "ka0s")
-  assertEqual(skin, "ka0s")
+  assertEqual(skin, CLIENT_SKIN)
   assertTrue(okO, "NS.SkinOverride raised without a store: " .. tostring(font))
   assertEqual(font, false)
   assertEqual(texture, false)
@@ -129,12 +132,12 @@ end)
 
 -- ── the keys and the rows ────────────────────────────────────────────────────────────────────
 
-test("Skin seam: the skin.* keys default to Ka0s Default, as skipRender Appearance rows", function()
+test("Skin seam: the skin.* keys default to the client's default skin, as skipRender Appearance rows", function()
   -- red under: a default other than today's look, a picker already marked seen (O3), or a row that
   -- renders itself on top of the library's tab.
   local d = NS.defaults.profile.skin
   assertEqual(d.source, "ka0s")
-  assertEqual(d.skin, "ka0s")
+  assertEqual(d.skin, CLIENT_SKIN, "WoW Forever on Forever, Ka0s Default on Retail")
   assertEqual(d.ignorePanel, true)
   assertEqual(d.ignoreFonts, false)
   assertEqual(d.font, "")
@@ -287,8 +290,8 @@ test("Skin seam: a profile switch applies the new profile's skin first, before t
   end
   local ok, err = pcall(function()
     mocks.__switchProfile("SkinProbe")
-    assertEqual(seen, "ka0s", "the new profile's skin was not applied before the panels reloaded")
-    assertEqual(select(2, Skin:GetChoice(OWNER)), "ka0s", "the switch did not move the applied skin")
+    assertEqual(seen, CLIENT_SKIN, "the new profile's skin was not applied before the panels reloaded")
+    assertEqual(select(2, Skin:GetChoice(OWNER)), CLIENT_SKIN, "the switch did not move the applied skin")
     assertEqual(looks, 1, "one switch, one repaint")
   end)
   R.ReloadProfile = reloadProfile
@@ -296,14 +299,14 @@ test("Skin seam: a profile switch applies the new profile's skin first, before t
   if not ok then error(err, 0) end
 end))
 
-test("Skin seam: a profile reset puts the skin, its exceptions and overrides back to Ka0s Default", clean(function()
+test("Skin seam: a profile reset puts the skin, its exceptions and overrides back to the client's default skin", clean(function()
   -- Reset all settings is db:ResetProfile() (options-ui-§12); skinning-§3 says the choice returns
   -- to Ka0s Default and is re-applied. The reset also takes the panels, so the case keeps none.
   NS.Registry:DeleteAll()
   NS.WriteSkinChoice("ka0s", "midnight", { panel = false, fonts = true }, { font = "Friz Quadrata TT", texture = false })
   assertEqual(select(2, Skin:GetChoice(OWNER)), "midnight")
   NS.db:ResetProfile()
-  assertEqual(select(2, Skin:GetChoice(OWNER)), "ka0s", "the reset left the old skin applied")
+  assertEqual(select(2, Skin:GetChoice(OWNER)), CLIENT_SKIN, "the reset left the old skin applied")
   local panel, fonts = Skin:GetIgnore(OWNER)
   assertEqual(panel, true, "the reset left the panel exception moved")
   assertEqual(fonts, false, "the reset left the fonts exception moved")

@@ -8,6 +8,8 @@ A backdrop-panel creator, in the lineage of kgPanels and ElvUI's panels. The use
 rectangles with a color, a border, a size, a position and a layer, and the addon draws them behind
 the rest of the UI. That is the whole product.
 
+It serves **Retail Midnight and WoW Forever** (Interface 120105, 16001) from one codebase. English only.
+
 **It does not host anything.** A panel is not a container: nothing is reparented into it, no other
 addon's frames are moved, and no Blizzard frame is touched. It is scenery — a visual grouping cue
 behind frames that stay exactly where their own addons put them. This constraint is why the addon

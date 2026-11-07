@@ -19,7 +19,11 @@ Read only the section you need:
 
 ## Runtime (in-game)
 
-**World of Warcraft (Retail). Nothing else.**
+**World of Warcraft, Retail or WoW Forever. Nothing else.**
+
+- The TOC declares the interface for each client: `## Interface: 120105, 16001`, Retail's number
+  first and Forever's second (`PanelMaster.toc`, its `## Interface:` line; toc-file-§3). One codebase
+  serves both clients.
 
 - The TOC declares **no `## Dependencies`** — no other addon is required. Evidence: the
   `PanelMaster.toc` header (its `##` fields).

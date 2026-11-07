@@ -31,10 +31,15 @@ client and is run when one is available, not per release.
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
+| FOREVER-1 to 12 | WoW Forever | The checks re-run on a live WoW Forever client: the AddOns list, a clean load, creating, moving and resizing panels, colors, artwork, strata locked and unlocked (the strata guard), profiles across a full restart, the default skin per client, the launcher, diagnostics, enable and disable |
 | SKIN-1 to 36 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation; a stored pick of the deleted Friz |
 
 ## Before you start
 
+- **Clients (clients-§6).** The addon serves Retail and WoW Forever. Every check outside the WoW
+  Forever section runs on **Retail**, where its recorded result was taken. The **WoW Forever** section
+  names the checks to re-run on a live **Forever** client; nothing in this addon is absent on either
+  client, so there is no absence check.
 - `/console scriptErrors 1`, then `/reload`, then `/pm resetall` and confirm. That is a **profile
   reset**: the settings and the panels on the current profile both go, so no separate panel wipe is
   needed.
@@ -1394,6 +1399,29 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   line and no **Sim mode** box anywhere; `/pm skin` and `/pm debug` look as SKIN-42 describes. Fail:
   a load error, a Sim mode box, or any Master controls row moved. Result:
 
+## WoW Forever
+
+**Client: WoW Forever** (1.60.1, interface 16001), every check here. The rest of this file is Retail's; these checks re-run its core on Forever, where the client draws its own frames and keeps its own `WTF`. Every Retail rule above holds: zero Lua errors, the cyan `[PM]` prefix, no taint warning.
+
+**Code:** `PanelMaster.toc` (the two-number `## Interface:` line), `core/PanelMaster.lua`, `modules/Canvas.lua`, `modules/Unlock.lua` (`U.PanelStrata`, the strata guard), `core/SkinSetup.lua` (`NS.DEFAULT_SKIN`); the vendored Ace3 widgets and AceDB 40 under `libs/`.
+
+**Setup.** Link the checkout into the Forever client once, from an elevated Windows prompt, then fully restart the client:
+`mklink /d "G:\Games\Blizzard\World of Warcraft\_forever_\Interface\AddOns\PanelMaster" "D:\Profile\Users\Tushar\Documents\GIT\PanelMaster"`.
+Forever's SavedVariables are `_forever_/WTF/Account/<ACCOUNT>/SavedVariables/PanelMaster.lua`. Props: none beyond the client; Sunn - Viewport Art and a pack only for the part of FOREVER-5 that names them.
+
+- **FOREVER-1. The AddOns list.** At character select → **Ka0s Panel Master** is listed with its logo and is **not** marked *Out of date*, and "Load out of date AddOns" does not need to be ticked for it to load. Result: owed
+- **FOREVER-2. A fresh install loads clean.** With no `PanelMaster.lua` in Forever's SavedVariables, log in → zero Lua errors and nothing on screen (a fresh install draws no panels, as INSTALL-1); `/pm version` → `[PM] v1.3.0`. Result: owed
+- **FOREVER-3. Create, move and resize.** `/pm new Forever`, `/pm unlock` → the panel appears at screen center with its outline and name. Drag it → it follows the mouse and stays where you drop it. On **Panels**, change **Width** and **Height** → it resizes at once. `/pm lock` → the outline and name go, and a click on the frame behind the panel lands there (FRAME-3). Result: owed
+- **FOREVER-4. Colors and border.** On the panel's **Appearance** tab change the background color and opacity, the border texture and the border color → each takes effect at once with no error. Result: owed
+- **FOREVER-5. Artwork.** On **Artwork**, pick `Class: Death Knight`, then step through several bundled entries → each draws (ART-1). If Sunn - Viewport Art and a pack are installed, its entries are listed and one draws (ART-14); if not, no Sunn entries appear and nothing errors (ART-13). Result: owed
+- **FOREVER-6. Strata, locked.** `/pm panel Forever strata BACKGROUND`, then `HIGH`, then back to `LOW` → the panel drops behind UI and covers it again as on Retail (LOOK-5), with no Lua error. Result: owed
+- **FOREVER-7. High stratas while unlocked (the strata guard).** `/pm unlock`, then set **Frame strata** on the panel to `BACKGROUND`, `LOW`, `HIGH`, `DIALOG`, `FULLSCREEN` and `TOOLTIP` in turn → at each the outline and name draw over the panel's own fill (FRAME-30, FRAME-31), and no Lua error mentions `STRATA_RANK` or a secret value. At `FULLSCREEN`, open **Panels**, pick another panel and click **Delete** → **No** takes the click and the high panel drags again after the popup closes (FRAME-32). `/pm lock` → no error. Result: owed
+- **FOREVER-8. Profiles across a full restart.** Create profile `SmokeTest` on the Profiles page, make and place a panel there, then **exit the client completely** and start it again → the same profile is active and the panel is where you left it. The Profiles page names this character's profile key with no error. Switch back and delete `SmokeTest` afterwards. Result: owed
+- **FOREVER-9. The default skin per client.** On a fresh Forever profile (create one on the Profiles page) → `/pm get skin.skin` reads `forever`, and the settings pages' Skin tab shows **WoW Forever** selected. On Retail, a fresh profile reads `ka0s` (Ka0s Default). Then pick Obsidian, then Ka0s Default, then WoW Forever on Forever → the unlock outline and the debug console repaint each time, with no error. Result: owed
+- **FOREVER-10. The launcher.** The minimap button shows the logo; left-click → the settings open on the landing page and the panels stay locked (LAUNCH-2); right-click → the menu titled **Ka0s Panel Master** with **Enabled** and **Locked**, and **Locked** unlocks and locks the panels as `/pm unlock` and `/pm lock` do (LAUNCH-3). Result: owed
+- **FOREVER-11. Diagnostics.** `/pm debug` → the console opens (DIAG-1); `/pm debug on`, drag a panel → lines print. `/pm diagnostics` → no Lua error, and the report's `client:` line reads `version=1.60.1` and `interface=16001`. Result: owed
+- **FOREVER-12. Enable and disable.** `/pm disable` → every panel goes away; `/pm unlock` → the disabled line and the panels stay locked (STATE-4); `/pm enable` → they return, as on Retail (STATE-1). Result: owed
+
 ## Pending sign-off
 
 On 2026-10-10 the owner marked every check in this file as passed, recorded on its `Result:` line
@@ -1445,3 +1473,7 @@ unchanged apart from the darker shade SKIN-40 checks.
 Pending from the owner's sixth smoke round (Ka0sAddonsCommonTasks `docs/2026-11-03-SMOKE_ROUND6/`,
 R6-RV, R6-PV and R6-RV2): SKIN-42, SKIN-43 and SKIN-44, new, and SKIN-15 and SKIN-23, which described the picker
 with no eye and lost their pass marks.
+
+Owed by the WoW Forever port (W2-PM-01, Ka0sAddonsCommonTasks
+`docs/2026-11-07-WOW_FOREVER_PORT_STEP5/03_WAVE2_PLAN.md`): FOREVER-1 to FOREVER-12, new, each with
+its `Result:` line reading `owed`.

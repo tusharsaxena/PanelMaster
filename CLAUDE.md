@@ -34,7 +34,8 @@ Start here, then read the docs:
   runtime / development / release-and-assets, with WSL2-Ubuntu commands.
 - Topic detail in `docs/` — **Tier 1 is always present**: `scope.md`, `module-map.md`, `schema.md`, `settings-panel.md`, `data-flow.md`, `common-tasks.md`. Conditional and addon-specific docs vary; `docs/ARCHITECTURE.md` → `## Documentation map` lists every page under `docs/` and says which conditional ones do not apply here (`documentation-§3`).
 
-Green gate before every commit: `lua tests/run.lua` and
+Green gate before every commit: `lua tests/run.lua`, `KA0S_KIT_CLIENT=forever lua tests/run.lua` (the
+addon serves Retail and WoW Forever, so the suite runs under both kit profiles, clients-§6) and
 `~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` (0/0; the kit bounds the suite on load, and
 `luacheck` loads no kit, so it runs through the bounded runner, testing-§15). Plus, whenever
 `../LibKa0s` has moved, the **vendor gate** — neither of the other two can see a stale vendored copy;
@@ -42,9 +43,9 @@ Green gate before every commit: `lua tests/run.lua` and
 never bump the version without an explicit instruction.
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Eleven of the twenty-one majors in the vendored v1.91.0 payload are adopted
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Twelve of the twenty-one majors in the vendored v1.94.0 payload are adopted
 (`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`, `Skin`,
-and `Bus` for its `Catalog` alone); `Perf` is declined, and `Widgets`, `Pool`, `Item`, `Compat`, `Glow`,
+`Bus` for its `Catalog` alone, and `Compat` for its `IsSecret` guard alone); `Perf` is declined, and `Widgets`, `Pool`, `Item`, `Glow`,
 `Sim`, `Toast`, `Charts` and `IconBrowser` are vendored but not consumed. **The look is the skin's** (`skinning`,
 `docs/ARCHITECTURE.md` → *Skins*): every color, face and texture on a surface of this addon's own
 (the unlock overlay, the console, and the settings pages unless the Scope leaves them the
@@ -55,7 +56,7 @@ under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.93.0 (MIT).
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.94.0 (MIT).
 LibKa0s icons: chevron-down, chevron-up, clear, close, confirm, copy, eye, info, move, reset, settings, volume-high.
 
 The first of those two lines is the **provenance line**, and it is an input rather than a note:

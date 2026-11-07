@@ -172,7 +172,8 @@ S.Schema = {
     group = "Appearance", label = "Skin source",
     tooltip = "Where this addon's look comes from: the Ka0s skin chosen below, or EllesmereUI.",
     onChange = function(v) NS.ApplySkinChoice(v, nil) end },
-  { path = "skin.skin", default = "ka0s", type = "string",
+  -- The client's default skin (core/SkinSetup.lua, skinning-§2): WoW Forever on Forever, Ka0s Default on Retail.
+  { path = "skin.skin", default = NS.DEFAULT_SKIN or "ka0s", type = "string",
     widget = "Dropdown", skipRender = true, values = NS.SKIN_OPTIONS,
     group = "Appearance", label = "Skin",
     tooltip = "The Ka0s skin this addon wears. Changes its settings pages and debug console right away.",
