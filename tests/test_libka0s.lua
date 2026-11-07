@@ -778,6 +778,9 @@ end)
 -- Every file that builds a LibKa0s descriptor. A seam added without being listed here is a seam
 -- with no guard, so the list is asserted against the filesystem rather than trusted.
 local SEAM_FILES = {
+  -- LibKa0s-Compat-1.0: resolves the major for its IsSecret guard alone (W2-PM-01) and builds no
+  -- descriptor. Listed because it resolves a LibKa0s major, which is the list's criterion.
+  "core/Compat.lua",
   "core/CoreSetup.lua",
   "core/EnvSetup.lua",
   "core/MediaSetup.lua",

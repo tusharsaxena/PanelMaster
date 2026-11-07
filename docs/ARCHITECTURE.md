@@ -18,13 +18,30 @@ secure frames, no combat gating on its render path, and no taint story. Full bou
 
 ## Module Map
 
-`core/` holds the bootstrap, the Compat firewall, the AceDB layer and eight of the eleven LibKa0s
-seams; `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer
+`core/` holds the bootstrap, the Compat firewall (which also routes `LibKa0s-Compat-1.0`'s `IsSecret`),
+the AceDB layer and eight of the eleven LibKa0s seams; `modules/` holds the registry, the artwork catalog, the Sunn adapter, the canvas renderer
 and unlock mode; `settings/` holds the schema, the other three seams and the four panel pages. Load
 order is fixed by the TOC — `core/Compat.lua` first, `settings/` last — and the LibKa0s seams pin
 several steps of it.
 
 File-by-file table and the seam/load-order contract in **[module-map.md](module-map.md)**.
+
+### Per-client features
+
+The addon serves Retail and WoW Forever from one codebase (clients-§1; the roster's Clients value is
+`Retail · Forever`; `## Interface: 120105, 16001`). **All features serve both clients.** No module,
+settings page or tab, slash verb, launcher entry or event registration carries a `clients`
+declaration, and the addon never asks which client it is on. It reads no character names, and it
+ships no seed list (clients-§5). The headless suite runs under both kit profiles (clients-§6), and
+the kit's missing-globals suite checks the tracked source against both clients' API sets.
+
+One guard exists for Forever: **the strata read.** On WoW Forever a `GetFrameStrata` read can come
+back secret (`Enum.SecretAspect.FrameStrata`; the port's classification, Ka0sAddonsCommonTasks
+`docs/2026-11-07-WOW_FOREVER_PORT_STEP5/00_CLASSIFICATION.md`), and the unlock code indexes `C.STRATA_RANK` with a panel's strata, which
+raises on a secret key. So the four unlock sites read `U.PanelStrata(f)` (`modules/Unlock.lua`)
+instead: the panel's own stored strata first (`f.__spec.strata`, which `modules/Canvas.lua`'s
+`applySpec` wrote with `SetFrameStrata`), a live read only when `NS.Compat.IsSecret` says it is not
+secret, and the template's strata (`LOW`) as the last answer. The guard costs nothing on Retail.
 
 ## Settings Schema
 
@@ -367,7 +384,8 @@ is refused under lockdown.
 
 ## Known Limitations
 
-Seven, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
+The addon serves Retail and WoW Forever (Interface 120105, 16001), one codebase and no client
+branching ([Per-client features](#per-client-features)); no Classic flavor. Seven limitations, each with its reasoning — CLI names with spaces, a renamed panel's frame name, frame-name
 reservation across renames, the hard-cut mouseover fade, player-class-only coloring, the Panels
 list's ASCII-only sort, and manual `/pm recover`. All in **[scope.md](scope.md)**.
 

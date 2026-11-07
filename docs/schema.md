@@ -45,7 +45,8 @@ not one of the General page's settings rows; the keys read as `/pm get skin.skin
 
 ```
   skin.source       -- "ka0s" (the Ka0s skins) | "eui" (EllesmereUI's)
-  skin.skin         -- which Ka0s skin; "ka0s" is Ka0s Default
+  skin.skin         -- which Ka0s skin; NS.DEFAULT_SKIN for a new profile: "forever" on WoW Forever,
+                    -- "ka0s" (Ka0s Default) on Retail (LibKa0s v1.94.0, skinning-§2)
   skin.ignorePanel  -- the Scope: leave the settings panel the client's (true for a new profile)
   skin.ignoreFonts  -- the Scope: leave every font the client's (false)
   skin.font         -- an LSM font key over the skin's default; "" is the skin's default

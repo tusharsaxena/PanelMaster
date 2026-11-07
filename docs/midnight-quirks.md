@@ -241,3 +241,13 @@ Each needs an in-game probe, recorded with the build, before any section of this
 ## PanelMaster-specific quirks
 
 None recorded.
+
+## Interface line — track both clients' builds
+
+`PanelMaster.toc` declares two build numbers, Retail's first and WoW Forever's second (toc-file-§3):
+
+```
+## Interface: 120105, 16001
+```
+
+Each value is `(major * 10000) + (minor * 100) + patch` for that client's Live patch: Retail Midnight 12.1.5 and Forever 1.60.1. Each client picks the number that matches it. **When either client ships a patch, replace that client's number** (`/dev-copilot:wow-bump-interface` bumps them per client) so the addon reads as up to date in that client's AddOn list, and move the README `[wow]` badge in the same change.

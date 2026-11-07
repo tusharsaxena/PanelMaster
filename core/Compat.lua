@@ -2,9 +2,34 @@ local _, NS = ...
 NS.Compat = NS.Compat or {}
 local Compat = NS.Compat
 
--- Retail-only addon: no game-flavor branching (compat). Every varying / deprecated API is gated by a
--- direct C_*/global presence check here, so a shim degrades to nil/false when its API is absent —
--- never by reading a game-flavor project id. Feature modules call NS.Compat.X, never the raw API.
+-- Serves Retail and WoW Forever from one codebase, with no client branching (compat, clients-§4). Every
+-- varying / deprecated API is gated by a direct C_*/global presence check here, so a shim degrades to
+-- nil/false when its API is absent — never by reading a game-flavor project id. Feature modules call
+-- NS.Compat.X, never the raw API.
+
+-- LibKa0s-Compat-1.0, for its secret-value guard alone (Compat.IsSecret below). Nothing else in the
+-- major has a caller here.
+local CompatLib = LibStub and LibStub("LibKa0s-Compat-1.0", true)
+
+-- ── Secret values ───────────────────────────────────────────────────────────────
+
+-- The library-absent arm of Compat.IsSecret. A deliberate, documented duplication of the library's
+-- three-line body (LibKa0s docs/api/Compat/version-1-docs.md, "Guards: the stub re-implements the
+-- body"): "the library is missing" is not "the client has no secrets system", so a stub answering
+-- false would send a secret into a table index on exactly the degraded path it exists to survive.
+-- The global is read bare and at call time, as the library reads it, so the harness mock reaches it.
+local function isSecretStub(v)
+  local fn = issecretvalue
+  if not fn then return false end
+  return fn(v) and true or false
+end
+
+-- Whether `v` is a secret value: false on a client without the secrets system. Asked before a value
+-- the client handed back is used as a table key (modules/Unlock.lua's U.PanelStrata).
+function Compat.IsSecret(v)
+  if CompatLib then return CompatLib.IsSecret(v) end
+  return isSecretStub(v)
+end
 
 -- ── Addon roster ────────────────────────────────────────────────────────────────
 

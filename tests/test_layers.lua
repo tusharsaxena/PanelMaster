@@ -182,6 +182,73 @@ test("U.ChromeStrata lifts to HIGH and never below the panel (PAN-Z04)", functio
   assertEqual(U.ChromeStrata("TOOLTIP"), "TOOLTIP")
 end)
 
+-- ── U.PanelStrata: the strata read the rank table may be indexed with (W2-PM-01) ─────────────────
+--
+-- On WoW Forever a strata read can come back secret, and C.STRATA_RANK[secret] raises
+-- (Enum.SecretAspect.FrameStrata). The four unlock sites read U.PanelStrata instead of GetFrameStrata.
+
+-- A stand-in secret: a table the mock's issecretvalue answers true for. Installed for the body
+-- only, with the rank table armed to raise if the secret ever reaches it as a key.
+local SECRET = setmetatable({}, { __tostring = function() return "<secret strata>" end })
+local function withSecretStrata(body)
+  local before = rawget(M, "issecretvalue")
+  M.issecretvalue = function(v) return v == SECRET end
+  local rankMeta = getmetatable(C.STRATA_RANK)
+  setmetatable(C.STRATA_RANK, { __index = function(_, k)
+    if k == SECRET then error("a secret strata reached C.STRATA_RANK", 0) end
+  end })
+  local ok, err = pcall(body)
+  setmetatable(C.STRATA_RANK, rankMeta)
+  M.issecretvalue = before
+  if not ok then error(err, 0) end
+end
+
+local function strataFrame(spec, live)
+  return { __spec = spec, GetFrameStrata = function() return live end }
+end
+
+test("U.PanelStrata: the panel's own stored strata wins over the live read", function()
+  assertEqual(U.PanelStrata(strataFrame({ strata = "DIALOG" }, "LOW")), "DIALOG")
+  withSecretStrata(function()
+    assertEqual(U.PanelStrata(strataFrame({ strata = "TOOLTIP" }, SECRET)), "TOOLTIP")
+  end)
+end)
+
+test("U.PanelStrata: with no spec it falls back to the live read, then to the template", function()
+  assertEqual(U.PanelStrata(strataFrame(nil, "HIGH")), "HIGH")
+  assertEqual(U.PanelStrata(strataFrame(nil, nil)), C.PANEL_TEMPLATE.strata)
+  assertEqual(U.PanelStrata(strataFrame(nil, "NOT_A_STRATA")), C.PANEL_TEMPLATE.strata)
+  assertEqual(U.PanelStrata(nil), C.PANEL_TEMPLATE.strata)
+end)
+
+test("U.PanelStrata: a secret live read never reaches the rank table", function()
+  withSecretStrata(function()
+    assertTrue(NS.Compat.IsSecret(SECRET), "the mock's issecretvalue did not reach NS.Compat.IsSecret")
+    assertEqual(U.PanelStrata(strataFrame(nil, SECRET)), C.PANEL_TEMPLATE.strata)
+  end)
+end)
+
+test("an unlocked panel whose strata read is secret decorates, yields and locks without raising", function()
+  fresh()
+  local rec = probe({ strata = "DIALOG" })
+  local f = Canvas:FrameFor(rec.id)
+  local plain = f.GetFrameStrata
+  f.GetFrameStrata = function() return SECRET end
+  local ok, err = pcall(withSecretStrata, function()
+    U:SetPanelUnlocked(rec.id, true)
+    assertEqual(f.overlay.frame:GetFrameStrata(), "DIALOG", "the overlay did not follow the stored strata")
+    local dlg = M.StaticPopupDialogs.KA0S_PANELMASTER_DELETE
+    dlg.OnShow()
+    assertFalse(f:IsMouseEnabled(), "a DIALOG panel still swallows the popup's clicks")
+    dlg.OnHide()
+    U:SetPanelUnlocked(rec.id, false)
+    assertEqual(f.overlay.frame:GetFrameStrata(), "DIALOG", "locking did not put the overlay back")
+  end)
+  f.GetFrameStrata = plain
+  fresh()
+  if not ok then error(err, 0) end
+end)
+
 test("an unlocked LOW panel's overlay floats at HIGH while the panel stays LOW (PAN-Z04)", function()
   withLayers(function()
     local rec = probe({ strata = "LOW" })

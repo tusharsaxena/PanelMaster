@@ -5,11 +5,12 @@ deliberately carries none of it, only the `[tests]` badge.
 
 ## The green gate
 
-Both of these must pass **before every commit**. A commit with red tests or lint errors is
+All three must pass **before every commit**. A commit with red tests or lint errors is
 forbidden, and a logic change without a covering test is not done.
 
 ```sh
 lua tests/run.lua     # all suites green; exits non-zero on any failure
+KA0S_KIT_CLIENT=forever lua tests/run.lua   # the same under the kit's forever profile (clients-§6)
 ~/.claude/dev-copilot/bin/ka0s-bounded luacheck .   # 0 errors, 0 warnings
 ```
 
@@ -231,8 +232,12 @@ All four out-of-game suites go through one vendored runner, and every run is rec
 ```sh
 tests/_kit/run-automated-tests.sh                            # all four, writes a bundle
 tests/_kit/run-automated-tests.sh --suite complexity          # a subset
-tests/_kit/run-automated-tests.sh --suite lint --suite tests --no-bundle   # the green gate; writes nothing
+tests/_kit/run-automated-tests.sh --suite lint --suite tests --no-bundle   # the green gate, Retail; writes nothing
+KA0S_KIT_CLIENT=forever tests/_kit/run-automated-tests.sh --suite tests --no-bundle   # and as WoW Forever
 ```
+
+The runner passes the environment through, so `KA0S_KIT_CLIENT` picks the kit profile for its `tests` suite.
+The addon serves Retail and WoW Forever, so the `tests` suite gates under **both** profiles (clients-§6).
 
 There are **two** checkpoints — the commit and the tag — and a suite answers differently at each, so
 the table names both. A single "Gates?" column could only ever describe one of them.
@@ -240,7 +245,7 @@ the table names both. A single "Gates?" column could only ever describe one of t
 | Suite | Command | Gates the commit? | Gates the tag? |
 |---|---|---|---|
 | `lint` | `~/.claude/dev-copilot/bin/ka0s-bounded luacheck .` | **yes** | **yes** |
-| `tests` | `lua tests/run.lua` | **yes** | **yes** |
+| `tests` | `lua tests/run.lua`, then `KA0S_KIT_CLIENT=forever lua tests/run.lua` | **yes**, both profiles | **yes**, both profiles |
 | `perf` | `lua tests/perf.lua` | no — recorded only | **yes** |
 | `complexity` | `bash tests/_kit/run-automated-tests.sh --suite complexity` (`lizard -l lua -L 1500` over the kit's sighted shadow, at the kit revision the `CLAUDE.md` provenance line pins; a function-count parity mismatch, or a crashed or bounded lizard run (reported in the kit-41 `crashed` bucket with the file named), is a fail; a crash is never a pass) | no — recorded only | **yes** |
 

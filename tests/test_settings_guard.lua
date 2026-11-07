@@ -22,6 +22,9 @@ local T = _G.PM_TEST
 local NS = T.NS
 local test, assertEqual, assertTrue = T.test, T.assertEqual, T.assertTrue
 local C = NS.Constants
+-- The client's default skin under the active kit profile (LibKa0s v1.94.0, skinning-§2): WoW Forever
+-- on forever, Ka0s Default on retail. Pinned from the profile, never read back from the addon.
+local CLIENT_SKIN = dofile("tests/_kit/mock_client.lua").current() == "forever" and "forever" or "ka0s"
 
 -- A deterministic one-line rendering of a value: tables sorted by key, numbers via %.17g so 0.05
 -- and a 0.05 that drifted by a rounding step differ.
@@ -105,7 +108,8 @@ local PROFILE_PIN = {
   -- AceDB default, the library's own: "all" until v1.83.0, "hud" since (D-10), and a stored mode stays.
   ["skin.outline"] = "{default=\"hud\",type=\"string\",values=\"all|hud|off\"}",
   ["skin.pickerSeen"] = "{default=false,type=\"bool\"}",
-  ["skin.skin"] = "{default=\"ka0s\",type=\"string\",values=\"azeroth|contrast|ember|forever|glass|ka0s|midnight|obsidian|wow\"}",
+  -- The skin default is the client's (W2-PM-01): Ka0s Default on Retail, WoW Forever on Forever.
+  ["skin.skin"] = "{default=\"" .. CLIENT_SKIN .. "\",type=\"string\",values=\"azeroth|contrast|ember|forever|glass|ka0s|midnight|obsidian|wow\"}",
   ["skin.source"] = "{default=\"ka0s\",type=\"string\",values=\"eui|ka0s\"}",
   ["skin.texture"] = "{default=\"\",type=\"string\"}",
   ["state.debugConsole"] = "{default=false,sessionOnly=true,type=\"bool\"}",
