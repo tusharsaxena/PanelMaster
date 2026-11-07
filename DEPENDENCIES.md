@@ -30,6 +30,7 @@ Read only the section you need:
   client load a standalone copy, or EllesmereUI, first if one is installed; a player installs none of it.
   EllesmereUI is read only as a skin source when the player already runs it (`docs/ARCHITECTURE.md`
   ▸ *Skins*).
+  Ace3: WoWUIDev/Ace3@ac3d1225 (untagged master; LibKa0s#76).
 - `LibDataBroker-1.1` and `LibDBIcon-1.0` back the launcher (`launcher-§1`): one broker object,
   registered twice. Both are resolved with `LibStub(..., true)` inside `LibKa0s-Launcher-1.0`, so a
   client carrying neither loses the minimap button and the broker row and raises nothing — which is

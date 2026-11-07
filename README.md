@@ -6,7 +6,7 @@
 ![Standard](https://img.shields.io/badge/Ka0s-WoW_Addon_Standard-yellow)
 ![Tests](https://img.shields.io/badge/Tests-1194%2F1194_passing-green)
 
-Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
+Retail only for now; WoW Forever support is planned. Panel Master draws plain backdrop panels behind your UI, so separate frames read as deliberate
 groups.
 
 A panel is a rectangle with a color, a border and a position, and that is all it is. It sits behind
