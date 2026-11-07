@@ -139,6 +139,7 @@ local SUITES = {
   -- run against Kit.skinValues and Kit.skinSwitch below.
   { name = "test_skin_values", dir = "tests/_kit/" },
   { name = "test_skin_switch", dir = "tests/_kit/" },
+  { name = "test_client_globals", dir = "tests/_kit/" },
 }
 
 -- Published so tests/test_harness.lua can state the inventory gate as a NAMED case over the
