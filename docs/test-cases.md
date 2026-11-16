@@ -1155,7 +1155,7 @@ Total.
 - DebugLog seam: the console is the library's instance, not a host re-implementation
 - DebugLog seam: the survivors kept their names and their shapes
 - DebugLog seam: the frame globals are byte-for-byte the ones this addon shipped
-- DebugLog seam: the console's title bar is three marks, at the icon pitch
+- DebugLog seam: the console's title bar is four marks, at the icon pitch
 - DebugLog seam: the library is told the FOLDER name, not just the frame name
 - Options seam: the descriptor is told the FOLDER name, so IdList help art can resolve
 - Options seam: info is declared, and no page here builds an IdList
