@@ -98,6 +98,10 @@ if not lib then
     -- NavRail, new at LibKa0s v1.61.0 (OptionsNav minor 1): drawn only by a page render, and no
     -- page here draws a rail (PanelMaster#55, will-not-do), so the same inert answer applies.
     NavRail = noop,
+    -- SideTabs, new at LibKa0s v1.100.0 (OptionsNav minor 7): a side-tab group drawn only by a page
+    -- render, and no page here draws one, so it answers nil, the live one's answer when it draws
+    -- nothing.
+    SideTabs = function() return nil end,
     -- Drawer, new at LibKa0s v1.73.0 (OptionsDrawer minor 1): drawn only by a page render, and no
     -- page here draws one, so the same inert answer applies.
     Drawer = noop,

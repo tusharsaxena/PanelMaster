@@ -81,6 +81,15 @@ if not lib then
   function D:BuildDiagnostics()
     return { lines = {}, dropped = 0, capped = false, capsHit = false }
   end
+  -- The report seam and its serializer (DebugLog minor 23, DebugLogDiagnostics minor 11, LibKa0s
+  -- v1.105.0). Nothing here calls either yet; they are owed by the stub for the parity case. With no
+  -- console there is nowhere to write a report, so it writes nothing and answers 0, the live
+  -- member's answer for a body that writes nothing. Serialize answers one line and no truncation,
+  -- the live pair's shape; the library's serializer is not copied here (anti-pattern #47).
+  function D:Report() return 0 end
+  function D:Serialize(value)
+    return { NS.SafeToString(type(value) == "table" and "<table>" or value) }, false
+  end
   -- The library's `debug` words: `diagnostics`, `on` and `off` answer true and anything else false,
   -- so the caller keeps its own fallback. Each routes to the member above that answers it here.
   function D:DebugVerb(rest)

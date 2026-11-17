@@ -147,25 +147,26 @@ test("DebugLog seam: the frame globals are byte-for-byte the ones this addon shi
   NS.DebugLog:Hide()
 end)
 
-test("DebugLog seam: the console's title bar is three marks, at the icon pitch", function()
+test("DebugLog seam: the console's title bar is four marks, at the icon pitch", function()
   -- `makeCloseButton` is deliberately not passed (the Ka0s window edge and its close control are
   -- the library's — standalone-windows). The title-bar offsets are DERIVED from what was actually
   -- built, so they are the one readable evidence of WHICH controls got built: an anchor cannot be
   -- read back through the frame API and a texture path cannot be read back at all.
   --
-  -- 6 / 30 / 54 is the ICON pitch — three 18-wide controls at 6px padding, which is what the
-  -- library draws once it has been told the addon FOLDER name and can resolve `clear` and `copy`
-  -- out of LibKa0s-Media. The old numbers were 6 / 30 / 78, where Clear was a 42-wide text button
-  -- reading the word. So this case is the headless half of smoke check DIAG-2: a -78 here means
-  -- `addonName` stopped reaching the descriptor and the console went back to words and a
-  -- multiplication sign, silently, because a texture path that resolves to nothing draws nothing
-  -- and raises nothing.
+  -- 6 / 30 / 54 / 78 is the ICON pitch — four 18-wide controls at 6px padding (close, the settings
+  -- mark DebugLogWindow minor 5 added beside it, LibKa0s#86, then clear and copy), which is what
+  -- the library draws once it has been told the addon FOLDER name and can resolve `clear` and
+  -- `copy` out of LibKa0s-Media. With the words, Copy lands at -102, past a 42-wide Clear button.
+  -- So this case is the headless half of smoke check DIAG-2: a -102 here means `addonName` stopped
+  -- reaching the descriptor and the console went back to words and a multiplication sign,
+  -- silently, because a texture path that resolves to nothing draws nothing and raises nothing.
   NS.DebugLog:Show()
   local offsets = NS.DebugLog._frameForTest.titleBarOffsets
   assertTrue(offsets ~= nil, "the library records no title-bar offsets")
   assertEqual(offsets.close, -6)
-  assertEqual(offsets.clear, -30, "Clear is not at Core's 18-wide close-button offset")
-  assertEqual(offsets.copy, -54,
+  assertEqual(offsets.settings, -30, "the settings mark is not at Core's 18-wide close-button offset")
+  assertEqual(offsets.clear, -54, "Clear is not one 18-wide mark past the settings mark")
+  assertEqual(offsets.copy, -78,
     "Copy is at the text-button pitch — the descriptor is no longer passing addonName")
   NS.DebugLog:Hide()
 end)
