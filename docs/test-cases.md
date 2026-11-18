@@ -715,7 +715,7 @@ Total.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (85)
+### test_slash.lua (88)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -763,7 +763,10 @@ Total.
 - Slash.BuildPanelLines: one row per panel, plus a header
 - Slash.BuildPanelLines: a disabled panel is dimmed, not hidden
 - Slash.BuildPanelLines: a record with enabled = nil lists as enabled (PM-R-07)
-- Slash.CliPanel: with no field, dumps every field in the declared order
+- Slash /pm panels: a report, written to the console with logging off and one chat pointer
+- Slash /pm panels: an empty registry is a short answer, said in chat, nothing written
+- Slash.CliPanel: with no field, dumps every field in the declared order to the console
+- Slash.CliPanel: a refusal inside the report verb stays in chat and writes nothing
 - Slash.CliPanel: with a field, prints just that field
 - Slash.CliPanel: with a value, sets it and echoes the stored result
 - Slash.CliPanel: the echo reflects clamping, not what was typed
@@ -1184,7 +1187,7 @@ Total.
 - L trap: no seam file hands a descriptor this addon's locale table
 - L trap: the seam-file list covers every file that calls lib:New
 
-### test_libka0s_degraded.lua (15)
+### test_libka0s_degraded.lua (16)
 
 - Degraded install: the addon loads with no LibKa0s at all
 - Degraded install: the shared cause clause is set on BOTH paths
@@ -1200,6 +1203,7 @@ Total.
 - Degraded install: /pm unlock and /pm lock print the library-absent line and change nothing
 - Degraded install: /pm profile prints the library-absent line and switches nothing
 - Degraded install: the help index still lists every verb
+- Degraded install: the report verbs print their report in chat, with no pointer
 - Degraded install: the schema loses the composed Master controls rows and NOTHING else
 
 ### test_surface_parity.lua (9)
@@ -1395,7 +1399,7 @@ Total.
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 85 |
+| test_slash.lua | 88 |
 | test_panel.lua | 53 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
@@ -1412,7 +1416,7 @@ Total.
 | test_disabled.lua | 23 |
 | test_sunnart.lua | 53 |
 | test_libka0s.lua | 37 |
-| test_libka0s_degraded.lua | 15 |
+| test_libka0s_degraded.lua | 16 |
 | test_surface_parity.lua | 9 |
 | test_harness.lua | 18 |
 | test_prose.lua | 15 |
@@ -1431,4 +1435,4 @@ Total.
 | test_skin_switch.lua | 9 |
 | test_client_globals.lua | 3 |
 | Skipped | 1 |
-| **Total** | **1201** |
+| **Total** | **1205** |

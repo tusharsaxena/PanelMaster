@@ -121,6 +121,18 @@ button; nothing is ambiguous about it because no panel field is called `fitart` 
 panel answers to that name** — a panel someone called "deleteall" still wins, so it can be inspected
 and edited from the CLI rather than being unreachable.
 
+**Two verbs are reports** (LibKa0s#79, the owner's report-routing ruling of 2026-11-08): `/pm panels`
+and the field dump `/pm panel <name>` are multi-line read-outs asked for to inspect or share, so they
+write through the console's `D:Report` instead of chat. The report is a `/pm panels` (or
+`/pm panel <name>`) header and the builder's lines under the `[Report]` tag, written whether or not
+trace logging is on; a hidden console opens, and chat gets exactly one line,
+`<title>: N lines written to the debug console. Use Copy to share it.` An empty registry is a
+one-line answer, `No panels yet`, and stays in chat; so does every refusal and usage line of
+`/pm panel` (no such panel, an unknown field), which writes nothing to the console. A single-field
+read or write echo is one line and stays in chat. `/pm list` is the reserved list verb and stays in
+chat. On an install with no library the DebugLog stub prints the same report body in chat with no
+header and no pointer.
+
 Output follows `slash-commands-§4/§5`: the cyan `[PM]` tag on every line, green headers, azure
 `[group]` headers, gold keys, white values, no trailing colons. `Slash:BuildListLines`,
 `BuildPanelLines` and `BuildPanelShowLines` return arrays rather than printing, so the output shape

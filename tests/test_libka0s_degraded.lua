@@ -335,6 +335,29 @@ test("Degraded install: the help index still lists every verb", function()
   end
 end)
 
+test("Degraded install: the report verbs print their report in chat, with no pointer", function()
+  -- LibKa0s#79, the ruling's library-absent arm: with no console the stub's D:Report streams the
+  -- body to chat (no `/pm panels` header, no pointer), because chat is the only place left to show
+  -- the read-out the player asked for by name.
+  local ns, m = loadDegraded()
+  ns.Print("warm up the notice")
+  ns.Registry:New("Kept")
+  local body = ns.Slash:BuildPanelLines()
+  local before = #m.__chat
+  ns.Slash:OnSlash("panels")
+  assertEqual(#m.__chat, before + #body, "the degraded report is the listing, one chat line a line")
+  for i, line in ipairs(body) do assertEqual(m.__chat[before + i], ns.PREFIX .. " " .. line) end
+  for i = before + 1, #m.__chat do
+    assertFalse(m.__chat[i]:find("written to the debug console", 1, true) ~= nil,
+      "the degraded report printed a pointer to a console that does not exist")
+  end
+  before = #m.__chat
+  ns.Slash:OnSlash("panel Kept")
+  assertEqual(#m.__chat, before + #ns.Constants.PANEL_FIELD_ORDER + 1,
+    "the degraded field dump is the panel line and one line per field")
+  assertEqual(ns.DebugLog:BufferSize(), 0, "the stub wrote into a console that does not exist")
+end)
+
 test("Degraded install: the schema loses the composed Master controls rows and NOTHING else",
   function()
     -- options-ui-§1 requires the stub's cost to be MEASURED rather than assumed, and pinned by the

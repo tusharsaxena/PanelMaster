@@ -17,7 +17,7 @@ client and is run when one is available, not per release.
 | IDs | Theme | What it covers |
 |---|---|---|
 | INSTALL-1 to 9 | Install and load | First login, version, standalone, raw string keys, the old test-mode sweep, the `[Init]` version, a clean load with the LibKa0s v1.75.0 majors |
-| SLASH-1 to 7 | Slash commands | Bare `/pm`, help and the landing list, unknown verbs, `set` clamps and refusals, `/pm list` |
+| SLASH-1 to 10 | Slash commands | Bare `/pm`, help and the landing list, unknown verbs, `set` clamps and refusals, `/pm list`, the `/pm panels` and `/pm panel <name>` reports in the debug console |
 | FRAME-1 to 33 | Panels | Create, drag, lock, click-through, snapping, default sizes, master scale, recovery, frame names, rename, copy, reset, delete, layering (unlock outline, popups over high panels, above-all art) |
 | LOOK-1 to 29 | Appearance | Colors, borders, textures, color pickers, border offset, class color, mouseover fade |
 | ACCENT-1 to 14 | Accent bar | The BenikUI-style strip: edges, size, color, texture, its border, opacity |
@@ -128,6 +128,21 @@ client and is run when one is available, not per release.
   (`Master controls`, `Moving panels`, `New panels`), four-space-indented rows, and grid size reading
   `4 px`. Under `Moving panels` the rows read in the tab's order: show names, unlock outline
   thickness, snap to grid, grid size. Result: pass (owner, 2026-10-24)
+- **SLASH-8. `/pm panels` is a report.** With at least two panels, the debug console closed and
+  logging off (`Debug: OFF`), type `/pm panels` → chat shows exactly one line, `[PM] panels: N lines
+  written to the debug console. Use Copy to share it.`, and the console opens. Its last lines are a
+  `/pm panels` header, then `Panels (N)` and one row per panel (name, size, anchor), all under
+  `[Report]`; a disabled panel is listed in gray. Logging is still `Debug: OFF`. Press Copy → the
+  pasted text has no `|cff` color codes. Result:
+- **SLASH-9. `/pm panel <name>` is a report.** Close the console, then `/pm panel <one of your
+  panels>` → one chat pointer, `[PM] panel <name>: N lines written to the debug console. Use Copy to
+  share it.`, and the console opens with a `/pm panel <name>` header, the `Panel <name> (id N)` line
+  and one `key = value` line per field, `name` first. `/pm panel <name> width` → that one field
+  answers **in chat** and the console gains nothing. Result:
+- **SLASH-10. Short answers and refusals stay in chat.** Close the console. `/pm panel Nobody` → one
+  chat line saying there is no panel called `Nobody`, and the console stays closed. On a character
+  (or profile) with no panels, `/pm panels` → one chat line, `No panels yet — make one with /pm new
+  <name>`, and the console stays closed. Result:
 
 ## FRAME
 
@@ -986,7 +1001,9 @@ asserts the wording; only the client can say the addon still works. Quit the cli
 
 - **DEGRADED-1. It loads and draws.** Log in with `scriptErrors` on → zero Lua errors, and your panels
   are drawn exactly as before. Result: pass (owner-marked 2026-10-10)
-- **DEGRADED-2. Panel verbs work.** `/pm panels` → a complete listing, every panel and field.
+- **DEGRADED-2. Panel verbs work.** `/pm panels` → a complete listing, every panel and field,
+  **in chat**, with no `/pm panels` header and no "written to the debug console" pointer (there is
+  no console to write to; amended for LibKa0s#79, SLASH-8).
   `/pm new SmokeTest`, then `/pm delete SmokeTest` → both work. Result: pass (owner-marked 2026-10-10)
 - **DEGRADED-3. The notice, once.** The first line the addon prints carries `[PM] The LibKa0s library
   is missing from this installation of Ka0s Panel Master (expected in libs/LibKa0s); running on
@@ -1479,3 +1496,8 @@ Owed by the WoW Forever port (W2-PM-01, Ka0sAddonsCommonTasks
 its `Result:` line reading `owed`.
 
 On 2026-11-08 the owner reported that every check of the WoW Forever port (W2-PM-01, Ka0sAddonsCommonTasks `docs/2026-11-07-WOW_FOREVER_PORT_STEP5/04_WAVE2_SMOKE.md`) passed, with a Retail sanity pass: FOREVER-1 to FOREVER-12, each recorded on its `Result:` line as `passed (owner, 2026-11-08)`.
+
+Owed by the LibKa0s v1.105.0 adoption, wave D (AD-79-PM, Ka0sAddonsCommonTasks
+`docs/2026-11-17-LIBKA0S_V1_105_ADOPTION/`): SLASH-8, SLASH-9 and SLASH-10, new, each with an empty
+`Result:` line, and DEGRADED-2, whose expected result now says the listing stays in chat with no
+pointer; its 2026-10-10 pass mark stands for the listing itself.

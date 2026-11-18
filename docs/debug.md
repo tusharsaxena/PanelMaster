@@ -227,6 +227,7 @@ Every other tag below is this addon's own.
 | `Debug` | the library (`SetEnabled`) | `logging enabled` / `logging disabled`, at each flip of the flag, including the enable a `/pm diagnostics` run makes when logging was off |
 | `Init` | the library, with `NS.InitSummary` (`core/Database.lua`) | Once per enable: addon and version, schema, profile, panel count, then the optional dependencies: `LSM yes/no, LibDBIcon yes/no, Sunn themes N` |
 | `Diag` | the library and `modules/Diagnostics.lua` | Every line of a `/pm diagnostics` report, written in full through the ungated append |
+| `Report` | the library (`D:Report`), through `settings/Slash.lua` | Every line of a `/pm panels` or `/pm panel <name>` report: a `/pm panels` (or `/pm panel <name>`) header, then the listing or the field dump, written through the ungated append whether or not logging is on. Chat gets one pointer line. An empty registry and a refusal write nothing |
 | `Set` | the library's schema seam; `core/Database.lua` | `[Set] <path> = <value>` once per settings write, and `[Set] panel.<field> = <value> on '<panel>'` once per panel field write (the editor, `/pm panel`, a drag-stop's four fields, a fit's two); one line per bulk copy or reset; one per profile reset or copy (see *Bulk copy and reset*) |
 | `Profile` | `core/Database.lua` | `switched to '<name>', N panels`, on a profile switch |
 | `Migrate` | `core/Database.lua` | A schema migration, only when one runs (at load) |

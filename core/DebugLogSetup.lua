@@ -82,11 +82,19 @@ if not lib then
     return { lines = {}, dropped = 0, capped = false, capsHit = false }
   end
   -- The report seam and its serializer (DebugLog minor 23, DebugLogDiagnostics minor 11, LibKa0s
-  -- v1.105.0). Nothing here calls either yet; they are owed by the stub for the parity case. With no
-  -- console there is nowhere to write a report, so it writes nothing and answers 0, the live
-  -- member's answer for a body that writes nothing. Serialize answers one line and no truncation,
-  -- the live pair's shape; the library's serializer is not copied here (anti-pattern #47).
-  function D:Report() return 0 end
+  -- v1.105.0). `/pm panels` and `/pm panel <name>` write through Report (settings/Slash.lua). With
+  -- no console the report is the read-out the player asked for by name, and chat is the only place
+  -- left to show it, so the body streams to chat with no header and no pointer (the ruling's
+  -- library-absent arm, docs/api/DebugLog/version-23.11.1.5-docs.md). It answers the lines it
+  -- printed. Serialize answers one line and no truncation, the live pair's shape; the library's
+  -- serializer is not copied here (anti-pattern #47).
+  function D:Report(_, _, fn)
+    local n = 0
+    if type(fn) == "function" then
+      fn(function(line) n = n + 1; NS.Print(NS.SafeToString(line)) end)
+    end
+    return n
+  end
   function D:Serialize(value)
     return { NS.SafeToString(type(value) == "table" and "<table>" or value) }, false
   end
