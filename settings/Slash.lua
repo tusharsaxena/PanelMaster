@@ -303,9 +303,11 @@ function Sl:CliPanel(arg)
 
   local field, value = parseFieldValue(tail)
 
-  -- The field dump is a report (see `report` above); a refusal before it stays in chat.
+  -- The field dump is a report (see `report` above); a refusal before it stays in chat. Titled by
+  -- the record's own name, not the typed key: Resolve folds case and takes an id, so `dumped` or
+  -- `1` would otherwise head a body that says `Panel Dumped`.
   if not field then
-    report("panel " .. key, Sl:BuildPanelShowLines(rec))
+    report("panel " .. rec.name, Sl:BuildPanelShowLines(rec))
     return
   end
 

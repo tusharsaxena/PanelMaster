@@ -617,6 +617,25 @@ test("Slash.CliPanel: with no field, dumps every field in the declared order to 
     quietConsole(); fresh()
   end)
 
+test("Slash.CliPanel: the report is titled by the panel's own name, not by what was typed",
+  function()
+    -- Review fix (wave D): Resolve matches a name case-insensitively and also takes a numeric id,
+    -- so titling the report with the typed key gave `panel dumped` or `panel 1` over a body that
+    -- says `Panel Dumped`. The header and the pointer name the record, as smoke SLASH-9 reads.
+    fresh(); quietConsole()
+    local rec = R:New("Dumped")
+    for _, typed in ipairs({ "dumped", tostring(rec.id) }) do
+      local written, chat = consoleLines(function() Sl:CliPanel(typed) end)
+      assertEqual(#chat, 1, "a report prints exactly one chat line, the pointer")
+      assertTrue(chat[1]:find("panel Dumped", 1, true) ~= nil,
+        "the pointer names what was typed (" .. typed .. "): " .. tostring(chat[1]))
+      assertTrue(written[1]:find("/pm panel Dumped", 1, true) ~= nil,
+        "the header names what was typed (" .. typed .. "): " .. tostring(written[1]))
+      quietConsole()
+    end
+    fresh()
+  end)
+
 test("Slash.CliPanel: a refusal inside the report verb stays in chat and writes nothing", function()
   fresh(); quietConsole()
   local written, chat = consoleLines(function() Sl:CliPanel("Nobody") end)

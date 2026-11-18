@@ -139,7 +139,8 @@ structure its own prose, and that is the only list of them outside the table.
 
 Report verbs: `panels` and the field dump `panel <name>` are reports (LibKa0s#79): they write
 through `NS.DebugLog:Report` to the debug console, ungated, show it, and print one pointer line in
-chat; an empty registry and every refusal stay in chat (`slash-dispatch.md`).
+chat; an empty registry and every refusal stay in chat (`slash-dispatch.md`). The field dump is
+titled by the panel's own name, so `/pm panel dumped` or `/pm panel 1` heads it `panel Dumped`.
 
 Schema-driven verbs: `config version get set list reset resetall debug diagnostics enable disable help` — `resetall` is a
 **profile reset** (`options-ui-§12`): confirm-gated, the same act as Profiles → Reset Profile, and it
