@@ -715,7 +715,7 @@ Total.
 - Schema seam: the live seam is the library's instance, and NS.Schema's names answer it
 - Schema: the grid-size slider and the write seam share one maximum
 
-### test_slash.lua (88)
+### test_slash.lua (89)
 
 - Slash.Register: registers both the short verb and the full-name alias
 - Slash.Version: prefers the TOC metadata over the in-code fallback
@@ -766,6 +766,7 @@ Total.
 - Slash /pm panels: a report, written to the console with logging off and one chat pointer
 - Slash /pm panels: an empty registry is a short answer, said in chat, nothing written
 - Slash.CliPanel: with no field, dumps every field in the declared order to the console
+- Slash.CliPanel: the report is titled by the panel's own name, not by what was typed
 - Slash.CliPanel: a refusal inside the report verb stays in chat and writes nothing
 - Slash.CliPanel: with a field, prints just that field
 - Slash.CliPanel: with a value, sets it and echoes the stored result
@@ -1399,7 +1400,7 @@ Total.
 | test_library_debug.lua | 11 |
 | test_diagnostics.lua | 22 |
 | test_schema.lua | 50 |
-| test_slash.lua | 88 |
+| test_slash.lua | 89 |
 | test_panel.lua | 53 |
 | test_panels_page.lua | 18 |
 | test_profiles.lua | 26 |
@@ -1435,4 +1436,4 @@ Total.
 | test_skin_switch.lua | 9 |
 | test_client_globals.lua | 3 |
 | Skipped | 1 |
-| **Total** | **1205** |
+| **Total** | **1206** |
