@@ -253,7 +253,7 @@ conversion guide, including how to pick good sources, is in
 
 | Symptom | Fix |
 |---------|-----|
-| I made a panel and cannot see it | There are three usual causes. It might be behind something opaque: run `/pm unlock`, which outlines and names every panel regardless. It might be switched off, so check `/pm panels`, where a disabled panel is listed in gray. Or the whole addon is off, in which case `/pm panels` tells you so and names `/pm enable`. |
+| I made a panel and cannot see it | There are three usual causes. It might be behind something opaque: run `/pm unlock`, which outlines and names every panel regardless. It might be switched off, so check `/pm panels`, which lists every panel in the debug console, a disabled one in gray. Or the whole addon is off, in which case `/pm panels` tells you so and names `/pm enable`. |
 | A panel has ended up off the edge of the screen | `/pm recover` brings every stray panel back into view. It never runs by itself, so a panel you deliberately parked half off-screen stays exactly where you put it. |
 | I unlocked panels but nothing became draggable | You were in combat, so the unlock was queued rather than applied, and you will have seen a gray notice saying so. It happens by itself the moment you leave combat. |
 | `/pm config` says it cannot open during combat | That is Blizzard's restriction, not a bug: the game will not let the settings window be switched to while you are fighting. Run it again once you are out. |

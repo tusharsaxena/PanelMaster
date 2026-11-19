@@ -547,12 +547,104 @@ test("Slash.BuildPanelLines: a record with enabled = nil lists as enabled (PM-R-
   assertTrue(lines[2]:find("|cffffff00", 1, true) ~= nil, "an enabled = nil panel was dimmed")
 end)
 
-test("Slash.CliPanel: with no field, dumps every field in the declared order", function()
-  fresh()
-  R:New("Dumped")
-  local lines = capture(function() Sl:CliPanel("Dumped") end)
-  assertEqual(#lines, #NS.Constants.PANEL_FIELD_ORDER + 1)
-  assertTrue(lines[2]:find("name", 1, true) ~= nil, "the dump is not in declared order")
+-- ── The two report verbs (LibKa0s#79, the owner's report-routing ruling of 2026-11-08) ──
+-- `/pm panels` and `/pm panel <name>` are read-outs asked for to inspect or share, so they are
+-- REPORTS: written to the debug console ungated, the console shown, one pointer line in chat. A
+-- short answer (an empty registry) and a refusal (no such panel) stay in chat and write nothing.
+
+local DL = NS.DebugLog
+
+local function quietConsole()
+  NS.State.debug = false
+  DL:Clear()
+  DL:Hide()
+end
+
+-- The console lines written while `fn` ran, as the plain buffer holds them.
+local function consoleLines(fn)
+  local before = #DL.buffer
+  local chat = capture(fn)
+  local out = {}
+  for i = before + 1, #DL.buffer do out[#out + 1] = DL.buffer[i] end
+  return out, chat
+end
+
+test("Slash /pm panels: a report, written to the console with logging off and one chat pointer",
+  function()
+    -- red under: CliPanels printing each BuildPanelLines line to chat
+    fresh(); quietConsole()
+    R:New("A"); R:New("B")
+    local body = Sl:BuildPanelLines()
+    local written, chat = consoleLines(function() NS.Slash:OnSlash("panels") end)
+    assertEqual(#chat, 1, "a report prints exactly one chat line, the pointer")
+    assertTrue(chat[1]:find("panels: " .. (#body + 1) .. " lines written to the debug console", 1, true)
+      ~= nil, "the pointer is not the library's REPORT_WRITTEN line: " .. tostring(chat[1]))
+    assertEqual(#written, #body + 1, "the report is the /pm panels header plus the listing")
+    assertTrue(written[1]:find("/pm panels", 1, true) ~= nil, "the report header names the verb")
+    assertTrue(written[2]:find("Panels (2)", 1, true) ~= nil)
+    assertTrue(written[3]:find("A", 1, true) ~= nil and written[4]:find("B", 1, true) ~= nil)
+    assertTrue(DL:IsShown(), "a report shows a hidden console")
+    assertFalse(NS.State.debug == true, "a report must not turn trace logging on")
+    quietConsole(); fresh()
+  end)
+
+test("Slash /pm panels: an empty registry is a short answer, said in chat, nothing written",
+  function()
+    fresh(); quietConsole()
+    local written, chat = consoleLines(function() Sl:CliPanels() end)
+    assertEqual(#chat, 1)
+    assertTrue(chat[1]:find("No panels yet", 1, true) ~= nil)
+    assertEqual(#written, 0, "a one-line answer is not a report")
+    assertFalse(DL:IsShown(), "a short answer must not open the console")
+  end)
+
+test("Slash.CliPanel: with no field, dumps every field in the declared order to the console",
+  function()
+    -- Re-pinned for LibKa0s#79: the field dump used to print to chat; it is a report now, so the
+    -- same lines land in the debug console under a `/pm panel <name>` header and chat gets one
+    -- pointer.
+    fresh(); quietConsole()
+    R:New("Dumped")
+    local written, chat = consoleLines(function() Sl:CliPanel("Dumped") end)
+    assertEqual(#chat, 1, "a report prints exactly one chat line, the pointer")
+    assertTrue(chat[1]:find("lines written to the debug console", 1, true) ~= nil)
+    assertEqual(#written, #NS.Constants.PANEL_FIELD_ORDER + 2,
+      "the dump is the header, the panel line and one line per field")
+    assertTrue(written[1]:find("/pm panel Dumped", 1, true) ~= nil, "the report header names the verb")
+    assertTrue(written[3]:find(NS.Constants.PANEL_FIELD_ORDER[1], 1, true) ~= nil,
+      "the dump is not in declared order")
+    assertTrue(DL:IsShown(), "a report shows a hidden console")
+    quietConsole(); fresh()
+  end)
+
+test("Slash.CliPanel: the report is titled by the panel's own name, not by what was typed",
+  function()
+    -- Review fix (wave D): Resolve matches a name case-insensitively and also takes a numeric id,
+    -- so titling the report with the typed key gave `panel dumped` or `panel 1` over a body that
+    -- says `Panel Dumped`. The header and the pointer name the record, as smoke SLASH-9 reads.
+    fresh(); quietConsole()
+    local rec = R:New("Dumped")
+    for _, typed in ipairs({ "dumped", tostring(rec.id) }) do
+      local written, chat = consoleLines(function() Sl:CliPanel(typed) end)
+      assertEqual(#chat, 1, "a report prints exactly one chat line, the pointer")
+      assertTrue(chat[1]:find("panel Dumped", 1, true) ~= nil,
+        "the pointer names what was typed (" .. typed .. "): " .. tostring(chat[1]))
+      assertTrue(written[1]:find("/pm panel Dumped", 1, true) ~= nil,
+        "the header names what was typed (" .. typed .. "): " .. tostring(written[1]))
+      quietConsole()
+    end
+    fresh()
+  end)
+
+test("Slash.CliPanel: a refusal inside the report verb stays in chat and writes nothing", function()
+  fresh(); quietConsole()
+  local written, chat = consoleLines(function() Sl:CliPanel("Nobody") end)
+  assertEqual(#chat, 1)
+  assertTrue(chat[1]:find("no panel", 1, true) ~= nil)
+  for _, line in ipairs(written) do
+    assertFalse(line:find("[Report]", 1, true) ~= nil, "a refusal wrote a report: " .. line)
+  end
+  assertFalse(DL:IsShown(), "a refusal must not open the console")
 end)
 
 test("Slash.CliPanel: with a field, prints just that field", function()

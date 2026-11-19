@@ -205,8 +205,24 @@ function Sl:BuildPanelLines()
   return lines
 end
 
+-- A REPORT (LibKa0s#79, the owner's report-routing ruling of 2026-11-08): a multi-line read-out
+-- asked for to inspect or share goes to the debug console through `D:Report`, ungated, showing a
+-- hidden console, with one pointer line in chat. Without the library the DebugLog stub streams the
+-- same body to chat. The body is the pure builder's lines, written once, so the console copy and
+-- the tests read one source.
+local function report(title, lines)
+  NS.DebugLog:Report("Report", title, function(out)
+    for _, line in ipairs(lines) do out(line) end
+  end)
+end
+
+-- An empty registry is a one-line answer, not a report, so it stays in chat and opens nothing.
 function Sl:CliPanels()
-  for _, line in ipairs(Sl:BuildPanelLines()) do print(line) end
+  if NS.Registry:Count() == 0 then
+    for _, line in ipairs(Sl:BuildPanelLines()) do print(line) end
+    return
+  end
+  report("panels", Sl:BuildPanelLines())
 end
 
 -- Full per-panel field dump, in the declared field order rather than pairs() order.
@@ -287,8 +303,11 @@ function Sl:CliPanel(arg)
 
   local field, value = parseFieldValue(tail)
 
+  -- The field dump is a report (see `report` above); a refusal before it stays in chat. Titled by
+  -- the record's own name, not the typed key: Resolve folds case and takes an id, so `dumped` or
+  -- `1` would otherwise head a body that says `Panel Dumped`.
   if not field then
-    for _, line in ipairs(Sl:BuildPanelShowLines(rec)) do print(line) end
+    report("panel " .. rec.name, Sl:BuildPanelShowLines(rec))
     return
   end
 
