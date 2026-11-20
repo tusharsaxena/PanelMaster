@@ -8,9 +8,25 @@
 -- marker, the tooltips' emphasis, and the rows the Panels page acquires itself, past the Options
 -- instance's owner proxy (settings/PanelEditor.lua).
 --
--- WHAT IS NOT. The panels are the player's content and no skin repaints them (cause A8). The debug
--- console, the first-run picker and every row the Options instance draws are the library's, and
--- its own suite holds them. No surface carries a companion: nothing here has a `<key>FromSkin` row.
+-- WHAT IS NOT. The panels are the player's content and no skin repaints them (cause A8), their
+-- new-panel defaults included (the owner's U-23, 2026-11-20). The debug console, the first-run
+-- picker and every row the Options instance draws are the library's, and its own suite holds them.
+-- No surface carries a companion: nothing here has a `<key>FromSkin` row.
+--
+-- THE FAMILY FIELDS (kit revision 58, SD-SK-PM of Ka0sAddonsCommonTasks
+-- docs/2026-11-20-LIBKA0S_94_97_99_100/). Each surface below must move every setter family it draws
+-- on its own: color on all six, and the face on the unlock label (first pass) and the create box.
+-- None takes `expect`, `hold` or `clear`, and each for a reason: no surface draws a texture (the
+-- outline is SetColorTexture, a color; the heading's divider and the create box are SkinAce's color
+-- paints), none holds a StatusBar (the addon creates none; the accent strip is a plain Texture on a
+-- panel, cause A8), and no ruling keeps a family of these fixed. A surface added later that draws
+-- skin art or a fill on a Texture declares `expect = "texture"`.
+--
+-- THE MEDIA FAKE. The skin paints a face only when LibSharedMedia resolves its key, and this
+-- harness has no LibSharedMedia, so without a fake every face fell back to the stock one under
+-- every skin and the font family was never asked. `begin` installs one for the surface's life that
+-- answers every shipped skin's font and statusbar keys with a path of its own, as the library's own
+-- switch fixture does (LibKa0s tests/fixture_skin_switch.lua), so a face that stops following fails.
 --
 -- Scope: every settings surface is `scope = "panel"`, since Ignore settings panel keeps it stock.
 -- The unlock overlay is a surface of this addon's own and follows the skin either way.
@@ -38,9 +54,38 @@ return function(NS, mocks)
     Canvas:RenderAll()
   end
 
-  --- One record, the editor's selection, and the recorder on.
+  --- A LibSharedMedia fake answering every shipped skin's font and statusbar keys with a path of
+  --- its own, installed in place of whatever the mocks hold; answers the function that puts it back.
+  local function installMedia()
+    local Skin, map = mocks.LibStub("LibKa0s-Skin-1.0"), {}
+    local KINDS = { ["bar.texture"] = "statusbar", ["font.body"] = "font", ["font.title"] = "font",
+                    ["font.mono"] = "font", ["hud.font"] = "font" }
+    for _, def in ipairs(Skin:Skins()) do
+      local t = Skin:ResolveSkin(def.key)
+      for token, kind in pairs(KINDS) do
+        local key = t[token]
+        if type(key) == "string" and key ~= "" then
+          map[kind .. ":" .. key] = "Interface\\AddOns\\SkinProbe\\" .. kind .. "\\" .. key
+        end
+      end
+    end
+    local saved = mocks.__libs["LibSharedMedia-3.0"]
+    mocks.__libs["LibSharedMedia-3.0"] = {
+      MediaType = { BACKGROUND = "background", BORDER = "border", FONT = "font",
+                    STATUSBAR = "statusbar", SOUND = "sound" },
+      Fetch = function(_, kind, key) return map[kind .. ":" .. tostring(key)] end,
+      IsValid = function(_, kind, key) return map[kind .. ":" .. tostring(key)] ~= nil end,
+      List = function() return {} end,
+      HashTable = function() return {} end,
+      Register = function() return true end,
+    }
+    return function() mocks.__libs["LibSharedMedia-3.0"] = saved end
+  end
+
+  --- One record, the editor's selection, and the recorder and the media fake on.
   local function begin(opts)
     later(installPaint(mocks))
+    later(installMedia())
     local rec = R:New("Surface", opts or {})
     E.__setSelectedID(rec.id)
     return rec

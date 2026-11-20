@@ -32,7 +32,7 @@ client and is run when one is available, not per release.
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
 | NUM-1 to 3 | Non-finite numbers | `nan`, `inf` and `1e999` refused by the panel CLI; one `/pm recover` repairs a stored one |
 | FOREVER-1 to 12 | WoW Forever | The checks re-run on a live WoW Forever client: the AddOns list, a clean load, creating, moving and resizing panels, colors, artwork, strata locked and unlocked (the strata guard), profiles across a full restart, the default skin per client, the launcher, diagnostics, enable and disable |
-| SKIN-1 to 36 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation; a stored pick of the deleted Friz |
+| SKIN-1 to 46 | Skins | The skinning rollout's checks: Ka0s Default as before (no HUD reset here), the Skin tab, each skin live on the settings pages, the Scope, the panels left the player's, the unlock overlay, fonts and the overrides, the console, EllesmereUI on and off, the copy, profiles, combat, the first-run skin picker, tooltips, popups and chat; then LibKa0s v1.82.0's: the Font outline, no font settings of the addon's own, `/pm skin`, the new faces, equal widths across skins, and the overrides reset on a skin change; the picker's rows, and a clean load after the dead-export removal; then a clean load on LibKa0s v1.84.0, and the one media picker; then a clean load on LibKa0s v1.85.0, tooltip emphasis, editor headings and the delete profile confirmation; a stored pick of the deleted Friz; then LibKa0s v1.108.0: no skin companion in the panel editor, and the panels kept through a skin switch |
 
 ## Before you start
 
@@ -1416,6 +1416,27 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` �
   line and no **Sim mode** box anywhere; `/pm skin` and `/pm debug` look as SKIN-42 describes. Fail:
   a load error, a Sim mode box, or any Master controls row moved. Result:
 
+### Every option default follows the skin (LibKa0s v1.108.0)
+
+- **SKIN-45. The editor draws no skin companion on a panel (SD-RV-PM, SD-SK-PM, owner U-23).**
+  LibKa0s v1.108.0 adds a *Use the skin's ...* box to every composed border and bar block unless
+  the addon opts out, and a panel's look is the player's content. Update and `/reload` with BugSack
+  on → no Lua error on load. `/pm new Smoke45`, then `/pm config` → **Panels**, pick **Smoke45**.
+  **Background and border** → the rows read *Background texture*, *Background color* with *Use class
+  color*, *Border style* with *Border thickness (px)*, *Border color* with *Use class color*, then
+  *Border offset*, with no *Use the skin's border* or *Use the skin's color* box. **Accent bar** → the
+  same holds for **Fill** (no *Use the skin's texture* or *Use the skin's color*) and its **Border**.
+  Fail: a load error, or any *Use the skin's ...* box on either tab. Result:
+- **SKIN-46. A skin switch leaves every panel as it was (SD-SK-PM, owner U-23).** Keep **Smoke45**
+  and one panel you styled yourself on screen; `/pm unlock`. `/pm skin` → pick **WoW Midnight**,
+  **Apply**; then **High Contrast**; then **Ka0s Default** again. After each: the panels' fill,
+  border, accent bar (texture, color, its black hairline) and any artwork look exactly as before,
+  **Smoke45** included, while the unlock outline and the name label change color with the skin.
+  Then `/pm new Smoke46` under **WoW Midnight** → it arrives with the same dark fill and class-colored
+  top bar as **Smoke45**, not the skin's colors. `/pm lock`, then `/pm delete Smoke45` and
+  `/pm delete Smoke46`. Fail: any panel's look moving with the skin, a new panel born in the skin's
+  colors, or the outline or label not following. Result:
+
 ## WoW Forever
 
 **Client: WoW Forever** (1.60.1, interface 16001), every check here. The rest of this file is Retail's; these checks re-run its core on Forever, where the client draws its own frames and keeps its own `WTF`. Every Retail rule above holds: zero Lua errors, the cyan `[PM]` prefix, no taint warning.
@@ -1501,3 +1522,7 @@ Owed by the LibKa0s v1.105.0 adoption, wave D (AD-79-PM, Ka0sAddonsCommonTasks
 `docs/2026-11-17-LIBKA0S_V1_105_ADOPTION/`): SLASH-8, SLASH-9 and SLASH-10, new, each with an empty
 `Result:` line, and DEGRADED-2, whose expected result now says the listing stays in chat with no
 pointer; its 2026-10-10 pass mark stands for the listing itself.
+
+Owed by the run for LibKa0s#94, #97, #99 and #100 (SD-RV-PM and SD-SK-PM, Ka0sAddonsCommonTasks
+`docs/2026-11-20-LIBKA0S_94_97_99_100/`, LibKa0s v1.108.0): SKIN-45 and SKIN-46, new, each with an
+empty `Result:` line.
