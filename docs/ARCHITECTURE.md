@@ -320,7 +320,11 @@ addon draws).
 - **What does not.** The panels themselves — fill, border, accent bars, accent border, artwork and
   class colors — are the player's content (decision D1): no `fromSkin` companions and **no one-time
   HUD style reset**, so no skin and no upgrade restyles a saved layout. New panels start from the
-  template, not the skin (D2). StaticPopups, GameTooltip's frame, `ColorPickerFrame` and the
+  template, not the skin (D2), and the template's look is the player's content too (the owner's
+  U-23, 2026-11-20). From LibKa0s v1.108.0 the composers add a *Use the skin's ...* companion to
+  every block unless the host opts out (ruling R-2), so the Panels editor's three composed blocks
+  (the panel's border, the accent bar's fill and its border) pass `fromSkin = false` and draw the
+  rows they drew before (`tests/test_options_groups.lua` holds it). StaticPopups, GameTooltip's frame, `ColorPickerFrame` and the
   minimap button stay stock (skinning-§7), though the lines the library writes on the button's
   tooltip follow the skin (LibKa0s v1.85.0); chat lines keep their colors (X7); the console keeps
   its monospace face. The editor tooltips' inline emphasis reads `gtip.emphasis` through
@@ -356,8 +360,13 @@ addon draws).
   `OptionalDeps`. PanelMaster has no bridge of its own.
 - **The gates.** The kit's `tests/_kit/test_skin_values.lua` (kit revision 50, anti-pattern #107)
   fails on a typed color or texture outside its categories and the rows in `tests/run.lua`, each
-  naming a cause; its `tests/_kit/test_skin_switch.lua` fails a surface `tests/skin_surfaces.lua`
-  declares that does not change under a probe skin.
+  naming a cause; from kit revision 58 it also reads tables of numbers, so the new-panel template's
+  colors carry rows of their own (cause A8, the owner's U-23). Its `tests/_kit/test_skin_switch.lua`
+  fails a surface `tests/skin_surfaces.lua` declares that does not change under a probe skin, and
+  from revision 58 each setter family (texture, color, font, shadow) has to move on its own. No
+  declared surface draws a texture or holds a StatusBar, so none takes `expect`, `hold` or `clear`;
+  the file installs a LibSharedMedia fake for each surface, so the unlock label's and the create
+  box's faces are compared too.
 
 ## Frame layering
 

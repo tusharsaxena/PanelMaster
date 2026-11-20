@@ -507,6 +507,56 @@ for _, spec in ipairs(TABS) do
   end)
 end
 
+-- ── the panels stay the player's: no skin companion (owner U-23, 2026-11-20; SD-SK-PM) ──────────
+--
+-- LibKa0s v1.108.0's composers emit a "Use the skin's ..." companion for every texture, border and
+-- color unless the host opts out (OptionsCompose minor 20, ruling R-2). A panel's look is the
+-- player's content, its new-panel defaults included (A8; the owner's U-23 of Ka0sAddonsCommonTasks
+-- docs/2026-11-20-LIBKA0S_94_97_99_100/SD_RULE.md), so every block the editor composes passes
+-- `fromSkin = false`, nothing reads a companion, and a panel record stores none.
+
+test("optionsgroups: every composed block opts out of the skin's companions (owner U-23)", function()
+  local src = readOrFail(EDITOR, "the gate cannot see how the blocks are built")
+  local seen = 0
+  for composer, body in src:gmatch("O%.(%a+Group)%s*%(?%s*(%b{})") do
+    if composer == "BorderGroup" or composer == "BarGroup" then
+      seen = seen + 1
+      assertTrue(body:find("fromSkin%s*=%s*false") ~= nil, "an O." .. composer .. " call in " .. EDITOR
+        .. " passes no `fromSkin = false`, so it draws skin companions nothing reads on a panel "
+        .. "(owner U-23)")
+    end
+  end
+  assertEqual(seen, 3, "the editor's composed blocks")
+end)
+
+for _, spec in ipairs(TABS) do
+  test("optionsgroups: the " .. spec.name .. " tab draws no Use the skin's row (owner U-23)",
+  function()
+    withMediaWidgets(function()
+      NS.Registry:DeleteAll()
+      local rec = NS.Registry:New("Unskinned")
+      local _, controls = renderTab(rec, spec.name)
+      assertTrue(#controls > 0, spec.name .. " drew no control")
+      for _, w in ipairs(controls) do
+        assertTrue(not w.labelText:find("skin", 1, true),
+          spec.name .. " draws '" .. w.labelText .. "', a skin companion on a panel (owner U-23)")
+      end
+      NS.Registry:DeleteAll()
+      E.__setSelectedID(nil)
+    end)
+  end)
+end
+
+test("optionsgroups: a new panel record stores no FromSkin field (owner U-23)", function()
+  NS.Registry:DeleteAll()
+  local rec = NS.Registry:New("Template")
+  for field in pairs(NS.Registry:Get(rec.id)) do
+    assertTrue(not tostring(field):find("FromSkin", 1, true),
+      "a new panel carries " .. tostring(field) .. ", a skin companion (owner U-23)")
+  end
+  NS.Registry:DeleteAll()
+end)
+
 -- ── every media picker previews (options-ui-§23, anti-pattern #109; PM-F02) ──────────────────────
 
 test("optionsgroups: the descriptor passes getLSM, so LSMValues and the font preload work", function()

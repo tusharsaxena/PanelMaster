@@ -176,6 +176,28 @@ Kit.skinValues = {
         .. "panel's artwork; nothing draws it", cause = "A8" },
     { file = "settings/PanelEditorTabs.lua", substring = "MyAddon\\\\art\\\\logo.tga",
       why = "the same tooltip's second example of a player's own path; nothing draws it", cause = "A8" },
+    -- The new-panel template's colors (kit revision 58 reads tables of numbers). A panel's look is
+    -- the player's content and its shipped defaults count as content too: the owner's U-23,
+    -- 2026-11-20 (Ka0sAddonsCommonTasks docs/2026-11-20-LIBKA0S_94_97_99_100/SD_RULE.md), so they
+    -- stay the addon's own under every skin and the editor composes its groups with fromSkin = false.
+    { file = "core/Constants.lua", substring = "bgColor      = { 0.05, 0.05, 0.07, 0.85 }",
+      why = "a new panel's background color, copied into the record at creation; the player's "
+        .. "content, never repainted by a skin (owner U-23, 2026-11-20)", cause = "A8" },
+    { file = "core/Constants.lua", substring = "borderColor  = { 0.35, 0.35, 0.40, 1.00 }",
+      why = "a new panel's border color; the player's content (owner U-23, 2026-11-20)", cause = "A8" },
+    { file = "core/Constants.lua", substring = "accentColor      = { 1.00, 1.00, 1.00, 1.00 }",
+      why = "a new panel's accent bar color under its class color; the player's content "
+        .. "(owner U-23, 2026-11-20)", cause = "A8" },
+    { file = "core/Constants.lua", substring = "accentBorderColor     = { 0.00, 0.00, 0.00, 1.00 }",
+      why = "a new panel's accent bar hairline; the player's content (owner U-23, 2026-11-20)",
+      cause = "A8" },
+    { file = "core/Constants.lua", substring = "artColor       = { 1, 1, 1, 1 }",
+      why = "a new panel's artwork tint, white so the art shows as authored; the player's content "
+        .. "(owner U-23, 2026-11-20)", cause = "A8" },
+    { file = "core/Util.lua", substring = "or fallback or { 1, 1, 1, 1 }",
+      why = "the panel color normalizer's last fallback: a malformed stored color on a player's "
+        .. "panel draws white rather than erroring in SetColorTexture; only panel records reach it",
+      cause = "A8" },
   },
 }
 Kit.skinSwitch = dofile("tests/skin_surfaces.lua")(NS, mocks)

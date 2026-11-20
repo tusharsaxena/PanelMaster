@@ -1280,7 +1280,7 @@ Total.
 - layoutcap self-test: a census that states nothing is told apart from one that states none
 - layoutcap self-test: the exempt set takes folders as well as paths
 
-### test_options_groups.lua (11)
+### test_options_groups.lua (15)
 
 - optionsgroups: the Panels editor types out no canonical block
 - optionsgroups: the three blocks are composed through the record-backed arm (#48)
@@ -1289,6 +1289,10 @@ Total.
 - optionsgroups: the Background and border blocks follow a write made elsewhere (#48)
 - optionsgroups: the Accent bar tab draws its canonical blocks control by control (#48)
 - optionsgroups: the Accent bar blocks follow a write made elsewhere (#48)
+- optionsgroups: every composed block opts out of the skin's companions (owner U-23)
+- optionsgroups: the Background and border tab draws no Use the skin's row (owner U-23)
+- optionsgroups: the Accent bar tab draws no Use the skin's row (owner U-23)
+- optionsgroups: a new panel record stores no FromSkin field (owner U-23)
 - optionsgroups: the descriptor passes getLSM, so LSMValues and the font preload work
 - optionsgroups: every panel media field has a preview picker
 - optionsgroups: a media row the library draws is tracked, so a scroll closes its list
@@ -1355,13 +1359,14 @@ Total.
 
 ### test_skin_values.lua (3)
 
-- skin values: every host row carries its file, substring, why and cause id
+- skin values: every host row carries its file, substring, why and a cause id or kit row category
 - skin values: no typed value outside the kit's categories and the host's rows
 - skin values: the check is falsifiable, a planted value of each shape is reported
 
-### test_skin_switch.lua (9)
+### test_skin_switch.lua (10)
 
 - skin switch: the check is falsifiable, a surface that redraws a literal is reported
+- skin switch: the check is falsifiable, a bar whose texture never moves is reported
 - skin switch: the unlock outline changes
 - skin switch: the unlock outline changes with the Scope ignored
 - skin switch: the unlock name label changes
@@ -1423,7 +1428,7 @@ Total.
 | test_prose.lua | 15 |
 | test_vendor_sync.lua | 3 |
 | test_layout_cap.lua | 13 |
-| test_options_groups.lua | 11 |
+| test_options_groups.lua | 15 |
 | test_settings_guard.lua | 2 |
 | test_settings_layout.lua | 8 |
 | test_register.lua | 1 |
@@ -1433,7 +1438,7 @@ Total.
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
 | test_skin_values.lua | 3 |
-| test_skin_switch.lua | 9 |
+| test_skin_switch.lua | 10 |
 | test_client_globals.lua | 3 |
 | Skipped | 1 |
-| **Total** | **1206** |
+| **Total** | **1211** |

@@ -517,6 +517,7 @@ local function buildPanelEditor(ctx, parent, rec)
                      flag = "borderClassColor" }
     renderBlock(retune(O.BorderGroup({
       bind = bind,
+      fromSkin = false,   -- a panel's look is the player's content (A8; owner U-23, 2026-11-20)
       keys = borderKeys(border),
       classColor = { source = C.COLOR_CLASS_SOURCE.borderColor },
       extra = { { field = "borderOffset", type = "number", label = "Border offset",
@@ -568,6 +569,7 @@ local function buildPanelEditor(ctx, parent, rec)
     -- collection. It multiplies the bar color's own alpha; modules/Canvas.lua does the composition.
     renderBlock(retune(O.BarGroup({
       bind = bind,
+      fromSkin = false,   -- a panel's look is the player's content (A8; owner U-23, 2026-11-20)
       keys = { barTexture = "accentTexture", barAlpha = "accentAlpha", barColor = "accentColor",
                useClassColorBar = "accentClassColor" },
       classColor = { source = C.COLOR_CLASS_SOURCE.accentColor },
@@ -602,6 +604,7 @@ local function buildPanelEditor(ctx, parent, rec)
                         color = "accentBorderColor", flag = "accentBorderClassColor" }
     renderBlock(retune(O.BorderGroup({
       bind = bind,
+      fromSkin = false,   -- a panel's look is the player's content (A8; owner U-23, 2026-11-20)
       keys = borderKeys(barBorder),
       classColor = { source = C.COLOR_CLASS_SOURCE.accentBorderColor },
       extra = { { field = "accentBorderOffset", type = "number", label = "Border offset",
