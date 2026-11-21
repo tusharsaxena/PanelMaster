@@ -43,7 +43,7 @@ addon serves Retail and WoW Forever, so the suite runs under both kit profiles, 
 never bump the version without an explicit instruction.
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Twelve of the twenty-five majors in the vendored v1.105.0 payload are adopted
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Twelve of the twenty-five majors in the vendored v1.108.0 payload are adopted
 (`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`, `Skin`,
 `Bus` for its `Catalog` alone, and `Compat` for its `IsSecret` guard alone); `Perf` is declined, and `Widgets`, `Pool`, `Item`, `Glow`,
 `Sim`, `Toast`, `Charts`, `IconBrowser`, `Role`, `Callout`, `WaypointArrow` and `Tooltip` are vendored but not consumed. **The look is the skin's** (`skinning`,
