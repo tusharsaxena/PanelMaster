@@ -1,0 +1,1 @@
+Independent review (rv-d, 2026-11-21) of the FU-RV commit: no findings. Payload and kit match LibKa0s v1.109.0 (only pruned media differ); provenance v1.109.0; midnight-quirks and forever-quirks blocks byte-match standard v2.117.0 catalogs; one Present forever-quirks.md doc-map row; citations correct (forever-quirks-§4); gates green on Retail and Forever, luacheck 0/0.
