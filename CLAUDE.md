@@ -43,7 +43,7 @@ addon serves Retail and WoW Forever, so the suite runs under both kit profiles, 
 never bump the version without an explicit instruction.
 
 This addon vendors **[LibKa0s](https://github.com/tusharsaxena/LibKa0s)** — the Ka0s shared library
-— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Twelve of the twenty-five majors in the vendored v1.109.0 payload are adopted
+— into `libs/LibKa0s/`, and its test kit into `tests/_kit/`. Twelve of the twenty-five majors in the vendored v1.112.0 payload are adopted
 (`Core`, `Env`, `Media`, `DebugLog`, `Slash`, `Options`, `Launcher`, `Lifecycle`, `Schema`, `Skin`,
 `Bus` for its `Catalog` alone, and `Compat` for its `IsSecret` guard alone); `Perf` is declined, and `Widgets`, `Pool`, `Item`, `Glow`,
 `Sim`, `Toast`, `Charts`, `IconBrowser`, `Role`, `Callout`, `WaypointArrow` and `Tooltip` are vendored but not consumed. **The look is the skin's** (`skinning`,
@@ -56,7 +56,7 @@ under `libs/` or `tests/_kit/`**: a library problem is fixed in `../LibKa0s` and
 re-vendor silently reverts a local edit. See `docs/module-map.md` for the seam files and the load
 order they pin, and this repo's GitHub issues for every adoption decision.
 
-Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.109.0 (MIT).
+Bundles [LibKa0s](https://github.com/tusharsaxena/LibKa0s) v1.112.0 (MIT).
 LibKa0s icons: chevron-down, chevron-up, clear, close, confirm, copy, eye, info, move, reset, settings, volume-high.
 
 The first of those two lines is the **provenance line**, and it is an input rather than a note:
