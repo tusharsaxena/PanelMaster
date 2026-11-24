@@ -1432,7 +1432,7 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` â
   color*, *Border style* with *Border thickness (px)*, *Border color* with *Use class color*, then
   *Border offset*, with no *Use the skin's border* or *Use the skin's color* box. **Accent bar** â†’ the
   same holds for **Fill** (no *Use the skin's texture* or *Use the skin's color*) and its **Border**.
-  Fail: a load error, or any *Use the skin's ...* box on either tab. Result:
+  Fail: a load error, or any *Use the skin's ...* box on either tab. Result: passed (owner, 2026-11-24)
 - **SKIN-46. A skin switch leaves every panel as it was (SD-SK-PM, owner U-23).** Keep **Smoke45**
   and one panel you styled yourself on screen; `/pm unlock`. `/pm skin` â†’ pick **WoW Midnight**,
   **Apply**; then **High Contrast**; then **Ka0s Default** again. After each: the panels' fill,
@@ -1441,7 +1441,7 @@ above: a fresh client start, a few styled panels, the Skin tab at `/pm config` â
   Then `/pm new Smoke46` under **WoW Midnight** â†’ it arrives with the same dark fill and class-colored
   top bar as **Smoke45**, not the skin's colors. `/pm lock`, then `/pm delete Smoke45` and
   `/pm delete Smoke46`. Fail: any panel's look moving with the skin, a new panel born in the skin's
-  colors, or the outline or label not following. Result:
+  colors, or the outline or label not following. Result: passed (owner, 2026-11-24)
 
 ## WoW Forever
 
@@ -1532,6 +1532,10 @@ pointer; its 2026-10-10 pass mark stands for the listing itself.
 Owed by the run for LibKa0s#94, #97, #99 and #100 (SD-RV-PM and SD-SK-PM, Ka0sAddonsCommonTasks
 `docs/2026-11-20-LIBKA0S_94_97_99_100/`, LibKa0s v1.108.0): SKIN-45 and SKIN-46, new, each with an
 empty `Result:` line.
+
+On 2026-11-24 the owner reported that both passed (run SKIN 11-20 of the owner's smoke sheet, a copy
+of `Ka0sPendingSmoke-2026-11-23.csv`), recorded on the owner's word on each `Result:` line as
+`passed (owner, 2026-11-24)`: SKIN-45 and SKIN-46.
 
 Owed by the feedback batch (FB-PM-01, Ka0sAddonsCommonTasks `docs/2026-11-24-FEEDBACK_BATCH/`,
 LibKa0s v1.112.0): DIAG-31, new, with an empty `Result:` line.
