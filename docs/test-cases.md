@@ -1329,6 +1329,12 @@ Total.
 - lintconfig: every files[...] ignore is narrowed to a file or a name
 - lintconfig: every inline luacheck ignore names the code it answers
 
+### test_sample_names.lua (3)
+
+- Sample names: the matcher flags a person or realm literal and passes prose
+- Sample names: no Sample/Mock person literal lives outside tests/, libs/ and frozen docs
+- Sample names: the library publishes the surfaces a future sample would read
+
 ### test_eol.lua (2)
 
 - eol: every tracked file carries the terminator .gitattributes declares for it
@@ -1434,6 +1440,7 @@ Total.
 | test_register.lua | 1 |
 | test_docs.lua | 1 |
 | test_lintconfig.lua | 4 |
+| test_sample_names.lua | 3 |
 | test_eol.lua | 2 |
 | test_diagnostics_contract.lua | 8 |
 | test_lizard_sighted.lua | 8 |
@@ -1441,4 +1448,4 @@ Total.
 | test_skin_switch.lua | 10 |
 | test_client_globals.lua | 3 |
 | Skipped | 1 |
-| **Total** | **1211** |
+| **Total** | **1214** |
