@@ -49,7 +49,7 @@ local function personLiterals(line)
   local found = {}
   for word in line:gmatch("%f[%w_](%u%l+)%f[^%w_]") do
     local isSample = word:match("^Sample%l+$") or word:match("^Mock%l+$")
-    if isSample and #word <= 12 and not NOT_PEOPLE[word] then found[#found + 1] = word end
+    if isSample and not NOT_PEOPLE[word] then found[#found + 1] = word end
   end
   return found
 end
@@ -96,6 +96,8 @@ end
 test("Sample names: the matcher flags a person or realm literal and passes prose", function()
   local hits = personLiterals('local who = "Samplemage-Samplerealm", pet = "Mockpaw" -- Mock fidelity')
   assertEqual(table.concat(hits, ","), "Samplemage,Samplerealm,Mockpaw")
+  assertEqual(table.concat(personLiterals("Samplewarlock Sampledeathknight Mockstrider"), ","),
+    "Samplewarlock,Sampledeathknight,Mockstrider", "a long name is a person too; no length cap")
   assertEqual(#personLiterals("Mock - Realm; Samples were Mocked; a Sample() call; SampleCrowd"), 0,
     "the bare words, English inflections and the library's CamelCase surfaces are not people")
 end)
