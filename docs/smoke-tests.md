@@ -26,7 +26,7 @@ client and is run when one is available, not per release.
 | PROFILE-1 to 18 | Profiles | The shared Default, the Profiles page, session state across a switch, the `/pm profile` verb |
 | STATE-1 to 7 | Enable and disable | The master switch, live and refused verbs while disabled, the total stand-down |
 | COMBAT-1 to 7 | Combat | Queued unlocks, a stand-down dropping them, the settings lockout, General visibility |
-| DIAG-1 to 30 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the Diagnostics link, the report turning logging on, the library's own refusal, edge and at-enable lines |
+| DIAG-1 to 31 | Debug console and diagnostics | Console chrome, log lines, copy and clear, the diagnostics report, resizing the console and its copy window, the copy window's close-only title bar, the Diagnostics link, the report turning logging on, the library's own refusal, edge and at-enable lines |
 | LAUNCH-1 to 12 | Launcher | Minimap button, its menu and tooltip, the account-wide button state, broker rows |
 | DEGRADED-1 to 14 | Library-absent install | What still works and what explains itself without `libs/LibKa0s` |
 | LOC-1 to 5 | Non-English client | Panel names with non-ASCII letters: slugs, case folding, sort, round trip |
@@ -945,6 +945,12 @@ and at least one art pack; skip those without it.
   registered` and `[Artwork] Sunn adapter: N themes, M rows`, once each. `/pm debug off`, `/pm debug
   on` → neither is written a second time. **Fail:** neither line after the `[Init]` line (the lines
   were gated off at OnEnable). Result: pass (owner-marked 2026-10-10)
+- **DIAG-31. The copy window is a companion: close only (FB-PM-01, LibKa0s v1.112.0;
+  standalone-windows *A companion window carries no settings mark*, standard v2.119.0).** Update
+  and `/reload` with BugSack on → no Lua error naming a file under `libs/LibKa0s/`. `/pm debug`,
+  then its Copy mark → the copy window's title bar carries the close mark alone, no gear; the
+  console behind it keeps its gear. The close mark closes the copy window and leaves the console
+  up. Fail: a load error, a blank mark, or a gear on the copy window. Result:
 
 ## LAUNCH
 
@@ -1526,3 +1532,6 @@ pointer; its 2026-10-10 pass mark stands for the listing itself.
 Owed by the run for LibKa0s#94, #97, #99 and #100 (SD-RV-PM and SD-SK-PM, Ka0sAddonsCommonTasks
 `docs/2026-11-20-LIBKA0S_94_97_99_100/`, LibKa0s v1.108.0): SKIN-45 and SKIN-46, new, each with an
 empty `Result:` line.
+
+Owed by the feedback batch (FB-PM-01, Ka0sAddonsCommonTasks `docs/2026-11-24-FEEDBACK_BATCH/`,
+LibKa0s v1.112.0): DIAG-31, new, with an empty `Result:` line.

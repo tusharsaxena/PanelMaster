@@ -16,6 +16,12 @@ rest of the UI. That is the whole product.
 secure frames, no combat gating on its render path, and no taint story. Full boundary in
 **[scope.md](scope.md)**.
 
+**It draws no sample data.** There is no test mode and no simulator (unlocking is the preview, and
+it shows the player's own panels by name), so no step panel is owed and no sample person is drawn
+(`preview-mode`, standard v2.120.0). `tests/test_sample_names.lua` holds that: a `Sample…`/`Mock…`
+person typed anywhere outside `tests/`, `libs/` and the frozen bundles goes red, because any future
+sample comes from `Sim.Sample` / `Sim.SampleCrowd`.
+
 ## Module Map
 
 `core/` holds the bootstrap, the Compat firewall (which also routes `LibKa0s-Compat-1.0`'s `IsSecret`),

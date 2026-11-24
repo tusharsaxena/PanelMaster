@@ -171,6 +171,7 @@ The suites, one per subject:
 | `tests/test_profiles.lua` | `Registry.CopyFrom`, profile switching, and the Profiles page. |
 | `tests/test_register.lua` | Every deviation id `docs/ARCHITECTURE.md` cites resolves to an audit bundle. |
 | `tests/test_registry.lua` | `Registry` create, set, rename, sanitize, recover and delete. |
+| `tests/test_sample_names.lua` | The sample-names gate (preview-mode, *Sample characters*, LibKa0s#104): no `Sample…`/`Mock…` person literal outside `tests/`, `libs/` and the frozen bundles, and the library's `Sim.Sample` and seeded `Sim.SampleCrowd` present for any future sample. |
 | `tests/test_schema.lua` | The schema rows, the Schema seam and its stub, `Schema.Set`, the tab partition. |
 | `tests/test_settings_guard.lua` | The stored-setting guard of the settings-layout pass: the set of stored paths, and each one's default, type and range, as designed (the skin rollout's `skin.*` rows added deliberately). |
 | `tests/test_settings_layout.lua` | The settings layout, line by line: each tab's designed lines, subsection headings, labels and reworded tooltips. |

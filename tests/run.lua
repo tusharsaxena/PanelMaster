@@ -120,7 +120,7 @@ local SUITES = {
   -- file of that name would now read as a collision with the kit's copy.
   { name = "test_layout_cap", dir = "tests/_kit/" },
   "test_options_groups", "test_settings_guard", "test_settings_layout",
-  "test_register", "test_docs", "test_lintconfig",
+  "test_register", "test_docs", "test_lintconfig", "test_sample_names",
   -- The kit has shipped one suite of its own since revision 15: the working-tree line-ending
   -- gate, over every path `git ls-files` reports. It lives where the rest of the kit lives
   -- rather than being re-typed into nine repositories, so it is declared with its own `dir`.
