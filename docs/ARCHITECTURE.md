@@ -436,7 +436,7 @@ generated directories are named once each and never enumerated per run: `docs/au
 | `message-bus.md` | Not applicable | Three messages; threshold is more than ten. The table lives in `ARCHITECTURE.md` → `## Message Bus` |
 | `midnight-quirks.md` | Present | Required in every addon from v2.102.0: the vendored client-quirks catalog. The addon's own section is empty — no client-version workaround of its own; the one fixup this addon ever carried was for a vendored **widget**, not a client behavior, and that widget is gone: the library's `Ka0sMedia_*` pickers replaced it |
 | `forever-quirks.md` | Present | The addon ships on WoW Forever (Clients `Retail · Forever`): the vendored Forever quirks catalog (forever-quirks-§1). The addon's own section is empty |
-| `compat-layer.md` | Present | 8 shims in `core/Compat.lua` (threshold is 3) |
+| `compat-layer.md` | Present | 9 shims in `core/Compat.lua` by the `documentation-§3` count, eight of them PanelMaster's own (threshold is 3) |
 | `perf-analysis/README.md` | Not applicable | `LibKa0s-Perf` is declined on structural grounds ([`LIBKA0S-31`](https://github.com/tusharsaxena/PanelMaster/issues/31)); see `## Documented deviations` and `performance.md` |
 
 ### Verification and record
